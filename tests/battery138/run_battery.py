@@ -160,7 +160,7 @@ add_test("loop_09_while_complex_cond", "#target hecpp\nvar a = 0\nvar b = 10\nwh
 add_test("loop_10_infinite_loop_kw", "#target hecpp\nvar step = 0\nloop { step = step + 1; if step == 4 { break } }\nprint(step)", "4")
 
 # 13. Strings, Concatenation, Unicode (10 tests)
-add_test("str_01_concat_basic", "#target hecpp\nvar s = \"Holy\" + \"Easy\"\nprint(s)", "Nyx")
+add_test("str_01_concat_basic", "#target hecpp\nvar s = \"ny\" + \"x\"\nprint(s)", "nyx")
 add_test("str_02_concat_vars", "#target hecpp\nvar a = \"Foo\"\nvar b = \"Bar\"\nprint(a + b)", "FooBar")
 add_test("str_03_unicode_chars", "#target hecpp\nprint(\"İstanbul / Türkiye - 24K Altın\")", "İstanbul / Türkiye - 24K Altın")
 add_test("str_04_escape_quotes", "#target hecpp\nprint(\"Hello \\\"World\\\"\")", "Hello \"World\"")
