@@ -91,21 +91,32 @@ foreach ($target in $ExistingPathTargets) {
     }
 }
 
-# 5. Add BinDir to User PATH & Current Session PATH
+# 5. Add BinDir & MinGW to User PATH & Current Session PATH
 $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
 if (-not $UserPath) {
     $UserPath = ""
 }
 if ($UserPath -notlike "*$BinDir*") {
-    $NewPath = if ($UserPath.Length -gt 0) { "$UserPath;$BinDir" } else { $BinDir }
-    [Environment]::SetEnvironmentVariable("Path", $NewPath, "User")
+    $UserPath = if ($UserPath.Length -gt 0) { "$UserPath;$BinDir" } else { $BinDir }
     Write-Host "[OK] Added $BinDir to User PATH." -ForegroundColor Green
 } else {
     Write-Host "[OK] $BinDir already present in User PATH." -ForegroundColor Green
 }
 
+# Check for MinGW toolchain
+$MinGWPath = "C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\llvm-mingw-20260616-ucrt-x86_64\bin"
+if ((Test-Path $MinGWPath) -and ($UserPath -notlike "*$MinGWPath*")) {
+    $UserPath = "$UserPath;$MinGWPath"
+    Write-Host "[OK] Added MinGW Toolchain to User PATH: $MinGWPath" -ForegroundColor Green
+}
+
+[Environment]::SetEnvironmentVariable("Path", $UserPath, "User")
+
 if ($env:Path -notlike "*$BinDir*") {
     $env:Path = "$BinDir;$env:Path"
+}
+if ((Test-Path $MinGWPath) -and ($env:Path -notlike "*$MinGWPath*")) {
+    $env:Path = "$MinGWPath;$env:Path"
 }
 
 Write-Host "===================================================================" -ForegroundColor Cyan
