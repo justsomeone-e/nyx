@@ -413,9 +413,66 @@ test "greeting test" {{
     with open(os.path.join(project_name, "src", "main.nyx"), "w", encoding="utf-8") as f:
         f.write(main_nyx_content)
         
+    vscode_dir = os.path.join(project_name, ".vscode")
+    os.makedirs(vscode_dir, exist_ok=True)
+    tasks_json_content = """{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "nyx: Build Active File",
+      "type": "shell",
+      "command": "nyx",
+      "args": ["build", "${file}"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "nyx: Run Active File",
+      "type": "shell",
+      "command": "nyx",
+      "args": ["run", "${file}"],
+      "group": "build",
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": true,
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "nyx: Run Full Test Suite",
+      "type": "shell",
+      "command": "nyx",
+      "args": ["test"],
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared"
+      }
+    }
+  ]
+}
+"""
+    with open(os.path.join(vscode_dir, "tasks.json"), "w", encoding="utf-8") as f:
+        f.write(tasks_json_content)
+
     print(f"\033[92m[OK] Created nyx project in ./{project_name}\033[0m")
     print(f"     - Manifest:   ./{project_name}/nyx.toml")
     print(f"     - Entrypoint: ./{project_name}/src/main.nyx")
+    print(f"     - VS Code:    ./{project_name}/.vscode/tasks.json (Ctrl+Shift+B ready)")
     print(f"\nTo get started:\n  cd {project_name}\n  nyx run\n")
 
 def cmd_clean():
