@@ -16,47 +16,65 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Package Release Archives
+        run: |
+          mkdir -p dist
+          TAG="${{ github.ref_name }}"
+          
+          # Create zip archive for Windows / Universal
+          zip -r "dist/nyx-${TAG}-universal.zip" src assets bin examples tests *.md LICENSE install.ps1 install.sh nyx.bat nyx.ps1 nyx.toml
+
+          # Create tar.gz archive for Linux / macOS
+          tar -czvf "dist/nyx-${TAG}-source.tar.gz" src assets bin examples tests *.md LICENSE install.ps1 install.sh nyx.bat nyx.ps1 nyx.toml
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "HolyEasyLang ${{ github.ref_name }} (Public Release)"
+          name: "nyx ${{ github.ref_name }} (Official Release)"
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
+          files: |
+            dist/*
           body: |
-            ## ⚡ HolyEasyLang ${{ github.ref_name }}
+            ## ⚡ nyx ${{ github.ref_name }}
 
             Next-Generation Multi-Target Systems & Application Programming Language.
 
-            ### 🚀 What's New in This Release
+            ### 🚀 Features in This Release
+            * **Phase 3 Native FFI & Systems Core**:
+              * Zero-cost C/C++ ABI interoperability (`#native include`, `extern "C"`).
+              * Memory safety (`unsafe {}`, raw pointers `*T`, `addr`, `peek`, `memdump`).
+              * Static (`.a`/`.lib`) & shared (`.dll`/`.so`) library compilation.
+              * Hardware bindings (`native/gpio`, `native/serial`, `native/spi`, `native/i2c`).
+              * Platform abstraction (`native/platform`, `native/env`, `native/process`, `native/net`).
+              * Native SDK & library package manager (`nyx new --lib`, `nyx build`, `nyx test`).
             * **Multi-Backend Compilation**:
               * `hecpp`: ISO C++20 backend frozen at Gate 8 (Production Native `.exe` via LLVM Clang / GCC).
               * `hejs`: Node.js ES2022 backend frozen at Gate 8.
               * `hepy`: Canonical reference evaluation engine.
               * `hers`: Rust 2021 active conformance backend (Gate 6).
             * **Module & Dependency Resolution**:
-              * Full topological import graph (`import "./file"`, `import "std/math"`).
-              * Diamond dependency deduplication & `E1302` ambiguous symbol resolution.
-            * **Rustc-Grade Diagnostics v2**:
-              * Visual caret spans (`^^^^`), source paths, note annotations, and `help:` hints.
-            * **Integrated Developer Tooling & LSP v2**:
-              * Language Server Protocol v2 (`completion`, `hover`, `definition`, `diagnostics`).
-              * Multi-command CLI (`new`, `check`, `build`, `run`, `test`, `doctor`, `fmt`).
-            * **Branding & Visuals**:
-              * Minimalist obsidian black vector logo & favicon.
+              * Pure-Python TOML parser and deterministic lockfile generation (`nyx.toml`, `nyx.lock`).
+              * Full topological import graph (`import "./file"`, `import "native/gpio"`).
+            * **Developer Tooling & LSP**:
+              * Language Server Protocol (`completion`, `hover`, `definition`, `diagnostics`).
+              * CLI suite (`new`, `check`, `build`, `run`, `test`, `doctor`, `fmt`, `lint`, `debug`, `profile`, `doc`).
 
-            ### 📦 Quick Automated Installation
+            ### 📦 Automated Installation
 
             **Windows (PowerShell):**
             ```powershell
-            irm https://raw.githubusercontent.com/k4chox/HolyEasyLang/main/install.ps1 | iex
+            irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
             ```
 
             **Linux / macOS (Bash):**
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/k4chox/HolyEasyLang/main/install.sh | bash
+            curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
             ```
-
-            ---
-            *For full documentation, visit [README.md](https://github.com/k4chox/HolyEasyLang).*
           generate_release_notes: true

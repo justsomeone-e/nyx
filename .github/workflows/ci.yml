@@ -1,4 +1,4 @@
-name: HolyEasyLang CI Battery
+name: nyx CI Battery
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-      - name: Checkout HolyEasyLang Repository
+      - name: Checkout nyx Repository
         uses: actions/checkout@v4
 
       - name: Set up Python ${{ matrix.python-version }}
