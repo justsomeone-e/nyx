@@ -1,4 +1,10 @@
 import sys
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except:
+        pass
+import sys
 import os
 import shutil
 import subprocess
@@ -7,13 +13,6 @@ _root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)
 
-if sys.stdout.encoding != 'utf-8':
-    try:
-        sys.stdout.reconfigure(encoding='utf-8')
-    except:
-        pass
-
-from src.compiler import Compiler
 from src.core import Lexer, Parser, TypeChecker
 from src.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
@@ -26,16 +25,16 @@ VERSION = "2.0.0-beta.1"
 
 def print_banner():
     print("===================================================================")
-    print(f"⚡ Nyx Core v{VERSION} (Beta 1) — Next-Gen Systems & Application Toolchain")
+    print(f"nyx core v{VERSION} (beta 1) — systems toolchain")
     print("===================================================================")
 
 def print_help():
     print_banner()
-    print("""Usage: nyx <command> [arguments] [options] (alias: he)
+    print("""Usage: nyx <command> [arguments] [options]
 
 Project & Development Commands:
-  nyx new <project_name>             Create a new Nyx project in a directory
-  nyx init [name]                    Initialize a nyx.toml / he.toml project
+  nyx new <project_name>             Create a new nyx project in a directory
+  nyx init [name]                    Initialize a nyx.toml project in current directory
   nyx check [file.nyx]               Fast type-check and semantic validation
   nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
@@ -43,37 +42,39 @@ Project & Development Commands:
   nyx clean                          Remove build artifacts and temporary files
 
 Toolchain & Quality:
-  he fmt <file.he>                  Auto-format and beautify source code
-  he lint <file.he>                 Static analysis and unsafe boundary checks
-  he lsp                            Launch Language Server Protocol (LSP) daemon
-  he debug <file.he>                Interactive step-by-step debugger
-  he profile <file.he>              Runtime bottleneck and profiling report
-  he doc <file.he>                  Generate HTML API documentation from /// comments
+  nyx fmt <file.nyx>                 Auto-format and beautify source code
+  nyx lint <file.nyx>                Static analysis and unsafe boundary checks
+  nyx lsp                            Launch Language Server Protocol (LSP) daemon
+  nyx debug <file.nyx>               Interactive step-by-step debugger
+  nyx profile <file.nyx>             Runtime bottleneck and profiling report
+  nyx doc <file.nyx>                 Generate HTML API documentation from /// comments
 
 Package Management:
-  he add <pkg> [@version]           Add a dependency into he.toml and lock in he.lock
-  he remove <pkg>                   Remove a dependency from he.toml and he.lock
-  he install                        Install / verify dependencies from he.toml
-  he pkg                            Inspect current project manifest and dependencies
+  nyx add <pkg> [@version]           Add a dependency into nyx.toml and lock in nyx.lock
+  nyx remove <pkg>                   Remove a dependency from nyx.toml and nyx.lock
+  nyx install                        Install / verify dependencies from nyx.toml
+  nyx pkg                            Inspect current project manifest and dependencies
 
 System & Diagnostics:
-  he version                        Show compiler core and detected native toolchains
-  he help                           Display this help message
+  nyx doctor                         Inspect compiler toolchains & environment health
+  nyx version                        Show compiler core and detected native toolchains
+  nyx help                           Display this help message
 
 Target Backends (--target):
   hecpp (C++20 Native) | hepy (Python) | hejs (Node.js) | hers (Rust 2021)
 ===================================================================""")
 
-def parse_he_toml():
-    """Reads he.toml in current directory if available."""
+def parse_nyx_toml():
+    """Reads nyx.toml or he.toml in current directory if available."""
     config = {
-        "name": "holy_app",
+        "name": "nyx_app",
         "version": "0.1.0",
         "target": "hecpp",
-        "entry": "src/main.he"
+        "entry": "src/main.nyx"
     }
-    if os.path.exists("he.toml"):
-        with open("he.toml", "r", encoding="utf-8") as f:
+    manifest = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
+    if manifest:
+        with open(manifest, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line.startswith("name ="):
@@ -101,12 +102,18 @@ def get_target_from_args(default_target="hecpp"):
             return t_map.get(t_raw, t_raw)
     return default_target
 
-def get_entry_file(default_entry="src/main.he"):
+def get_entry_file(default_entry="src/main.nyx"):
     args = [a for a in sys.argv[2:] if not a.startswith("--") and a not in ("cpp", "hecpp", "py", "hepy", "js", "hejs", "rs", "hers", "wasm", "react")]
-    if args and args[0].endswith(".he"):
+    if args and (args[0].endswith(".nyx") or args[0].endswith(".he")):
         return args[0]
     if os.path.exists(default_entry):
         return default_entry
+    if os.path.exists("src/main.he"):
+        return "src/main.he"
+    if os.path.exists("src/main.nyx"):
+        return "src/main.nyx"
+    if os.path.exists("main.nyx"):
+        return "main.nyx"
     if os.path.exists("main.he"):
         return "main.he"
     return None
@@ -122,7 +129,7 @@ def cmd_check(entry_file):
     loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)))
     ast = loader.load_program(entry_file, code)
     TypeChecker(ast, entry_file, code).check()
-    print("\033[92m[✓] Check Passed: 0 syntax or semantic errors found.\033[0m")
+    print("\033[92m[OK] Check Passed: 0 syntax or semantic errors found.\033[0m")
 
 def cmd_build(entry_file, target, is_release=False):
     if not entry_file or not os.path.exists(entry_file):
@@ -152,7 +159,7 @@ def cmd_build(entry_file, target, is_release=False):
             f.write(cpp_code)
         ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe)
         if ok:
-            print(f"\033[92m[✓] Compiled Native Executable:\033[0m {out_exe}")
+            print(f"\033[92m[OK] Compiled Native Executable:\033[0m {out_exe}")
         else:
             print(f"\033[93m[!] Transpiled C++ source generated at:\033[0m {out_cpp}")
             print(f"    ({msg})")
@@ -162,21 +169,21 @@ def cmd_build(entry_file, target, is_release=False):
         out_js = os.path.join(build_dir, f"{base_name}.js")
         with open(out_js, "w", encoding="utf-8") as f:
             f.write(js_code)
-        print(f"\033[92m[✓] Generated Node.js ES2022 Module:\033[0m {out_js}")
+        print(f"\033[92m[OK] Generated Node.js ES2022 Module:\033[0m {out_js}")
 
     elif target == "hers":
         rs_code = codegen.gen_rust()
         out_rs = os.path.join(build_dir, f"{base_name}.rs")
         with open(out_rs, "w", encoding="utf-8") as f:
             f.write(rs_code)
-        print(f"\033[92m[✓] Generated Rust 2021 Source:\033[0m {out_rs}")
+        print(f"\033[92m[OK] Generated Rust 2021 Source:\033[0m {out_rs}")
 
     elif target == "hepy":
         py_code = codegen.gen_python()
         out_py = os.path.join(build_dir, f"{base_name}.py")
         with open(out_py, "w", encoding="utf-8") as f:
             f.write(py_code)
-        print(f"\033[92m[✓] Generated Python 3 Module:\033[0m {out_py}")
+        print(f"\033[92m[OK] Generated Python 3 Module:\033[0m {out_py}")
 
     else:
         print(f"\033[91m[!] Unknown target '{target}'\033[0m")
@@ -208,7 +215,7 @@ def cmd_run(entry_file, target):
         subprocess.run([node_path, "-e", js_code])
     elif target == "hecpp":
         import tempfile
-        temp_dir = tempfile.mkdtemp(prefix="he_run_")
+        temp_dir = tempfile.mkdtemp(prefix="nyx_run_")
         try:
             cpp_file = os.path.join(temp_dir, "main.cpp")
             exe_file = os.path.join(temp_dir, "main.exe")
@@ -225,7 +232,7 @@ def cmd_run(entry_file, target):
             shutil.rmtree(temp_dir, ignore_errors=True)
     elif target == "hers":
         import tempfile
-        temp_dir = tempfile.mkdtemp(prefix="he_run_rs_")
+        temp_dir = tempfile.mkdtemp(prefix="nyx_run_rs_")
         try:
             rs_file = os.path.join(temp_dir, "main.rs")
             with open(rs_file, "w", encoding="utf-8") as f:
@@ -237,7 +244,7 @@ def cmd_run(entry_file, target):
                 obj_file = os.path.join(temp_dir, "main.o")
                 res = subprocess.run([rustc, "--edition=2021", "--emit=obj", rs_file, "-o", obj_file], capture_output=True, text=True)
                 if res.returncode == 0:
-                    print("\033[92m[✓] Rust 2021 Typecheck & MIR Object verified successfully.\033[0m")
+                    print("\033[92m[OK] Rust 2021 Typecheck & MIR Object verified successfully.\033[0m")
                 else:
                     print(res.stderr or res.stdout)
         finally:
@@ -254,15 +261,15 @@ name = "{project_name}"
 version = "0.1.0"
 edition = "2026"
 target = "hecpp"
-entry = "src/main.he"
+entry = "src/main.nyx"
 
 [dependencies]
-# std = "4.0.0"
+# std = "2.0.0"
 
 [build]
 opt_level = 2
 """
-    with open(os.path.join(project_name, "he.toml"), "w", encoding="utf-8") as f:
+    with open(os.path.join(project_name, "nyx.toml"), "w", encoding="utf-8") as f:
         f.write(manifest_content)
         
     gitignore_content = """build/
@@ -275,26 +282,26 @@ target/
     with open(os.path.join(project_name, ".gitignore"), "w", encoding="utf-8") as f:
         f.write(gitignore_content)
         
-    main_he_content = f"""#target hecpp
+    main_nyx_content = f"""#target hecpp
 
 fn greet(name: string) -> string {{
-    return "Hello, " + name + " from Nyx!"
+    return "Hello, " + name + " from nyx!"
 }}
 
 var message = greet("{project_name}")
 print(message)
 
 test "greeting test" {{
-    assert(greet("Umut") == "Hello, Umut from Nyx!", "Greeting must match")
+    assert(greet("User") == "Hello, User from nyx!", "Greeting must match")
 }}
 """
-    with open(os.path.join(project_name, "src", "main.he"), "w", encoding="utf-8") as f:
-        f.write(main_he_content)
+    with open(os.path.join(project_name, "src", "main.nyx"), "w", encoding="utf-8") as f:
+        f.write(main_nyx_content)
         
-    print(f"\033[92m[✓] Created Nyx project in ./{project_name}\033[0m")
-    print(f"    - Manifest:   ./{project_name}/he.toml")
-    print(f"    - Entrypoint: ./{project_name}/src/main.he")
-    print(f"\nTo get started:\n  cd {project_name}\n  he run\n")
+    print(f"\033[92m[OK] Created nyx project in ./{project_name}\033[0m")
+    print(f"     - Manifest:   ./{project_name}/nyx.toml")
+    print(f"     - Entrypoint: ./{project_name}/src/main.nyx")
+    print(f"\nTo get started:\n  cd {project_name}\n  nyx run\n")
 
 def cmd_clean():
     cleaned = 0
@@ -302,15 +309,15 @@ def cmd_clean():
         if os.path.exists(target):
             shutil.rmtree(target, ignore_errors=True)
             cleaned += 1
-    print(f"\033[92m[✓] Cleaned {cleaned} build artifact directory/directories.\033[0m")
+    print(f"\033[92m[OK] Cleaned {cleaned} build artifact directory/directories.\033[0m")
 
 def cmd_doctor():
     print_banner()
-    print("🔍 Environment & Toolchain Diagnostics:")
+    print("Environment & Toolchain Diagnostics:")
     
     # 1. Python runtime
     print(f"\n  [1] Core Python Runtime (hepy Reference):")
-    print(f"      • Status:    \033[92m[✓] OK\033[0m")
+    print(f"      • Status:    \033[92m[OK] Available\033[0m")
     print(f"      • Path:      {sys.executable}")
     print(f"      • Version:   Python {sys.version.split()[0]}")
 
@@ -318,7 +325,7 @@ def cmd_doctor():
     print(f"\n  [2] C++20 Compiler (hecpp Native Executables):")
     clang = CppToolchain.find_compiler()
     if clang:
-        print(f"      • Status:    \033[92m[✓] OK\033[0m")
+        print(f"      • Status:    \033[92m[OK] Available\033[0m")
         print(f"      • Compiler:  {clang}")
         print(f"      • Capability: Native .exe compilation supported")
     else:
@@ -332,7 +339,7 @@ def cmd_doctor():
     print(f"\n  [3] JavaScript Runtime (hejs Target):")
     node = shutil.which("node")
     if node:
-        print(f"      • Status:    \033[92m[✓] OK\033[0m")
+        print(f"      • Status:    \033[92m[OK] Available\033[0m")
         print(f"      • Node Path: {node}")
     else:
         print(f"      • Status:    \033[93m[!] NOT FOUND\033[0m")
@@ -344,7 +351,7 @@ def cmd_doctor():
     if not os.path.exists(rustc):
         rustc = shutil.which("rustc")
     if rustc:
-        print(f"      • Status:    \033[92m[✓] OK (Gate 6)\033[0m")
+        print(f"      • Status:    \033[92m[OK] Gate 6 Conformance\033[0m")
         print(f"      • Path:      {rustc}")
     else:
         print(f"      • Status:    \033[93m[!] NOT FOUND\033[0m")
@@ -372,7 +379,7 @@ def main():
         sys.exit(0)
 
     cmd = sys.argv[1].lower()
-    config = parse_he_toml()
+    config = parse_nyx_toml()
 
     if cmd in ("--help", "-h", "help"):
         print_help()
@@ -381,29 +388,29 @@ def main():
     elif cmd == "doctor":
         cmd_doctor()
     elif cmd == "new":
-        name = sys.argv[2] if len(sys.argv) > 2 else "holy_project"
+        name = sys.argv[2] if len(sys.argv) > 2 else "nyx_project"
         cmd_new(name)
     elif cmd == "init":
-        PackageManager.init(sys.argv[2] if len(sys.argv) > 2 else config.get("name", "holy_project"))
+        PackageManager.init(sys.argv[2] if len(sys.argv) > 2 else config.get("name", "nyx_project"))
     elif cmd == "check":
-        entry = get_entry_file(config.get("entry", "src/main.he"))
+        entry = get_entry_file(config.get("entry", "src/main.nyx"))
         cmd_check(entry)
     elif cmd == "build":
         target = get_target_from_args(config.get("target", "hecpp"))
-        entry = get_entry_file(config.get("entry", "src/main.he"))
+        entry = get_entry_file(config.get("entry", "src/main.nyx"))
         is_release = "--release" in sys.argv
         cmd_build(entry, target, is_release)
     elif cmd == "run":
         target = get_target_from_args(config.get("target", "hecpp"))
-        entry = get_entry_file(config.get("entry", "src/main.he"))
+        entry = get_entry_file(config.get("entry", "src/main.nyx"))
         cmd_run(entry, target)
     elif cmd == "test":
-        if len(sys.argv) > 2 and sys.argv[2].endswith(".he"):
+        if len(sys.argv) > 2 and (sys.argv[2].endswith(".nyx") or sys.argv[2].endswith(".he")):
             target_file = sys.argv[2]
             if not os.path.exists(target_file):
                 print(f"\033[91m[!] Error: Test file '{target_file}' not found.\033[0m")
                 sys.exit(1)
-            print(f"\033[96m[*] Running Nyx In-File Unit Tests in '{target_file}'...\033[0m")
+            print(f"\033[96m[*] Running nyx In-File Unit Tests in '{target_file}'...\033[0m")
             Compiler(target_file).compile(run_immediately=True)
         else:
             test_suite = os.path.join(os.path.dirname(__file__), "..", "tests", "run_all_tests.py")
@@ -413,35 +420,35 @@ def main():
     elif cmd == "clean":
         cmd_clean()
     elif cmd == "fmt":
-        if len(sys.argv) < 3: print("Usage: he fmt <file.he>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx fmt <file.nyx>"); sys.exit(1)
         Formatter.format_file(sys.argv[2])
     elif cmd == "lint":
-        if len(sys.argv) < 3: print("Usage: he lint <file.he>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx lint <file.nyx>"); sys.exit(1)
         Linter.lint_file(sys.argv[2])
     elif cmd == "lsp":
-        from src.toolchain.lsp_server import NyxuageServer
-        NyxuageServer().run()
+        from src.toolchain.lsp_server import LanguageServer
+        LanguageServer().run()
     elif cmd == "debug":
-        if len(sys.argv) < 3: print("Usage: he debug <file.he>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx debug <file.nyx>"); sys.exit(1)
         Debugger(sys.argv[2]).start()
     elif cmd == "profile":
-        if len(sys.argv) < 3: print("Usage: he profile <file.he>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx profile <file.nyx>"); sys.exit(1)
         Profiler.profile_file(sys.argv[2])
     elif cmd == "doc":
-        if len(sys.argv) < 3: print("Usage: he doc <file.he>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx doc <file.nyx>"); sys.exit(1)
         DocGenerator.generate_docs(sys.argv[2])
     elif cmd == "add":
-        if len(sys.argv) < 3: print("Usage: he add <package_name>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx add <package_name>"); sys.exit(1)
         PackageManager.add(sys.argv[2])
     elif cmd == "remove":
-        if len(sys.argv) < 3: print("Usage: he remove <package_name>"); sys.exit(1)
+        if len(sys.argv) < 3: print("Usage: nyx remove <package_name>"); sys.exit(1)
         PackageManager.remove(sys.argv[2])
     elif cmd == "install":
         PackageManager.install()
     elif cmd == "pkg":
         PackageManager.list_installed()
     else:
-        print(f"\033[91m[!] Unknown command: '{cmd}'. Run 'he help' for available commands.\033[0m")
+        print(f"\033[91m[!] Unknown command: '{cmd}'. Run 'nyx help' for available commands.\033[0m")
         sys.exit(1)
 
 if __name__ == "__main__":
