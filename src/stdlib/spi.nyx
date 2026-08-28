@@ -1,0 +1,21 @@
+// nyx Native Hardware Library: native/spi
+#target hecpp
+
+const SPI_MODE_0: int = 0
+const SPI_MODE_1: int = 1
+const SPI_MODE_2: int = 2
+const SPI_MODE_3: int = 3
+
+fn spi_open(bus: int, device: int) -> int {
+    print("[SPI] Open Bus", bus, "Device", device)
+    return 1
+}
+
+fn spi_transfer(handle: int, data: int) -> int {
+    print("[SPI] Transfer handle", handle, "Data", data)
+    return data
+}
+
+fn spi_close(handle: int) {
+    print("[SPI] Close handle", handle)
+}

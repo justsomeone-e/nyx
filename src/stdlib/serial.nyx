@@ -1,0 +1,25 @@
+// nyx Native Hardware Library: native/serial
+#target hecpp
+
+const SERIAL_BAUD_9600: int = 9600
+const SERIAL_BAUD_19200: int = 19200
+const SERIAL_BAUD_57600: int = 57600
+const SERIAL_BAUD_115200: int = 115200
+
+fn serial_open(port: string, baud: int) -> int {
+    print("[SERIAL] Open", port, "@", baud)
+    return 1
+}
+
+fn serial_write(handle: int, data: string) -> int {
+    print("[SERIAL] Write handle", handle, ":", data)
+    return 1
+}
+
+fn serial_read(handle: int, count: int) -> string {
+    return "OK"
+}
+
+fn serial_close(handle: int) {
+    print("[SERIAL] Close handle", handle)
+}

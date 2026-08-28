@@ -5,7 +5,7 @@ from .diagnostics import DiagnosticEmitter
 
 class Lexer:
     def __init__(self, source: str, filepath: str = "<memory>"):
-        self.source = source
+        self.source = source.lstrip('\ufeff')
         self.filepath = filepath
         self.pos = 0
         self.line = 1

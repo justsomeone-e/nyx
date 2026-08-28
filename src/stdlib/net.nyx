@@ -1,0 +1,11 @@
+#target hecpp
+
+#native include <cstdlib>
+
+fn http_get(url: string) -> string {
+    return ""
+}
+
+fn http_status() -> int {
+    return 0
+}

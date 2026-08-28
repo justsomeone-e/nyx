@@ -63,7 +63,7 @@ class ModuleLoader:
         self.collected_declarations = []
         
         if source is None:
-            with open(abs_root, "r", encoding="utf-8") as f:
+            with open(abs_root, "r", encoding="utf-8-sig") as f:
                 source = f.read()
 
         tokens = Lexer(source, root_filepath).tokenize()
@@ -110,7 +110,7 @@ class ModuleLoader:
             module_ast = self.loaded_modules[target_path]
         else:
             self.import_stack.append(target_path)
-            with open(target_path, "r", encoding="utf-8") as f:
+            with open(target_path, "r", encoding="utf-8-sig") as f:
                 mod_src = f.read()
                 
             tokens = Lexer(mod_src, target_path).tokenize()

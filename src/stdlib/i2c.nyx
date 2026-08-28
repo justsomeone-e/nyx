@@ -1,0 +1,21 @@
+// nyx Native Hardware Library: native/i2c
+#target hecpp
+
+fn i2c_open(bus: int, addr: int) -> int {
+    print("[I2C] Open Bus", bus, "Addr", addr)
+    return 1
+}
+
+fn i2c_write_byte(handle: int, reg: int, val: int) -> int {
+    print("[I2C] Write handle", handle, "Reg", reg, "Val", val)
+    return 1
+}
+
+fn i2c_read_byte(handle: int, reg: int) -> int {
+    print("[I2C] Read handle", handle, "Reg", reg)
+    return 85
+}
+
+fn i2c_close(handle: int) -> void {
+    print("[I2C] Close handle", handle)
+}

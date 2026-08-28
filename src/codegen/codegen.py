@@ -147,23 +147,32 @@ class UniversalCodeGen:
             return base
 
         # Extern C declarations (only emitted when needed, using standard C FFI signatures)
+        KNOWN_CRT_FUNCS = {
+            "getenv", "system", "exit", "_exit", "abort", "malloc", "calloc", "realloc", "free",
+            "abs", "labs", "llabs", "puts", "putchar", "getchar", "printf", "scanf", "sprintf",
+            "snprintf", "strlen", "wcslen", "sqrt", "pow", "sin", "cos", "tan", "memset", "memcpy",
+            "memmove", "strcpy", "strncpy", "strcmp", "strncmp", "strcat", "strncat", "fopen",
+            "fclose", "fread", "fwrite", "fseek", "ftell", "rewind", "clock", "time"
+        }
         if extern_c_funcs:
-            lines.append("// --- nyx Extern FFI Declarations ---")
-            lines.append("extern \"C\" {")
-            for ef in extern_c_funcs.values():
-                ret = c_ffi_type(ef.return_type)
-                if ef.name in ("strlen", "wcslen", "fread", "fwrite") and ret in ("int", "int64_t"):
-                    ret = "size_t"
-                params = []
-                for p in ef.params:
-                    p_t = c_ffi_type(p.type_annot)
-                    if p.name in ("size", "len", "length", "count") and p_t == "int":
-                        p_t = "size_t"
-                    params.append(f"{p_t} {p.name}")
-                if ef.is_varargs:
-                    params.append("...")
-                lines.append(f"    {ret} {ef.name}({', '.join(params)});")
-            lines.append("}\n")
+            custom_externs = [ef for ef in extern_c_funcs.values() if ef.name not in KNOWN_CRT_FUNCS]
+            if custom_externs:
+                lines.append("// --- nyx Extern FFI Declarations ---")
+                lines.append("extern \"C\" {")
+                for ef in custom_externs:
+                    ret = c_ffi_type(ef.return_type)
+                    if ef.name in ("strlen", "wcslen", "fread", "fwrite") and ret in ("int", "int64_t"):
+                        ret = "size_t"
+                    params = []
+                    for p in ef.params:
+                        p_t = c_ffi_type(p.type_annot)
+                        if p.name in ("size", "len", "length", "count") and p_t == "int":
+                            p_t = "size_t"
+                        params.append(f"{p_t} {p.name}")
+                    if ef.is_varargs:
+                        params.append("...")
+                    lines.append(f"    {ret} {ef.name}({', '.join(params)});")
+                lines.append("}\n")
 
         def emit_expr(node: ASTNode) -> str:
             if isinstance(node, NumberNode): return str(node.value)
@@ -327,10 +336,10 @@ class UniversalCodeGen:
             else: res.append(f"{sp}{emit_expr(node)};")
             return res
 
-        # Forward declarations for functions
+        # Forward declarations for functions with explicit return types
         fwd_decls = []
         for s in self.ast.statements:
-            if isinstance(s, FunctionDefNode):
+            if isinstance(s, FunctionDefNode) and s.return_type is not None:
                 gen_s = f"template<{', '.join('typename ' + g for g in s.generic_params)}>\n" if s.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in s.params])
                 ret_t = cpp_type(s.return_type)

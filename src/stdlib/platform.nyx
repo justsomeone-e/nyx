@@ -1,0 +1,27 @@
+#target hecpp
+
+#native include <cstdlib>
+
+fn os_name() -> string {
+    return "windows"
+}
+
+fn arch() -> string {
+    return "x86_64"
+}
+
+fn is_windows() -> bool {
+    return true
+}
+
+fn is_linux() -> bool {
+    return false
+}
+
+fn path_separator() -> string {
+    return "\\"
+}
+
+fn line_ending() -> string {
+    return "\r\n"
+}

@@ -6,6 +6,9 @@ import glob
 from typing import Optional, Tuple
 
 class CppToolchain:
+    _cached_compiler: Optional[str] = None
+    _cached_ar: Optional[str] = None
+
     @staticmethod
     def test_compiler_capabilities(compiler_path: str) -> bool:
         """Verifies that the compiler can actually compile and run on the current host architecture."""
@@ -53,6 +56,8 @@ class CppToolchain:
 
     @classmethod
     def find_compiler(cls) -> Optional[str]:
+        if cls._cached_compiler and os.path.exists(cls._cached_compiler):
+            return cls._cached_compiler
         candidates = []
         
         # 1. PATH (prefer x86_64 or native)
@@ -87,25 +92,110 @@ class CppToolchain:
         # Validate with active compilation and execution capability probe
         for cand in candidates:
             if cls.test_compiler_capabilities(cand):
+                cls._cached_compiler = cand
                 return cand
                 
         return None
 
     @classmethod
-    def compile_cpp(cls, cpp_filepath: str, out_exe: Optional[str] = None, link_libraries: Optional[list] = None) -> Tuple[bool, str]:
+    def find_ar(cls) -> Optional[str]:
+        if cls._cached_ar and os.path.exists(cls._cached_ar):
+            return cls._cached_ar
+        compiler = cls.find_compiler()
+        if compiler:
+            bin_dir = os.path.dirname(compiler)
+            for ar_name in ('llvm-ar.exe', 'ar.exe', 'x86_64-w64-mingw32-ar.exe', 'llvm-ar', 'ar'):
+                p = os.path.join(bin_dir, ar_name)
+                if os.path.exists(p):
+                    cls._cached_ar = p
+                    return p
+        for ar_name in ('llvm-ar', 'ar'):
+            p = shutil.which(ar_name)
+            if p:
+                cls._cached_ar = p
+                return p
+        return None
+
+    @classmethod
+    def compile_cpp(cls, cpp_filepath: str, out_exe: Optional[str] = None, link_libraries: Optional[list] = None, output_type: str = "exe", include_dirs: Optional[list] = None, lib_dirs: Optional[list] = None) -> Tuple[bool, str]:
         compiler = cls.find_compiler()
         if not compiler:
             return False, "No capable C++20 compiler for host architecture found."
 
-        if not out_exe:
-            out_exe = os.path.splitext(cpp_filepath)[0] + (".exe" if os.name == 'nt' else "")
-
         compiler_name = os.path.basename(compiler).lower()
         link_libs = link_libraries or []
+        inc_args = [f"-I{d}" for d in (include_dirs or [])]
+        libdir_args = [f"-L{d}" for d in (lib_dirs or [])]
 
+        # Determine target file extension if not provided
+        if not out_exe:
+            base = os.path.splitext(cpp_filepath)[0]
+            if output_type in ("lib", "static"):
+                out_exe = f"{base}.a"
+            elif output_type in ("shared", "dll"):
+                out_exe = f"{base}.dll" if os.name == 'nt' else f"{base}.so"
+            elif output_type in ("obj", "object"):
+                out_exe = f"{base}.o"
+            else:
+                out_exe = f"{base}.exe" if os.name == 'nt' else base
+
+        # Check inferred output_type from filename
+        if out_exe.endswith(".a") or out_exe.endswith(".lib"):
+            output_type = "lib"
+        elif out_exe.endswith(".dll") or out_exe.endswith(".so") or out_exe.endswith(".dylib"):
+            output_type = "shared"
+        elif out_exe.endswith(".o") or out_exe.endswith(".obj"):
+            output_type = "obj"
+
+        # 1. Static Library (.a / .lib)
+        if output_type == "lib":
+            temp_obj = os.path.splitext(cpp_filepath)[0] + ".temp.o"
+            cmd_obj = [compiler, "-std=c++20", "-O2", "-c", cpp_filepath, "-o", temp_obj] + inc_args
+            try:
+                res = subprocess.run(cmd_obj, capture_output=True, text=True)
+                if res.returncode != 0:
+                    return False, f"C++ Object Compilation Error:\n{res.stderr or res.stdout}"
+                ar = cls.find_ar()
+                if not ar:
+                    return False, "Archive utility (ar / llvm-ar) not found in toolchain."
+                cmd_ar = [ar, "rcs", out_exe, temp_obj]
+                res_ar = subprocess.run(cmd_ar, capture_output=True, text=True)
+                if os.path.exists(temp_obj):
+                    try: os.remove(temp_obj)
+                    except: pass
+                if res_ar.returncode == 0:
+                    return True, out_exe
+                return False, f"Static Archive Error:\n{res_ar.stderr or res_ar.stdout}"
+            except Exception as e:
+                return False, f"Failed to build static library: {e}"
+
+        # 2. Shared Library (.dll / .so)
+        elif output_type == "shared":
+            lib_args = [f"-l{l}" for l in link_libs]
+            cmd = [compiler, "-std=c++20", "-shared", "-O2", cpp_filepath, "-o", out_exe] + inc_args + libdir_args + lib_args
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
+                return False, f"Shared Library Error:\n{res.stderr or res.stdout}"
+            except Exception as e:
+                return False, f"Failed to build shared library: {e}"
+
+        # 3. Object File (.o)
+        elif output_type == "obj":
+            cmd = [compiler, "-std=c++20", "-c", "-O2", cpp_filepath, "-o", out_exe] + inc_args
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
+                return False, f"Object Compilation Error:\n{res.stderr or res.stdout}"
+            except Exception as e:
+                return False, f"Failed to compile object: {e}"
+
+        # 4. Standard Executable (.exe)
         if "cl" in compiler_name and "clang" not in compiler_name:
-            lib_args = [l if l.endswith(".lib") else f"{l}.lib" for l in link_libs]
-            cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"] + lib_args
+            lib_args = [l if (l.endswith(".lib") or os.path.exists(l)) else f"{l}.lib" for l in link_libs]
+            cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"] + inc_args + libdir_args + lib_args
             try:
                 res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode == 0:
@@ -114,15 +204,10 @@ class CppToolchain:
             except Exception as e:
                 return False, f"Failed to execute compiler '{compiler}': {e}"
         else:
-            lib_args = [f"-l{l}" for l in link_libs]
-            static_flag = ["-static"] if sys.platform != 'darwin' else []
-            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe] + lib_args
+            lib_args = [l if (l.endswith(".a") or l.endswith(".lib") or l.endswith(".o") or os.path.exists(l)) else f"-l{l}" for l in link_libs]
+            cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe] + inc_args + libdir_args + lib_args
             try:
                 res = subprocess.run(cmd, capture_output=True, text=True)
-                if res.returncode != 0:
-                    # Retry without -static
-                    cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe] + lib_args
-                    res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode == 0:
                     return True, out_exe
                 else:

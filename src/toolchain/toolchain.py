@@ -260,57 +260,76 @@ class DocGenerator:
 # =========================================================
 # 6. PACKAGE MANAGER (he pkg / he add / he remove / he.toml)
 # =========================================================
-from src.toolchain.manifest import Manifest
+# =========================================================
+# 6. PACKAGE MANAGER (nyx pkg / nyx add / nyx remove / nyx.toml)
+# =========================================================
+from src.toolchain.manifest import NyxManifest, NyxLock
 
 class PackageManager:
     @staticmethod
     def init(name: str = "my_project"):
-        m = Manifest(name=name)
-        m.save("he.toml")
-        m.write_lockfile("he.lock")
-        print("\033[92m[✓] Created he.toml manifest & he.lock successfully!\033[0m")
+        m = NyxManifest()
+        m.package["name"] = name
+        m.save("nyx.toml")
+        NyxLock.generate(m, "nyx.lock")
+        print("\033[92m[OK] Created nyx.toml manifest & nyx.lock successfully!\033[0m")
 
     @staticmethod
     def add(pkg_name: str, version: str = "1.0.0"):
+        manifest_file = "nyx.toml" if os.path.exists("nyx.toml") else "he.toml"
         print(f"\033[96m[*] Adding dependency:\033[0m {pkg_name} @ {version}...")
-        m = Manifest.load("he.toml")
+        m = NyxManifest(manifest_file)
         m.dependencies[pkg_name] = version
-        m.save("he.toml")
-        m.write_lockfile("he.lock")
-        print(f"\033[92m[✓] Added '{pkg_name}' v{version} to he.toml & locked in he.lock!\033[0m")
+        m.save("nyx.toml")
+        NyxLock.generate(m, "nyx.lock")
+        print(f"\033[92m[OK] Added '{pkg_name}' v{version} to nyx.toml & locked in nyx.lock!\033[0m")
 
     @staticmethod
     def remove(pkg_name: str):
+        manifest_file = "nyx.toml" if os.path.exists("nyx.toml") else "he.toml"
         print(f"\033[96m[*] Removing dependency:\033[0m {pkg_name}...")
-        m = Manifest.load("he.toml")
+        m = NyxManifest(manifest_file)
         if pkg_name in m.dependencies:
             del m.dependencies[pkg_name]
-            m.save("he.toml")
-            m.write_lockfile("he.lock")
-            print(f"\033[92m[✓] Removed '{pkg_name}' from he.toml and he.lock!\033[0m")
+            m.save("nyx.toml")
+            NyxLock.generate(m, "nyx.lock")
+            print(f"\033[92m[OK] Removed '{pkg_name}' from nyx.toml and nyx.lock!\033[0m")
         else:
-            print(f"\033[93m[!] Dependency '{pkg_name}' was not found in he.toml.\033[0m")
+            print(f"\033[93m[!] Dependency '{pkg_name}' was not found in nyx.toml.\033[0m")
 
     @staticmethod
     def install():
-        print("\033[96m[*] Resolving & locking dependencies from he.toml...\033[0m")
-        if not os.path.exists("he.toml"):
-            print("\033[91m[!] No he.toml found. Run 'he init'\033[0m")
+        manifest_file = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
+        if not manifest_file:
+            print("\033[91m[!] No nyx.toml found. Run 'nyx init'\033[0m")
             return
-        m = Manifest.load("he.toml")
-        m.write_lockfile("he.lock")
-        print(f"\033[92m[✓] Resolved & locked {len(m.dependencies)} dependencies into he.lock!\033[0m")
+        print("\033[96m[*] Resolving & locking dependencies from nyx.toml...\033[0m")
+        m = NyxManifest(manifest_file)
+        NyxLock.generate(m, "nyx.lock")
+        print(f"\033[92m[OK] Resolved & locked {len(m.dependencies)} dependencies into nyx.lock!\033[0m")
 
     @staticmethod
     def list_installed():
-        if os.path.exists("he.toml"):
-            m = Manifest.load("he.toml")
-            print(f"\033[96mProject:\033[0m {m.name} v{m.version} (Edition: {m.edition}, Target: {m.target})")
+        manifest_file = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
+        if manifest_file:
+            m = NyxManifest(manifest_file)
+            p_name = m.package.get("name", "nyx_app")
+            p_ver = m.package.get("version", "0.1.0")
+            p_ed = m.package.get("edition", "2026")
+            p_tgt = m.package.get("target", "hecpp")
+            print(f"\033[96mProject:\033[0m {p_name} v{p_ver} (Edition: {p_ed}, Target: {p_tgt})")
             print(f"\033[96mDependencies ({len(m.dependencies)}):\033[0m")
             for k, v in m.dependencies.items():
                 print(f"  • {k}: {v}")
+            if m.native.get("includes") or m.native.get("links"):
+                print(f"\033[96mNative Configuration:\033[0m")
+                print(f"  • Includes: {m.native.get('includes', [])}")
+                print(f"  • Links:    {m.native.get('links', [])}")
+            print(f"\033[96mBuild Configuration:\033[0m")
+            print(f"  • Opt Level:   {m.build.get('opt_level', 2)}")
+            print(f"  • Output Type: {m.build.get('output_type', 'exe')}")
         else:
-            print("[!] No he.toml found in current directory. Run 'he init'")
+            print("[!] No nyx.toml found in current directory. Run 'nyx init'")
 
 # =========================================================
 # 7. STANDALONE EXECUTABLE COMPILER (he compile --standalone)

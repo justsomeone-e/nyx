@@ -70,21 +70,33 @@ def parse_nyx_toml():
         "name": "nyx_app",
         "version": "0.1.0",
         "target": "hecpp",
-        "entry": "src/main.nyx"
+        "entry": "src/main.nyx",
+        "output_type": "exe"
     }
-    manifest = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
-    if manifest:
-        with open(manifest, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("name ="):
-                    config["name"] = line.split("=")[1].strip().strip('"').strip("'")
-                elif line.startswith("version ="):
-                    config["version"] = line.split("=")[1].strip().strip('"').strip("'")
-                elif line.startswith("default =") or line.startswith("target ="):
-                    config["target"] = line.split("=")[1].strip().strip('"').strip("'")
-                elif line.startswith("entry ="):
-                    config["entry"] = line.split("=")[1].strip().strip('"').strip("'")
+    manifest_path = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
+    if manifest_path:
+        try:
+            from src.toolchain.manifest import NyxManifest
+            mf = NyxManifest.load_from_file(manifest_path)
+            config["name"] = mf.package.name
+            config["version"] = mf.package.version
+            config["target"] = mf.package.target or mf.build.target
+            config["entry"] = mf.package.entry or mf.build.entry
+            config["output_type"] = mf.build.output_type
+        except Exception:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("name ="):
+                        config["name"] = line.split("=")[1].strip().strip('"').strip("'")
+                    elif line.startswith("version ="):
+                        config["version"] = line.split("=")[1].strip().strip('"').strip("'")
+                    elif line.startswith("default =") or line.startswith("target ="):
+                        config["target"] = line.split("=")[1].strip().strip('"').strip("'")
+                    elif line.startswith("entry ="):
+                        config["entry"] = line.split("=")[1].strip().strip('"').strip("'")
+                    elif line.startswith("output_type ="):
+                        config["output_type"] = line.split("=")[1].strip().strip('"').strip("'")
     return config
 
 def get_target_from_args(default_target="hecpp"):
@@ -108,6 +120,8 @@ def get_entry_file(default_entry="src/main.nyx"):
         return args[0]
     if os.path.exists(default_entry):
         return default_entry
+    if os.path.exists("src/lib.nyx"):
+        return "src/lib.nyx"
     if os.path.exists("src/main.he"):
         return "src/main.he"
     if os.path.exists("src/main.nyx"):
@@ -131,7 +145,7 @@ def cmd_check(entry_file):
     TypeChecker(ast, entry_file, code).check()
     print("\033[92m[OK] Check Passed: 0 syntax or semantic errors found.\033[0m")
 
-def cmd_build(entry_file, target, is_release=False):
+def cmd_build(entry_file, target, is_release=False, output_type="exe"):
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: Source file not found '{entry_file}'.\033[0m")
         sys.exit(1)
@@ -140,7 +154,7 @@ def cmd_build(entry_file, target, is_release=False):
     os.makedirs(build_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(entry_file))[0]
     
-    print(f"\033[96m[*] Building [{target}]:\033[0m {entry_file} -> {build_dir}")
+    print(f"\033[96m[*] Building [{target}] ({output_type}):\033[0m {entry_file} -> {build_dir}")
     with open(entry_file, "r", encoding="utf-8") as f:
         code = f.read()
 
@@ -154,15 +168,32 @@ def cmd_build(entry_file, target, is_release=False):
     if target == "hecpp":
         cpp_code = codegen.gen_cpp()
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
-        out_exe = os.path.join(build_dir, f"{base_name}.exe")
         with open(out_cpp, "w", encoding="utf-8") as f:
             f.write(cpp_code)
-        ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe, codegen.get_link_libraries())
-        if ok:
-            print(f"\033[92m[OK] Compiled Native Executable:\033[0m {out_exe}")
+
+        if output_type == "lib":
+            out_target = os.path.join(build_dir, f"lib{base_name}.a")
+            ok, msg = CppToolchain.compile_cpp(out_cpp, out_target, codegen.get_link_libraries(), output_type="lib")
+            if ok:
+                print(f"\033[92m[OK] Compiled Static Library:\033[0m {out_target}")
+            else:
+                print(f"\033[93m[!] Static library generation failed:\033[0m {msg}")
+        elif output_type == "shared":
+            ext = ".dll" if sys.platform == "win32" else ".so"
+            out_target = os.path.join(build_dir, f"{base_name}{ext}")
+            ok, msg = CppToolchain.compile_cpp(out_cpp, out_target, codegen.get_link_libraries(), output_type="shared")
+            if ok:
+                print(f"\033[92m[OK] Compiled Shared Library:\033[0m {out_target}")
+            else:
+                print(f"\033[93m[!] Shared library generation failed:\033[0m {msg}")
         else:
-            print(f"\033[93m[!] Transpiled C++ source generated at:\033[0m {out_cpp}")
-            print(f"    ({msg})")
+            out_exe = os.path.join(build_dir, f"{base_name}.exe")
+            ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe, codegen.get_link_libraries(), output_type="exe")
+            if ok:
+                print(f"\033[92m[OK] Compiled Native Executable:\033[0m {out_exe}")
+            else:
+                print(f"\033[93m[!] Transpiled C++ source generated at:\033[0m {out_cpp}")
+                print(f"    ({msg})")
             
     elif target == "hejs":
         js_code = codegen.gen_js()
@@ -250,12 +281,94 @@ def cmd_run(entry_file, target):
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-def cmd_new(project_name):
+def cmd_new(project_name, is_lib=False):
     if os.path.exists(project_name):
         print(f"\033[91m[!] Error: Directory '{project_name}' already exists.\033[0m")
         return
     os.makedirs(os.path.join(project_name, "src"), exist_ok=True)
     
+    if is_lib:
+        os.makedirs(os.path.join(project_name, "examples"), exist_ok=True)
+        manifest_content = f"""[package]
+name = "{project_name}"
+version = "0.1.0"
+edition = "2026"
+target = "hecpp"
+entry = "src/lib.nyx"
+
+[dependencies]
+# std = "2.0.0"
+
+[build]
+target = "hecpp"
+output_type = "lib"
+entry = "src/lib.nyx"
+opt_level = 2
+"""
+        with open(os.path.join(project_name, "nyx.toml"), "w", encoding="utf-8") as f:
+            f.write(manifest_content)
+
+        gitignore_content = """build/
+target/
+*.a
+*.lib
+*.dll
+*.so
+*.o
+*.lock
+.system_generated/
+"""
+        with open(os.path.join(project_name, ".gitignore"), "w", encoding="utf-8") as f:
+            f.write(gitignore_content)
+
+        lib_nyx_content = f"""// nyx native library: {project_name}
+#target hecpp
+
+fn add(a: int, b: int) -> int {{
+    return a + b
+}}
+
+test "library add test" {{
+    assert(add(10, 20) == 30, "add must sum correctly")
+}}
+"""
+        with open(os.path.join(project_name, "src", "lib.nyx"), "w", encoding="utf-8") as f:
+            f.write(lib_nyx_content)
+
+        example_nyx_content = f"""// Example usage of {project_name}
+#target hecpp
+import "../src/lib.nyx"
+
+var res = add(5, 7)
+print("Add result:", res)
+"""
+        with open(os.path.join(project_name, "examples", "basic.nyx"), "w", encoding="utf-8") as f:
+            f.write(example_nyx_content)
+
+        readme_content = f"""# {project_name}
+
+Native library for nyx.
+
+## Building
+```bash
+nyx build
+```
+
+## Testing
+```bash
+nyx test
+```
+"""
+        with open(os.path.join(project_name, "README.md"), "w", encoding="utf-8") as f:
+            f.write(readme_content)
+
+        print(f"\033[92m[OK] Created nyx library project in ./{project_name}\033[0m")
+        print(f"     - Manifest:   ./{project_name}/nyx.toml (output_type = 'lib')")
+        print(f"     - Entrypoint: ./{project_name}/src/lib.nyx")
+        print(f"     - Example:    ./{project_name}/examples/basic.nyx")
+        print(f"\nTo get started:\n  cd {project_name}\n  nyx build\n")
+        return
+
     manifest_content = f"""[package]
 name = "{project_name}"
 version = "0.1.0"
@@ -267,6 +380,8 @@ entry = "src/main.nyx"
 # std = "2.0.0"
 
 [build]
+target = "hecpp"
+output_type = "exe"
 opt_level = 2
 """
     with open(os.path.join(project_name, "nyx.toml"), "w", encoding="utf-8") as f:
@@ -388,8 +503,10 @@ def main():
     elif cmd == "doctor":
         cmd_doctor()
     elif cmd == "new":
-        name = sys.argv[2] if len(sys.argv) > 2 else "nyx_project"
-        cmd_new(name)
+        raw_args = [a for a in sys.argv[2:] if not a.startswith("--")]
+        name = raw_args[0] if raw_args else "nyx_project"
+        is_lib = "--lib" in sys.argv
+        cmd_new(name, is_lib=is_lib)
     elif cmd == "init":
         PackageManager.init(sys.argv[2] if len(sys.argv) > 2 else config.get("name", "nyx_project"))
     elif cmd == "check":
@@ -399,7 +516,8 @@ def main():
         target = get_target_from_args(config.get("target", "hecpp"))
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         is_release = "--release" in sys.argv
-        cmd_build(entry, target, is_release)
+        output_type = config.get("output_type", "exe")
+        cmd_build(entry, target, is_release, output_type=output_type)
     elif cmd == "run":
         target = get_target_from_args(config.get("target", "hecpp"))
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
@@ -412,6 +530,14 @@ def main():
                 sys.exit(1)
             print(f"\033[96m[*] Running nyx In-File Unit Tests in '{target_file}'...\033[0m")
             cmd_run(target_file, "hepy")
+            print("\033[92m[OK] Execution finished successfully.\033[0m")
+        elif os.path.exists("src/lib.nyx"):
+            print("\033[96m[*] Running nyx In-File Unit Tests in 'src/lib.nyx'...\033[0m")
+            cmd_run("src/lib.nyx", "hepy")
+            print("\033[92m[OK] Execution finished successfully.\033[0m")
+        elif os.path.exists("src/main.nyx"):
+            print("\033[96m[*] Running nyx In-File Unit Tests in 'src/main.nyx'...\033[0m")
+            cmd_run("src/main.nyx", "hepy")
             print("\033[92m[OK] Execution finished successfully.\033[0m")
         else:
             test_suite = os.path.join(os.path.dirname(__file__), "..", "tests", "run_all_tests.py")

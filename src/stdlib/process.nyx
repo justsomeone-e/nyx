@@ -1,0 +1,14 @@
+#target hecpp
+
+#native include <cstdlib>
+
+extern "C" fn system(cmd: string) -> int
+extern "C" fn exit(code: int) -> void
+
+fn exec_cmd(command: string) -> int {
+    return system(command)
+}
+
+fn exit_process(code: int) -> void {
+    exit(code)
+}
