@@ -1,6 +1,6 @@
-# 📝 HolyEasyLang — Master TODO List & Görev Takibi
+# 📝 Nyx — Master TODO List & Görev Takibi
 
-Bu dosya, **`HolyEasyLang`** dilinin sıfırdan zirveye adım adım inşa edilme planıdır.
+Bu dosya, **`Nyx`** dilinin sıfırdan zirveye adım adım inşa edilme planıdır.
 
 ---
 

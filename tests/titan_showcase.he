@@ -6,7 +6,7 @@ var name: string = "Umut"
 var speed: float = 3.14
 var active: bool = true
 
-print(" =  =  = HolyEasy Titan Feature Showcase =  =  = ")
+print(" =  =  = Nyx Titan Feature Showcase =  =  = ")
 print("User: ", name, "| Age: ", age, "| Active: ", active)
 
 // 1. Optional / Null Safety
@@ -22,7 +22,7 @@ match res {
 }
 
 // 3. File System & OS APIs
-fs.write("titan_temp.txt", "HolyEasy v4.0 Titan Engine Active")
+fs.write("titan_temp.txt", "Nyx v4.0 Titan Engine Active")
 print("fs.read(): ", fs.read("titan_temp.txt"))
 print("os.platform(): ", os.platform())
 

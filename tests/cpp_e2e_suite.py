@@ -84,12 +84,12 @@ print("Sum excluding 5:", sum)
     (
         "e2e_06_string_unicode_and_concat",
         """#target hecpp
-var title = "HolyEasy"
+var title = "Nyx"
 var lang = "Lang 🚀"
 var full = title + " " + lang
 print("Full:", full)
 """,
-        "Full: HolyEasy Lang 🚀"
+        "Full: Nyx Lang 🚀"
     ),
     (
         "e2e_07_result_pattern_matching",

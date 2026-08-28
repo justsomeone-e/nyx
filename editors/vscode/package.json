@@ -1,9 +1,9 @@
 {
-  "name": "holyeasylang",
-  "displayName": "HolyEasyLang Language Support",
-  "description": "Official language support and syntax highlighting for HolyEasyLang",
+  "name": "nyxlang",
+  "displayName": "Nyx Language Support",
+  "description": "Official language support and syntax highlighting for Nyx",
   "version": "4.0.0",
-  "publisher": "holyeasy",
+  "publisher": "nyx",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -13,17 +13,17 @@
   "contributes": {
     "languages": [
       {
-        "id": "holyeasy",
-        "aliases": ["HolyEasyLang", "holyeasy", "he"],
+        "id": "nyx",
+        "aliases": ["Nyx", "nyx", "he"],
         "extensions": [".he"],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "holyeasy",
-        "scopeName": "source.holyeasy",
-        "path": "./syntaxes/holyeasy.tmLanguage.json"
+        "language": "nyx",
+        "scopeName": "source.nyx",
+        "path": "./syntaxes/nyx.tmLanguage.json"
       }
     ]
   }

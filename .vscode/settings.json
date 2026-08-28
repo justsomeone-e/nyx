@@ -8,6 +8,6 @@
   "editor.suggestOnTriggerCharacters": true,
   "editor.acceptSuggestionOnEnter": "on",
   "files.associations": {
-    "*.he": "holyeasylang"
+    "*.he": "nyxlang"
   }
 }

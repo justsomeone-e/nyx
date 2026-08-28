@@ -1,4 +1,4 @@
-# HolyEasyLang — Native Interoperability & FFI Guide
+# Nyx — Native Interoperability & FFI Guide
 
 > [!IMPORTANT]
 > Native bindings (`#native`) allow direct integration with platform-specific C++, JavaScript, and Rust libraries. They are distinct from the standard cross-platform language library and are target-dependent.
@@ -9,7 +9,7 @@
 
 The `#native` block embeds platform-specific code directly into the transpiled output:
 
-```holyeasy
+```nyx
 #target hecpp
 
 #native cpp {
@@ -35,7 +35,7 @@ When targeting `hecpp`, native blocks have direct access to:
 
 ### 2.2 JavaScript / Node.js (`hejs` — Gate 8 / Stable)
 When targeting `hejs`, native blocks can access the Node.js or Browser runtime:
-```holyeasy
+```nyx
 #target hejs
 
 #native js {
@@ -48,7 +48,7 @@ When targeting `hejs`, native blocks can access the Node.js or Browser runtime:
 
 ### 2.3 Rust 2021 (`hers` — Gate 6 / Active Conformance)
 When targeting `hers`, native blocks integrate with `std` and external crates:
-```holyeasy
+```nyx
 #target hers
 
 #native rust {
@@ -63,9 +63,9 @@ When targeting `hers`, native blocks integrate with `std` and external crates:
 
 ## 3. Unsafe Memory Operations & Direct Pointer Access
 
-Low-level operations that bypass HolyEasyLang's memory safety guarantees must be enclosed in an `unsafe { ... }` block:
+Low-level operations that bypass Nyx's memory safety guarantees must be enclosed in an `unsafe { ... }` block:
 
-```holyeasy
+```nyx
 fn inspect_raw_memory(target: int) {
     unsafe {
         var p = addr(target)

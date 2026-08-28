@@ -1,4 +1,4 @@
-// HolyEasyLang Standard Library: std/fs
+// Nyx Standard Library: std/fs
 #target hecpp
 
 fn join_paths(p1: string, p2: string) -> string {

@@ -4,7 +4,7 @@
     "body": [
       "#target ${1|hecpp,hejs,hepy,heasm|} // Note: Only 1 #target allowed per file (Tek dosyada yalnizca 1 #target kullanilabilir)"
     ],
-    "description": "Set HolyEasyLang Compilation Target"
+    "description": "Set Nyx Compilation Target"
   },
   "Function": {
     "prefix": "fn",
@@ -13,7 +13,7 @@
       "\t${0:// body}",
       "\treturn ${3:result}"
     ],
-    "description": "Define a HolyEasyLang Function"
+    "description": "Define a Nyx Function"
   },
   "Use Module": {
     "prefix": "use",

@@ -1,6 +1,6 @@
-# 💻 HolyEasyLang CLI & Command Reference
+# 💻 Nyx CLI & Command Reference
 
-The HolyEasyLang toolchain binary (`he`) provides project scaffolding, validation, multi-target compilation, testing, formatting, and language services.
+The Nyx toolchain binary (`he`) provides project scaffolding, validation, multi-target compilation, testing, formatting, and language services.
 
 ---
 
@@ -11,7 +11,7 @@ he <command> [arguments] [options]
 ```
 
 ### 1. `he new <project_name>`
-Creates a standard HolyEasy project structure:
+Creates a standard Nyx project structure:
 ```text
 my_project/
 ├── he.toml
@@ -48,7 +48,7 @@ Diagnoses host system dependencies (Python, LLVM Clang, Node.js, Rust, and Git) 
 Launches the JSON-RPC 2.0 Language Server Protocol daemon for editor integrations (VS Code, Neovim, Emacs).
 
 ### 9. `he fmt <file.he>`
-Auto-formats and indents source code according to HolyEasyLang standards.
+Auto-formats and indents source code according to Nyx standards.
 
 ### 10. `he clean`
 Removes temporary build artifacts and directories (`build/`, `target/`, `__pycache__`).

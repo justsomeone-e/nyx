@@ -1,15 +1,15 @@
 {
-  "name": "holyeasylang-support",
-  "displayName": "HolyEasyLang Language Support & IntelliSense",
-  "description": "Syntax highlighting, snippets, and IntelliSense for HolyEasyLang (.he)",
+  "name": "nyxlang-support",
+  "displayName": "Nyx Language Support & IntelliSense",
+  "description": "Syntax highlighting, snippets, and IntelliSense for Nyx (.he)",
   "version": "1.0.0",
-  "publisher": "HolyEasy",
+  "publisher": "Nyx",
   "engines": {
     "vscode": "^1.75.0"
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:holyeasylang"
+    "onLanguage:nyxlang"
   ],
   "categories": [
     "Programming Languages",
@@ -18,22 +18,22 @@
   "contributes": {
     "languages": [
       {
-        "id": "holyeasylang",
-        "aliases": ["HolyEasyLang", "he", "heLang"],
+        "id": "nyxlang",
+        "aliases": ["Nyx", "he", "heLang"],
         "extensions": [".he"],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "holyeasylang",
+        "language": "nyxlang",
         "scopeName": "source.he",
         "path": "./syntaxes/he.tmLanguage.json"
       }
     ],
     "snippets": [
       {
-        "language": "holyeasylang",
+        "language": "nyxlang",
         "path": "./snippets/he.snippets.json"
       }
     ]

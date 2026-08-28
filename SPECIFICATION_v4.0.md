@@ -1,11 +1,11 @@
-# HolyEasyLang v4.0 — Formal Language & Compiler Specification
+# Nyx v4.0 — Formal Language & Compiler Specification
 
 ## 1. Architecture Overview
 
-HolyEasyLang is a statically analyzed, multi-target programming language designed with an emphasis on deterministic type inference, zero-cost abstractions, robust error diagnostics, and seamless native transpilation.
+Nyx is a statically analyzed, multi-target programming language designed with an emphasis on deterministic type inference, zero-cost abstractions, robust error diagnostics, and seamless native transpilation.
 
 ```text
-               HolyEasyLang Source (*.he)
+               Nyx Source (*.he)
                             │
                      [ 1. Lexer ] ─── Tokens
                             │

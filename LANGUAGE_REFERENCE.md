@@ -1,12 +1,12 @@
-# 📖 HolyEasyLang Language Reference & Syntax Specification
+# 📖 Nyx Language Reference & Syntax Specification
 
-HolyEasyLang is a statically-typed language engineered for multi-target execution with zero cognitive overhead.
+Nyx is a statically-typed language engineered for multi-target execution with zero cognitive overhead.
 
 ---
 
 ## 1. Variables and Constants
 
-```holyeasy
+```nyx
 var age: int = 24       // Mutable variable with explicit type
 var name = "Umut"       // Type inference (infers string)
 val pi: float = 3.1415  // Immutable constant
@@ -16,7 +16,7 @@ val pi: float = 3.1415  // Immutable constant
 
 ## 2. Functions & Return Types
 
-```holyeasy
+```nyx
 fn add(a: int, b: int) -> int {
     return a + b
 }
@@ -30,7 +30,7 @@ fn greet(name: string) {
 
 ## 3. Structs & Field Mutability
 
-```holyeasy
+```nyx
 struct Point {
     x: int,
     y: int
@@ -46,7 +46,7 @@ print("Coordinates:", p.x, p.y)
 ## 4. Control Flow
 
 ### If / Else Conditionals
-```holyeasy
+```nyx
 if score >= 90 {
     print("Grade: A")
 } else if score >= 80 {
@@ -57,7 +57,7 @@ if score >= 90 {
 ```
 
 ### Loops
-```holyeasy
+```nyx
 // Range loop
 for i in 1..10 {
     print(i)
@@ -74,7 +74,7 @@ while count > 0 {
 
 ## 5. Modules & Imports
 
-```holyeasy
+```nyx
 import "./helper"                       // Local relative file helper.he
 import "std/math"                       // Standard library math module
 import { abs_val, power } from "std/math" // Selective symbol imports
@@ -84,7 +84,7 @@ import { abs_val, power } from "std/math" // Selective symbol imports
 
 ## 6. Pattern Matching & Result Types
 
-```holyeasy
+```nyx
 var res: Result<int, string> = Ok(1337)
 
 match res {
@@ -98,7 +98,7 @@ match res {
 
 ## 7. In-File Unit Tests
 
-```holyeasy
+```nyx
 fn multiply(a: int, b: int) -> int {
     return a * b
 }

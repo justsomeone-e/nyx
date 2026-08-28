@@ -1,11 +1,11 @@
-# HolyEasyLang — Unified Architecture & Backend Quality Gates
+# Nyx — Unified Architecture & Backend Quality Gates
 
 ## 1. Unified Versioning Standard
 
-HolyEasyLang uses a **single, unified versioning model**. The language version applies to the entire compiler and standard ecosystem. Backends declare **Stability States**, not fragmented version numbers.
+Nyx uses a **single, unified versioning model**. The language version applies to the entire compiler and standard ecosystem. Backends declare **Stability States**, not fragmented version numbers.
 
 ```text
-HolyEasyLang Core v4.0 (Unified Language Specification)
+Nyx Core v4.0 (Unified Language Specification)
 ├── Backend API Contract v4.0
 │     ├── hepy  [ 📐 REFERENCE ] : Pure Python Canonical Semantic Engine (Gate 8)
 │     ├── hecpp [ 🔒 STABLE    ] : Native C++20 Clang/G++ Pipeline (Gate 8)

@@ -1,12 +1,12 @@
-# Getting Started with HolyEasyLang
+# Getting Started with Nyx
 
-Welcome to **HolyEasyLang**! This guide walks you from zero to building, testing, and packaging your first project.
+Welcome to **Nyx**! This guide walks you from zero to building, testing, and packaging your first project.
 
 ---
 
 ## 1. Installation & Environment Check
 
-Verify that HolyEasyLang is properly configured by running:
+Verify that Nyx is properly configured by running:
 
 ```bash
 he version
@@ -15,7 +15,7 @@ he version
 Output:
 ```text
 ===================================================================
-⚡ HolyEasyLang (he) Core v4.0.0-RELEASE — Enterprise Systems Toolchain
+⚡ Nyx (he) Core v4.0.0-RELEASE — Enterprise Systems Toolchain
 ===================================================================
 Detected Host Toolchains & Execution Engines:
   • C++20 Toolchain:      .../clang++.exe
@@ -52,7 +52,7 @@ my_first_app/
 
 Open `src/main.he` in your editor:
 
-```holyeasy
+```nyx
 #target hecpp
 
 struct User {

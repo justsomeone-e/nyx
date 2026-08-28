@@ -1,4 +1,4 @@
-// HolyEasyLang Standard Library: std/str
+// Nyx Standard Library: std/str
 #target hecpp
 
 fn is_empty_str(s: string) -> bool {
@@ -20,8 +20,8 @@ fn contains_substring(s: string, sub: string) -> bool {
 test "std/str comprehensive tests" {
     assert(is_empty_str("") == true, "empty string check")
     assert(is_empty_str("abc") == false, "non empty string check")
-    assert(concat_three("Holy", "Easy", "Lang") == "HolyEasyLang", "three way concat")
+    assert(concat_three("Holy", "Easy", "Lang") == "Nyx", "three way concat")
     assert(wrap_with("data", "[", "]") == "[data]", "wrap_with tags")
-    assert(contains_substring("HolyEasyLang", "Easy") == true, "contains_substring true")
-    assert(contains_substring("HolyEasyLang", "Rust") == false, "contains_substring false")
+    assert(contains_substring("Nyx", "Easy") == true, "contains_substring true")
+    assert(contains_substring("Nyx", "Rust") == false, "contains_substring false")
 }

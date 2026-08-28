@@ -1,4 +1,4 @@
-# ⚡ HolyEasyLang (heLang) Titan Specification Manual v4.0
+# ⚡ Nyx (heLang) Titan Specification Manual v4.0
 
 > **Tasarım Felsefesi:** *"Low-Level gücünü C++'tan, pratikliği Python'dan, web esnekliğini React'tan al; ama hiçbirinin karmaşasını yaşama."*
 
@@ -6,7 +6,7 @@
 
 ## 1. 🚀 Hızlı Başlangıç & CLI (`he`)
 
-HolyEasyLang artık tek bir komut satırı aracıyla (`he`) yönetilir:
+Nyx artık tek bir komut satırı aracıyla (`he`) yönetilir:
 
 ```bash
 # Programı çalıştır (Live Interactive Runner)
@@ -18,7 +18,7 @@ he build main.he
 # 10/10 Otomatik derleyici testlerini çalıştır
 he test
 
-# Yeni bir HolyEasyLang projesi başlat
+# Yeni bir Nyx projesi başlat
 he new my_radar_project
 ```
 
@@ -120,4 +120,4 @@ memdump(p, 16)
 | `#target heino` | **Arduino / ESP32** | Donanım yazılımı (Firmware), frekans üreteçleri |
 
 ---
-*HolyEasyLang Titan Engine v4.0 © 2026 - Tüm Hakları Saklıdır.*
+*Nyx Titan Engine v4.0 © 2026 - Tüm Hakları Saklıdır.*

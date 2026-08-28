@@ -35,7 +35,7 @@ def run_smoke_test():
         # Step 2: he new
         print("[2/5] Testing 'he new smoke_project' project scaffolding...")
         res = subprocess.run([sys.executable, cli_py, "new", "smoke_project"], cwd=temp_sandbox, capture_output=True, encoding='utf-8', errors='replace')
-        assert res.returncode == 0 and "Created HolyEasyLang project" in res.stdout
+        assert res.returncode == 0 and "Created Nyx project" in res.stdout
         
         proj_dir = os.path.join(temp_sandbox, "smoke_project")
         assert os.path.exists(os.path.join(proj_dir, "he.toml")), "he.toml must exist"
@@ -64,16 +64,16 @@ def run_smoke_test():
         # Step 5: he run across backends
         print("[5/5] Testing 'he run' across hepy, hejs, and hecpp...")
         res_py = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hepy"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-        assert res_py.returncode == 0 and "Hello, smoke_project from HolyEasyLang!" in res_py.stdout
+        assert res_py.returncode == 0 and "Hello, smoke_project from Nyx!" in res_py.stdout
 
         res_js = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hejs"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-        assert res_js.returncode == 0 and "Hello, smoke_project from HolyEasyLang!" in res_js.stdout
+        assert res_js.returncode == 0 and "Hello, smoke_project from Nyx!" in res_js.stdout
 
         # Verify C++ transpilation & compilation
         from src.codegen.cpp_toolchain import CppToolchain
         if CppToolchain.find_compiler():
             res_cpp = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hecpp"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-            assert res_cpp.returncode == 0 and "Hello, smoke_project from HolyEasyLang!" in res_cpp.stdout
+            assert res_cpp.returncode == 0 and "Hello, smoke_project from Nyx!" in res_cpp.stdout
         else:
             res_cpp = subprocess.run([sys.executable, cli_py, "build", main_he, "--target", "hecpp"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
             assert res_cpp.returncode == 0 and os.path.exists(os.path.join(proj_dir, "build"))

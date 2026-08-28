@@ -9,9 +9,9 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 def run_suite():
-    test_dir = r"C:\Users\USER\Desktop\HolyEasyLang\tests"
+    test_dir = r"C:\Users\USER\Desktop\Nyx\tests"
     os.makedirs(test_dir, exist_ok=True)
-    compiler_path = r"C:\Users\USER\Desktop\HolyEasyLang\he_compiler.py"
+    compiler_path = r"C:\Users\USER\Desktop\Nyx\he_compiler.py"
 
     tests = [
         ("01_arithmetic.he", """#target hecpp\nvar a = (10 + 5) * 2 - 4 / 2\nprint("Arithmetic Result:", a)"""),
@@ -22,7 +22,7 @@ def run_suite():
         ("06_structs.he", """#target hecpp\nstruct Target { name, freq, signal }\nvar t = Target("Altin", 5000, 95)\nprint("Target:", t.name, t.freq, t.signal)"""),
         ("07_pipeline.he", """#target hecpp\n5000 -> freq\nfn double_val(x) { return x * 2 }\nfreq |> double_val |> print"""),
         ("08_memory.he", """#target hecpp\nvar x = 1337\nvar a = addr(x)\nvar val = peek(a)\nprint("Memory Read:", val)"""),
-        ("09_strings.he", """#target hecpp\nvar email = "admin@holyeasy.org"\nprint("Has @:", contains(email, "@"))\nprint("Age Str:", "Age: " + to_string(25))"""),
+        ("09_strings.he", """#target hecpp\nvar email = "admin@nyx.org"\nprint("Has @:", contains(email, "@"))\nprint("Age Str:", "Age: " + to_string(25))"""),
         ("10_react.he", """#target hereact\nvar title = "Alan Tarama UI"\nvar hz = 5000""")
     ]
 

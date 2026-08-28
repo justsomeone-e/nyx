@@ -40,7 +40,7 @@ class Compiler:
             out_file = base_name + ".cpp"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(cpp_out)
-            print(f"[*] HolyEasyLang Compiling: {self.filepath} -> [Target: hecpp]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hecpp]")
             print(f"[+] Output generated: {out_file}")
 
         elif target == "hereact":
@@ -48,7 +48,7 @@ class Compiler:
             out_file = base_name + ".tsx"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(tsx_out)
-            print(f"[*] HolyEasyLang Compiling: {self.filepath} -> [Target: hereact]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hereact]")
             print(f"[+] Output generated: {out_file}")
 
         elif target == "hewasm":
@@ -56,7 +56,7 @@ class Compiler:
             out_file = base_name + ".wat"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(wat_out)
-            print(f"[*] HolyEasyLang Compiling: {self.filepath} -> [Target: hewasm]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hewasm]")
             print(f"[+] Output generated: {out_file}")
 
         elif target == "hepy":
@@ -64,7 +64,7 @@ class Compiler:
             out_file = base_name + ".py"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(py_out)
-            print(f"[*] HolyEasyLang Compiling: {self.filepath} -> [Target: hepy]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hepy]")
             print(f"[+] Output generated: {out_file}")
 
         elif target == "hejs":
@@ -72,7 +72,7 @@ class Compiler:
             out_file = base_name + ".js"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(js_out)
-            print(f"[*] HolyEasyLang Compiling: {self.filepath} -> [Target: hejs]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hejs]")
             print(f"[+] Output generated: {out_file}")
 
         if run_immediately:

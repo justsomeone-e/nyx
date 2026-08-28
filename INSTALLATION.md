@@ -1,12 +1,12 @@
-# 📦 HolyEasyLang Installation Guide
+# 📦 Nyx Installation Guide
 
-This guide walks you through installing and configuring HolyEasyLang across Windows, Linux, and macOS.
+This guide walks you through installing and configuring Nyx across Windows, Linux, and macOS.
 
 ---
 
 ## 1. Prerequisites
 
-HolyEasyLang core requires **Python 3.10+**. 
+Nyx core requires **Python 3.10+**. 
 To compile native executables (`hecpp`), a modern C++20 compiler (`clang++` or `g++`) is recommended.
 
 | Platform | Recommended Toolchain | Quick Install Command |
@@ -23,13 +23,13 @@ To compile native executables (`hecpp`), a modern C++20 compiler (`clang++` or `
 ### Windows (PowerShell)
 Run in an elevated or standard PowerShell terminal:
 ```powershell
-irm https://raw.githubusercontent.com/holyeasy/holyeasylang/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/nyx/nyxlang/main/install.ps1 | iex
 ```
-This clones/downloads the toolchain to `~/.holyeasy` and appends `~/.holyeasy/bin` to your User `PATH`.
+This clones/downloads the toolchain to `~/.nyx` and appends `~/.nyx/bin` to your User `PATH`.
 
 ### Linux / macOS (Bash)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/holyeasy/holyeasylang/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nyx/nyxlang/main/install.sh | bash
 ```
 
 ---
@@ -38,8 +38,8 @@ curl -fsSL https://raw.githubusercontent.com/holyeasy/holyeasylang/main/install.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/holyeasy/holyeasylang.git
-   cd holyeasylang
+   git clone https://github.com/nyx/nyxlang.git
+   cd nyxlang
    ```
 
 2. Verify host diagnostics:
@@ -53,9 +53,9 @@ curl -fsSL https://raw.githubusercontent.com/holyeasy/holyeasylang/main/install.
      ./bin/he doctor
      ```
 
-3. Add HolyEasyLang to your `PATH`:
-   * **Windows**: Add `C:\path\to\holyeasylang` to your environment variables.
-   * **Linux / macOS**: Add `export PATH="$PATH:/path/to/holyeasylang/bin"` in `~/.bashrc` or `~/.zshrc`.
+3. Add Nyx to your `PATH`:
+   * **Windows**: Add `C:\path\to\nyxlang` to your environment variables.
+   * **Linux / macOS**: Add `export PATH="$PATH:/path/to/nyxlang/bin"` in `~/.bashrc` or `~/.zshrc`.
 
 ---
 

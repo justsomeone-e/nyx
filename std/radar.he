@@ -1,5 +1,5 @@
 // ==========================================
-// 📡 HolyEasyLang Standard Library: Radar & DSP
+// 📡 Nyx Standard Library: Radar & DSP
 // ==========================================
 
 fn calc_resonance(base_freq, mineral_factor):

@@ -1,11 +1,11 @@
 <div align="center">
 
-  <a href="https://github.com/justsomeone-e/HolyEasyLang">
+  <a href="https://github.com/justsomeone-e/Nyx">
     <img src="assets/logo.svg" width="136" height="136" alt="Nyx Logo" style="filter: drop-shadow(0 12px 24px rgba(0,240,255,0.2));"/>
   </a>
   <br/><br/>
 
-  <a href="https://github.com/justsomeone-e/HolyEasyLang">
+  <a href="https://github.com/justsomeone-e/Nyx">
     <img src="https://capsule-render.vercel.app/api?type=rect&color=080B10&stroke=1E2734&strokeWidth=2&height=180&section=header&text=NYX%20SYSTEMS%20COMPILER&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=42&desc=Statically%20Typed%20%7C%20Zero-Cost%20Multi-Backend%20Architecture&descFontSize=16&descAlignY=66" width="100%" alt="Nyx Architecture Banner"/>
   </a>
 
@@ -16,8 +16,8 @@
   </p>
 
   <p align="center">
-    <a href="https://github.com/justsomeone-e/HolyEasyLang/releases"><img src="https://img.shields.io/badge/RELEASE-v2.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/HolyEasyLang/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
+    <a href="https://github.com/justsomeone-e/Nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v2.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/Nyx/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
@@ -102,11 +102,11 @@
   </tr>
   <tr>
     <td><b>Windows (PowerShell)</b></td>
-    <td><code>irm https://raw.githubusercontent.com/justsomeone-e/HolyEasyLang/main/install.ps1 | iex</code></td>
+    <td><code>irm https://raw.githubusercontent.com/justsomeone-e/Nyx/main/install.ps1 | iex</code></td>
   </tr>
   <tr>
     <td><b>Linux / macOS (POSIX)</b></td>
-    <td><code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/HolyEasyLang/main/install.sh | bash</code></td>
+    <td><code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/Nyx/main/install.sh | bash</code></td>
   </tr>
 </table>
 
@@ -136,7 +136,7 @@ nyx build --target hers   # Rust 2021 object emit
 
 ### § 4.0 LANGUAGE SPECIFICATION
 
-```holyeasy
+```nyx
 #target hecpp
 import "std/math"
 import "std/io"

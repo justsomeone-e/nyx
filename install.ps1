@@ -1,4 +1,4 @@
-# HolyEasyLang Official Windows Installer
+# Nyx Official Windows Installer
 $ErrorActionPreference = "Stop"
 
 Write-Host "===================================================================" -ForegroundColor Cyan

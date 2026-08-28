@@ -1,8 +1,8 @@
-# HolyEasyLang — CLI & Enterprise Toolchain Manual
+# Nyx — CLI & Enterprise Toolchain Manual
 
 ## 1. Toolchain Overview
 
-HolyEasyLang provides a unified CLI driver (`he` / `he.bat`) covering the full developer lifecycle: project scaffolding, type-checking, native compilation, direct execution, in-file testing, formatting, and package management.
+Nyx provides a unified CLI driver (`he` / `he.bat`) covering the full developer lifecycle: project scaffolding, type-checking, native compilation, direct execution, in-file testing, formatting, and package management.
 
 ```text
                                  he CLI
@@ -16,7 +16,7 @@ HolyEasyLang provides a unified CLI driver (`he` / `he.bat`) covering the full d
 
 ## 2. Project Conventions & Manifest (`he.toml`)
 
-Every HolyEasyLang project contains a `he.toml` manifest file at its root:
+Every Nyx project contains a `he.toml` manifest file at its root:
 
 ```toml
 [package]

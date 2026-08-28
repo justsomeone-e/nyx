@@ -81,12 +81,12 @@ print("Sum excluding 5:", sum)
     (
         "js_06_string_unicode_and_concat",
         """#target hejs
-var title = "HolyEasy"
+var title = "Nyx"
 var lang = "Lang 🚀"
 var full = title + " " + lang
 print("Full:", full)
 """,
-        "Full: HolyEasy Lang 🚀"
+        "Full: Nyx Lang 🚀"
     ),
     (
         "js_07_result_pattern_matching",

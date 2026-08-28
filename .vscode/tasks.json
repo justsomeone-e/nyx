@@ -2,7 +2,7 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "HolyEasyLang: Derle ve Çalıştır",
+      "label": "Nyx: Derle ve Çalıştır",
       "type": "shell",
       "command": "python he_compiler.py ${file}",
       "group": {

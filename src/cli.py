@@ -278,20 +278,20 @@ target/
     main_he_content = f"""#target hecpp
 
 fn greet(name: string) -> string {{
-    return "Hello, " + name + " from HolyEasyLang!"
+    return "Hello, " + name + " from Nyx!"
 }}
 
 var message = greet("{project_name}")
 print(message)
 
 test "greeting test" {{
-    assert(greet("Umut") == "Hello, Umut from HolyEasyLang!", "Greeting must match")
+    assert(greet("Umut") == "Hello, Umut from Nyx!", "Greeting must match")
 }}
 """
     with open(os.path.join(project_name, "src", "main.he"), "w", encoding="utf-8") as f:
         f.write(main_he_content)
         
-    print(f"\033[92m[✓] Created HolyEasyLang project in ./{project_name}\033[0m")
+    print(f"\033[92m[✓] Created Nyx project in ./{project_name}\033[0m")
     print(f"    - Manifest:   ./{project_name}/he.toml")
     print(f"    - Entrypoint: ./{project_name}/src/main.he")
     print(f"\nTo get started:\n  cd {project_name}\n  he run\n")
@@ -403,7 +403,7 @@ def main():
             if not os.path.exists(target_file):
                 print(f"\033[91m[!] Error: Test file '{target_file}' not found.\033[0m")
                 sys.exit(1)
-            print(f"\033[96m[*] Running HolyEasyLang In-File Unit Tests in '{target_file}'...\033[0m")
+            print(f"\033[96m[*] Running Nyx In-File Unit Tests in '{target_file}'...\033[0m")
             Compiler(target_file).compile(run_immediately=True)
         else:
             test_suite = os.path.join(os.path.dirname(__file__), "..", "tests", "run_all_tests.py")
@@ -419,8 +419,8 @@ def main():
         if len(sys.argv) < 3: print("Usage: he lint <file.he>"); sys.exit(1)
         Linter.lint_file(sys.argv[2])
     elif cmd == "lsp":
-        from src.toolchain.lsp_server import HolyEasyLanguageServer
-        HolyEasyLanguageServer().run()
+        from src.toolchain.lsp_server import NyxuageServer
+        NyxuageServer().run()
     elif cmd == "debug":
         if len(sys.argv) < 3: print("Usage: he debug <file.he>"); sys.exit(1)
         Debugger(sys.argv[2]).start()

@@ -1,4 +1,4 @@
-// HolyEasyLang Standard Library: std/math
+// Nyx Standard Library: std/math
 #target hecpp
 
 fn abs_val(x: int) -> int {

@@ -11,14 +11,14 @@ if sys.stdout.encoding != 'utf-8':
     except:
         pass
 
-from src.toolchain.lsp_server import HolyEasyLanguageServer
+from src.toolchain.lsp_server import NyxuageServer
 
 def run_lsp_suite():
     print("=" * 70)
     print("⚡ HOLYEASYLANG LSP v2 IDE SERVICE HARNESS")
     print("=" * 70)
 
-    server = HolyEasyLanguageServer()
+    server = NyxuageServer()
     test_uri = "file:///C:/test_project/main.he"
     test_code = """import "std/math"
 

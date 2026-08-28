@@ -1,6 +1,6 @@
-# 📋 HolyEasyLang (heLang) — Master Kanban & Geliştirme Yol Haritası
+# 📋 Nyx (heLang) — Master Kanban & Geliştirme Yol Haritası
 
-Bu Kanban panosu, **`HolyEasyLang`** dilini adım adım, sağlam temeller üzerine kurarak profesyonel bir derleyiciye dönüştürmek için hazırlanmıştır.
+Bu Kanban panosu, **`Nyx`** dilini adım adım, sağlam temeller üzerine kurarak profesyonel bir derleyiciye dönüştürmek için hazırlanmıştır.
 
 ---
 

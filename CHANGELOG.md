@@ -1,6 +1,6 @@
-# 📝 HolyEasyLang Changelog
+# 📝 Nyx Changelog
 
-All notable changes to the HolyEasyLang compiler, toolchain, and standard library are documented in this file.
+All notable changes to the Nyx compiler, toolchain, and standard library are documented in this file.
 
 ---
 

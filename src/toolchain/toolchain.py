@@ -123,7 +123,7 @@ class Debugger:
         with open(filepath, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
-        print(f"\033[96m⚡ HolyEasyLang Interactive Debugger v4.0\033[0m")
+        print(f"\033[96m⚡ Nyx Interactive Debugger v4.0\033[0m")
         print(f"Debugging: {filepath} ({len(lines)} lines)")
         print("Commands: (n)ext, (p)rint <var>, (m)emory <addr>, (b)reak <line>, (c)ontinue, (q)uit\n")
 
@@ -159,7 +159,7 @@ class Debugger:
                 vname = cmd[1]
                 print(f"  {vname} = {env.get(vname, '<undefined>')}")
             elif action in ("m", "memory"):
-                print("  0x00007FFD2B4A1028: 48 6F 6C 79 45 61 73 79 | HolyEasy")
+                print("  0x00007FFD2B4A1028: 48 6F 6C 79 45 61 73 79 | Nyx")
             elif action in ("c", "continue"):
                 pc += 1
                 while pc <= len(lines) and pc not in breakpoints:
@@ -173,7 +173,7 @@ class Debugger:
 class Profiler:
     @staticmethod
     def profile_file(filepath: str):
-        print(f"\033[96m⚡ HolyEasyLang Runtime Profiler v4.0\033[0m")
+        print(f"\033[96m⚡ Nyx Runtime Profiler v4.0\033[0m")
         print(f"Profiling: {filepath}\n")
         
         t0 = time.perf_counter()
@@ -225,7 +225,7 @@ class DocGenerator:
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>HolyEasyLang Documentation - {os.path.basename(filepath)}</title>
+    <title>Nyx Documentation - {os.path.basename(filepath)}</title>
     <style>
         body {{ background: #03070D; color: #F1F5F9; font-family: -apple-system, monospace; padding: 40px; }}
         h1 {{ color: #00F0FF; border-bottom: 1px solid #1B2D44; padding-bottom: 12px; }}
@@ -235,7 +235,7 @@ class DocGenerator:
     </style>
 </head>
 <body>
-    <h1>⚡ HolyEasyLang Otomatik Dokümantasyon</h1>
+    <h1>⚡ Nyx Otomatik Dokümantasyon</h1>
     <p>Dosya: <code>{os.path.basename(filepath)}</code></p>
     <div style="margin-top: 30px;">
 """

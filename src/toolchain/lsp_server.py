@@ -30,7 +30,7 @@ BUILTINS = [
 ]
 TYPES = ["int", "float", "string", "bool", "Array", "Result", "Option", "void"]
 
-class HolyEasyLanguageServer:
+class NyxuageServer:
     def __init__(self):
         self.documents: Dict[str, str] = {}
         self.parsed_asts: Dict[str, ProgramNode] = {}
@@ -97,7 +97,7 @@ class HolyEasyLanguageServer:
                 },
                 "severity": 1,
                 "code": de.code,
-                "source": "holyeasy",
+                "source": "nyx",
                 "message": f"[{de.code}] {de.title}"
             })
         except Exception as e:
@@ -111,7 +111,7 @@ class HolyEasyLanguageServer:
                     "end": {"line": line, "character": col + 8}
                 },
                 "severity": 1,
-                "source": "holyeasy",
+                "source": "nyx",
                 "message": err_str
             })
         finally:
@@ -150,7 +150,7 @@ class HolyEasyLanguageServer:
                 return {
                     "contents": {
                         "kind": "markdown",
-                        "value": f"```holyeasy\n{b['detail']}\n```\n\n{b['doc']}"
+                        "value": f"```nyx\n{b['detail']}\n```\n\n{b['doc']}"
                     }
                 }
 
@@ -159,7 +159,7 @@ class HolyEasyLanguageServer:
             return {
                 "contents": {
                     "kind": "markdown",
-                    "value": f"```holyeasy\ntype {word}\n```\n\nHolyEasyLang primitive/built-in type."
+                    "value": f"```nyx\ntype {word}\n```\n\nNyx primitive/built-in type."
                 }
             }
 
@@ -173,7 +173,7 @@ class HolyEasyLanguageServer:
                     return {
                         "contents": {
                             "kind": "markdown",
-                            "value": f"```holyeasy\nfn {s.name}({params_s}){ret_s}\n```"
+                            "value": f"```nyx\nfn {s.name}({params_s}){ret_s}\n```"
                         }
                     }
                 elif isinstance(s, StructDefNode) and s.name == word:
@@ -181,7 +181,7 @@ class HolyEasyLanguageServer:
                     return {
                         "contents": {
                             "kind": "markdown",
-                            "value": f"```holyeasy\nstruct {s.name} {{ {fields_s} }}\n```"
+                            "value": f"```nyx\nstruct {s.name} {{ {fields_s} }}\n```"
                         }
                     }
 
@@ -334,4 +334,4 @@ class HolyEasyLanguageServer:
                 sys.exit(0)
 
 if __name__ == "__main__":
-    HolyEasyLanguageServer().run()
+    NyxuageServer().run()

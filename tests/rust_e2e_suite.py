@@ -65,11 +65,11 @@ print("Target:", t.name, t.freq, t.signal)
     (
         "rs_05_string_unicode_and_concat",
         """#target hers
-var title = "HolyEasy"
+var title = "Nyx"
 var lang = "Lang 🚀"
 print("Full:", title, lang)
 """,
-        "Full: HolyEasy Lang 🚀"
+        "Full: Nyx Lang 🚀"
     ),
     (
         "rs_06_result_pattern_matching",

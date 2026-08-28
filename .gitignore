@@ -1,5 +1,5 @@
 # ==============================
-# HolyEasyLang
+# Nyx
 # ==============================
 
 # Build outputs
@@ -19,7 +19,7 @@ dist/
 *.pdb
 *.ilk
 
-# HolyEasyLang generated/cache files
+# Nyx generated/cache files
 .holy/
 .hecache/
 *.hec

@@ -55,7 +55,7 @@ print("Target:", t.name, t.freq, t.score)
     ),
     (
         "diff_06_string_unicode_and_concat",
-        """var part1 = "HolyEasy"
+        """var part1 = "Nyx"
 var part2 = "Lang 🚀"
 print("Joined:", part1 + " " + part2)
 """
