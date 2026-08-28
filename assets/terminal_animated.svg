@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="100%" height="100%">
+  <defs>
+    <linearGradient id="termBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#090d13"/>
+      <stop offset="100%" stop-color="#040608"/>
+    </linearGradient>
+
+    <filter id="termGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="rgba(0, 240, 255, 0.15)"/>
+    </filter>
+  </defs>
+
+  <style>
+    .term-mono { font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace; font-size: 13.5px; }
+    
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+    .cursor { animation: blink 1s infinite; }
+
+    @keyframes line1Anim { 0% { opacity: 0; } 10% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes line2Anim { 0%, 20% { opacity: 0; } 30% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes line3Anim { 0%, 40% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes line4Anim { 0%, 60% { opacity: 0; } 70% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes line5Anim { 0%, 75% { opacity: 0; } 85% { opacity: 1; } 100% { opacity: 1; } }
+    @keyframes line6Anim { 0%, 88% { opacity: 0; } 95% { opacity: 1; } 100% { opacity: 1; } }
+
+    .l1 { animation: line1Anim 8s infinite; }
+    .l2 { animation: line2Anim 8s infinite; }
+    .l3 { animation: line3Anim 8s infinite; }
+    .l4 { animation: line4Anim 8s infinite; }
+    .l5 { animation: line5Anim 8s infinite; }
+    .l6 { animation: line6Anim 8s infinite; }
+  </style>
+
+  <!-- Terminal Window Container -->
+  <rect width="900" height="420" rx="12" fill="url(#termBg)" stroke="#1e293b" stroke-width="1.5" filter="url(#termGlow)"/>
+
+  <!-- Window Header Bar -->
+  <rect width="900" height="38" rx="12" fill="#0f172a"/>
+  <rect y="26" width="900" height="12" fill="#0f172a"/>
+  <line x1="0" y1="38" x2="900" y2="38" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- Window Control Buttons (Mac Style) -->
+  <circle cx="22" cy="19" r="6" fill="#ef4444"/>
+  <circle cx="42" cy="19" r="6" fill="#f59e0b"/>
+  <circle cx="62" cy="19" r="6" fill="#10b981"/>
+
+  <!-- Title Tab -->
+  <text x="450" y="24" text-anchor="middle" font-family="'Inter', sans-serif" font-size="12" font-weight="600" fill="#64748b">nyx-terminal — bash — 90x24</text>
+
+  <!-- Terminal Content -->
+  <g transform="translate(32, 75)" class="term-mono">
+    <!-- Command Prompt Line -->
+    <g class="l1">
+      <text x="0" y="0" fill="#00f0ff" font-weight="700">user@nyx-dev</text>
+      <text x="110" y="0" fill="#94a3b8">:</text>
+      <text x="120" y="0" fill="#a78bfa">~/projects/app</text>
+      <text x="250" y="0" fill="#94a3b8">$</text>
+      <text x="265" y="0" fill="#f8fafc">nyx run main.nyx --target heasm</text>
+    </g>
+
+    <!-- Compiler Step 1 -->
+    <g transform="translate(0, 32)" class="l2">
+      <text x="0" y="0" fill="#38bdf8">[*] Phase 4.0 Frontend:</text>
+      <text x="200" y="0" fill="#cbd5e1">Lexing (100% Parity) → AST Validation → TypeChecker</text>
+    </g>
+
+    <!-- Compiler Step 2 -->
+    <g transform="translate(0, 62)" class="l3">
+      <text x="0" y="0" fill="#818cf8">[*] Tree-Shaking Emitter:</text>
+      <text x="200" y="0" fill="#e2e8f0">Generating minimal Intel x86_64 assembly (346 bytes)</text>
+    </g>
+
+    <!-- Compiler Step 3 -->
+    <g transform="translate(0, 92)" class="l4">
+      <text x="0" y="0" fill="#00f0ff">[*] Generated Assembly:</text>
+      <text x="200" y="0" fill="#a5f3fc">build\heasm\main.s (Intel Syntax, Zero-Cost ABI)</text>
+    </g>
+
+    <!-- Compiler Step 4 -->
+    <g transform="translate(0, 122)" class="l5">
+      <text x="0" y="0" fill="#4ade80">[OK] Compiled Native Binary:</text>
+      <text x="230" y="0" fill="#86efac">build\heasm\main.exe (LLVM Optimized)</text>
+    </g>
+
+    <!-- Execution Output -->
+    <g transform="translate(0, 160)" class="l6">
+      <line x1="0" y1="0" x2="836" y2="0" stroke="#334155" stroke-dasharray="4"/>
+      <text x="0" y="28" fill="#facc15" font-weight="700">&gt;&gt; Execution Output:</text>
+      <text x="0" y="56" fill="#ffffff" font-weight="600">5! in Assembly = 120</text>
+      <text x="0" y="80" fill="#a7f3d0">All in-file unit tests PASSED (100% conformance)</text>
+      <line x1="0" y1="98" x2="836" y2="98" stroke="#334155" stroke-dasharray="4"/>
+      
+      <!-- New Prompt with Blinking Cursor -->
+      <g transform="translate(0, 125)">
+        <text x="0" y="0" fill="#00f0ff" font-weight="700">user@nyx-dev</text>
+        <text x="110" y="0" fill="#94a3b8">:</text>
+        <text x="120" y="0" fill="#a78bfa">~/projects/app</text>
+        <text x="250" y="0" fill="#94a3b8">$</text>
+        <rect x="265" y="-13" width="9" height="17" fill="#00f0ff" class="cursor"/>
+      </g>
+    </g>
+  </g>
+</svg>

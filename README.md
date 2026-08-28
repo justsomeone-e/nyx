@@ -1,18 +1,18 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/logo.svg" width="420" alt="nyx logotype"/>
+    <img src="assets/banner_animated.svg" width="100%" alt="nyx systems compiler banner"/>
   </a>
   <br/><br/>
 
   <p align="center">
-    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+Node.js+ES2022+%7C+Rust+2021+%7C+Python+3.;Deterministic+AST+Pipeline+with+Topological+Deduplication.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
-      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+Node.js+ES2022+%7C+Rust+2021+%7C+Python+3.;Deterministic+AST+Pipeline+with+Topological+Deduplication.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
+    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Deterministic+AST+Pipeline+with+Self-Hosting+Stage+1.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
+      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Deterministic+AST+Pipeline+with+Self-Hosting+Stage+1.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
     </a>
   </p>
 
   <p align="center">
-    <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v3.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v3.0.0--beta.3-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
     <a href="https://github.com/justsomeone-e/nyx/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
@@ -33,11 +33,17 @@
 
 ---
 
+<div align="center">
+  <img src="assets/terminal_animated.svg" width="92%" alt="nyx interactive live execution"/>
+</div>
+
+---
+
 ## `01` — Overview
 
-**Nyx** is a compiled, statically typed systems programming language and multi-target toolchain designed around a deterministic compiler architecture.
+**nyx** is a compiled, statically typed systems programming language and multi-target toolchain designed around a deterministic compiler architecture.
 
-A Nyx program is parsed, validated, type-checked, and converted into a canonical typed Abstract Syntax Tree. From that shared representation, Nyx can generate code for multiple execution environments without duplicating the language frontend.
+A nyx program is parsed, validated, type-checked, and converted into a canonical typed Abstract Syntax Tree. From that shared representation, nyx can generate code for multiple execution environments without duplicating the language frontend.
 
 ```text
                  ┌──────────────────────────────┐
