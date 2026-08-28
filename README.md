@@ -1,13 +1,9 @@
 <div align="center">
 
-  <a href="https://github.com/justsomeone-e/Nyx">
-    <img src="assets/logo.svg" width="136" height="136" alt="Nyx Logo" style="filter: drop-shadow(0 12px 24px rgba(0,240,255,0.2));"/>
+  <a href="https://github.com/justsomeone-e/nyx">
+    <img src="assets/logo.svg" width="420" alt="nyx logotype"/>
   </a>
   <br/><br/>
-
-  <a href="https://github.com/justsomeone-e/Nyx">
-    <img src="https://capsule-render.vercel.app/api?type=rect&color=080B10&stroke=1E2734&strokeWidth=2&height=180&section=header&text=nyx&fontSize=56&fontColor=ffffff&animation=fadeIn&fontAlignY=42&desc=Statically%20Typed%20%7C%20Zero-Cost%20Multi-Backend%20Architecture&descFontSize=16&descAlignY=66" width="100%" alt="nyx Architecture Banner"/>
-  </a>
 
   <p align="center">
     <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+Node.js+ES2022+%7C+Rust+2021+%7C+Python+3.;Deterministic+AST+Pipeline+with+Topological+Deduplication.;Diagnostics+v2+with+Sub-Character+Span+Precision.">

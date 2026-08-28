@@ -1,29 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <!-- Pure Obsidian / Jet Black Canvas -->
-  <rect width="512" height="512" rx="96" fill="#090A0C"/>
-  <rect width="508" height="508" x="2" y="2" rx="94" fill="none" stroke="#1F232B" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="100%" height="100%">
+  <defs>
+    <!-- Silver-White Metallic Gradient -->
+    <linearGradient id="silverGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="60%" stop-color="#E1E6EB"/>
+      <stop offset="100%" stop-color="#B8C2CC"/>
+    </linearGradient>
 
-  <!-- Iconic Pure Minimalist 'nyx' Monogram / Geometric Mark -->
-  <!-- Crisp, authentic, flat vector geometry with perfect proportions -->
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    
-    <!-- Outer Focus Geometric Orbit (Subtle Architectural Detail) -->
-    <circle cx="256" cy="256" r="160" stroke="#161A22" stroke-width="2"/>
+    <!-- Cyan Electric Bevel Gradient -->
+    <linearGradient id="cyanFacet" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0088FF"/>
+    </linearGradient>
 
-    <!-- 'n' Curve & Pillar Structure (Silver Metallic #E6EDF3) -->
-    <path d="M 160 320 L 160 216 C 160 178 190 156 226 156 C 262 156 286 182 286 216 L 286 320" 
-          stroke="#E6EDF3" stroke-width="28"/>
+    <!-- Dark Shadow Bevel -->
+    <linearGradient id="shadeFacet" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7B8896"/>
+      <stop offset="100%" stop-color="#4B5563"/>
+    </linearGradient>
+  </defs>
 
-    <!-- 'y' & 'x' Dynamic Diagonal Intersection (Electric Accent #00F0FF) -->
-    <!-- Descending sharp slash -->
-    <path d="M 216 196 L 352 356" 
-          stroke="#00F0FF" stroke-width="28"/>
+  <g transform="translate(60, 40)">
+    <!-- ==================== LETTER 'n' ==================== -->
+    <!-- Left Cyan Cut Accent -->
+    <path d="M 60 110 L 96 130 L 96 230 L 60 230 Z" fill="url(#cyanFacet)"/>
+    <!-- Left Pillar Base -->
+    <path d="M 60 70 L 96 70 L 96 130 L 60 110 Z" fill="url(#silverGrad)"/>
+    <!-- 'n' Arch Body -->
+    <path d="M 96 70 C 130 50 190 50 200 90 L 200 230 L 164 230 L 164 110 C 158 92 126 92 96 106 Z" fill="url(#silverGrad)"/>
+    <!-- 'n' Inner Shadow Bevel -->
+    <path d="M 164 110 L 200 90 L 200 230 L 164 230 Z" fill="url(#shadeFacet)" opacity="0.3"/>
 
-    <!-- Ascending crossing slash completing the 'x' vertex -->
-    <path d="M 352 216 L 276 304" 
-          stroke="#E6EDF3" stroke-width="28"/>
+    <!-- ==================== LETTER 'y' ==================== -->
+    <!-- Left Diagonal Arm -->
+    <path d="M 270 70 L 330 160 L 305 178 L 245 70 Z" fill="url(#silverGrad)"/>
+    <!-- Right Descending Blade -->
+    <path d="M 375 70 L 275 240 L 310 240 L 410 70 Z" fill="url(#silverGrad)"/>
+    <!-- 'y' Under-blade Cyan Accent -->
+    <path d="M 315 168 L 348 214 L 325 240 L 295 240 Z" fill="url(#cyanFacet)"/>
 
-    <!-- Micro Precision Core Anchor Point -->
-    <circle cx="256" cy="256" r="6" fill="#00F0FF"/>
+    <!-- ==================== LETTER 'x' ==================== -->
+    <!-- Primary Top-Left to Bottom-Right Stroke -->
+    <path d="M 460 70 L 515 150 L 460 230 L 495 230 L 535 170 L 575 230 L 610 230 L 555 150 L 610 70 L 575 70 L 535 130 L 495 70 Z" fill="url(#silverGrad)"/>
+    <!-- Top-Right Cyan Cut Facet -->
+    <path d="M 555 150 L 610 70 L 575 70 L 535 130 Z" fill="url(#cyanFacet)"/>
+    <!-- Bottom-Left Cyan Cut Facet -->
+    <path d="M 515 150 L 460 230 L 495 230 L 535 170 Z" fill="url(#cyanFacet)"/>
   </g>
 </svg>
