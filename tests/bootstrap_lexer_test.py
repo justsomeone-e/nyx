@@ -20,7 +20,7 @@ from src.codegen.cpp_toolchain import CppToolchain
 
 def run_bootstrap_lexer_test() -> bool:
     print("=" * 70)
-    print("⚡ NYX PHASE 4.0.1 - 4.0.3 BOOTSTRAP LEXER PARITY HARNESS")
+    print("⚡ NYX PHASE 4.0.1 - 4.0.3 EXHAUSTIVE BOOTSTRAP LEXER PARITY HARNESS")
     print("=" * 70)
 
     # Read base lexer.nyx
@@ -36,9 +36,13 @@ def run_bootstrap_lexer_test() -> bool:
 
     test_sources = [
         ("basic_math", 'var x: int = 100 + 20; print("Result:", x)'),
-        ("native_directives", '#target hecpp\n#native include <vector>\n#native link "user32.lib"\n#native use std::vector;\nextern "C" fn puts(s: string) -> int'),
-        ("struct_and_impl", 'struct Point { x: int, y: int }\nimpl Point { fn dist(self) -> int { return self.x + self.y } }'),
-        ("control_flow_and_operators", 'if a >= 10 && b != 20 || c == 30 { var s = val ?? "default"; for i in 0..10 { break } }')
+        ("block_and_doc_comments", '/* multiline\nblock comment */\n/// doc comment\n// line comment\nvar a = 10;'),
+        ("escaped_strings_and_quotes", 'var s1 = "escaped\\nstring"; var s2 = "quotes: \\"test\\"";'),
+        ("floats_and_hex_literals", 'var f = 123.456; var h = 0xFF; var z = 0.789;'),
+        ("ranges_and_operators", 'for i in 0..10 { if a >= 10 && b != 20 || c == 30 { var s = val ?? "default"; } }'),
+        ("pipeline_and_arrows", 'var res = x |> double |> add; fn cb(x: int) -> int; (a, b) => a + b; obj?.field;'),
+        ("native_directives_and_ffi", '#target hecpp\n#native include <vector>\n#native link "user32.lib"\n#native use std::vector;\n#native raw int x = 42;\nextern "C" fn puts(s: string) -> int'),
+        ("struct_and_impl", 'struct Point { x: int, y: int }\nimpl Point { fn dist(self) -> int { return self.x + self.y } }')
     ]
 
     all_passed = True
@@ -115,7 +119,7 @@ main()
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     print("=" * 70)
-    print(f"Bootstrap Lexer Parity Result: {'SUCCESS' if all_passed else 'FAILURE'}")
+    print(f"Exhaustive Bootstrap Lexer Parity Result: {'SUCCESS' if all_passed else 'FAILURE'}")
     print("=" * 70)
     return all_passed
 

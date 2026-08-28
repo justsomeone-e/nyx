@@ -14,17 +14,88 @@ struct ASTParam {
     type_name: string
 }
 
-struct ASTNodeData {
+struct ASTField {
+    name: string,
+    type_name: string
+}
+
+struct ASTNode {
     kind: string,
     name: string,
     value: string,
     op: string,
+    type_name: string,
+    is_const: bool,
+    is_async: bool,
     line: int,
     col: int
 }
 
-impl ASTNodeData {
+impl ASTNode {
     fn to_str(self) -> string {
         return self.kind + "('" + self.name + "', '" + self.value + "')@" + to_string(self.line) + ":" + to_string(self.col)
     }
+}
+
+// Concrete AST node structures matching nyx grammar
+struct ProgramAST {
+    target: string,
+    statements: Array<ASTNode>
+}
+
+struct VarDeclAST {
+    name: string,
+    type_annot: string,
+    is_const: bool,
+    line: int,
+    col: int
+}
+
+struct FunctionAST {
+    name: string,
+    params: Array<ASTParam>,
+    return_type: string,
+    is_async: bool,
+    line: int,
+    col: int
+}
+
+struct StructAST {
+    name: string,
+    fields: Array<ASTField>,
+    line: int,
+    col: int
+}
+
+struct ImplAST {
+    target_type: string,
+    trait_name: string,
+    line: int,
+    col: int
+}
+
+struct IfAST {
+    condition: string,
+    line: int,
+    col: int
+}
+
+struct WhileAST {
+    condition: string,
+    line: int,
+    col: int
+}
+
+struct ForAST {
+    var_name: string,
+    collection_or_range: string,
+    line: int,
+    col: int
+}
+
+struct NativeDirectiveAST {
+    kind: string, // include, link, use, raw
+    payload: string,
+    line: int,
+    col: int
 }

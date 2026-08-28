@@ -112,6 +112,24 @@ impl Lexer {
                 continue
             }
 
+            // Block comment /* ... */
+            if self.match_str("/*") {
+                self.pos = self.pos + 2
+                self.col = self.col + 2
+                while self.pos + 1 < length and not (self.peek_char() == "*" and self.peek_ahead(1) == "/") {
+                    if self.peek_char() == "\n" {
+                        self.line = self.line + 1
+                        self.col = 1
+                    } else {
+                        self.col = self.col + 1
+                    }
+                    self.pos = self.pos + 1
+                }
+                self.pos = self.pos + 2
+                self.col = self.col + 2
+                continue
+            }
+
             // Directives: #target and #native
             if ch == "#" and self.match_str("#target") {
                 var start_col = self.col
@@ -247,6 +265,7 @@ impl Lexer {
                         elif esc == "t" { str_val = str_val + "\t" }
                         elif esc == "r" { str_val = str_val + "\r" }
                         elif esc == "\\" { str_val = str_val + "\\" }
+                        elif esc == quote { str_val = str_val + quote }
                         else { str_val = str_val + esc }
                         self.pos = self.pos + 2
                         self.col = self.col + 2
@@ -267,10 +286,25 @@ impl Lexer {
                 continue
             }
 
-            // Numbers
-            if (ch >= "0" and ch <= "9") {
+            // Numbers (decimal, float, and hex 0x)
+            if (ch >= "0" and ch <= "9") or (ch == "." and self.pos + 1 < length and (self.peek_ahead(1) >= "0" and self.peek_ahead(1) <= "9")) {
                 var start_col = self.col
                 var start_pos = self.pos
+                if ch == "0" and self.pos + 1 < length and (self.peek_ahead(1) == "x" or self.peek_ahead(1) == "X") {
+                    self.pos = self.pos + 2
+                    self.col = self.col + 2
+                    while self.pos < length and ((self.peek_char() >= "0" and self.peek_char() <= "9") or (self.peek_char() >= "a" and self.peek_char() <= "f") or (self.peek_char() >= "A" and self.peek_char() <= "F")) {
+                        self.pos = self.pos + 1
+                        self.col = self.col + 1
+                    }
+                    var hex_val = ""
+                    for i in start_pos..self.pos-1 {
+                        hex_val = hex_val + self.source[i]
+                    }
+                    tokens.push(Token("NUMBER", hex_val, self.line, start_col))
+                    continue
+                }
+
                 while self.pos < length and ((self.peek_char() >= "0" and self.peek_char() <= "9") or self.peek_char() == ".") {
                     if self.peek_char() == "." and self.peek_ahead(1) == "." {
                         break
