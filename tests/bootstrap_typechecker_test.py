@@ -21,10 +21,9 @@ from src.codegen.cpp_toolchain import CppToolchain
 
 def run_bootstrap_typechecker_test() -> bool:
     print("=" * 70)
-    print("⚡ NYX PHASE 4.0.6 SEMANTIC TYPECHECKER PARITY HARNESS")
+    print("⚡ NYX PHASE 4.0.6 EXHAUSTIVE SEMANTIC TYPECHECKER HARNESS")
     print("=" * 70)
 
-    # 1. Read Lexer, Parser, and TypeChecker nyx files
     with open(os.path.join(_root_dir, "compiler", "parser.nyx"), "r", encoding="utf-8") as f:
         parser_content = f.read()
     parser_lines = [l for l in parser_content.split("\n") if not (l.startswith("#target") or l.startswith("#native"))]
@@ -64,7 +63,7 @@ def run_bootstrap_typechecker_test() -> bool:
     for name, src in valid_cases:
         print(f"[*] Validating: {name} ...", end=" ")
 
-        # A. Python TypeChecker
+        # Python TypeChecker
         py_tokens = PyLexer(src, f"{name}.nyx").tokenize()
         py_ast = PyParser(py_tokens, src, f"{name}.nyx").parse()
         py_tc = PyTypeChecker(py_ast, f"{name}.nyx", src)
@@ -74,7 +73,7 @@ def run_bootstrap_typechecker_test() -> bool:
         except:
             py_accepted = False
 
-        # B. Native Nyx TypeChecker
+        # Native Nyx TypeChecker
         escaped_src = src.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
         runner_code = f"""{combined_base}
 
@@ -84,7 +83,7 @@ fn main() {{
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], "", false, "")
+    var tc = TypeChecker([], [], [], "", false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")
@@ -117,7 +116,7 @@ main()
             shutil.rmtree(temp_dir, ignore_errors=True)
 
         if py_accepted and nyx_accepted:
-            print("PASS (Accepted by both Python & Native Nyx TypeCheckers)")
+            print("PASS (Accepted by both)")
         else:
             print(f"FAILED (Py={py_accepted}, Nyx={nyx_accepted})")
             all_passed = False
@@ -125,13 +124,17 @@ main()
     print("\n--- 2. Invalid Semantic Cases (Rejection Parity) ---")
     invalid_cases = [
         ("type_mismatch_var", "var x: int = \"string_val\";"),
-        ("return_type_mismatch", "fn get_num() -> int { return \"not_a_num\"; }")
+        ("return_type_mismatch", "fn get_num() -> int { return \"not_a_num\"; }"),
+        ("undefined_variable", "var a: int = 10; var b: int = undefined_var + 5;"),
+        ("wrong_function_arg_type", "fn square(x: int) -> int { return x * x; }\nsquare(\"invalid\");"),
+        ("wrong_argument_count", "fn mult(a: int, b: int) -> int { return a * b; }\nmult(10);"),
+        ("scope_leak", "fn compute() -> int { if true { var local_val: int = 42; } return local_val; }")
     ]
 
     for name, src in invalid_cases:
         print(f"[*] Testing Rejection: {name} ...", end=" ")
 
-        # A. Python TypeChecker Rejection
+        # Python TypeChecker Rejection
         py_rejected = False
         try:
             py_tokens = PyLexer(src, f"{name}.nyx").tokenize()
@@ -144,7 +147,7 @@ main()
         except:
             py_rejected = True
 
-        # B. Native Nyx TypeChecker Rejection
+        # Native Nyx TypeChecker Rejection
         escaped_src = src.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
         runner_code = f"""{combined_base}
 
@@ -154,7 +157,7 @@ fn main() {{
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], "", false, "")
+    var tc = TypeChecker([], [], [], "", false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")
@@ -187,7 +190,7 @@ main()
             shutil.rmtree(temp_dir, ignore_errors=True)
 
         if py_rejected and nyx_rejected:
-            print("PASS (Dual Semantic Rejection Parity - Both Python & Nyx Rejected)")
+            print("PASS (Dual Rejection - Both Python & Nyx TypeCheckers Rejected)")
         else:
             print(f"FAILED (Py={py_rejected}, Nyx={nyx_rejected})")
             all_passed = False

@@ -260,6 +260,14 @@ class TypeChecker:
             # Check argument types if function is known
             if node.callee in self.func_defs:
                 param_specs = self.func_defs[node.callee]['params']
+                if len(node.args) != len(param_specs):
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2007", f"Function '{node.callee}' expected {len(param_specs)} arguments, but got {len(node.args)}",
+                        expected=f"{len(param_specs)} arguments",
+                        found=f"{len(node.args)} arguments",
+                        help_msg=f"Provide exactly {len(param_specs)} arguments to '{node.callee}()'."
+                    )
                 for idx, arg in enumerate(node.args):
                     if idx < len(param_specs):
                         p_name, p_type = param_specs[idx]
@@ -325,6 +333,14 @@ class TypeChecker:
             return 'Array<any>'
         if isinstance(node, IdentifierNode):
             t = self.lookup(node.name)
+            if not t:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2002", f"Undefined variable '{node.name}'",
+                    expected="declared variable",
+                    found=f"'{node.name}'",
+                    help_msg=f"Variable '{node.name}' is referenced before declaration or outside its scope."
+                )
             return t if t else 'any'
         if isinstance(node, BinaryOpNode):
             if node.op in ('==', '!=', '>', '<', '>=', '<=', 'and', 'or', '&&', '||'):
