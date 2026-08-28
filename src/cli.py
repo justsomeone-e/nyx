@@ -26,21 +26,21 @@ VERSION = "2.0.0-beta.1"
 
 def print_banner():
     print("===================================================================")
-    print(f"⚡ HolyEasyLang (he) Core v{VERSION} (Beta 1) — Enterprise Systems Toolchain")
+    print(f"⚡ Nyx Core v{VERSION} (Beta 1) — Next-Gen Systems & Application Toolchain")
     print("===================================================================")
 
 def print_help():
     print_banner()
-    print("""Usage: he <command> [arguments] [options]
+    print("""Usage: nyx <command> [arguments] [options] (alias: he)
 
 Project & Development Commands:
-  he new <project_name>             Create a new HolyEasyLang project in a directory
-  he init [name]                    Initialize a he.toml project in current directory
-  he check [file.he]                Fast type-check and semantic validation
-  he build [file.he] [--target t]   Build executable or transpile project into build/
-  he run [file.he] [--target t]     Compile and run project / file immediately
-  he test [file.he | all]           Execute in-file unit tests or test framework
-  he clean                          Remove build artifacts and temporary files
+  nyx new <project_name>             Create a new Nyx project in a directory
+  nyx init [name]                    Initialize a nyx.toml / he.toml project
+  nyx check [file.nyx]               Fast type-check and semantic validation
+  nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
+  nyx run [file.nyx] [--target t]    Compile and run project / file immediately
+  nyx test [file.nyx | all]          Execute in-file unit tests or test framework
+  nyx clean                          Remove build artifacts and temporary files
 
 Toolchain & Quality:
   he fmt <file.he>                  Auto-format and beautify source code

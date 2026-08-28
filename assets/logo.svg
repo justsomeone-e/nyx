@@ -1,63 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Background Gradient: Deep Matte Obsidian -->
-    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F1318"/>
-      <stop offset="50%" stop-color="#07090C"/>
-      <stop offset="100%" stop-color="#020305"/>
+    <!-- Deep Cosmic Matte Background -->
+    <linearGradient id="nyxBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E1217"/>
+      <stop offset="50%" stop-color="#06080B"/>
+      <stop offset="100%" stop-color="#010204"/>
     </linearGradient>
 
-    <!-- Border Ring Gradient -->
-    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2A323D"/>
-      <stop offset="50%" stop-color="#14181F"/>
-      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.4"/>
+    <!-- Celestial Border Ring -->
+    <linearGradient id="nyxBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D3748"/>
+      <stop offset="50%" stop-color="#141923"/>
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.5"/>
     </linearGradient>
 
-    <!-- Lightning Core Gradient -->
-    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Electric Cyan-to-White Energy -->
+    <linearGradient id="nyxEnergy" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="40%" stop-color="#DDF8FA"/>
-      <stop offset="80%" stop-color="#00F0FF"/>
-      <stop offset="100%" stop-color="#0088FF"/>
+      <stop offset="35%" stop-color="#C5F9FF"/>
+      <stop offset="75%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0077FF"/>
     </linearGradient>
 
     <!-- Outer Glow Filter -->
-    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="12" result="blur" />
+    <filter id="nyxGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <!-- Subtle Drop Shadow -->
-    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.8"/>
+    <!-- Drop Shadow -->
+    <filter id="nyxShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#000000" flood-opacity="0.85"/>
     </filter>
   </defs>
 
-  <!-- Base Rounded Rectangle (Squircle) -->
-  <rect x="32" y="32" width="448" height="448" rx="112" ry="112" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="4" filter="url(#dropShadow)"/>
+  <!-- Squircle Base Container -->
+  <rect x="32" y="32" width="448" height="448" rx="116" ry="116" fill="url(#nyxBg)" stroke="url(#nyxBorder)" stroke-width="4" filter="url(#nyxShadow)"/>
 
-  <!-- Subtle Geometric Grid / Halo (Minimalist Circuit Detail) -->
-  <circle cx="256" cy="256" r="160" fill="none" stroke="#1A222D" stroke-width="1.5" stroke-dasharray="6 6"/>
-  <circle cx="256" cy="256" r="195" fill="none" stroke="#12171F" stroke-width="1"/>
+  <!-- Celestial Orbit Ring -->
+  <circle cx="256" cy="256" r="168" fill="none" stroke="#161E28" stroke-width="1.5" stroke-dasharray="8 8"/>
+  <circle cx="256" cy="256" r="202" fill="none" stroke="#10151D" stroke-width="1"/>
 
-  <!-- Outer Ambient Glow for Lightning -->
+  <!-- Ambient Energy Flare behind 'N' -->
   <path d="M280 96 L168 264 L244 264 L224 416 L344 248 L268 248 Z" 
-        fill="#00F0FF" opacity="0.15" filter="url(#cyanGlow)" />
+        fill="#00F0FF" opacity="0.18" filter="url(#nyxGlow)" />
 
-  <!-- Minimalist Monogram: Stylized 'H' Wings & Dynamic Electric Bolt -->
-  <!-- Left Pillar of 'H' -->
-  <path d="M156 160 L188 160 C192 160 196 164 196 168 L196 344 C196 348 192 352 188 352 L156 352 C152 352 148 348 148 344 L148 168 C148 164 152 160 156 160 Z" 
-        fill="#2A3441"/>
+  <!-- Stylized Monogram: 'N' with an Electric Diagonal Slash -->
+  <!-- Left Vertical Stem of 'N' -->
+  <path d="M148 148 L188 148 C192 148 196 152 196 156 L196 356 C196 360 192 364 188 364 L148 364 C144 364 140 360 140 356 L140 156 C140 152 144 148 148 148 Z" 
+        fill="#232C37"/>
 
-  <!-- Right Pillar of 'H' -->
-  <path d="M324 160 L356 160 C360 160 364 164 364 168 L364 344 C364 348 360 352 356 352 L324 352 C320 352 316 348 316 344 L316 168 C316 164 320 160 324 160 Z" 
-        fill="#2A3441"/>
+  <!-- Right Vertical Stem of 'N' -->
+  <path d="M324 148 L364 148 C368 148 372 152 372 156 L372 356 C372 360 368 364 364 364 L324 364 C320 364 316 360 316 356 L316 156 C316 152 320 148 324 148 Z" 
+        fill="#232C37"/>
 
-  <!-- Main Pure Vector Lightning Bolt (Sharp Minimalist Centerpiece) -->
-  <path d="M284 108 L176 268 C172 274 176 280 184 280 L248 280 L228 404 C226 414 238 418 244 410 L340 252 C344 246 340 240 332 240 L268 240 L296 116 C298 108 288 102 284 108 Z" 
-        fill="url(#boltGrad)"/>
+  <!-- Dynamic Electric Lightning Center Slash forming the 'N' & Bolt -->
+  <path d="M296 104 L172 272 C168 278 172 284 180 284 L248 284 L224 408 C222 418 234 422 240 414 L344 252 C348 246 344 240 336 240 L272 240 L308 112 C310 104 300 98 296 104 Z" 
+        fill="url(#nyxEnergy)"/>
 
-  <!-- Sleek Cyber Cut Highlights -->
-  <path d="M284 108 L220 204 L252 240 L296 116 Z" fill="#FFFFFF" opacity="0.3"/>
+  <!-- Subtle Specular Reflection Cut -->
+  <path d="M296 104 L228 200 L260 240 L308 112 Z" fill="#FFFFFF" opacity="0.35"/>
 </svg>

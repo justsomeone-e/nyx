@@ -1,12 +1,12 @@
 <div align="center">
 
   <a href="https://github.com/k4chox/HolyEasyLang">
-    <img src="assets/logo.svg" width="130" height="130" alt="HolyEasyLang Logo" style="filter: drop-shadow(0 10px 20px rgba(0,240,255,0.25));"/>
+    <img src="assets/logo.svg" width="130" height="130" alt="Nyx Logo" style="filter: drop-shadow(0 10px 20px rgba(0,240,255,0.25));"/>
   </a>
   <br/>
 
   <a href="https://github.com/k4chox/HolyEasyLang">
-    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=200&section=header&text=⚡%20HolyEasyLang&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Next-Gen%20Multi-Target%20Systems%20%26%20Application%20Language&descFontSize=19&descAlignY=62" width="100%" alt="HolyEasyLang Banner"/>
+    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=200&section=header&text=⚡%20Nyx%20(NyxLang)&fontSize=58&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Next-Gen%20Multi-Target%20Systems%20%26%20Application%20Language&descFontSize=19&descAlignY=62" width="100%" alt="Nyx Banner"/>
   </a>
 
   <p align="center">
@@ -35,15 +35,15 @@
 
 ---
 
-## ✨ Why HolyEasyLang?
+## ✨ Why Nyx?
 
-HolyEasyLang bridges the gap between **high-level expressiveness** (like Python & TypeScript) and **bare-metal systems performance** (like C++ & Rust). 
+**Nyx** (formerly *HolyEasyLang*) is a modern, high-performance systems and application language designed to bridge the gap between **high-level expressiveness** (like Python & TypeScript) and **bare-metal systems performance** (like C++ & Rust).
 
 <table>
   <tr>
     <td width="50%">
       <h3>🚀 Fast & Multi-Target</h3>
-      <p>Write once in <code>.he</code> and compile seamlessly to <b>C++20 Native Binaries</b>, <b>Node.js ES2022 Modules</b>, <b>Rust 2021 Source</b>, or <b>Python 3 Reference</b>.</p>
+      <p>Write once in <code>.nyx</code> (or <code>.he</code>) and compile seamlessly to <b>C++20 Native Binaries</b>, <b>Node.js ES2022 Modules</b>, <b>Rust 2021 Source</b>, or <b>Python 3 Reference</b>.</p>
     </td>
     <td width="50%">
       <h3>🔍 Rustc-Grade Diagnostics v2</h3>
@@ -57,7 +57,7 @@ HolyEasyLang bridges the gap between **high-level expressiveness** (like Python 
     </td>
     <td width="50%">
       <h3>🛠️ Integrated Toolchain & LSP v2</h3>
-      <p>Built-in formatter (<code>he fmt</code>), linter, unit test runner (<code>he test</code>), environment doctor (<code>he doctor</code>), and IDE Language Server Protocol daemon.</p>
+      <p>Built-in formatter (<code>nyx fmt</code>), linter, unit test runner (<code>nyx test</code>), environment doctor (<code>nyx doctor</code>), and IDE Language Server Protocol daemon.</p>
     </td>
   </tr>
 </table>
@@ -67,38 +67,38 @@ HolyEasyLang bridges the gap between **high-level expressiveness** (like Python 
 ## 🏛️ Compiler Architecture
 
 ```text
-                           HolyEasyLang Source (.he)
-                                      │
-                                ┌─────▼─────┐
-                                │   Lexer   │  (Unicode, Tokenizer)
-                                └─────┬─────┘
-                                      │
-                                ┌─────▼─────┐
-                                │   Parser  │  (Immutable Concrete AST)
-                                └─────┬─────┘
-                                      │
-                             ┌────────▼────────┐
-                             │  Module Loader  │  (Topological Dependency Graph,
-                             └────────┬────────┘   Diamond Deduplication, E1302 Collision)
-                                      │
-                             ┌────────▼────────┐
-                             │   TypeChecker   │  (Scope Tracking, Type Inference,
-                             └────────┬────────┘   Option/Result Semantics)
-                                      │
-                             ┌────────▼────────┐
-                             │    Typed AST    │
-                             └────────┬────────┘
-                                      │
-          ┌─────────────────┬─────────┴─────────┬─────────────────┐
-          │                 │                   │                 │
-    ┌─────▼─────┐     ┌─────▼─────┐       ┌─────▼─────┐     ┌─────▼─────┐
-    │   hecpp   │     │   hejs    │       │   hers    │     │   hepy    │
-    │  Gate 8 🔒│     │  Gate 8 🔒│       │  Gate 6 🟡│     │  Gate 8 📐│
-    │   C++20   │     │ Node.js   │       │ Rust 2021 │     │ Reference │
-    └─────┬─────┘     └─────┬─────┘       └─────┬─────┘     └─────┬─────┘
-          │                 │                   │                 │
-          ▼                 ▼                   ▼                 ▼
-     Native .exe       ES2022 Module       rustc Object        Python 3
+                                 Nyx Source (.nyx / .he)
+                                            │
+                                      ┌─────▼─────┐
+                                      │   Lexer   │  (Unicode, Tokenizer)
+                                      └─────┬─────┘
+                                            │
+                                      ┌─────▼─────┐
+                                      │   Parser  │  (Immutable Concrete AST)
+                                      └─────┬─────┘
+                                            │
+                                   ┌────────▼────────┐
+                                   │  Module Loader  │  (Topological Dependency Graph,
+                                   └────────┬────────┘   Diamond Deduplication, E1302 Collision)
+                                            │
+                                   ┌────────▼────────┐
+                                   │   TypeChecker   │  (Scope Tracking, Type Inference,
+                                   └────────┬────────┘   Option/Result Semantics)
+                                            │
+                                   ┌────────▼────────┐
+                                   │    Typed AST    │
+                                   └────────┬────────┘
+                                            │
+          ┌───────────────────────┬─────────┴─────────┬───────────────────────┐
+          │                       │                   │                       │
+    ┌─────▼─────┐           ┌─────▼─────┐       ┌─────▼─────┐           ┌─────▼─────┐
+    │   hecpp   │           │   hejs    │       │   hers    │           │   hepy    │
+    │  Gate 8 🔒│           │  Gate 8 🔒│       │  Gate 6 🟡│           │  Gate 8 📐│
+    │   C++20   │           │ Node.js   │       │ Rust 2021 │           │ Reference │
+    └─────┬─────┘           └─────┬─────┘       └─────┬─────┘           └─────┬─────┘
+          │                       │                   │                       │
+          ▼                       ▼                   ▼                       ▼
+     Native .exe             ES2022 Module       rustc Object              Python 3
     (Clang / GCC)
 ```
 
@@ -127,23 +127,25 @@ HolyEasyLang bridges the gap between **high-level expressiveness** (like Python 
 
 ```bash
 # 1. Verify host compilers & runtime environment
-he doctor
+nyx doctor
 
 # 2. Create a fresh project
-he new my_app
+nyx new my_app
 cd my_app
 
 # 3. Fast type-check
-he check
+nyx check
 
 # 4. Compile & Run (Native C++20 by default)
-he run
+nyx run
 
 # 5. Target Node.js, Python, or Rust
-he run --target hejs
-he run --target hepy
-he build --target hers
+nyx run --target hejs
+nyx run --target hepy
+nyx build --target hers
 ```
+
+*(Note: `he` command is fully supported as a backward-compatible alias).*
 
 ---
 
@@ -196,7 +198,7 @@ test "capacity calculation test" {
 
 ```text
 ======================================================================
-⚡ HOLYEASYLANG ENTERPRISE UNIFIED TEST BATTERY
+⚡ NYX CORE ENTERPRISE UNIFIED TEST BATTERY
 ======================================================================
 [*] Lexer & Unicode Unit Tests        -> 100% PASS
 [*] Parser AST Construction           -> 100% PASS
@@ -232,7 +234,7 @@ test "capacity calculation test" {
 
 <div align="center">
 
-  <sub>Built with precision by the HolyEasyLang Core Team. Licensed under <a href="LICENSE">MIT</a>.</sub>
+  <sub>Built with precision by the Nyx Core Team. Licensed under <a href="LICENSE">MIT</a>.</sub>
 
   <br/><br/>
   
