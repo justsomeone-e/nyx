@@ -132,6 +132,48 @@ class Parser:
     def parse_statement(self) -> Optional[ASTNode]:
         tok = self.current()
 
+        # Native Directives
+        if tok.type == TokenType.NATIVE_INCLUDE:
+            self.advance()
+            return NativeIncludeNode(tok.value, tok.line, tok.col)
+
+        if tok.type == TokenType.NATIVE_LINK:
+            self.advance()
+            return NativeLinkNode(tok.value, tok.line, tok.col)
+
+        if tok.type == TokenType.NATIVE_RAW:
+            self.advance()
+            return NativeRawNode(tok.value, tok.line, tok.col)
+
+        # Extern Function Declaration: extern "C" fn puts(s: string) -> int
+        if tok.type == TokenType.EXTERN:
+            self.advance()
+            abi = "C"
+            if self.current().type == TokenType.STRING:
+                abi = self.advance().value
+            self.expect(TokenType.FN, "E1010", "Expected 'fn' after 'extern' declaration")
+            fn_name = self.expect(TokenType.IDENT, "E1011", "Expected external function name").value
+            self.expect(TokenType.LPAREN)
+            params: List[FunctionParam] = []
+            is_varargs = False
+            while self.current().type not in (TokenType.RPAREN, TokenType.EOF):
+                if self.current().type == TokenType.DOTDOT or self.current().value == "...":
+                    self.advance()
+                    is_varargs = True
+                    break
+                pname = self.expect(TokenType.IDENT).value
+                ptype = None
+                if self.match(TokenType.COLON):
+                    ptype = self.parse_type()
+                params.append(FunctionParam(pname, ptype))
+                if not self.match(TokenType.COMMA):
+                    break
+            self.expect(TokenType.RPAREN)
+            ret_type = TypeNode("void")
+            if self.match(TokenType.ARROW):
+                ret_type = self.parse_type()
+            return ExternFnDeclNode(abi, fn_name, params, ret_type, is_varargs, tok.line, tok.col)
+
         # Import Statement: import "path", use "path", import { a, b } from "path", import "path" as alias
         if tok.type in (TokenType.IMPORT, TokenType.USE):
             self.advance()

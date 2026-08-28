@@ -59,7 +59,7 @@ class Lexer:
                 self.pos += 2; self.col += 2
                 continue
 
-            # Directives #target
+            # Directives: #target and #native
             if ch == '#' and self.source[self.pos:self.pos+7] == "#target":
                 start_col = self.col
                 self.pos += 7; self.col += 7
@@ -70,6 +70,44 @@ class Lexer:
                     self.pos += 1; self.col += 1
                 target_val = self.source[start_val:self.pos]
                 self.tokens.append(Token(TokenType.TARGET_DIR, target_val, self.line, start_col))
+                continue
+
+            if ch == '#' and self.source[self.pos:self.pos+7] == "#native":
+                start_col = self.col
+                self.pos += 7; self.col += 7
+                while self.pos < length and self.source[self.pos].isspace() and self.source[self.pos] != '\n':
+                    self.pos += 1; self.col += 1
+                
+                # 1. #native include <stdio.h> / "header.h"
+                if self.source[self.pos:self.pos+7] == "include":
+                    self.pos += 7; self.col += 7
+                    while self.pos < length and self.source[self.pos].isspace() and self.source[self.pos] != '\n':
+                        self.pos += 1; self.col += 1
+                    start_hdr = self.pos
+                    while self.pos < length and self.source[self.pos] != '\n' and self.source[self.pos] != ';':
+                        self.pos += 1; self.col += 1
+                    hdr = self.source[start_hdr:self.pos].strip()
+                    self.tokens.append(Token(TokenType.NATIVE_INCLUDE, hdr, self.line, start_col))
+                    continue
+
+                # 2. #native link "lib" / user32
+                if self.source[self.pos:self.pos+4] == "link":
+                    self.pos += 4; self.col += 4
+                    while self.pos < length and self.source[self.pos].isspace() and self.source[self.pos] != '\n':
+                        self.pos += 1; self.col += 1
+                    start_lib = self.pos
+                    while self.pos < length and self.source[self.pos] != '\n' and self.source[self.pos] != ';':
+                        self.pos += 1; self.col += 1
+                    lib = self.source[start_lib:self.pos].strip().strip('"\'')
+                    self.tokens.append(Token(TokenType.NATIVE_LINK, lib, self.line, start_col))
+                    continue
+
+                # 3. #native target: raw
+                start_raw = self.pos
+                while self.pos < length and self.source[self.pos] != '\n':
+                    self.pos += 1; self.col += 1
+                raw = self.source[start_raw:self.pos].strip()
+                self.tokens.append(Token(TokenType.NATIVE_RAW, raw, self.line, start_col))
                 continue
 
             # Multi-character symbols

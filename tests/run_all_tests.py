@@ -89,10 +89,11 @@ from tests.smoke_test_clean_environment import run_smoke_test
 from tests.cpp_e2e_suite import run_cpp_e2e_tests
 from tests.js_e2e_suite import run_js_e2e_tests
 from tests.rust_e2e_suite import run_rust_e2e_tests
+from tests.ffi_suite import run_ffi_suite
 
 def main():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG ENTERPRISE UNIFIED TEST FRAMEWORK")
+    print("⚡ NYX SYSTEMS UNIFIED TEST FRAMEWORK")
     print("=" * 70)
     
     run_lexer_tests()
@@ -127,11 +128,14 @@ def main():
     
     print()
     e2e_ok = run_cpp_e2e_tests()
+
+    print()
+    ffi_ok = run_ffi_suite()
     
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and diff_ok and js_ok and rs_ok and e2e_ok and battery_ok
+    all_passed = mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and battery_ok
     print("=" * 70)
     if all_passed:
         print("🏆 ALL TEST SUITES PASSED (100% SUCCESS RATE)")

@@ -7,7 +7,8 @@ from .ast_nodes import (
     AssignNode, TypeAliasNode, StructDefNode, TraitDefNode, ImplBlockNode,
     EnumDefNode, UnsafeBlockNode, SpawnNode, TestBlockNode, AssertNode,
     FunctionDefNode, MatchNode, TryCatchNode, IfNode, WhileNode, ForNode,
-    ReturnNode, BreakNode, ContinueNode, TypeNode
+    ReturnNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
+    NativeLinkNode, NativeRawNode, ExternFnDeclNode
 )
 from .diagnostics import DiagnosticEmitter
 
@@ -87,6 +88,11 @@ class TypeChecker:
                 params = [(p.name, p.type_annot.name if p.type_annot else 'any') for p in stmt.params]
                 self.func_defs[stmt.name] = {'ret': ret_t, 'params': params}
                 self.declare(stmt.name, f'fn->{ret_t}')
+            elif isinstance(stmt, ExternFnDeclNode):
+                ret_t = str(stmt.return_type) if stmt.return_type else 'void'
+                params = [(p.name, str(p.type_annot) if p.type_annot else 'any') for p in stmt.params]
+                self.func_defs[stmt.name] = {'ret': ret_t, 'params': params, 'is_extern': True}
+                self.declare(stmt.name, f'fn->{ret_t}')
 
         # 2nd Pass: Full Semantic Analysis & Type Inference
         for stmt in self.ast.statements:
@@ -94,6 +100,9 @@ class TypeChecker:
 
     def visit(self, node: Optional[ASTNode]):
         if not node:
+            return
+
+        if isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeRawNode, ExternFnDeclNode)):
             return
 
         if isinstance(node, VarDeclNode):

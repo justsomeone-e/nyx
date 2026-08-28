@@ -92,7 +92,7 @@ class CppToolchain:
         return None
 
     @classmethod
-    def compile_cpp(cls, cpp_filepath: str, out_exe: Optional[str] = None) -> Tuple[bool, str]:
+    def compile_cpp(cls, cpp_filepath: str, out_exe: Optional[str] = None, link_libraries: Optional[list] = None) -> Tuple[bool, str]:
         compiler = cls.find_compiler()
         if not compiler:
             return False, "No capable C++20 compiler for host architecture found."
@@ -101,8 +101,11 @@ class CppToolchain:
             out_exe = os.path.splitext(cpp_filepath)[0] + (".exe" if os.name == 'nt' else "")
 
         compiler_name = os.path.basename(compiler).lower()
+        link_libs = link_libraries or []
+
         if "cl" in compiler_name and "clang" not in compiler_name:
-            cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"]
+            lib_args = [l if l.endswith(".lib") else f"{l}.lib" for l in link_libs]
+            cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"] + lib_args
             try:
                 res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode == 0:
@@ -111,13 +114,14 @@ class CppToolchain:
             except Exception as e:
                 return False, f"Failed to execute compiler '{compiler}': {e}"
         else:
+            lib_args = [f"-l{l}" for l in link_libs]
             static_flag = ["-static"] if sys.platform != 'darwin' else []
-            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe]
+            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe] + lib_args
             try:
                 res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode != 0:
                     # Retry without -static
-                    cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe]
+                    cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe] + lib_args
                     res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode == 0:
                     return True, out_exe

@@ -92,6 +92,9 @@ class TokenType:
     SEMICOLON = "SEMICOLON"
     
     TARGET_DIR = "TARGET"
+    NATIVE_INCLUDE = "NATIVE_INCLUDE"
+    NATIVE_LINK = "NATIVE_LINK"
+    NATIVE_RAW = "NATIVE_RAW"
     EOF = "EOF"
 
 class Token:

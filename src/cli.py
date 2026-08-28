@@ -157,7 +157,7 @@ def cmd_build(entry_file, target, is_release=False):
         out_exe = os.path.join(build_dir, f"{base_name}.exe")
         with open(out_cpp, "w", encoding="utf-8") as f:
             f.write(cpp_code)
-        ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe)
+        ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe, codegen.get_link_libraries())
         if ok:
             print(f"\033[92m[OK] Compiled Native Executable:\033[0m {out_exe}")
         else:
@@ -221,7 +221,7 @@ def cmd_run(entry_file, target):
             exe_file = os.path.join(temp_dir, "main.exe")
             with open(cpp_file, "w", encoding="utf-8") as f:
                 f.write(codegen.gen_cpp())
-            ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file)
+            ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file, codegen.get_link_libraries())
             if ok and os.path.exists(exe_file):
                 ret, out = CppToolchain.run_executable(exe_file)
                 if out:

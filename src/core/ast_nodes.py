@@ -234,3 +234,28 @@ class ImportNode(ASTNode):
         self.path = path
         self.alias = alias
         self.symbols = symbols or []
+
+class NativeIncludeNode(ASTNode):
+    def __init__(self, header: str, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.header = header
+
+class NativeLinkNode(ASTNode):
+    def __init__(self, library: str, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.library = library
+
+class NativeRawNode(ASTNode):
+    def __init__(self, raw: str, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.raw = raw
+
+class ExternFnDeclNode(ASTNode):
+    def __init__(self, abi: str, name: str, params: List[FunctionParam], return_type: TypeNode, is_varargs: bool = False, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.abi = abi
+        self.name = name
+        self.params = params
+        self.return_type = return_type
+        self.is_varargs = is_varargs
+
