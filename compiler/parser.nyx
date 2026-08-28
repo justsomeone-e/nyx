@@ -1,0 +1,434 @@
+#target hecpp
+#native include <string>
+#native include <vector>
+
+struct Token {
+    type_name: string,
+    value: string,
+    line: int,
+    col: int
+}
+
+struct FunctionParam {
+    name: string,
+    type_annot: string
+}
+
+struct ASTNode {
+    kind: string,
+    name: string,
+    value: string,
+    op: string,
+    type_name: string,
+    is_const: bool,
+    is_async: bool,
+    is_safe: bool,
+    is_varargs: bool,
+    params: Array<FunctionParam>,
+    generic_args: Array<string>,
+    children: Array<ASTNode>,
+    line: int,
+    col: int
+}
+
+impl ASTNode {
+    fn to_str(self) -> string {
+        var res = "(" + self.kind
+        if self.name != "" { res = res + " name='" + self.name + "'" }
+        if self.value != "" { res = res + " val='" + self.value + "'" }
+        if self.op != "" { res = res + " op='" + self.op + "'" }
+        if self.type_name != "" { res = res + " type='" + self.type_name + "'" }
+        if self.is_const { res = res + " const=true" }
+        if self.is_async { res = res + " async=true" }
+        
+        if len(self.params) > 0 {
+            res = res + " params=["
+            for i in 0..len(self.params)-1 {
+                if i > 0 { res = res + ", " }
+                res = res + self.params[i].name + ": " + self.params[i].type_annot
+            }
+            res = res + "]"
+        }
+        
+        if len(self.children) > 0 {
+            res = res + " body=["
+            for i in 0..len(self.children)-1 {
+                if i > 0 { res = res + " " }
+                res = res + self.children[i].to_str()
+            }
+            res = res + "]"
+        }
+        res = res + ")"
+        return res
+    }
+}
+
+struct Parser {
+    tokens: Array<Token>,
+    pos: int
+}
+
+impl Parser {
+    fn current(self) -> Token {
+        if self.pos >= len(self.tokens) {
+            return Token("EOF", "EOF", 0, 0)
+        }
+        return self.tokens[self.pos]
+    }
+
+    fn peek_ahead(self, offset: int) -> Token {
+        var idx = self.pos + offset
+        if idx >= len(self.tokens) {
+            return Token("EOF", "EOF", 0, 0)
+        }
+        return self.tokens[idx]
+    }
+
+    fn advance(self) -> Token {
+        var tok = self.current()
+        if self.pos < len(self.tokens) {
+            self.pos = self.pos + 1
+        }
+        return tok
+    }
+
+    fn match_type(self, tt: string) -> bool {
+        if self.current().type_name == tt {
+            self.advance()
+            return true
+        }
+        return false
+    }
+
+    fn expect(self, tt: string) -> Token {
+        var tok = self.current()
+        if tok.type_name == tt {
+            return self.advance()
+        }
+        // Return empty on mismatch
+        return self.advance()
+    }
+
+    fn parse_type(self) -> string {
+        var is_ptr = false
+        if self.match_type("MUL") { is_ptr = true }
+        var name = self.advance().value
+        if self.match_type("LT") {
+            var gen = self.parse_type()
+            self.expect("GT")
+            name = name + "<" + gen + ">"
+        }
+        if is_ptr { name = "*" + name }
+        if self.match_type("QUESTION") { name = name + "?" }
+        return name
+    }
+
+    fn parse_primary(self) -> ASTNode {
+        var tok = self.current()
+
+        if tok.type_name == "NUMBER" {
+            self.advance()
+            return ASTNode("Number", "", tok.value, "", "int", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        if tok.type_name == "STRING" {
+            self.advance()
+            return ASTNode("String", "", tok.value, "", "string", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        if tok.type_name == "BOOLEAN" {
+            self.advance()
+            return ASTNode("Boolean", "", tok.value, "", "bool", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        if tok.type_name == "NULL" {
+            self.advance()
+            return ASTNode("Null", "", "null", "", "null", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        if tok.type_name == "IDENT" {
+            var name = self.advance().value
+            return ASTNode("Identifier", name, "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        if tok.type_name == "PRINT" or tok.type_name == "ADDR" or tok.type_name == "PEEK" or tok.type_name == "MEMDUMP" {
+            var callee = self.advance().value
+            self.expect("LPAREN")
+            var args: Array<ASTNode> = []
+            if not self.match_type("RPAREN") {
+                while true {
+                    args.push(self.parse_expr(0))
+                    if self.match_type("COMMA") { continue }
+                    self.expect("RPAREN")
+                    break
+                }
+            }
+            return ASTNode("FunctionCall", callee, "", "", "", false, false, false, false, [], [], args, tok.line, tok.col)
+        }
+
+        if self.match_type("LPAREN") {
+            var expr = self.parse_expr(0)
+            self.expect("RPAREN")
+            return expr
+        }
+
+        if self.match_type("LBRACKET") {
+            var elems: Array<ASTNode> = []
+            if not self.match_type("RBRACKET") {
+                while true {
+                    elems.push(self.parse_expr(0))
+                    if self.match_type("COMMA") { continue }
+                    self.expect("RBRACKET")
+                    break
+                }
+            }
+            return ASTNode("Array", "", "", "", "", false, false, false, false, [], [], elems, tok.line, tok.col)
+        }
+
+        self.advance()
+        return ASTNode("Unknown", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+    }
+
+    fn parse_postfix(self) -> ASTNode {
+        var node = self.parse_primary()
+
+        while true {
+            if self.match_type("DOT") {
+                var member = self.expect("IDENT").value
+                if self.match_type("LPAREN") {
+                    var args: Array<ASTNode> = []
+                    if not self.match_type("RPAREN") {
+                        while true {
+                            args.push(self.parse_expr(0))
+                            if self.match_type("COMMA") { continue }
+                            self.expect("RPAREN")
+                            break
+                        }
+                    }
+                    var call_node = ASTNode("MethodCall", member, "", "", "", false, false, false, false, [], [], args, node.line, node.col)
+                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node, call_node], node.line, node.col)
+                } else {
+                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node], node.line, node.col)
+                }
+            } elif self.match_type("LBRACKET") {
+                var idx = self.parse_expr(0)
+                self.expect("RBRACKET")
+                node = ASTNode("IndexAccess", "", "", "", "", false, false, false, false, [], [], [node, idx], node.line, node.col)
+            } elif self.match_type("LPAREN") {
+                var args: Array<ASTNode> = []
+                if not self.match_type("RPAREN") {
+                    while true {
+                        args.push(self.parse_expr(0))
+                        if self.match_type("COMMA") { continue }
+                        self.expect("RPAREN")
+                        break
+                    }
+                }
+                node = ASTNode("FunctionCall", node.name, "", "", "", false, false, false, false, [], [], args, node.line, node.col)
+            } else {
+                break
+            }
+        }
+        return node
+    }
+
+    fn parse_unary(self) -> ASTNode {
+        var tok = self.current()
+        if tok.type_name == "MINUS" or tok.type_name == "NOT" {
+            self.advance()
+            var expr = self.parse_unary()
+            return ASTNode("UnaryOp", "", "", tok.value, "", false, false, false, false, [], [], [expr], tok.line, tok.col)
+        }
+        return self.parse_postfix()
+    }
+
+    fn get_prec(self, op: string) -> int {
+        if op == "OR" or op == "or" { return 10 }
+        if op == "AND" or op == "and" { return 20 }
+        if op == "EQ" or op == "NEQ" or op == "==" or op == "!=" { return 30 }
+        if op == "LT" or op == "GT" or op == "LTE" or op == "GTE" or op == "<" or op == ">" or op == "<=" or op == ">=" { return 40 }
+        if op == "PLUS" or op == "MINUS" or op == "+" or op == "-" { return 50 }
+        if op == "MUL" or op == "DIV" or op == "MOD" or op == "*" or op == "/" or op == "%" { return 60 }
+        return 0
+    }
+
+    fn parse_expr(self, min_prec: int) -> ASTNode {
+        var left = self.parse_unary()
+
+        while true {
+            var tok = self.current()
+            var prec = self.get_prec(tok.type_name)
+            if prec <= min_prec {
+                break
+            }
+            self.advance()
+            var right = self.parse_expr(prec)
+            left = ASTNode("BinaryOp", "", "", tok.value, "", false, false, false, false, [], [], [left, right], tok.line, tok.col)
+        }
+        return left
+    }
+
+    fn parse_statement(self) -> ASTNode {
+        var tok = self.current()
+
+        // Directives
+        if tok.type_name == "TARGET" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Directive", "target", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+        if tok.type_name == "NATIVE_INCLUDE" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Directive", "native_include", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+        if tok.type_name == "NATIVE_LINK" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Directive", "native_link", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+        if tok.type_name == "NATIVE_USE" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Directive", "native_use", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+        if tok.type_name == "NATIVE_RAW" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Directive", "native_raw", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+
+        // Variable declaration
+        if tok.type_name == "VAR" or tok.type_name == "LET" or tok.type_name == "CONST" {
+            var is_const = (tok.type_name == "CONST")
+            self.advance()
+            var name = self.expect("IDENT").value
+            var type_annot = ""
+            if self.match_type("COLON") {
+                type_annot = self.parse_type()
+            }
+            var init_expr = ASTNode("Null", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+            if self.match_type("ASSIGN") {
+                init_expr = self.parse_expr(0)
+            }
+            self.match_type("SEMICOLON")
+            return ASTNode("VarDecl", name, "", "", type_annot, is_const, false, false, false, [], [], [init_expr], tok.line, tok.col)
+        }
+
+        // Function definition
+        if tok.type_name == "FN" {
+            self.advance()
+            var name = self.expect("IDENT").value
+            self.expect("LPAREN")
+            var params: Array<FunctionParam> = []
+            if not self.match_type("RPAREN") {
+                while true {
+                    var pname = self.expect("IDENT").value
+                    var ptype = ""
+                    if self.match_type("COLON") {
+                        ptype = self.parse_type()
+                    }
+                    params.push(FunctionParam(pname, ptype))
+                    if self.match_type("COMMA") { continue }
+                    self.expect("RPAREN")
+                    break
+                }
+            }
+            var ret_type = "void"
+            if self.match_type("ARROW") {
+                ret_type = self.parse_type()
+            }
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
+            }
+            return ASTNode("FunctionDef", name, "", "", ret_type, false, false, false, false, params, [], body, tok.line, tok.col)
+        }
+
+        // Struct definition
+        if tok.type_name == "STRUCT" {
+            self.advance()
+            var name = self.expect("IDENT").value
+            var fields: Array<FunctionParam> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    var fname = self.expect("IDENT").value
+                    self.expect("COLON")
+                    var ftype = self.parse_type()
+                    fields.push(FunctionParam(fname, ftype))
+                    self.match_type("COMMA")
+                }
+            }
+            return ASTNode("StructDef", name, "", "", "", false, false, false, false, fields, [], [], tok.line, tok.col)
+        }
+
+        // Impl block
+        if tok.type_name == "IMPL" {
+            self.advance()
+            var target = self.expect("IDENT").value
+            var methods: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    methods.push(self.parse_statement())
+                }
+            }
+            return ASTNode("ImplBlock", target, "", "", "", false, false, false, false, [], [], methods, tok.line, tok.col)
+        }
+
+        // Return
+        if tok.type_name == "RETURN" {
+            self.advance()
+            var expr = ASTNode("Null", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+            if self.current().type_name != "SEMICOLON" and self.current().type_name != "RBRACE" {
+                expr = self.parse_expr(0)
+            }
+            self.match_type("SEMICOLON")
+            return ASTNode("Return", "", "", "", "", false, false, false, false, [], [], [expr], tok.line, tok.col)
+        }
+
+        // If statement
+        if tok.type_name == "IF" {
+            self.advance()
+            var cond = self.parse_expr(0)
+            var then_body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    then_body.push(self.parse_statement())
+                }
+            }
+            var else_body: Array<ASTNode> = []
+            if self.match_type("ELSE") {
+                if self.match_type("LBRACE") {
+                    while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                        else_body.push(self.parse_statement())
+                    }
+                }
+            }
+            var children: Array<ASTNode> = [cond]
+            for s in then_body { children.push(s) }
+            return ASTNode("If", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
+        }
+
+        // General expression / assignment statement
+        var expr = self.parse_expr(0)
+        if self.match_type("ASSIGN") {
+            var val_expr = self.parse_expr(0)
+            self.match_type("SEMICOLON")
+            return ASTNode("Assign", "", "", "=", "", false, false, false, false, [], [], [expr, val_expr], tok.line, tok.col)
+        }
+        self.match_type("SEMICOLON")
+        return expr
+    }
+
+    fn parse_program(self) -> ASTNode {
+        var stmts: Array<ASTNode> = []
+        while self.current().type_name != "EOF" {
+            while self.match_type("SEMICOLON") { }
+            if self.current().type_name == "EOF" { break }
+            stmts.push(self.parse_statement())
+        }
+        return ASTNode("Program", "main", "", "", "", false, false, false, false, [], [], stmts, 1, 1)
+    }
+}

@@ -237,7 +237,23 @@ class UniversalCodeGen:
                     args_cpp = ' << " " << '.join([emit_expr(a) for a in node.args]) if node.args else '""'
                     return f"cout << {args_cpp} << endl"
                 
-                # Check if calling vector / collection / object methods
+                # Check if calling member access node: obj.method(args)
+                if isinstance(node.callee, MemberAccessNode):
+                    target_expr = emit_expr(node.callee.obj)
+                    if target_expr in ("self", "this"):
+                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                        return f"this->{node.callee.member}({args_cpp})"
+                    if node.callee.member == "push":
+                        return f"{target_expr}.push_back({emit_expr(node.args[0])})"
+                    elif node.callee.member in ("len", "length", "size"):
+                        return f"(int64_t){target_expr}.size()"
+                    elif node.callee.member == "pop":
+                        return f"{target_expr}.pop_back()"
+                    else:
+                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                        return f"{target_expr}.{node.callee.member}({args_cpp})"
+
+                # Check if calling vector / collection / object methods as string
                 if isinstance(node.callee, str) and "." in node.callee:
                     obj_part, method_part = node.callee.rsplit(".", 1)
                     if obj_part in ("self", "this"):

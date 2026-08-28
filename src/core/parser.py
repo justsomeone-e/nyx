@@ -582,8 +582,7 @@ class Parser:
                 member_name = self.advance().value
                 if self.match(TokenType.LPAREN):
                     args = self.parse_args()
-                    callee_str = f"{node.name}.{member_name}" if isinstance(node, IdentifierNode) else member_name
-                    node = FunctionCallNode(callee_str, args)
+                    node = FunctionCallNode(MemberAccessNode(node, member_name), args)
                 else:
                     node = MemberAccessNode(node, member_name, is_safe=False)
             # Array index: arr[0]

@@ -98,6 +98,7 @@ from tests.hardware_suite import run_hardware_suite
 from tests.sdk_suite import run_sdk_suite
 from tests.interop_suite import run_interop_suite
 from tests.bootstrap_lexer_test import run_bootstrap_lexer_test
+from tests.bootstrap_parser_test import run_bootstrap_parser_test
 
 def main():
     print("=" * 70)
@@ -163,13 +164,16 @@ def main():
 
     print()
     boot_lex_ok = run_bootstrap_lexer_test()
+
+    print()
+    boot_parse_ok = run_bootstrap_parser_test()
     
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
     all_passed = (mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
-                  natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and battery_ok)
+                  natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and battery_ok)
     print("=" * 70)
     if all_passed:
         print("🏆 ALL TEST SUITES PASSED (100% SUCCESS RATE)")
