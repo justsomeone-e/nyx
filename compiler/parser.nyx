@@ -65,7 +65,9 @@ impl ASTNode {
 
 struct Parser {
     tokens: Array<Token>,
-    pos: int
+    pos: int,
+    has_error: bool,
+    error_msg: string
 }
 
 impl Parser {
@@ -105,7 +107,8 @@ impl Parser {
         if tok.type_name == tt {
             return self.advance()
         }
-        // Return empty on mismatch
+        self.has_error = true
+        self.error_msg = "Expected token " + tt + " but found " + tok.type_name + " at line " + to_string(tok.line) + ":" + to_string(tok.col)
         return self.advance()
     }
 
@@ -185,6 +188,8 @@ impl Parser {
             return ASTNode("Array", "", "", "", "", false, false, false, false, [], [], elems, tok.line, tok.col)
         }
 
+        self.has_error = true
+        self.error_msg = "Unexpected token in expression: " + tok.type_name + " ('" + tok.value + "') at line " + to_string(tok.line) + ":" + to_string(tok.col)
         self.advance()
         return ASTNode("Unknown", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
     }
@@ -310,6 +315,11 @@ impl Parser {
             var init_expr = ASTNode("Null", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
             if self.match_type("ASSIGN") {
                 init_expr = self.parse_expr(0)
+            } else {
+                if self.current().type_name != "SEMICOLON" {
+                    self.has_error = true
+                    self.error_msg = "Expected '=' after variable name at line " + to_string(tok.line) + ":" + to_string(tok.col)
+                }
             }
             self.match_type("SEMICOLON")
             return ASTNode("VarDecl", name, "", "", type_annot, is_const, false, false, false, [], [], [init_expr], tok.line, tok.col)
@@ -343,6 +353,10 @@ impl Parser {
                 while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
                     body.push(self.parse_statement())
                 }
+                if self.current().type_name == "EOF" {
+                    self.has_error = true
+                    self.error_msg = "Unclosed function body block: expected '}'"
+                }
             }
             return ASTNode("FunctionDef", name, "", "", ret_type, false, false, false, false, params, [], body, tok.line, tok.col)
         }
@@ -359,6 +373,10 @@ impl Parser {
                     var ftype = self.parse_type()
                     fields.push(FunctionParam(fname, ftype))
                     self.match_type("COMMA")
+                }
+                if self.current().type_name == "EOF" {
+                    self.has_error = true
+                    self.error_msg = "Unclosed struct definition block: expected '}'"
                 }
             }
             return ASTNode("StructDef", name, "", "", "", false, false, false, false, fields, [], [], tok.line, tok.col)

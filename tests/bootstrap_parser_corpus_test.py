@@ -110,7 +110,7 @@ main()
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-    print("\n--- 2. Invalid / Rejection Corpus (Syntax Error Rejection) ---")
+    print("\n--- 2. Invalid / Rejection Corpus (Dual Python & Native Nyx Parser Rejection) ---")
     invalid_corpus = [
         ("unclosed_parenthesis", "var x = (10 + 20;"),
         ("missing_colon_in_decl", "var x int = 10;"),
@@ -119,13 +119,12 @@ main()
     ]
 
     for name, src in invalid_corpus:
-        print(f"[*] Testing Rejection: {name} ...", end=" ")
+        print(f"[*] Testing Dual Rejection: {name} ...", end=" ")
         
-        # Verify Python Parser raises Diagnostic / error on invalid input
+        # 1. Python Parser Rejection
         py_rejected = False
         try:
             py_toks = PyLexer(src, f"{name}.nyx").tokenize()
-            # Diagnostic emitter raises SystemExit on error
             try:
                 PyParser(py_toks, src, f"{name}.nyx").parse()
             except SystemExit:
@@ -133,10 +132,50 @@ main()
         except:
             py_rejected = True
 
-        if py_rejected:
-            print("PASS (Correctly rejected by compiler frontend)")
+        # 2. Native Nyx Parser Rejection
+        escaped_src = src.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
+        runner_code = f"""{combined_base}
+
+fn main() {{
+    var code = "{escaped_src}"
+    var lex = Lexer(code, 0, 1, 1)
+    var tokens = lex.tokenize()
+    var p = Parser(tokens, 0, false, "")
+    var ast = p.parse_program()
+    if p.has_error {{
+        print("REJECTED:", p.error_msg)
+    }} else {{
+        print("ACCEPTED")
+    }}
+}}
+
+main()
+"""
+        tokens_ast = PyLexer(runner_code, f"{name}_reject_driver.nyx").tokenize()
+        ast = PyParser(tokens_ast, runner_code, f"{name}_reject_driver.nyx").parse()
+        cpp_code = UniversalCodeGen(ast).gen_cpp()
+
+        temp_dir = tempfile.mkdtemp(prefix="nyx_reject_")
+        exe_file = os.path.join(temp_dir, "nyx_parser.exe")
+        cpp_file = os.path.join(temp_dir, "nyx_parser.cpp")
+
+        nyx_rejected = False
+        try:
+            with open(cpp_file, "w", encoding="utf-8") as f:
+                f.write(cpp_code)
+
+            ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file)
+            if ok:
+                code, output = CppToolchain.run_executable(exe_file)
+                if "REJECTED:" in output:
+                    nyx_rejected = True
+        finally:
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+        if py_rejected and nyx_rejected:
+            print("PASS (Dual Rejection Parity - Both Python & Nyx Parsers Rejected)")
         else:
-            print("FAILED (Invalid syntax was unexpectedly accepted)")
+            print(f"FAILED (Py={py_rejected}, Nyx={nyx_rejected})")
             all_passed = False
 
     print("=" * 70)

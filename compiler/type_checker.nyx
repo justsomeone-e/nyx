@@ -1,0 +1,252 @@
+#target hecpp
+#native include <string>
+#native include <vector>
+
+struct Symbol {
+    name: string,
+    type_name: string
+}
+
+struct StructFieldInfo {
+    struct_name: string,
+    field_name: string,
+    field_type: string
+}
+
+struct TypeChecker {
+    symbols: Array<Symbol>,
+    struct_fields: Array<StructFieldInfo>,
+    current_fn_return_type: string,
+    has_error: bool,
+    error_msg: string
+}
+
+impl TypeChecker {
+    fn register_symbol(self, name: string, type_name: string) {
+        // Update if exists or append
+        for i in 0..len(self.symbols)-1 {
+            if self.symbols[i].name == name {
+                self.symbols[i].type_name = type_name
+                return
+            }
+        }
+        self.symbols.push(Symbol(name, type_name))
+    }
+
+    fn lookup_symbol(self, name: string) -> string {
+        for i in 0..len(self.symbols)-1 {
+            if self.symbols[i].name == name {
+                return self.symbols[i].type_name
+            }
+        }
+        return ""
+    }
+
+    fn register_struct_field(self, sname: string, fname: string, ftype: string) {
+        self.struct_fields.push(StructFieldInfo(sname, fname, ftype))
+    }
+
+    fn lookup_struct_field(self, sname: string, fname: string) -> string {
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == sname and self.struct_fields[i].field_name == fname {
+                return self.struct_fields[i].field_type
+            }
+        }
+        return ""
+    }
+
+    fn is_compatible(self, expected: string, found: string) -> bool {
+        if expected == "" or expected == "any" or found == "any" { return true }
+        if expected == found { return true }
+        // float accepts int
+        if expected == "float" and found == "int" { return true }
+        // optional accepts null or base type
+        if len(expected) > 1 and expected[len(expected)-1] == "?" {
+            if found == "null" { return true }
+            var base = ""
+            for i in 0..len(expected)-2 { base = base + expected[i] }
+            if base == found { return true }
+        }
+        return false
+    }
+
+    fn infer_type(self, node: ASTNode) -> string {
+        if node.kind == "Number" {
+            if contains(node.value, ".") { return "float" }
+            return "int"
+        }
+        if node.kind == "String" { return "string" }
+        if node.kind == "Boolean" { return "bool" }
+        if node.kind == "Null" { return "null" }
+        
+        if node.kind == "Identifier" {
+            var t = self.lookup_symbol(node.name)
+            if t != "" { return t }
+            return "any"
+        }
+
+        if node.kind == "BinaryOp" {
+            if node.op == "==" or node.op == "!=" or node.op == "<" or node.op == ">" or node.op == "<=" or node.op == ">=" or node.op == "and" or node.op == "or" {
+                return "bool"
+            }
+            if len(node.children) >= 2 {
+                var lt = self.infer_type(node.children[0])
+                var rt = self.infer_type(node.children[1])
+                if lt == "float" or rt == "float" { return "float" }
+                if lt == "string" or rt == "string" { return "string" }
+                return lt
+            }
+            return "int"
+        }
+
+        if node.kind == "UnaryOp" {
+            if node.op == "not" or node.op == "!" { return "bool" }
+            if len(node.children) > 0 { return self.infer_type(node.children[0]) }
+            return "int"
+        }
+
+        if node.kind == "FunctionCall" {
+            if node.name == "print" { return "void" }
+            if node.name == "to_string" or node.name == "to_str" { return "string" }
+            if node.name == "to_int" { return "int" }
+            if node.name == "addr" or node.name == "peek" { return "int" }
+            var fn_t = self.lookup_symbol(node.name)
+            if fn_t != "" { return fn_t }
+            return "any"
+        }
+
+        if node.kind == "MemberAccess" {
+            if len(node.children) > 0 {
+                var obj_t = self.infer_type(node.children[0])
+                var field_t = self.lookup_struct_field(obj_t, node.name)
+                if field_t != "" { return field_t }
+            }
+            return "any"
+        }
+
+        if node.kind == "Array" {
+            if len(node.children) > 0 {
+                var elem_t = self.infer_type(node.children[0])
+                return "Array<" + elem_t + ">"
+            }
+            return "Array<any>"
+        }
+
+        if node.kind == "IndexAccess" {
+            if len(node.children) > 0 {
+                var arr_t = self.infer_type(node.children[0])
+                if arr_t == "string" { return "string" }
+                if len(arr_t) > 7 and arr_t[0] == "A" and arr_t[1] == "r" {
+                    // Extract T from Array<T>
+                    var inner = ""
+                    for i in 6..len(arr_t)-2 { inner = inner + arr_t[i] }
+                    return inner
+                }
+            }
+            return "any"
+        }
+
+        return "any"
+    }
+
+    fn check_statement(self, node: ASTNode) {
+        if node.kind == "VarDecl" {
+            var inferred = "any"
+            if len(node.children) > 0 {
+                inferred = self.infer_type(node.children[0])
+            }
+            var decl_type = node.type_name
+            if decl_type != "" {
+                if not self.is_compatible(decl_type, inferred) {
+                    self.has_error = true
+                    self.error_msg = "Type mismatch in variable '" + node.name + "': expected " + decl_type + " but found " + inferred
+                }
+            } else {
+                decl_type = inferred
+            }
+            self.register_symbol(node.name, decl_type)
+            return
+        }
+
+        if node.kind == "Assign" {
+            if len(node.children) >= 2 {
+                var target_t = self.infer_type(node.children[0])
+                var val_t = self.infer_type(node.children[1])
+                if not self.is_compatible(target_t, val_t) {
+                    self.has_error = true
+                    self.error_msg = "Cannot assign type " + val_t + " to " + target_t
+                }
+            }
+            return
+        }
+
+        if node.kind == "StructDef" {
+            for i in 0..len(node.params)-1 {
+                self.register_struct_field(node.name, node.params[i].name, node.params[i].type_annot)
+            }
+            return
+        }
+
+        if node.kind == "FunctionDef" {
+            self.register_symbol(node.name, node.type_name)
+            var prev_ret = self.current_fn_return_type
+            self.current_fn_return_type = node.type_name
+
+            // Register params in local scope
+            for i in 0..len(node.params)-1 {
+                self.register_symbol(node.params[i].name, node.params[i].type_annot)
+            }
+
+            // Check function body
+            for i in 0..len(node.children)-1 {
+                self.check_statement(node.children[i])
+            }
+            self.current_fn_return_type = prev_ret
+            return
+        }
+
+        if node.kind == "Return" {
+            var ret_val_type = "void"
+            if len(node.children) > 0 and node.children[0].kind != "Null" {
+                ret_val_type = self.infer_type(node.children[0])
+            }
+            if self.current_fn_return_type != "" and self.current_fn_return_type != "void" {
+                if not self.is_compatible(self.current_fn_return_type, ret_val_type) {
+                    self.has_error = true
+                    self.error_msg = "Return type mismatch: expected " + self.current_fn_return_type + " but returned " + ret_val_type
+                }
+            }
+            return
+        }
+
+        if node.kind == "If" or node.kind == "While" {
+            for i in 1..len(node.children)-1 {
+                self.check_statement(node.children[i])
+            }
+            return
+        }
+
+        if node.kind == "For" {
+            // Register loop variable as int
+            self.register_symbol(node.name, "int")
+            for i in 2..len(node.children)-1 {
+                self.check_statement(node.children[i])
+            }
+            return
+        }
+    }
+
+    fn check_program(self, ast: ASTNode) -> bool {
+        self.register_symbol("print", "void")
+        self.register_symbol("to_string", "string")
+        self.register_symbol("to_str", "string")
+        self.register_symbol("to_int", "int")
+        self.register_symbol("addr", "int")
+        self.register_symbol("peek", "int")
+
+        for i in 0..len(ast.children)-1 {
+            self.check_statement(ast.children[i])
+        }
+        return not self.has_error
+    }
+}
