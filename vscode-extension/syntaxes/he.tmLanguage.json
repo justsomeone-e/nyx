@@ -1,0 +1,85 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "HolyEasyLang",
+  "scopeName": "source.he",
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.he",
+      "match": "//.*$"
+    },
+    {
+      "name": "meta.preprocessor.target.he",
+      "match": "(#target)\\s+(hecpp|hereact|react|hejs|hepy|heasm|hejava|hec|hego|herust|hecs|heino)",
+      "captures": {
+        "1": { "name": "keyword.control.directive.he" },
+        "2": { "name": "entity.name.type.target.he" }
+      }
+    },
+    {
+      "name": "meta.preprocessor.native.he",
+      "match": "(#native)\\s+([a-zA-Z0-9_]+):\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.control.directive.he" },
+        "2": { "name": "entity.name.type.target.he" },
+        "3": { "name": "string.unquoted.native.he" }
+      }
+    },
+    {
+      "name": "keyword.declaration.he",
+      "match": "\\b(var|let|set|degisken|const)\\b"
+    },
+    {
+      "name": "keyword.control.he",
+      "match": "\\b(if|eger|when|else|degilse|elif|for|in|loop|while|return|dondur|continue|devam|break|dur|use)\\b"
+    },
+    {
+      "name": "keyword.function.he",
+      "match": "\\b(fn|def|action|islev)\\b"
+    },
+    {
+      "name": "support.function.builtin.he",
+      "match": "\\b(print|yazdir|len|range|emit|addr|adres|peek|oku|memdump|bellek_dok)\\b"
+    },
+    {
+      "name": "constant.language.boolean.he",
+      "match": "\\b(true|false|dogru|yanlis)\\b"
+    },
+    {
+      "name": "string.quoted.double.he",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.he",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.he",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.he",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric.he",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    {
+      "name": "keyword.operator.he",
+      "match": "(->|\\|>|\\.\\.|==|!=|>=|<=|>|<|\\+|-|\\*|/|=|>>)"
+    },
+    {
+      "name": "entity.name.function.he",
+      "match": "(?:fn|def|action|islev)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "entity.name.function.he" }
+      }
+    }
+  ]
+}

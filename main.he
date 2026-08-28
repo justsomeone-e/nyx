@@ -1,0 +1,49 @@
+#target hecpp // Note: Only 1 #target allowed per file
+
+// Gelişmiş kullanıcıdan input alma örneği
+print("=== Kullanıcı Bilgi Formu ===")
+
+loop {
+	print("Adınız: ")
+	$ad = input()
+
+	if $ad != "" {
+		break
+	}
+
+	print("Ad alanı boş bırakılamaz.")
+}
+
+loop {
+	print("Yaşınız (1-120): ")
+	$yas_metni = input()
+
+	if is_number($yas_metni) {
+		$yas = to_int($yas_metni)
+
+		if $yas >= 1 and $yas <= 120 {
+			break
+		}
+	}
+
+	print("Lütfen 1 ile 120 arasında geçerli bir sayı girin.")
+}
+
+loop {
+	print("E-posta adresiniz: ")
+	$eposta = input()
+
+	if contains($eposta, "@") and contains($eposta, ".") {
+		break
+	}
+
+	print("Geçerli bir e-posta adresi girin.")
+}
+
+print("")
+print("Bilgileriniz alındı:")
+print("Ad: " + $ad)
+print("Yaş: " + to_string($yas))
+print("E-posta: " + $eposta)
+
+    

@@ -1,0 +1,3 @@
+#target hecpp
+var x: User? = null
+if x == null { print("Is Null") } else { print("Not Null") }

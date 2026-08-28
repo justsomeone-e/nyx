@@ -1,0 +1,3 @@
+#target hecpp
+var s = ""
+if s == "" { print("Empty Str OK") }

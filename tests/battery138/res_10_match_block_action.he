@@ -1,0 +1,3 @@
+#target hecpp
+var status = "ready"
+match status { "ready" => { print("SYSTEM READY"); print("ONLINE") }, "_" => print("OFFLINE") }

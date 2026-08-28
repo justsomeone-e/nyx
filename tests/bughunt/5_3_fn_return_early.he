@@ -1,0 +1,6 @@
+#target hecpp
+fn test_early() {
+    return 42
+    print("SHOULD NOT RUN")
+}
+print(test_early())

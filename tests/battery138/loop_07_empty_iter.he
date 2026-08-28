@@ -1,0 +1,4 @@
+#target hecpp
+var empty = []
+for x in empty { print("SHOULD NOT RUN") }
+print("Loop finished")

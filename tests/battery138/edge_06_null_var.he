@@ -1,0 +1,3 @@
+#target hecpp
+var n = null
+print(n == null)

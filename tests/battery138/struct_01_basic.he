@@ -1,0 +1,4 @@
+#target hecpp
+struct Point { x, y }
+var p = Point(10, 20)
+print(p.x, p.y)

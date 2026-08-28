@@ -1,0 +1,3 @@
+#target hecpp
+var s = "Holy" + "Easy"
+print(s)

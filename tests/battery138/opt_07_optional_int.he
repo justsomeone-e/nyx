@@ -1,0 +1,3 @@
+#target hecpp
+var score: int? = null
+print(score ?? 0)

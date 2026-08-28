@@ -1,0 +1,7 @@
+#target hecpp
+import "./utils"
+import "std/math"
+
+var price = calculate_discount(1000, 20)
+var p = power(2, 3)
+print("Discounted Price:", price, "Power:", p)

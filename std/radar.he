@@ -1,0 +1,13 @@
+// ==========================================
+// 📡 HolyEasyLang Standard Library: Radar & DSP
+// ==========================================
+
+fn calc_resonance(base_freq, mineral_factor):
+    var adjusted = base_freq + (mineral_factor * 2)
+    return adjusted
+
+fn check_lock(signal_strength):
+    if signal_strength >= 80:
+        return true
+    else:
+        return false

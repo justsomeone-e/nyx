@@ -1,0 +1,6 @@
+#target hecpp
+try {
+    print("hello")
+} catch error {
+    print("wrong")
+}

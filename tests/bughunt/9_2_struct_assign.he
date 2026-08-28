@@ -1,0 +1,8 @@
+#target hecpp
+struct User {
+    name,
+    age
+}
+var user = User("Umut", 13)
+user.age = 14
+print(user.age)

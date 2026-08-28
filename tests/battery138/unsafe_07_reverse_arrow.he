@@ -1,0 +1,3 @@
+#target hecpp
+8700 -> freq
+print("Freq:", freq)

@@ -1,0 +1,8 @@
+#target hecpp
+
+struct User {
+    name: string
+}
+
+var user: User? = null
+print("Kullanıcı:", user?.name ?? "Bilinmeyen Kullanıcı")

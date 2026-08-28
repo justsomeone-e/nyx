@@ -1,0 +1,11 @@
+#target hecpp
+
+var base_freq: int = 5000
+var target: string = "24K SAF ALTIN"
+
+print("========================================")
+print("🎯 HEDEF:", target)
+print("⚡ FREKANS:", base_freq, "Hz")
+print("========================================")
+
+base_freq |> print

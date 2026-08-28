@@ -1,0 +1,6 @@
+#target hecpp
+struct A { val }
+struct B { a }
+struct C { b }
+var c = C(B(A(777)))
+print(c.b.a.val)

@@ -1,0 +1,2 @@
+#target hecpp
+print("x = " + to_string(5))

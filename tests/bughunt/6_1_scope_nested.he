@@ -1,0 +1,8 @@
+#target hecpp
+var x = 10
+if true {
+    var y = 20
+    print(x)
+    print(y)
+}
+print(x)

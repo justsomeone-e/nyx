@@ -1,0 +1,4 @@
+#target hecpp
+struct Target { name, freq, signal }
+var t = Target("Altin", 5000, 95)
+print("Target:", t.name, t.freq, t.signal)

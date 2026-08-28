@@ -1,0 +1,46 @@
+#target hecpp
+
+/// Titan Showcase Demo Script
+var age: int = 13
+var name: string = "Umut"
+var speed: float = 3.14
+var active: bool = true
+
+print(" =  =  = HolyEasy Titan Feature Showcase =  =  = ")
+print("User: ", name, "| Age: ", age, "| Active: ", active)
+
+// 1. Optional / Null Safety
+var user: User? = null
+print("Null Coalesce Test: ", user?.name ?? "Unknown User")
+
+// 2. Result Pattern Matching
+var res = Ok("Radar Frekans Verisi")
+match res {
+    Ok(data) => print("Basarili: ", data), 
+    Err(e) => print("Hata: ", e), 
+    "_" => print("Bilinmeyen durum")
+}
+
+// 3. File System & OS APIs
+fs.write("titan_temp.txt", "HolyEasy v4.0 Titan Engine Active")
+print("fs.read(): ", fs.read("titan_temp.txt"))
+print("os.platform(): ", os.platform())
+
+// 4. Concurrency (spawn)
+spawn {
+    print("[SPAWNED THREAD] Arka plan taramasi calisiyor...")
+}
+
+// 5. Unsafe Memory Block
+unsafe {
+    var num = 999
+    var ptr = addr(num)
+    print("Unsafe Pointer: ", ptr)
+    print("Unsafe Peek: ", peek(ptr))
+}
+
+// 6. Test & Assert
+test "matematik testi" {
+    assert(10 * 5 =  = 50, "Carpma dogru olmali")
+}
+print("Tum testler ve ozellikler basariyla dogrulandi!")

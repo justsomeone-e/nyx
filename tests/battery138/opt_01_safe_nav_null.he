@@ -1,0 +1,4 @@
+#target hecpp
+struct User { name }
+var u: User? = null
+print(u?.name ?? "None")

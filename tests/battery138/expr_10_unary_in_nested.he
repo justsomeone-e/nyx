@@ -1,0 +1,2 @@
+#target hecpp
+print(-((10 + 20) / 2))

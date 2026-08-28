@@ -1,0 +1,4 @@
+#target hecpp
+var s = 0
+for i in 1..4 { s = s + i }
+print(s)

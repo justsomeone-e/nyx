@@ -1,0 +1,3 @@
+#target hecpp
+unsafe { var x = 10; memdump(addr(x), 16) }
+print("Memdump OK")

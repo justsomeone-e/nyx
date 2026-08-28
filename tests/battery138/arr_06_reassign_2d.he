@@ -1,0 +1,4 @@
+#target hecpp
+var a = [[1, 2], [3, 4]]
+a[1][1] = 99
+print(a[1][1])

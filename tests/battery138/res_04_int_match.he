@@ -1,0 +1,3 @@
+#target hecpp
+var code = 2
+match code { 1 => print("ONE"), 2 => print("TWO"), "_" => print("MANY") }

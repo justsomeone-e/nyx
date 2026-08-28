@@ -1,0 +1,5 @@
+#target hecpp
+struct Pair { a, b }
+var p1 = Pair(1, 2)
+var p2 = p1
+print(p2.a, p2.b)

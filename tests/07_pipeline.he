@@ -1,0 +1,4 @@
+#target hecpp
+5000 -> freq
+fn double_val(x) { return x * 2 }
+freq |> double_val |> print

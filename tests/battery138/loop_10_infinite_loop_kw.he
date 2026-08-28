@@ -1,0 +1,4 @@
+#target hecpp
+var step = 0
+loop { step = step + 1; if step == 4 { break } }
+print(step)

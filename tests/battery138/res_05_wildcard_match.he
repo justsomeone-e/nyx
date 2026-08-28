@@ -1,0 +1,3 @@
+#target hecpp
+var x = 999
+match x { 1 => print("1"), "_" => print("WILDCARD") }

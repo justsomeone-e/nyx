@@ -1,0 +1,3 @@
+#target hecpp
+fn dbl(x) { return x * 2 }
+5000 |> dbl |> print

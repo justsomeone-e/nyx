@@ -1,0 +1,3 @@
+#target hecpp
+var x = []
+print("Empty Array OK")

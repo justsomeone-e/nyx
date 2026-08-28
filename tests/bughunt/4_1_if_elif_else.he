@@ -1,0 +1,9 @@
+#target hecpp
+var x = 10
+if x > 20 {
+    print("A")
+} elif x > 5 {
+    print("B")
+} else {
+    print("C")
+}

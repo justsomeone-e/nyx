@@ -1,0 +1,74 @@
+import os
+import sys
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+if sys.stdout.encoding != 'utf-8':
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+    except:
+        pass
+
+from src.toolchain.lsp_server import HolyEasyLanguageServer
+
+def run_lsp_suite():
+    print("=" * 70)
+    print("⚡ HOLYEASYLANG LSP v2 IDE SERVICE HARNESS")
+    print("=" * 70)
+
+    server = HolyEasyLanguageServer()
+    test_uri = "file:///C:/test_project/main.he"
+    test_code = """import "std/math"
+
+struct Point { x: int, y: int }
+
+fn calculate_distance(p1: Point, p2: Point) -> int {
+    var dx = abs_val(p1.x - p2.x)
+    var dy = abs_val(p1.y - p2.y)
+    return dx + dy
+}
+
+var pt = Point(10, 20)
+print(calculate_distance(pt, pt))
+"""
+    server.documents[test_uri] = test_code
+    server.validate_document(test_uri, test_code)
+
+    # 1. Test Autocompletion
+    print("[*] Testing LSP Autocompletion (Local & stdlib imported symbols)...")
+    comp_items = server.handle_completion(test_uri, {"line": 10, "character": 5})
+    labels = [item["label"] for item in comp_items]
+    assert "abs_val" in labels, "Imported stdlib function 'abs_val' must appear in completions"
+    assert "power" in labels, "Imported stdlib function 'power' must appear in completions"
+    assert "Point" in labels, "Local struct 'Point' must appear in completions"
+    assert "calculate_distance" in labels, "Local function 'calculate_distance' must appear in completions"
+    assert "print" in labels and "match" in labels
+    print(f"  [PASS] Autocompletion returned {len(comp_items)} verified symbols")
+
+    # 2. Test Hover Information
+    print("[*] Testing LSP Hover Tooltips...")
+    hover_fn = server.handle_hover(test_uri, {"line": 4, "character": 5}) # 'calculate_distance'
+    assert hover_fn is not None and "calculate_distance" in hover_fn["contents"]["value"]
+    hover_struct = server.handle_hover(test_uri, {"line": 2, "character": 8}) # 'Point'
+    assert hover_struct is not None and "struct Point" in hover_struct["contents"]["value"]
+    hover_builtin = server.handle_hover(test_uri, {"line": 11, "character": 2}) # 'print'
+    assert hover_builtin is not None and "Core language output" in hover_builtin["contents"]["value"]
+    print("  [PASS] Hover cards correctly formatted Markdown signatures")
+
+    # 3. Test Go To Definition
+    print("[*] Testing LSP Go-To-Definition...")
+    def_res = server.handle_definition(test_uri, {"line": 11, "character": 8}) # 'calculate_distance'
+    assert def_res is not None
+    assert def_res["range"]["start"]["line"] == 4, "Should point to line 5 (0-indexed 4)"
+    print("  [PASS] Go-To-Definition resolved exact AST source location")
+
+    print("=" * 70)
+    print("[OK] LSP v2 Conformance: 3/3 Passed")
+    print("=" * 70)
+    return True
+
+if __name__ == "__main__":
+    ok = run_lsp_suite()
+    sys.exit(0 if ok else 1)

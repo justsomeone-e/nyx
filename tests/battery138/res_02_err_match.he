@@ -1,0 +1,3 @@
+#target hecpp
+var r = Err("404 Not Found")
+match r { Ok(v) => print("OK"), Err(e) => print("ERR:", e), "_" => print("OTHER") }

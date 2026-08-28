@@ -1,0 +1,4 @@
+#target hecpp
+var email = "admin@holyeasy.org"
+print("Has @:", contains(email, "@"))
+print("Age Str:", "Age: " + to_string(25))

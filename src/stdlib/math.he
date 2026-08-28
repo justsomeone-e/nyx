@@ -1,0 +1,63 @@
+// HolyEasyLang Standard Library: std/math
+#target hecpp
+
+fn abs_val(x: int) -> int {
+    if x < 0 { return -x }
+    return x
+}
+
+fn max_val(a: int, b: int) -> int {
+    if a > b { return a }
+    return b
+}
+
+fn min_val(a: int, b: int) -> int {
+    if a < b { return a }
+    return b
+}
+
+fn power(base: int, exp: int) -> int {
+    var res = 1
+    for i in 1..exp {
+        res = res * base
+    }
+    return res
+}
+
+fn clamp(val: int, min_v: int, max_v: int) -> int {
+    if val < min_v { return min_v }
+    if val > max_v { return max_v }
+    return val
+}
+
+fn gcd(a: int, b: int) -> int {
+    var x = abs_val(a)
+    var y = abs_val(b)
+    while y != 0 {
+        var t = y
+        y = x % y
+        x = t
+    }
+    return x
+}
+
+fn sign(x: int) -> int {
+    if x > 0 { return 1 }
+    if x < 0 { return -1 }
+    return 0
+}
+
+test "std/math comprehensive tests" {
+    assert(abs_val(-42) == 42, "abs_val negative")
+    assert(abs_val(42) == 42, "abs_val positive")
+    assert(max_val(10, 20) == 20, "max_val")
+    assert(min_val(10, 20) == 10, "min_val")
+    assert(power(2, 5) == 32, "power exponential")
+    assert(clamp(15, 0, 10) == 10, "clamp upper")
+    assert(clamp(-5, 0, 10) == 0, "clamp lower")
+    assert(clamp(5, 0, 10) == 5, "clamp inside")
+    assert(gcd(48, 18) == 6, "gcd compute")
+    assert(sign(50) == 1, "sign positive")
+    assert(sign(-50) == -1, "sign negative")
+    assert(sign(0) == 0, "sign zero")
+}

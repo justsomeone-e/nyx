@@ -1,0 +1,3 @@
+#target hecpp
+var f = -3.14
+print(f)

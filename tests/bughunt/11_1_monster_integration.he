@@ -1,0 +1,23 @@
+#target hecpp
+struct User {
+    name,
+    age
+}
+
+fn is_adult(user) {
+    return user.age >= 18
+}
+
+var users = [
+    User("Ali", 20),
+    User("Veli", 15),
+    User("Umut", 25)
+]
+
+for user in users {
+    if is_adult(user) {
+        print(user.name + " adult")
+    } else {
+        print(user.name + " young")
+    }
+}

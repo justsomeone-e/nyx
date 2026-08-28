@@ -1,0 +1,4 @@
+#target hecpp
+var a = [1, 2, 3]
+a[0] = 50
+print(a[0])

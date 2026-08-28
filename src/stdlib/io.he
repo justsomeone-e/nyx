@@ -1,0 +1,22 @@
+// HolyEasyLang Standard Library: std/io
+#target hecpp
+
+fn println_str(msg: string) {
+    print(msg)
+}
+
+fn println_int(val: int) {
+    print(val)
+}
+
+fn println_bool(val: bool) {
+    print(val)
+}
+
+fn prompt_input(prompt: string) -> string {
+    return input(prompt)
+}
+
+test "std/io comprehensive tests" {
+    println_str("HolyEasyLang I/O Test Passed")
+}

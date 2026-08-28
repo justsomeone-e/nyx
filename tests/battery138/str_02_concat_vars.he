@@ -1,0 +1,4 @@
+#target hecpp
+var a = "Foo"
+var b = "Bar"
+print(a + b)

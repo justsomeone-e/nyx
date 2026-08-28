@@ -1,0 +1,3 @@
+#target hecpp
+var z = 0
+print(z == 0)

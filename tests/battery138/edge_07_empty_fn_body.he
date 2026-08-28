@@ -1,0 +1,4 @@
+#target hecpp
+fn do_nothing() {}
+do_nothing()
+print("Done")

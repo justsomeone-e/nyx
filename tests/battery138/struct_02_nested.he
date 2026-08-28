@@ -1,0 +1,5 @@
+#target hecpp
+struct Address { city }
+struct User { name, addr }
+var u = User("Umut", Address("Istanbul"))
+print(u.name, u.addr.city)

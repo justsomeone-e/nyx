@@ -1,0 +1,3 @@
+#target hecpp
+fn arr_sum(arr, idx) { if idx >= 3 { return 0 } return arr[idx] + arr_sum(arr, idx + 1) }
+print(arr_sum([10, 20, 30], 0))

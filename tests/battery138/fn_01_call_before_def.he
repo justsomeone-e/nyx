@@ -1,0 +1,4 @@
+#target hecpp
+fn a(x) { return b(x) }
+fn b(x) { return x * 2 }
+print(a(5))

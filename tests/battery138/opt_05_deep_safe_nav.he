@@ -1,0 +1,6 @@
+#target hecpp
+struct City { name }
+struct Address { city: City? }
+struct Profile { addr: Address? }
+var p: Profile? = null
+print(p?.addr?.city?.name ?? "No City")

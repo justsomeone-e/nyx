@@ -1,0 +1,3 @@
+#target hecpp
+var r = Ok(123)
+print(r.is_ok)

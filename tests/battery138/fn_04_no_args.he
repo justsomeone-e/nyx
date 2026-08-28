@@ -1,0 +1,3 @@
+#target hecpp
+fn get_magic() { return 42 }
+print(get_magic())

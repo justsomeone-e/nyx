@@ -1,0 +1,3 @@
+#target hecpp
+var s = ["apple", "banana"]
+print(s[1])

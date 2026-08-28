@@ -1,0 +1,4 @@
+#target hecpp
+struct Box { val }
+fn unbox(b) { return b.val }
+print(unbox(Box(100)))

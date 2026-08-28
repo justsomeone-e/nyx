@@ -1,0 +1,4 @@
+#target hecpp
+struct Item { id }
+var items = [Item(1), Item(2)]
+print(items[1].id)

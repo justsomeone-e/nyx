@@ -1,0 +1,3 @@
+#target hecpp
+fn add_typed(a: int, b: int) -> int { return a + b }
+print(add_typed(20, 30))

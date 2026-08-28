@@ -1,0 +1,5 @@
+#target hecpp
+var a = 0
+var b = 10
+while a < 5 && b > 5 { a = a + 1; b = b - 1 }
+print(a, b)

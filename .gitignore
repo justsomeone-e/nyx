@@ -1,0 +1,90 @@
+# ==============================
+# HolyEasyLang
+# ==============================
+
+# Build outputs
+build/
+target/
+dist/
+
+# Generated backend output
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.a
+*.lib
+*.pdb
+*.ilk
+
+# HolyEasyLang generated/cache files
+.holy/
+.hecache/
+*.hec
+*.hecache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Rust
+Cargo.lock
+target/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.swp
+*.swo
+
+# IDE / editors
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+.idea/
+*.code-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Coverage / profiling
+coverage/
+htmlcov/
+*.prof
+.profraw
+
+# Local environment
+.env
+.env.*
+!.env.example
+
+# Test-generated artifacts
+tests/__pycache__/
+tests/**/__pycache__/
+
+# Local toolchains
+.toolchains/

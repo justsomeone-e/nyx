@@ -1,0 +1,3 @@
+#target hecpp
+if true {}
+print("Empty Block OK")

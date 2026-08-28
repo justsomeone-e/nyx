@@ -1,0 +1,4 @@
+#target hecpp
+var name = "Umut"
+print(name)
+print("Hello " + name)

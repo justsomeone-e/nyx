@@ -1,0 +1,13 @@
+{
+  "editor.wordBasedSuggestions": "off",
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": false
+  },
+  "editor.suggestOnTriggerCharacters": true,
+  "editor.acceptSuggestionOnEnter": "on",
+  "files.associations": {
+    "*.he": "holyeasylang"
+  }
+}

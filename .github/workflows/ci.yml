@@ -1,0 +1,41 @@
+name: HolyEasyLang CI Battery
+
+on:
+  push:
+    branches: [ main, release/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-matrix:
+    name: Test on ${{ matrix.os }} (Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+
+    steps:
+      - name: Checkout HolyEasyLang Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up Node.js (for hejs conformance)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Clang / LLVM (for hecpp native conformance)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt update
+          sudo apt install -y clang
+
+      - name: Execute Full Universal Test Suite
+        run: |
+          python -u tests/run_all_tests.py

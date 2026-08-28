@@ -1,0 +1,3 @@
+#target hecpp
+var names = ["Ali", "Veli"]
+for n in names { print("User:", n) }

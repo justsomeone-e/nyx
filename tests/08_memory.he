@@ -1,0 +1,5 @@
+#target hecpp
+var x = 1337
+var a = addr(x)
+var val = peek(a)
+print("Memory Read:", val)

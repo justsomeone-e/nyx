@@ -1,0 +1,3 @@
+#target hecpp
+fn sq(x) { return x * x }
+print(sq(sq(2)))

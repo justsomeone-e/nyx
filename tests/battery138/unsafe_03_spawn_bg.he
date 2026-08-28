@@ -1,0 +1,3 @@
+#target hecpp
+spawn { var bg = 1 }
+print("Spawn OK")

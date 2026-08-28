@@ -1,0 +1,41 @@
+{
+  "name": "holyeasylang-support",
+  "displayName": "HolyEasyLang Language Support & IntelliSense",
+  "description": "Syntax highlighting, snippets, and IntelliSense for HolyEasyLang (.he)",
+  "version": "1.0.0",
+  "publisher": "HolyEasy",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:holyeasylang"
+  ],
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "holyeasylang",
+        "aliases": ["HolyEasyLang", "he", "heLang"],
+        "extensions": [".he"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "holyeasylang",
+        "scopeName": "source.he",
+        "path": "./syntaxes/he.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "holyeasylang",
+        "path": "./snippets/he.snippets.json"
+      }
+    ]
+  }
+}

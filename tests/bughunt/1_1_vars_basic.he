@@ -1,0 +1,7 @@
+#target hecpp
+var x = 10
+var y = x
+var z = x + y
+print(x)
+print(y)
+print(z)

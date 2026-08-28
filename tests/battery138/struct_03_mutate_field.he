@@ -1,0 +1,5 @@
+#target hecpp
+struct Point { x, y }
+var p = Point(1, 2)
+p.x = 99
+print(p.x)

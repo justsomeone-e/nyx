@@ -1,0 +1,5 @@
+#target hecpp
+var $gold = 5000
+let $silver = 8700
+const $name = "MFD"
+print("Substances:", $gold, $silver, $name)

@@ -1,0 +1,2 @@
+#target hecpp
+print(5 > 10 || 3 == 3)

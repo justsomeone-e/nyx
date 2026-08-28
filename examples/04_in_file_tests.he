@@ -1,0 +1,27 @@
+#target hecpp
+
+fn add(a: int, b: int) -> int {
+    return a + b
+}
+
+fn concat_str(s1: string, s2: string) -> string {
+    return s1 + " " + s2
+}
+
+test "math addition" {
+    var res = add(10, 20)
+    assert(res == 30, "10 + 20 must be 30")
+    print("  [PASS] add(10, 20) == 30")
+}
+
+test "string formatting" {
+    var greeting = concat_str("Holy", "Easy")
+    assert(greeting == "Holy Easy", "string concatenation must match")
+    print("  [PASS] concat_str(\"Holy\", \"Easy\") == \"Holy Easy\"")
+}
+
+test "array indexing" {
+    var numbers = [100, 200, 300]
+    assert(numbers[1] == 200, "second element must be 200")
+    print("  [PASS] numbers[1] == 200")
+}

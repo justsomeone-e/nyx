@@ -1,0 +1,27 @@
+// HolyEasyLang Standard Library: std/str
+#target hecpp
+
+fn is_empty_str(s: string) -> bool {
+    return s == ""
+}
+
+fn concat_three(a: string, b: string, c: string) -> string {
+    return a + b + c
+}
+
+fn wrap_with(s: string, open_tag: string, close_tag: string) -> string {
+    return open_tag + s + close_tag
+}
+
+fn contains_substring(s: string, sub: string) -> bool {
+    return contains(s, sub)
+}
+
+test "std/str comprehensive tests" {
+    assert(is_empty_str("") == true, "empty string check")
+    assert(is_empty_str("abc") == false, "non empty string check")
+    assert(concat_three("Holy", "Easy", "Lang") == "HolyEasyLang", "three way concat")
+    assert(wrap_with("data", "[", "]") == "[data]", "wrap_with tags")
+    assert(contains_substring("HolyEasyLang", "Easy") == true, "contains_substring true")
+    assert(contains_substring("HolyEasyLang", "Rust") == false, "contains_substring false")
+}

@@ -1,0 +1,13 @@
+# HolyEasyLang Package Manifest
+[package]
+name = "my-holy-project"
+version = "1.0.0"
+authors = ["USER"]
+
+[dependencies]
+std = "4.0.0"
+radar = "2.1.0"
+
+[targets]
+native = "hecpp"
+web = "hereact"

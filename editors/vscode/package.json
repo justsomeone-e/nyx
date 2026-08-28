@@ -1,0 +1,30 @@
+{
+  "name": "holyeasylang",
+  "displayName": "HolyEasyLang Language Support",
+  "description": "Official language support and syntax highlighting for HolyEasyLang",
+  "version": "4.0.0",
+  "publisher": "holyeasy",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "holyeasy",
+        "aliases": ["HolyEasyLang", "holyeasy", "he"],
+        "extensions": [".he"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "holyeasy",
+        "scopeName": "source.holyeasy",
+        "path": "./syntaxes/holyeasy.tmLanguage.json"
+      }
+    ]
+  }
+}

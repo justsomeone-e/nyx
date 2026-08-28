@@ -1,0 +1,3 @@
+#target hecpp
+var score: int? = 95
+print(score ?? 0)

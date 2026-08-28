@@ -1,0 +1,3 @@
+#target hecpp
+var arr = [10, 20, 30, 40]
+for x in arr { if x == 30 { break }; print(x) }
