@@ -224,7 +224,10 @@ def cmd_run(entry_file, target):
         print(f"\033[91m[!] Error: Source file not found '{entry_file}'.\033[0m")
         sys.exit(1)
         
-    print(f"\033[96m[*] Running [{target}]:\033[0m {entry_file}")
+    build_dir = os.path.join("build", target)
+    os.makedirs(build_dir, exist_ok=True)
+    base_name = os.path.splitext(os.path.basename(entry_file))[0]
+
     with open(entry_file, "r", encoding="utf-8") as f:
         code = f.read()
 
@@ -235,51 +238,61 @@ def cmd_run(entry_file, target):
     codegen = UniversalCodeGen(ast)
 
     if target == "hepy":
+        out_py = os.path.join(build_dir, f"{base_name}.py")
         py_code = codegen.gen_python()
-        subprocess.run([sys.executable, "-c", py_code])
+        with open(out_py, "w", encoding="utf-8") as f:
+            f.write(py_code)
+        print(f"\033[96m[*] Target [Python 3]:\033[0m {out_py}")
+        print("\033[90m--------------------------------------------------\033[0m")
+        subprocess.run([sys.executable, out_py])
+        print("\033[90m--------------------------------------------------\033[0m")
     elif target == "hejs":
+        out_js = os.path.join(build_dir, f"{base_name}.js")
         js_code = codegen.gen_js()
+        with open(out_js, "w", encoding="utf-8") as f:
+            f.write(js_code)
         node_path = shutil.which("node")
         if not node_path:
             print("\033[91m[!] Node.js not found on system PATH.\033[0m")
             return
-        subprocess.run([node_path, "-e", js_code])
+        print(f"\033[96m[*] Target [Node.js ES2022]:\033[0m {out_js}")
+        print("\033[90m--------------------------------------------------\033[0m")
+        subprocess.run([node_path, out_js])
+        print("\033[90m--------------------------------------------------\033[0m")
     elif target == "hecpp":
-        import tempfile
-        temp_dir = tempfile.mkdtemp(prefix="nyx_run_")
-        try:
-            cpp_file = os.path.join(temp_dir, "main.cpp")
-            exe_file = os.path.join(temp_dir, "main.exe")
-            with open(cpp_file, "w", encoding="utf-8") as f:
-                f.write(codegen.gen_cpp())
-            ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file, codegen.get_link_libraries())
-            if ok and os.path.exists(exe_file):
-                ret, out = CppToolchain.run_executable(exe_file)
-                if out:
-                    print(out.rstrip())
-            else:
-                print(f"\033[91m[!] C++ Compilation failed:\033[0m\n{msg}")
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
+        out_exe = os.path.join(build_dir, f"{base_name}.exe")
+        with open(out_cpp, "w", encoding="utf-8") as f:
+            f.write(codegen.gen_cpp())
+        ok, msg = CppToolchain.compile_cpp(out_cpp, out_exe, codegen.get_link_libraries(), output_type="exe")
+        if ok and os.path.exists(out_exe):
+            print(f"\033[96m[*] Transpiled C++20 Source:\033[0m {out_cpp}")
+            print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
+            print("\033[90m--------------------------------------------------\033[0m")
+            ret_code, out_str = CppToolchain.run_executable(out_exe)
+            if out_str:
+                print(out_str.rstrip())
+            print("\033[90m--------------------------------------------------\033[0m")
+        else:
+            print(f"\033[91m[!] C++ Compilation failed:\033[0m\n{msg}")
     elif target == "hers":
-        import tempfile
-        temp_dir = tempfile.mkdtemp(prefix="nyx_run_rs_")
-        try:
-            rs_file = os.path.join(temp_dir, "main.rs")
-            with open(rs_file, "w", encoding="utf-8") as f:
-                f.write(codegen.gen_rust())
-            rustc = r"C:\Program Files\Rust stable MSVC 1.98\bin\rustc.exe"
-            if not os.path.exists(rustc):
-                rustc = shutil.which("rustc")
-            if rustc:
-                obj_file = os.path.join(temp_dir, "main.o")
-                res = subprocess.run([rustc, "--edition=2021", "--emit=obj", rs_file, "-o", obj_file], capture_output=True, text=True)
-                if res.returncode == 0:
-                    print("\033[92m[OK] Rust 2021 Typecheck & MIR Object verified successfully.\033[0m")
-                else:
-                    print(res.stderr or res.stdout)
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        out_rs = os.path.join(build_dir, f"{base_name}.rs")
+        with open(out_rs, "w", encoding="utf-8") as f:
+            f.write(codegen.gen_rust())
+        print(f"\033[96m[*] Transpiled Rust 2021 Source:\033[0m {out_rs}")
+        rustc = r"C:\Program Files\Rust stable MSVC 1.98\bin\rustc.exe"
+        if not os.path.exists(rustc):
+            rustc = shutil.which("rustc")
+        if rustc:
+            out_exe = os.path.join(build_dir, f"{base_name}.exe")
+            res = subprocess.run([rustc, "--edition=2021", out_rs, "-o", out_exe], capture_output=True, text=True)
+            if res.returncode == 0 and os.path.exists(out_exe):
+                print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
+                print("\033[90m--------------------------------------------------\033[0m")
+                subprocess.run([out_exe])
+                print("\033[90m--------------------------------------------------\033[0m")
+            else:
+                print(res.stderr or res.stdout)
 
 def cmd_new(project_name, is_lib=False):
     if os.path.exists(project_name):

@@ -2,11 +2,11 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "nyx: Build Active File",
+      "label": "nyx: Build & Run Active File",
       "type": "shell",
       "command": "nyx",
       "args": [
-        "build",
+        "run",
         "${file}"
       ],
       "group": {
@@ -31,23 +31,23 @@
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "focus": false,
+        "focus": true,
         "panel": "shared"
       }
     },
     {
-      "label": "nyx: Run Active File",
+      "label": "nyx: Build Only (Emit Code & Binary)",
       "type": "shell",
       "command": "nyx",
       "args": [
-        "run",
+        "build",
         "${file}"
       ],
       "group": "build",
       "presentation": {
         "echo": true,
         "reveal": "always",
-        "focus": true,
+        "focus": false,
         "panel": "shared"
       }
     },
