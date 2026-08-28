@@ -58,15 +58,29 @@ class TypeChecker:
             return True
         if type_node.is_optional and actual == 'null':
             return True
-        return self.is_compatible(type_node.name, actual)
+        # Optional types accept their base type: int? accepts int
+        if type_node.is_optional:
+            base_name = type_node.name
+            if self.is_compatible(base_name, actual):
+                return True
+        expected_str = str(type_node)
+        return self.is_compatible(expected_str, actual)
 
     def is_compatible(self, expected: str, actual: str) -> bool:
         if expected in ('any', None) or actual in ('any', None):
             return True
         if expected == actual:
             return True
+        # Strip optional suffix for base type comparison
+        exp_base = expected.rstrip('?')
+        act_base = actual.rstrip('?')
+        if exp_base == act_base:
+            return True
+        # Pointer compatibility (*void can accept any *T or vice versa)
+        if exp_base.startswith('*') and act_base.startswith('*'):
+            return True
         # int can widen to float
-        if expected == 'float' and actual == 'int':
+        if exp_base == 'float' and act_base == 'int':
             return True
         # null compatibility with Option / Nullable types
         if actual == 'null' and ('?' in expected or 'Option' in expected):
@@ -144,9 +158,9 @@ class TypeChecker:
         elif isinstance(node, FunctionDefNode):
             self.enter_scope()
             prev_ret = self.current_return_type
-            self.current_return_type = node.return_type.name if node.return_type else None
+            self.current_return_type = str(node.return_type) if node.return_type else None
             for p in node.params:
-                p_type = p.type_annot.name if p.type_annot else 'any'
+                p_type = str(p.type_annot) if p.type_annot else 'any'
                 self.declare(p.name, p_type)
             for s in node.body:
                 self.visit(s)

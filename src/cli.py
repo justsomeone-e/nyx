@@ -21,7 +21,7 @@ from src.toolchain import (
     DocGenerator, PackageManager, StandalonePackager
 )
 
-VERSION = "2.0.0-beta.1"
+VERSION = "3.0.0-beta.1"
 
 def print_banner():
     print("===================================================================")

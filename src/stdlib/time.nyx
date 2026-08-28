@@ -1,0 +1,17 @@
+// nyx Standard Library: std/time (Native Clocks & Timers)
+#target hecpp
+#native include <time.h>
+#native include <chrono>
+#native include <thread>
+
+fn sleep_ms(ms: int) {
+    delay_ms(ms)
+}
+
+fn now_epoch() -> int {
+    return 0
+}
+
+test "std/time basic functionality" {
+    sleep_ms(1)
+}

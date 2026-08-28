@@ -1,0 +1,30 @@
+// nyx Native Hardware Library: native/gpio
+#target hecpp
+
+const GPIO_INPUT: int = 0
+const GPIO_OUTPUT: int = 1
+const GPIO_LOW: int = 0
+const GPIO_HIGH: int = 1
+
+const PIN_INPUT: int = 0
+const PIN_OUTPUT: int = 1
+const PIN_LOW: int = 0
+const PIN_HIGH: int = 1
+
+fn set_mode(pin: int, mode: int) {
+    print("[GPIO] Mode Pin", pin, "->", mode)
+}
+
+fn write(pin: int, state: int) {
+    print("[GPIO] Write Pin", pin, "->", state)
+}
+
+fn read(pin: int) -> int {
+    return 0
+}
+
+test "native/gpio pin operations" {
+    set_mode(13, GPIO_OUTPUT)
+    write(13, GPIO_HIGH)
+    write(13, GPIO_LOW)
+}

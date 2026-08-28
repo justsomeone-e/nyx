@@ -1,0 +1,19 @@
+// nyx Standard Library: std/os (Native OS Subsystem)
+#target hecpp
+#native include <stdlib.h>
+#native include <stdio.h>
+
+extern "C" fn system(command: string) -> int
+extern "C" fn getenv(varname: string) -> string
+
+fn run_cmd(cmd: string) -> int {
+    return system(cmd)
+}
+
+fn get_env(name: string) -> string {
+    return getenv(name)
+}
+
+test "std/os basic functionality" {
+    assert(run_cmd("echo nyx OS subsystem initialized") == 0, "Command execution must return 0")
+}

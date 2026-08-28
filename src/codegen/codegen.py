@@ -344,6 +344,8 @@ class UniversalCodeGen:
         for s in self.ast.statements:
             if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, FunctionDefNode, TypeAliasNode)):
                 top_levels.extend(emit_stmt(s, 0))
+            elif isinstance(s, VarDeclNode) and (s.is_const or getattr(s, '_is_global', False)):
+                top_levels.extend(emit_stmt(s, 0))
             else:
                 main_stmts.extend(emit_stmt(s, 1))
 

@@ -8,7 +8,11 @@ if _root_dir not in sys.path:
 
 from src.core.lexer import Lexer
 from src.core.parser import Parser
-from src.core.ast_nodes import ProgramNode, ImportNode, FunctionDefNode, StructDefNode, TraitDefNode, ImplBlockNode, TypeAliasNode, ASTNode
+from src.core.ast_nodes import (
+    ProgramNode, ImportNode, FunctionDefNode, StructDefNode, TraitDefNode,
+    ImplBlockNode, TypeAliasNode, ASTNode, EnumDefNode, ExternFnDeclNode,
+    VarDeclNode, NativeIncludeNode, NativeLinkNode, NativeRawNode
+)
 from src.core.diagnostics import DiagnosticEmitter
 
 class ModuleLoader:
@@ -24,9 +28,9 @@ class ModuleLoader:
         """Resolves module path to an absolute filesystem path and returns all searched candidate paths."""
         searched = []
         
-        # 1. Standard Library: std/math, std::math, std/str
-        if import_path.startswith("std/") or import_path.startswith("std::"):
-            submodule = import_path.replace("std::", "").replace("std/", "")
+        # 1. Standard / Native Library: std/math, native/gpio, std/os
+        if any(import_path.startswith(p) for p in ("std/", "std::", "native/", "native::")):
+            submodule = import_path.replace("std::", "").replace("std/", "").replace("native::", "").replace("native/", "")
             for ext in (".nyx", ".he", ""):
                 base = submodule if submodule.endswith(ext) else submodule + ext
                 cand = os.path.join(self.stdlib_dir, base)
@@ -120,9 +124,13 @@ class ModuleLoader:
             self.loaded_modules[target_path] = module_ast
             self.import_stack.pop()
 
-        # Collect exported declarations from this module
+        # Collect exported declarations and native directives from this module
         for s in module_ast.statements:
-            if isinstance(s, (FunctionDefNode, StructDefNode, TraitDefNode, ImplBlockNode, TypeAliasNode)):
+            if isinstance(s, (NativeIncludeNode, NativeLinkNode, NativeRawNode)):
+                self.collected_declarations.append(s)
+                continue
+
+            if isinstance(s, (FunctionDefNode, StructDefNode, TraitDefNode, ImplBlockNode, TypeAliasNode, EnumDefNode, ExternFnDeclNode, VarDeclNode)):
                 sym_name = getattr(s, "name", None)
                 if not sym_name:
                     continue

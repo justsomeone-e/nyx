@@ -1,0 +1,33 @@
+// nyx Standard Library: std/memory (Native Memory Allocation & Pointers)
+#target hecpp
+#native include <stdlib.h>
+#native include <string.h>
+
+extern "C" fn malloc(size: int) -> *void
+extern "C" fn free(ptr: *void) -> void
+extern "C" fn memset(ptr: *void, val: int, size: int) -> *void
+
+fn allocate(size: int) -> *void {
+    unsafe {
+        return malloc(size)
+    }
+}
+
+fn release(ptr: *void) {
+    unsafe {
+        free(ptr)
+    }
+}
+
+fn fill_zero(ptr: *void, size: int) {
+    unsafe {
+        memset(ptr, 0, size)
+    }
+}
+
+test "std/memory basic allocation" {
+    var p = allocate(128)
+    assert(addr(p) > 0, "Allocated pointer must be valid")
+    fill_zero(p, 128)
+    release(p)
+}

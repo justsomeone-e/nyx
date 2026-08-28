@@ -12,8 +12,8 @@
   </p>
 
   <p align="center">
-    <a href="https://github.com/justsomeone-e/Nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v2.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/Nyx/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
+    <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v3.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/nyx/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
