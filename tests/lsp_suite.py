@@ -19,7 +19,7 @@ def run_lsp_suite():
     print("=" * 70)
 
     server = NyxuageServer()
-    test_uri = "file:///C:/test_project/main.he"
+    test_uri = "file:///C:/test_project/main.nyx"
     test_code = """import "std/math"
 
 struct Point { x: int, y: int }

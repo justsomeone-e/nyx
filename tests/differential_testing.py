@@ -109,9 +109,9 @@ def run_differential_tests():
     
     for name, code in TRIPLE_DIFF_CASES:
         # 1. Frontend: AST & TypeCheck
-        tokens = Lexer(code, f"{name}.he").tokenize()
-        ast = Parser(tokens, code, f"{name}.he").parse()
-        TypeChecker(ast, f"{name}.he", code).check()
+        tokens = Lexer(code, f"{name}.nyx").tokenize()
+        ast = Parser(tokens, code, f"{name}.nyx").parse()
+        TypeChecker(ast, f"{name}.nyx", code).check()
         
         # 2. Python Backend Execution
         py_code = UniversalCodeGen(ast).gen_python()

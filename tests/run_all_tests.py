@@ -73,7 +73,7 @@ fn is_adult(u) { return u.age >= 18 }
 def run_module_tests():
     print("[*] Running Module & Import Loader Unit Tests...")
     from src.core.module_loader import ModuleLoader
-    main_file = os.path.join(BASE_DIR, "tests", "modules", "main_test.he")
+    main_file = os.path.join(BASE_DIR, "tests", "modules", "main_test.nyx")
     loader = ModuleLoader(base_dir=os.path.dirname(main_file))
     ast = loader.load_program(main_file)
     assert any(isinstance(s, FunctionDefNode) and s.name == "calculate_discount" for s in ast.statements)

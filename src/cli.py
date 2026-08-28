@@ -411,7 +411,8 @@ def main():
                 print(f"\033[91m[!] Error: Test file '{target_file}' not found.\033[0m")
                 sys.exit(1)
             print(f"\033[96m[*] Running nyx In-File Unit Tests in '{target_file}'...\033[0m")
-            Compiler(target_file).compile(run_immediately=True)
+            cmd_run(target_file, "hepy")
+            print("\033[92m[OK] Execution finished successfully.\033[0m")
         else:
             test_suite = os.path.join(os.path.dirname(__file__), "..", "tests", "run_all_tests.py")
             if not os.path.exists(test_suite):

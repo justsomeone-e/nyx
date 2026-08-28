@@ -27,27 +27,27 @@ class ModuleLoader:
         # 1. Standard Library: std/math, std::math, std/str
         if import_path.startswith("std/") or import_path.startswith("std::"):
             submodule = import_path.replace("std::", "").replace("std/", "")
-            if not submodule.endswith(".he"):
-                submodule += ".he"
-            cand1 = os.path.join(self.stdlib_dir, submodule)
-            searched.append(cand1)
-            if os.path.exists(cand1):
-                return cand1, searched
+            for ext in (".nyx", ".he", ""):
+                base = submodule if submodule.endswith(ext) else submodule + ext
+                cand = os.path.join(self.stdlib_dir, base)
+                if cand not in searched: searched.append(cand)
+                if os.path.exists(cand):
+                    return cand, searched
             return None, searched
 
-        # 2. Local relative import: ./utils, ../math, helper.he
+        # 2. Local relative import: ./utils, ../math, helper.nyx
         curr_dir = os.path.dirname(os.path.abspath(current_file)) if current_file and current_file != "<memory>" else self.base_dir
         cand1 = os.path.normpath(os.path.join(curr_dir, import_path))
-        cand_file = cand1 if cand1.endswith(".he") else cand1 + ".he"
-        cand_index = os.path.join(cand1, "index.he")
-        
-        searched.append(cand_file)
-        searched.append(cand_index)
-
-        if os.path.exists(cand_file):
-            return cand_file, searched
-        if os.path.exists(cand_index):
-            return cand_index, searched
+        for ext in (".nyx", ".he", ""):
+            cand_f = cand1 if cand1.endswith(ext) else cand1 + ext
+            if cand_f not in searched: searched.append(cand_f)
+            if os.path.exists(cand_f):
+                return cand_f, searched
+        for idx in ("index.nyx", "index.he"):
+            cand_idx = os.path.join(cand1, idx)
+            if cand_idx not in searched: searched.append(cand_idx)
+            if os.path.exists(cand_idx):
+                return cand_idx, searched
             
         return None, searched
 

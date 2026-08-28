@@ -30,10 +30,10 @@ def run_module_suite():
     try:
         # Test 1: Diamond Dependency Resolution (A -> B, A -> C, B -> D, C -> D)
         print("[*] Testing Diamond Dependency Resolution (A -> B, A -> C, B -> D, C -> D)...")
-        mod_d = os.path.join(temp_dir, "d.he")
-        mod_b = os.path.join(temp_dir, "b.he")
-        mod_c = os.path.join(temp_dir, "c.he")
-        mod_a = os.path.join(temp_dir, "a.he")
+        mod_d = os.path.join(temp_dir, "d.nyx")
+        mod_b = os.path.join(temp_dir, "b.nyx")
+        mod_c = os.path.join(temp_dir, "c.nyx")
+        mod_a = os.path.join(temp_dir, "a.nyx")
 
         with open(mod_d, "w", encoding="utf-8") as f:
             f.write("fn shared_base() -> int { return 42 }\n")
@@ -55,9 +55,9 @@ def run_module_suite():
 
         # Test 2: Ambiguous Symbol Collision Detection (E1302)
         print("[*] Testing Ambiguous Symbol Collision Detection (E1302)...")
-        mod_x = os.path.join(temp_dir, "x.he")
-        mod_y = os.path.join(temp_dir, "y.he")
-        mod_main = os.path.join(temp_dir, "ambig_main.he")
+        mod_x = os.path.join(temp_dir, "x.nyx")
+        mod_y = os.path.join(temp_dir, "y.nyx")
+        mod_main = os.path.join(temp_dir, "ambig_main.nyx")
 
         with open(mod_x, "w", encoding="utf-8") as f:
             f.write("fn calculate() -> int { return 10 }\n")
@@ -77,7 +77,7 @@ def run_module_suite():
 
         # Test 3: Module Not Found with candidate paths search (E1301)
         print("[*] Testing Module Not Found with Diagnostics v2 (E1301)...")
-        mod_missing = os.path.join(temp_dir, "missing_main.he")
+        mod_missing = os.path.join(temp_dir, "missing_main.nyx")
         with open(mod_missing, "w", encoding="utf-8") as f:
             f.write("import \"./non_existent_module\"\n")
 

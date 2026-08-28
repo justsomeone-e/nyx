@@ -32,20 +32,20 @@ def run_smoke_test():
         print("  [PASS] 'he doctor' ran cleanly")
         passed_steps += 1
 
-        # Step 2: he new
-        print("[2/5] Testing 'he new smoke_project' project scaffolding...")
+        # Step 2: nyx new
+        print("[2/5] Testing 'nyx new smoke_project' project scaffolding...")
         res = subprocess.run([sys.executable, cli_py, "new", "smoke_project"], cwd=temp_sandbox, capture_output=True, encoding='utf-8', errors='replace')
-        assert res.returncode == 0 and "Created Nyx project" in res.stdout
+        assert res.returncode == 0 and "Created nyx project" in res.stdout
         
         proj_dir = os.path.join(temp_sandbox, "smoke_project")
-        assert os.path.exists(os.path.join(proj_dir, "he.toml")), "he.toml must exist"
-        assert os.path.exists(os.path.join(proj_dir, "src", "main.he")), "src/main.he must exist"
+        assert os.path.exists(os.path.join(proj_dir, "nyx.toml")) or os.path.exists(os.path.join(proj_dir, "he.toml")), "nyx.toml must exist"
+        assert os.path.exists(os.path.join(proj_dir, "src", "main.nyx")), "src/main.nyx must exist"
         print("  [PASS] Project created with valid structure and manifest")
         passed_steps += 1
 
         # Step 3: he check
         print("[3/5] Testing 'he check' on generated project...")
-        main_he = os.path.join(proj_dir, "src", "main.he")
+        main_he = os.path.join(proj_dir, "src", "main.nyx")
         res = subprocess.run([sys.executable, cli_py, "check", main_he], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
         assert res.returncode == 0 and "Check Passed" in res.stdout
         print("  [PASS] Semantic validation passed with 0 errors")
@@ -61,19 +61,19 @@ def run_smoke_test():
         print("  [PASS] In-file assertion battery passed")
         passed_steps += 1
 
-        # Step 5: he run across backends
-        print("[5/5] Testing 'he run' across hepy, hejs, and hecpp...")
+        # Step 5: nyx run across backends
+        print("[5/5] Testing 'nyx run' across hepy, hejs, and hecpp...")
         res_py = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hepy"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-        assert res_py.returncode == 0 and "Hello, smoke_project from Nyx!" in res_py.stdout
+        assert res_py.returncode == 0 and "Hello, smoke_project from nyx!" in res_py.stdout
 
         res_js = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hejs"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-        assert res_js.returncode == 0 and "Hello, smoke_project from Nyx!" in res_js.stdout
+        assert res_js.returncode == 0 and "Hello, smoke_project from nyx!" in res_js.stdout
 
         # Verify C++ transpilation & compilation
         from src.codegen.cpp_toolchain import CppToolchain
         if CppToolchain.find_compiler():
             res_cpp = subprocess.run([sys.executable, cli_py, "run", main_he, "--target", "hecpp"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
-            assert res_cpp.returncode == 0 and "Hello, smoke_project from Nyx!" in res_cpp.stdout
+            assert res_cpp.returncode == 0 and "Hello, smoke_project from nyx!" in res_cpp.stdout
         else:
             res_cpp = subprocess.run([sys.executable, cli_py, "build", main_he, "--target", "hecpp"], cwd=proj_dir, capture_output=True, encoding='utf-8', errors='replace')
             assert res_cpp.returncode == 0 and os.path.exists(os.path.join(proj_dir, "build"))

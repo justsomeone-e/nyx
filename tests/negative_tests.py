@@ -72,9 +72,9 @@ def run_negative_tests():
         caught_error_code = None
         
         try:
-            tokens = Lexer(code, f"{name}.he").tokenize()
-            ast = Parser(tokens, code, f"{name}.he").parse()
-            tc = TypeChecker(ast, f"{name}.he", code)
+            tokens = Lexer(code, f"{name}.nyx").tokenize()
+            ast = Parser(tokens, code, f"{name}.nyx").parse()
+            tc = TypeChecker(ast, f"{name}.nyx", code)
             tc.check()
         except (Exception, SystemExit):
             out = buf.getvalue()

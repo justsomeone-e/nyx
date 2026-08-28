@@ -19,8 +19,8 @@
     "languages": [
       {
         "id": "nyxlang",
-        "aliases": ["Nyx", "he", "heLang"],
-        "extensions": [".he"],
+        "aliases": ["nyx", "Nyx", "nyxlang", "he"],
+        "extensions": [".nyx", ".he"],
         "configuration": "./language-configuration.json"
       }
     ],

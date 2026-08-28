@@ -79,9 +79,9 @@ def run_fuzz_tests(num_random: int = 500):
         sys.stderr = io.StringIO()
         
         try:
-            tokens = Lexer(code, f"fuzz_{idx}.he").tokenize()
-            ast = Parser(tokens, code, f"fuzz_{idx}.he").parse()
-            tc = TypeChecker(ast, f"fuzz_{idx}.he", code)
+            tokens = Lexer(code, f"fuzz_{idx}.nyx").tokenize()
+            ast = Parser(tokens, code, f"fuzz_{idx}.nyx").parse()
+            tc = TypeChecker(ast, f"fuzz_{idx}.nyx", code)
             tc.check()
             valid_parses += 1
         except SystemExit:
