@@ -1,0 +1,88 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "nyx",
+  "scopeName": "source.nyx",
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.nyx",
+      "match": "//.*$"
+    },
+    {
+      "name": "meta.preprocessor.target.nyx",
+      "match": "(#target)\\s+(hecpp|hejs|hers|hepy|hereact|heasm)",
+      "captures": {
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "entity.name.type.target.nyx" }
+      }
+    },
+    {
+      "name": "meta.preprocessor.native.nyx",
+      "match": "(#native)\\s+([a-zA-Z0-9_]+):\\s*(.*)$",
+      "captures": {
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "entity.name.type.target.nyx" },
+        "3": { "name": "string.unquoted.native.nyx" }
+      }
+    },
+    {
+      "name": "keyword.declaration.nyx",
+      "match": "\\b(var|let|const|type|struct|fn|test)\\b"
+    },
+    {
+      "name": "keyword.control.nyx",
+      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|try|catch|unsafe|import|from|export|assert)\\b"
+    },
+    {
+      "name": "support.function.builtin.nyx",
+      "match": "\\b(print|println|len|addr|peek|memdump|contains|to_string|to_int|channel|spawn|Ok|Err)\\b"
+    },
+    {
+      "name": "constant.language.boolean.nyx",
+      "match": "\\b(true|false|null)\\b"
+    },
+    {
+      "name": "string.quoted.double.nyx",
+      "begin": "\"",
+      "end": "\"",
+      "patterns": [
+        {
+          "name": "constant.character.escape.nyx",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.single.nyx",
+      "begin": "'",
+      "end": "'",
+      "patterns": [
+        {
+          "name": "constant.character.escape.nyx",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric.nyx",
+      "match": "\\b\\d+(\\.\\d+)?\\b"
+    },
+    {
+      "name": "keyword.operator.nyx",
+      "match": "(->|\\|>|\\.\\.|==|!=|>=|<=|>|<|\\+|-|\\*|/|=|&&|\\|\\||!|=>)"
+    },
+    {
+      "name": "entity.name.function.nyx",
+      "match": "(?:fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "entity.name.function.nyx" }
+      }
+    },
+    {
+      "name": "entity.name.type.struct.nyx",
+      "match": "(?:struct)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "entity.name.type.struct.nyx" }
+      }
+    }
+  ]
+}

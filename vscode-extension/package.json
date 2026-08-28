@@ -1,9 +1,9 @@
 {
-  "name": "nyxlang-support",
-  "displayName": "Nyx Language Support & IntelliSense",
-  "description": "Syntax highlighting, snippets, and IntelliSense for Nyx (.he)",
-  "version": "1.0.0",
-  "publisher": "Nyx",
+  "name": "nyx-language-support",
+  "displayName": "nyx Language Support & IntelliSense",
+  "description": "Syntax highlighting, snippets, and rich IntelliSense for nyx (.nyx)",
+  "version": "2.0.0",
+  "publisher": "nyx",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -27,14 +27,14 @@
     "grammars": [
       {
         "language": "nyxlang",
-        "scopeName": "source.he",
-        "path": "./syntaxes/he.tmLanguage.json"
+        "scopeName": "source.nyx",
+        "path": "./syntaxes/nyx.tmLanguage.json"
       }
     ],
     "snippets": [
       {
         "language": "nyxlang",
-        "path": "./snippets/he.snippets.json"
+        "path": "./snippets/nyx.snippets.json"
       }
     ]
   }

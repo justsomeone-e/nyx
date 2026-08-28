@@ -3,20 +3,14 @@ const vscode = require('vscode');
 function activate(context) {
     const targetsList = [
         { name: 'hecpp', desc: 'C++20 High Performance Native Binary' },
+        { name: 'hejs', desc: 'JavaScript / Web / Node.js Engine (ES2022)' },
+        { name: 'hers', desc: 'Rust 2021 Memory-Safe Conformance Target' },
+        { name: 'hepy', desc: 'Python 3 Rapid Scripting & ML Reference' },
         { name: 'hereact', desc: 'React (TSX / JSX) Modern Web UI' },
-        { name: 'react', desc: 'React (TSX / JSX) Modern Web UI' },
-        { name: 'hec', desc: 'ANSI C Pure Low-Level Engine' },
-        { name: 'hejs', desc: 'JavaScript / Web / Node.js Engine' },
-        { name: 'hepy', desc: 'Python 3 Rapid Scripting & ML' },
-        { name: 'hego', desc: 'Go / Golang Concurrency & Backend' },
-        { name: 'herust', desc: 'Rust Memory-Safe Native Target' },
-        { name: 'hejava', desc: 'Java JVM Cross-Platform App' },
-        { name: 'hecs', desc: 'C# / .NET Game & Enterprise App' },
-        { name: 'heino', desc: 'Arduino / ESP32 Hardware Firmware' },
-        { name: 'heasm', desc: 'X86_64 Pure Assembly Code' }
+        { name: 'heasm', desc: 'x86_64 Pure Assembly Code' }
     ];
 
-    const provider = vscode.languages.registerCompletionItemProvider('holyeasylang', {
+    const provider = vscode.languages.registerCompletionItemProvider(['nyxlang', 'nyx', 'he', 'holyeasylang'], {
         provideCompletionItems(document, position, token, completionContext) {
             const items = [];
 
@@ -36,10 +30,9 @@ function activate(context) {
             }
 
             // 1. DIRECTIVES & TARGETS
-            addSnippet('#target', '#target ${1|hecpp,hereact,hejs,hepy,hec,hego,herust,hejava,hecs,heino,heasm|} // Note: Only 1 #target allowed per file', 'target directive', 'Specifies HolyEasyLang compilation target.');
-            addSnippet('target', '#target ${1|hecpp,hereact,hejs,hepy,hec,hego,herust,hejava,hecs,heino,heasm|} // Note: Only 1 #target allowed per file', 'target directive', 'Specifies HolyEasyLang compilation target.');
-            addSnippet('#native', '#native ${1|hecpp,hepy,hereact,hejs|}: ${2:#include <windows.h>}', '#native escape hatch', 'Injects raw native target library code directly.');
-            addSnippet('native', '#native ${1|hecpp,hepy,hereact,hejs|}: ${2:#include <windows.h>}', '#native escape hatch', 'Injects raw native target library code directly.');
+            addSnippet('#target', '#target ${1|hecpp,hejs,hers,hepy,hereact,heasm|}', 'target directive', 'Specifies nyx compilation backend target.');
+            addSnippet('target', '#target ${1|hecpp,hejs,hers,hepy,hereact,heasm|}', 'target directive', 'Specifies nyx compilation backend target.');
+            addSnippet('#native', '#native ${1|hecpp,hepy,hejs,hers|}: ${2:#include <iostream>}', '#native escape hatch', 'Injects raw native target library code directly.');
 
             targetsList.forEach(t => {
                 const item = new vscode.CompletionItem(t.name, vscode.CompletionItemKind.EnumMember);
@@ -47,45 +40,51 @@ function activate(context) {
                 items.push(item);
             });
 
-            // 2. PIPELINE & FLOW OPERATORS
-            addSnippet('pipe', '${1:value} |> ${2:func} |> print', 'pipeline operator (|>)', 'Passes the left expression output into the right function as argument.');
+            // 2. OPERATORS
+            addSnippet('pipe', '${1:value} |> ${2:func}', 'pipeline operator (|>)', 'Passes the left expression output into the right function as argument.');
             addSnippet('arrow', '${1:value} -> ${2:variable_name}', 'arrow assignment (->)', 'Assigns the left value to the right variable.');
 
-            // 3. CONTROL FLOW SNIPPETS
-            addSnippet('continue', 'continue', 'continue statement', 'Skips the remaining statements in current iteration.');
-            addSnippet('break', 'break', 'break statement', 'Breaks out of current loop.');
-            addSnippet('if', 'if ${1:condition}:\n\t${0:// body}', 'if statement', 'Conditional execution block.');
-            addSnippet('ifel', 'if ${1:condition}:\n\t${2:// true block}\nelse:\n\t${0:// false block}', 'if-else statement', 'If-else conditional branching.');
-            addSnippet('ifelif', 'if ${1:condition1}:\n\t${2:// block 1}\nelif ${3:condition2}:\n\t${4:// block 2}\nelse:\n\t${0:// block 3}', 'if-elif-else statement', 'Multi-conditional branching.');
-            addSnippet('fn', 'fn ${1:name}(${2:params}):\n\t${0:// body}\n\treturn ${3:result}', 'fn (function definition)', 'Declares a reusable function.');
-            addSnippet('for', 'for ${1:i} in ${2:1}..${3:10}:\n\t${0:print($1)}', 'for range loop', 'Iterates over a numerical range.');
-            addSnippet('loop', 'loop ${1:condition}:\n\t${0:// loop body}', 'loop statement', 'Repeats execution while condition is true.');
-            addSnippet('var', 'var ${1:name} = ${2:value}', 'var variable declaration', 'Declares a new variable.');
-            addSnippet('let', 'let ${1:name} = ${2:value}', 'let variable declaration', 'Declares a modern variable.');
-            addSnippet('const', 'const ${1:NAME} = ${2:value}', 'const constant declaration', 'Declares an immutable constant.');
+            // 3. CONTROL FLOW SNIPPETS & KEYWORDS
+            addSnippet('continue', 'continue', 'continue statement', 'Skips to the next iteration of the current loop.');
+            addSnippet('break', 'break', 'break statement', 'Terminates and exits the current loop.');
+            addSnippet('return', 'return ${1:value}', 'return statement', 'Returns a value from the current function.');
+            addSnippet('if', 'if ${1:condition} {\n\t${0:// body}\n}', 'if block', 'Conditional branch execution.');
+            addSnippet('ifelse', 'if ${1:condition} {\n\t${2:// true block}\n} else {\n\t${0:// false block}\n}', 'if-else block', 'Conditional if-else branching.');
+            addSnippet('elif', 'elif ${1:condition} {\n\t${0:// branch}\n}', 'elif branch', 'Else-if condition.');
+            addSnippet('for', 'for ${1:i} in ${2:1}..${3:10} {\n\t${0:print($1)}\n}', 'for range loop', 'Iterates over a range or collection.');
+            addSnippet('while', 'while ${1:condition} {\n\t${0:// loop body}\n}', 'while loop', 'Repeats execution while condition is true.');
+            addSnippet('loop', 'loop {\n\t${0:// infinite loop}\n\tif ${1:condition} { break }\n}', 'loop statement', 'Unconditional loop.');
+            addSnippet('match', 'match ${1:expr} {\n\t${2:pattern} => ${3:result},\n\t"_" => ${0:default}\n}', 'match pattern matching', 'Pattern matching expression.');
+            addSnippet('fn', 'fn ${1:name}(${2:params}) -> ${3:type} {\n\t${0:// body}\n\treturn ${4:result}\n}', 'fn declaration', 'Declares a strongly typed function.');
+            addSnippet('struct', 'struct ${1:Name} {\n\t${2:field1}: ${3:type},\n\t${4:field2}: ${5:type}\n}', 'struct definition', 'Declares a custom data structure.');
+            addSnippet('var', 'var ${1:name} = ${2:value}', 'var declaration', 'Declares a variable.');
+            addSnippet('let', 'let ${1:name} = ${2:value}', 'let declaration', 'Declares a variable.');
+            addSnippet('const', 'const ${1:NAME} = ${2:value}', 'const declaration', 'Declares an immutable constant.');
             addSnippet('print', 'print(${1:"message"})', 'print statement', 'Prints values to standard output.');
-            addSnippet('use', 'use "${1:./module.he}"', 'use file module', 'Imports and links a local .he module file.');
-
-            // Memory Snippets
-            addSnippet('addr', 'addr(${1:variable})', 'addr(variable) : uintptr_t', 'Gets physical 64-bit RAM memory address.');
-            addSnippet('peek', 'peek(${1:address})', 'peek(address) : uint64_t', 'Reads raw value from memory address.');
-            addSnippet('memdump', 'memdump(${1:address}, ${2:16})', 'memdump(address, length)', 'Dumps memory in Hex and ASCII table.');
+            addSnippet('import', 'import "${1:./module.nyx}"', 'import module', 'Imports and links a local .nyx module file.');
+            addSnippet('import_selective', 'import { ${1:symbol} } from "${2:./module.nyx}"', 'selective import', 'Selectively imports symbols from a module.');
+            addSnippet('test', 'test "${1:test name}" {\n\tassert(${2:condition}, "${3:message}")\n}', 'test block', 'Defines an in-file unit test.');
+            addSnippet('unsafe', 'unsafe {\n\t${0:// raw memory operations}\n}', 'unsafe block', 'Allows direct memory operations (addr, peek, memdump).');
 
             // 4. KEYWORDS
-            const kws = ['continue', 'break', 'if', 'else', 'elif', 'fn', 'return', 'for', 'in', 'loop', 'var', 'let', 'set', 'const', 'use'];
-            kws.forEach(kw => addKeyword(kw, `keyword ${kw}`, `HolyEasyLang keyword \`${kw}\``));
+            const kws = [
+                'continue', 'break', 'return', 'if', 'else', 'elif', 'for', 'in', 'while', 'loop',
+                'match', 'fn', 'struct', 'var', 'let', 'const', 'import', 'export', 'unsafe',
+                'test', 'assert', 'true', 'false', 'null', 'Ok', 'Err', 'try', 'catch', 'type'
+            ];
+            kws.forEach(kw => addKeyword(kw, `keyword ${kw}`, `nyx keyword \`${kw}\``));
 
-            // 5. USER VARIABLES
+            // 5. LOCAL SCOPE VARIABLES
             const text = document.getText();
-            const varRegex = /\b(?:var|let|set|const)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
+            const varRegex = /\b(?:var|let|const|fn|struct)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
             let match;
             const seen = new Set();
             while ((match = varRegex.exec(text)) !== null) {
-                const varName = match[1];
-                if (!seen.has(varName)) {
-                    seen.add(varName);
-                    const varItem = new vscode.CompletionItem(varName, vscode.CompletionItemKind.Variable);
-                    varItem.detail = `Variable: ${varName}`;
+                const symName = match[1];
+                if (!seen.has(symName)) {
+                    seen.add(symName);
+                    const varItem = new vscode.CompletionItem(symName, vscode.CompletionItemKind.Variable);
+                    varItem.detail = `Symbol: ${symName}`;
                     items.push(varItem);
                 }
             }
