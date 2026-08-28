@@ -192,6 +192,17 @@ class CppToolchain:
             except Exception as e:
                 return False, f"Failed to compile object: {e}"
 
+        # 4. Assembly Source (.s / .asm)
+        elif output_type in ("asm", "s"):
+            cmd = [compiler, "-std=c++20", "-S", "-masm=intel", "-O2", cpp_filepath, "-o", out_exe] + inc_args
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
+                return False, f"Assembly Generation Error:\n{res.stderr or res.stdout}"
+            except Exception as e:
+                return False, f"Failed to generate assembly: {e}"
+
         # 4. Standard Executable (.exe)
         if "cl" in compiler_name and "clang" not in compiler_name:
             lib_args = [l if (l.endswith(".lib") or os.path.exists(l)) else f"{l}.lib" for l in link_libs]

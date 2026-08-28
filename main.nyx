@@ -1,7 +1,3 @@
-#target hecpp
+#target heasm
 
-fn main() {
-    print("Welcome to nyx systems programming language!")
-}
-
-main()
+print("Hello Nyx!")

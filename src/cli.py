@@ -99,19 +99,46 @@ def parse_nyx_toml():
                         config["output_type"] = line.split("=")[1].strip().strip('"').strip("'")
     return config
 
-def get_target_from_args(default_target="hecpp"):
+def get_target_from_args(default_target="hecpp", entry_file=None):
+    # 1. Check CLI flag
     if "--target" in sys.argv:
         idx = sys.argv.index("--target")
         if idx + 1 < len(sys.argv):
             t_raw = sys.argv[idx + 1].lower()
             t_map = {
                 "cpp": "hecpp", "hecpp": "hecpp",
+                "asm": "heasm", "heasm": "heasm", "assembly": "heasm",
                 "py": "hepy", "python": "hepy", "hepy": "hepy",
                 "js": "hejs", "node": "hejs", "hejs": "hejs",
                 "rs": "hers", "rust": "hers", "hers": "hers",
                 "react": "hereact", "wasm": "hewasm"
             }
             return t_map.get(t_raw, t_raw)
+            
+    # 2. Check in-file #target directive
+    if entry_file and os.path.exists(entry_file):
+        try:
+            with open(entry_file, "r", encoding="utf-8") as f:
+                for _ in range(15):
+                    line = f.readline()
+                    if not line: break
+                    line = line.strip()
+                    if line.startswith("#target"):
+                        parts = line.split()
+                        if len(parts) >= 2:
+                            t_raw = parts[1].strip().lower()
+                            t_map = {
+                                "cpp": "hecpp", "hecpp": "hecpp",
+                                "asm": "heasm", "heasm": "heasm", "assembly": "heasm",
+                                "py": "hepy", "python": "hepy", "hepy": "hepy",
+                                "js": "hejs", "node": "hejs", "hejs": "hejs",
+                                "rs": "hers", "rust": "hers", "hers": "hers",
+                                "react": "hereact", "wasm": "hewasm"
+                            }
+                            return t_map.get(t_raw, t_raw)
+        except Exception:
+            pass
+
     return default_target
 
 def get_entry_file(default_entry="src/main.nyx"):
@@ -195,6 +222,25 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe"):
                 print(f"\033[93m[!] Transpiled C++ source generated at:\033[0m {out_cpp}")
                 print(f"    ({msg})")
             
+    elif target in ("heasm", "asm"):
+        cpp_code = codegen.gen_cpp()
+        temp_cpp = os.path.join(build_dir, f"{base_name}_temp.cpp")
+        with open(temp_cpp, "w", encoding="utf-8") as f:
+            f.write(cpp_code)
+        out_s = os.path.join(build_dir, f"{base_name}.s")
+        ok, msg = CppToolchain.compile_cpp(temp_cpp, out_s, codegen.get_link_libraries(), output_type="asm")
+        if ok and os.path.exists(out_s):
+            out_exe = os.path.join(build_dir, f"{base_name}.exe")
+            CppToolchain.compile_cpp(temp_cpp, out_exe, codegen.get_link_libraries(), output_type="exe")
+            print(f"\033[96m[*] Generated Assembly (Intel x86_64):\033[0m {out_s}")
+            if os.path.exists(out_exe):
+                print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
+            if os.path.exists(temp_cpp):
+                try: os.remove(temp_cpp)
+                except: pass
+        else:
+            print(f"\033[91m[!] Assembly generation failed:\033[0m {msg}")
+
     elif target == "hejs":
         js_code = codegen.gen_js()
         out_js = os.path.join(build_dir, f"{base_name}.js")
@@ -237,7 +283,29 @@ def cmd_run(entry_file, target):
     TypeChecker(ast, entry_file, code).check()
     codegen = UniversalCodeGen(ast)
 
-    if target == "hepy":
+    if target in ("heasm", "asm"):
+        cpp_code = codegen.gen_cpp()
+        temp_cpp = os.path.join(build_dir, f"{base_name}_temp.cpp")
+        with open(temp_cpp, "w", encoding="utf-8") as f:
+            f.write(cpp_code)
+        out_s = os.path.join(build_dir, f"{base_name}.s")
+        out_exe = os.path.join(build_dir, f"{base_name}.exe")
+        CppToolchain.compile_cpp(temp_cpp, out_s, codegen.get_link_libraries(), output_type="asm")
+        ok, msg = CppToolchain.compile_cpp(temp_cpp, out_exe, codegen.get_link_libraries(), output_type="exe")
+        if ok and os.path.exists(out_exe):
+            print(f"\033[96m[*] Generated Assembly (Intel x86_64):\033[0m {out_s}")
+            print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
+            print("\033[90m--------------------------------------------------\033[0m")
+            ret_code, out_str = CppToolchain.run_executable(out_exe)
+            if out_str:
+                print(out_str.rstrip())
+            print("\033[90m--------------------------------------------------\033[0m")
+            if os.path.exists(temp_cpp):
+                try: os.remove(temp_cpp)
+                except: pass
+        else:
+            print(f"\033[91m[!] Assembly Execution failed:\033[0m\n{msg}")
+    elif target == "hepy":
         out_py = os.path.join(build_dir, f"{base_name}.py")
         py_code = codegen.gen_python()
         with open(out_py, "w", encoding="utf-8") as f:
@@ -583,14 +651,14 @@ def main():
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         cmd_check(entry)
     elif cmd == "build":
-        target = get_target_from_args(config.get("target", "hecpp"))
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
+        target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
         is_release = "--release" in sys.argv
         output_type = config.get("output_type", "exe")
         cmd_build(entry, target, is_release, output_type=output_type)
     elif cmd == "run":
-        target = get_target_from_args(config.get("target", "hecpp"))
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
+        target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
         cmd_run(entry, target)
     elif cmd == "test":
         if len(sys.argv) > 2 and (sys.argv[2].endswith(".nyx") or sys.argv[2].endswith(".he")):
