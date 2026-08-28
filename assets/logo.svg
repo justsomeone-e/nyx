@@ -1,69 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-  <defs>
-    <!-- Dark Monolith Carbon Background -->
-    <linearGradient id="nyxObsidian" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0B0E14"/>
-      <stop offset="50%" stop-color="#05070A"/>
-      <stop offset="100%" stop-color="#000204"/>
-    </linearGradient>
+  <!-- Pure Obsidian / Jet Black Canvas -->
+  <rect width="512" height="512" rx="96" fill="#090A0C"/>
+  <rect width="508" height="508" x="2" y="2" rx="94" fill="none" stroke="#1F232B" stroke-width="2"/>
 
-    <!-- Industrial Sharp Chamfer Gradient -->
-    <linearGradient id="nyxFrame" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#3A4659"/>
-      <stop offset="50%" stop-color="#18202C"/>
-      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0.6"/>
-    </linearGradient>
+  <!-- Iconic Pure Minimalist 'nyx' Monogram / Geometric Mark -->
+  <!-- Crisp, authentic, flat vector geometry with perfect proportions -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    
+    <!-- Outer Focus Geometric Orbit (Subtle Architectural Detail) -->
+    <circle cx="256" cy="256" r="160" stroke="#161A22" stroke-width="2"/>
 
-    <!-- Cold Plasma Cyan-to-Silver Gradient -->
-    <linearGradient id="plasmaBeam" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="30%" stop-color="#E1FAFC"/>
-      <stop offset="70%" stop-color="#00F0FF"/>
-      <stop offset="100%" stop-color="#0072FF"/>
-    </linearGradient>
+    <!-- 'n' Curve & Pillar Structure (Silver Metallic #E6EDF3) -->
+    <path d="M 160 320 L 160 216 C 160 178 190 156 226 156 C 262 156 286 182 286 216 L 286 320" 
+          stroke="#E6EDF3" stroke-width="28"/>
 
-    <!-- Cold Plasma Core Glow -->
-    <filter id="plasmaGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="8" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
+    <!-- 'y' & 'x' Dynamic Diagonal Intersection (Electric Accent #00F0FF) -->
+    <!-- Descending sharp slash -->
+    <path d="M 216 196 L 352 356" 
+          stroke="#00F0FF" stroke-width="28"/>
 
-    <!-- Hard Industrial Shadow -->
-    <filter id="monolithShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.95"/>
-    </filter>
-  </defs>
+    <!-- Ascending crossing slash completing the 'x' vertex -->
+    <path d="M 352 216 L 276 304" 
+          stroke="#E6EDF3" stroke-width="28"/>
 
-  <!-- Outer Octagonal / Chamfered Industrial Monolith Base -->
-  <path d="M 128 32 L 384 32 L 480 128 L 480 384 L 384 480 L 128 480 L 32 384 L 32 128 Z" 
-        fill="url(#nyxObsidian)" stroke="url(#nyxFrame)" stroke-width="4" filter="url(#monolithShadow)"/>
-
-  <!-- Inner Architectural Grid / Precision Markings -->
-  <polygon points="256,96 416,256 256,416 96,256" fill="none" stroke="#141C26" stroke-width="1.5"/>
-  <circle cx="256" cy="256" r="140" fill="none" stroke="#1A2433" stroke-width="1" stroke-dasharray="4 8"/>
-  <circle cx="256" cy="256" r="175" fill="none" stroke="#0F1620" stroke-width="1"/>
-
-  <!-- Precision Corner Calibrations -->
-  <path d="M 64 144 L 64 112 L 96 112" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
-  <path d="M 448 144 L 448 112 L 416 112" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
-  <path d="M 64 368 L 64 400 L 96 400" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
-  <path d="M 448 368 L 448 400 L 416 400" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
-
-  <!-- Ambient Energy Flare -->
-  <polygon points="280,104 168,264 248,264 220,408 344,248 264,248" 
-           fill="#00F0FF" opacity="0.12" filter="url(#plasmaGlow)"/>
-
-  <!-- Monolithic Minimalist 'N' Heavy Glyph Geometry -->
-  <!-- Left Monolith Pillar -->
-  <path d="M 152 144 L 196 144 L 196 368 L 152 368 Z" fill="#1E2734"/>
-  
-  <!-- Right Monolith Pillar -->
-  <path d="M 316 144 L 360 144 L 360 368 L 316 368 Z" fill="#1E2734"/>
-
-  <!-- Razor-Sharp Diagonal Energy Beam (Connecting N and Razor Vertex) -->
-  <path d="M 296 112 L 168 276 L 244 276 L 220 400 L 344 236 L 268 236 L 304 112 Z" 
-        fill="url(#plasmaBeam)" filter="url(#plasmaGlow)"/>
-
-  <!-- Monolithic Specular Edge Refraction -->
-  <path d="M 296 112 L 232 196 L 256 236 L 304 112 Z" fill="#FFFFFF" opacity="0.45"/>
+    <!-- Micro Precision Core Anchor Point -->
+    <circle cx="256" cy="256" r="6" fill="#00F0FF"/>
+  </g>
 </svg>

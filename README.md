@@ -6,7 +6,7 @@
   <br/><br/>
 
   <a href="https://github.com/justsomeone-e/Nyx">
-    <img src="https://capsule-render.vercel.app/api?type=rect&color=080B10&stroke=1E2734&strokeWidth=2&height=180&section=header&text=NYX%20SYSTEMS%20COMPILER&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=42&desc=Statically%20Typed%20%7C%20Zero-Cost%20Multi-Backend%20Architecture&descFontSize=16&descAlignY=66" width="100%" alt="Nyx Architecture Banner"/>
+    <img src="https://capsule-render.vercel.app/api?type=rect&color=080B10&stroke=1E2734&strokeWidth=2&height=180&section=header&text=nyx&fontSize=56&fontColor=ffffff&animation=fadeIn&fontAlignY=42&desc=Statically%20Typed%20%7C%20Zero-Cost%20Multi-Backend%20Architecture&descFontSize=16&descAlignY=66" width="100%" alt="nyx Architecture Banner"/>
   </a>
 
   <p align="center">
