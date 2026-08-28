@@ -21,7 +21,7 @@ from src.core.ast_nodes import (
     FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
     ForNode, MatchNode, UnsafeBlockNode, SpawnNode, ReturnNode, BreakNode, ContinueNode,
     NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
-    MemberAccessNode
+    MemberAccessNode, IndexAccessNode
 )
 from src.codegen.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
@@ -31,7 +31,7 @@ def py_ast_to_canonical(node) -> str:
         stmts = " ".join(py_ast_to_canonical(s) for s in node.statements)
         return f"(Program name='main' body=[{stmts}])"
     if isinstance(node, VarDeclNode):
-        t = node.type_annot.name if node.type_annot else ""
+        t = str(node.type_annot) if node.type_annot else ""
         const_s = " const=true" if node.is_const else ""
         type_s = f" type='{t}'" if t else ""
         return f"(VarDecl name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
@@ -52,17 +52,20 @@ def py_ast_to_canonical(node) -> str:
     if isinstance(node, UnaryOpNode):
         return f"(UnaryOp op='{node.op}' body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, FunctionCallNode):
+        if isinstance(node.callee, MemberAccessNode):
+            callee_s = py_ast_to_canonical(node.callee.obj)
+            return f"(MemberAccess name='{node.callee.member}' body=[{callee_s} (MethodCall name='{node.callee.member}')])"
         args = " ".join(py_ast_to_canonical(a) for a in node.args)
         body_s = f" body=[{args}]" if args else ""
         return f"(FunctionCall name='{node.callee}'{body_s})"
     if isinstance(node, FunctionDefNode):
-        params_s = ", ".join(f"{p.name}: {p.type_annot.name if p.type_annot else ''}" for p in node.params)
-        ret = node.return_type.name if node.return_type else "void"
+        params_s = ", ".join(f"{p.name}: {str(p.type_annot) if p.type_annot else ''}" for p in node.params)
+        ret = str(node.return_type) if node.return_type else "void"
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         params_attr = f" params=[{params_s}]" if params_s else ""
         return f"(FunctionDef name='{node.name}' type='{ret}'{params_attr} body=[{body}])"
     if isinstance(node, StructDefNode):
-        params_s = ", ".join(f"{p.name}: {p.type_annot.name if p.type_annot else ''}" for p in node.fields)
+        params_s = ", ".join(f"{p.name}: {str(p.type_annot) if p.type_annot else ''}" for p in node.fields)
         return f"(StructDef name='{node.name}' params=[{params_s}])"
     if isinstance(node, ImplBlockNode):
         methods = " ".join(py_ast_to_canonical(m) for m in node.methods)
@@ -87,6 +90,8 @@ def py_ast_to_canonical(node) -> str:
         return f"(For name='{node.var_name}' body=[{start} {end} {body}])"
     if isinstance(node, MemberAccessNode):
         return f"(MemberAccess name='{node.member}' body=[{py_ast_to_canonical(node.obj)}])"
+    if isinstance(node, IndexAccessNode):
+        return f"(IndexAccess body=[{py_ast_to_canonical(node.obj)} {py_ast_to_canonical(node.index_expr)}])"
     if isinstance(node, UnsafeBlockNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(UnsafeBlock body=[{body}])"
