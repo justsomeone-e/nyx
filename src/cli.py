@@ -550,10 +550,28 @@ test "greeting test" {{
     with open(os.path.join(vscode_dir, "tasks.json"), "w", encoding="utf-8") as f:
         f.write(tasks_json_content)
 
+    c_cpp_props = """{
+  "configurations": [
+    {
+      "name": "nyx-MinGW",
+      "includePath": ["${workspaceFolder}/**"],
+      "defines": ["_DEBUG", "UNICODE", "_UNICODE"],
+      "compilerPath": "C:/Users/USER/AppData/Local/Microsoft/WinGet/Packages/MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/llvm-mingw-20260616-ucrt-x86_64/bin/clang++.exe",
+      "cStandard": "c17",
+      "cppStandard": "c++20",
+      "intelliSenseMode": "windows-clang-x64"
+    }
+  ],
+  "version": 4
+}
+"""
+    with open(os.path.join(vscode_dir, "c_cpp_properties.json"), "w", encoding="utf-8") as f:
+        f.write(c_cpp_props)
+
     print(f"\033[92m[OK] Created nyx project in ./{project_name}\033[0m")
     print(f"     - Manifest:   ./{project_name}/nyx.toml")
     print(f"     - Entrypoint: ./{project_name}/src/main.nyx")
-    print(f"     - VS Code:    ./{project_name}/.vscode/tasks.json (Ctrl+Shift+B ready)")
+    print(f"     - VS Code:    ./{project_name}/.vscode/ (tasks.json & IntelliSense ready)")
     print(f"\nTo get started:\n  cd {project_name}\n  nyx run\n")
 
 def cmd_clean():
