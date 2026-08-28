@@ -377,6 +377,46 @@ impl Parser {
             return ASTNode("ImplBlock", target, "", "", "", false, false, false, false, [], [], methods, tok.line, tok.col)
         }
 
+        // Trait definition
+        if tok.type_name == "TRAIT" {
+            self.advance()
+            var name = self.expect("IDENT").value
+            var methods: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    methods.push(self.parse_statement())
+                }
+            }
+            return ASTNode("TraitDef", name, "", "", "", false, false, false, false, [], [], methods, tok.line, tok.col)
+        }
+
+        // Extern C function declaration
+        if tok.type_name == "EXTERN" {
+            self.advance()
+            var abi = self.expect("STRING").value
+            self.expect("FN")
+            var name = self.expect("IDENT").value
+            self.expect("LPAREN")
+            var params: Array<FunctionParam> = []
+            if not self.match_type("RPAREN") {
+                while true {
+                    var pname = self.expect("IDENT").value
+                    self.expect("COLON")
+                    var ptype = self.parse_type()
+                    params.push(FunctionParam(pname, ptype))
+                    if self.match_type("COMMA") { continue }
+                    self.expect("RPAREN")
+                    break
+                }
+            }
+            var ret_type = "void"
+            if self.match_type("ARROW") {
+                ret_type = self.parse_type()
+            }
+            self.match_type("SEMICOLON")
+            return ASTNode("ExternFn", name, abi, "", ret_type, false, false, false, false, params, [], [], tok.line, tok.col)
+        }
+
         // Return
         if tok.type_name == "RETURN" {
             self.advance()
@@ -386,6 +426,18 @@ impl Parser {
             }
             self.match_type("SEMICOLON")
             return ASTNode("Return", "", "", "", "", false, false, false, false, [], [], [expr], tok.line, tok.col)
+        }
+
+        // Break & Continue
+        if tok.type_name == "BREAK" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Break", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+        }
+        if tok.type_name == "CONTINUE" {
+            self.advance()
+            self.match_type("SEMICOLON")
+            return ASTNode("Continue", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
         }
 
         // If statement
@@ -398,17 +450,119 @@ impl Parser {
                     then_body.push(self.parse_statement())
                 }
             }
-            var else_body: Array<ASTNode> = []
+            var children: Array<ASTNode> = [cond]
+            for s in then_body { children.push(s) }
+
             if self.match_type("ELSE") {
+                var else_body: Array<ASTNode> = []
                 if self.match_type("LBRACE") {
                     while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
                         else_body.push(self.parse_statement())
                     }
                 }
+                var else_node = ASTNode("ElseBlock", "", "", "", "", false, false, false, false, [], [], else_body, tok.line, tok.col)
+                children.push(else_node)
+            }
+            return ASTNode("If", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
+        }
+
+        // While loop
+        if tok.type_name == "WHILE" {
+            self.advance()
+            var cond = self.parse_expr(0)
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
             }
             var children: Array<ASTNode> = [cond]
-            for s in then_body { children.push(s) }
-            return ASTNode("If", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
+            for s in body { children.push(s) }
+            return ASTNode("While", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
+        }
+
+        // For loop
+        if tok.type_name == "FOR" {
+            self.advance()
+            var var_name = self.expect("IDENT").value
+            self.expect("IN")
+            var range_start = self.parse_expr(0)
+            var range_end = ASTNode("Null", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+            if self.match_type("DOTDOT") {
+                range_end = self.parse_expr(0)
+            }
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
+            }
+            var children: Array<ASTNode> = [range_start, range_end]
+            for s in body { children.push(s) }
+            return ASTNode("For", var_name, "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
+        }
+
+        // Loop infinite loop
+        if tok.type_name == "LOOP" {
+            self.advance()
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
+            }
+            return ASTNode("Loop", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
+        }
+
+        // Unsafe block
+        if tok.type_name == "UNSAFE" {
+            self.advance()
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
+            }
+            return ASTNode("UnsafeBlock", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
+        }
+
+        // Spawn block
+        if tok.type_name == "SPAWN" {
+            self.advance()
+            var body: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    body.push(self.parse_statement())
+                }
+            }
+            return ASTNode("Spawn", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
+        }
+
+        // Match statement
+        if tok.type_name == "MATCH" {
+            self.advance()
+            var target = self.parse_expr(0)
+            var cases: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                    var pattern = self.parse_expr(0)
+                    self.expect("FAT_ARROW")
+                    var case_body: Array<ASTNode> = []
+                    if self.match_type("LBRACE") {
+                        while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                            case_body.push(self.parse_statement())
+                        }
+                    } else {
+                        case_body.push(self.parse_statement())
+                    }
+                    var case_node = ASTNode("MatchCase", "", "", "", "", false, false, false, false, [], [], case_body, pattern.line, pattern.col)
+                    cases.push(pattern)
+                    cases.push(case_node)
+                }
+            }
+            var children: Array<ASTNode> = [target]
+            for c in cases { children.push(c) }
+            return ASTNode("Match", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
         }
 
         // General expression / assignment statement

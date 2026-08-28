@@ -18,8 +18,10 @@ from src.core.parser import Parser as PyParser
 from src.core.ast_nodes import (
     ProgramNode, VarDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
     NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, FunctionCallNode,
-    FunctionDefNode, StructDefNode, ImplBlockNode, IfNode, ReturnNode,
-    NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode
+    FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
+    ForNode, MatchNode, UnsafeBlockNode, SpawnNode, ReturnNode, BreakNode, ContinueNode,
+    NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
+    MemberAccessNode
 )
 from src.codegen.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
@@ -65,12 +67,54 @@ def py_ast_to_canonical(node) -> str:
     if isinstance(node, ImplBlockNode):
         methods = " ".join(py_ast_to_canonical(m) for m in node.methods)
         return f"(ImplBlock name='{node.target_type}' body=[{methods}])"
+    if isinstance(node, TraitDefNode):
+        methods = " ".join(py_ast_to_canonical(m) for m in node.methods)
+        return f"(TraitDef name='{node.name}' body=[{methods}])"
     if isinstance(node, IfNode):
         then_b = " ".join(py_ast_to_canonical(s) for s in node.then_branch)
-        return f"(If body=[{py_ast_to_canonical(node.condition)} {then_b}])"
+        else_b = ""
+        if node.else_branch:
+            else_stmts = " ".join(py_ast_to_canonical(s) for s in node.else_branch)
+            else_b = f" (ElseBlock body=[{else_stmts}])"
+        return f"(If body=[{py_ast_to_canonical(node.condition)} {then_b}{else_b}])"
+    if isinstance(node, WhileNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(While body=[{py_ast_to_canonical(node.condition)} {body}])"
+    if isinstance(node, ForNode):
+        start = py_ast_to_canonical(node.start_expr) if node.start_expr else "(Null val='null' type='null')"
+        end = py_ast_to_canonical(node.end_expr) if node.end_expr else "(Null val='null' type='null')"
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(For name='{node.var_name}' body=[{start} {end} {body}])"
+    if isinstance(node, MemberAccessNode):
+        return f"(MemberAccess name='{node.member}' body=[{py_ast_to_canonical(node.obj)}])"
+    if isinstance(node, UnsafeBlockNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(UnsafeBlock body=[{body}])"
+    if isinstance(node, SpawnNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(Spawn body=[{body}])"
+    if isinstance(node, MatchNode):
+        cases_s = []
+        for pat, blk in node.cases:
+            if isinstance(blk, list):
+                blk_s = " ".join(py_ast_to_canonical(s) for s in blk)
+            elif isinstance(blk, UnsafeBlockNode):
+                blk_s = " ".join(py_ast_to_canonical(s) for s in blk.body)
+            else:
+                blk_s = py_ast_to_canonical(blk)
+            cases_s.append(f"{py_ast_to_canonical(pat)} (MatchCase body=[{blk_s}])")
+        return f"(Match body=[{py_ast_to_canonical(node.expr)} {' '.join(cases_s)}])"
     if isinstance(node, ReturnNode):
         expr = py_ast_to_canonical(node.expr) if node.expr else "(Null val='null' type='null')"
         return f"(Return body=[{expr}])"
+    if isinstance(node, BreakNode):
+        return "(Break)"
+    if isinstance(node, ContinueNode):
+        return "(Continue)"
+    if isinstance(node, ExternFnDeclNode):
+        params_s = ", ".join(f"{p.name}: {p.type_annot.name if p.type_annot else ''}" for p in node.params)
+        ret = node.return_type.name if node.return_type else "void"
+        return f"(ExternFn name='{node.name}' val='{node.abi}' type='{ret}' params=[{params_s}])"
     if isinstance(node, NativeIncludeNode):
         return f"(Directive name='native_include' val='{node.header}')"
     if isinstance(node, NativeLinkNode):
@@ -83,7 +127,7 @@ def py_ast_to_canonical(node) -> str:
 
 def run_bootstrap_parser_test() -> bool:
     print("=" * 70)
-    print("⚡ NYX PHASE 4.0.4 - 4.0.5 BOOTSTRAP PARSER PARITY HARNESS")
+    print("⚡ NYX PHASE 4.0.4 - 4.0.5 EXHAUSTIVE BOOTSTRAP PARSER PARITY HARNESS")
     print("=" * 70)
 
     with open(os.path.join(_root_dir, "compiler", "parser.nyx"), "r", encoding="utf-8") as f:
@@ -114,7 +158,13 @@ def run_bootstrap_parser_test() -> bool:
         ("simple_var_and_math", "var x: int = 10 + 20 * 30;"),
         ("function_definition", "fn add(a: int, b: int) -> int { return a + b; }"),
         ("struct_definition", "struct Point { x: int, y: int }"),
-        ("if_control_flow", "if a > 10 { print(\"Large\"); }"),
+        ("impl_and_methods", "impl Point { fn dist(self) -> int { return self.x + self.y; } }"),
+        ("if_else_branches", "if a > 10 { print(\"Large\"); } else { print(\"Small\"); }"),
+        ("while_and_break", "while true { break; }"),
+        ("for_range_loop", "for i in 0..10 { continue; }"),
+        ("unsafe_block", "unsafe { var ptr = addr(x); }"),
+        ("match_pattern", "match x { 1 => { print(\"One\"); } 2 => { print(\"Two\"); } }"),
+        ("extern_ffi_decl", "extern \"C\" fn puts(s: string) -> int;"),
         ("native_directives", "#native include <vector>\n#native link \"user32.lib\"\n#native use std::vector;")
     ]
 
@@ -174,7 +224,7 @@ main()
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     print("=" * 70)
-    print(f"Bootstrap Parser Parity Result: {'SUCCESS' if all_passed else 'FAILURE'}")
+    print(f"Exhaustive Bootstrap Parser Parity Result: {'SUCCESS' if all_passed else 'FAILURE'}")
     print("=" * 70)
     return all_passed
 
