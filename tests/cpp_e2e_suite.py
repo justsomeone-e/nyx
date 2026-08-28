@@ -155,7 +155,8 @@ def run_cpp_e2e_tests():
             # 2. Transpile to C++20
             cpp_code = UniversalCodeGen(ast).gen_cpp()
             cpp_file = os.path.join(temp_dir, f"{name}.cpp")
-            exe_file = os.path.join(temp_dir, f"{name}.exe")
+            exe_ext = ".exe" if os.name == 'nt' else ""
+            exe_file = os.path.join(temp_dir, f"{name}{exe_ext}")
             
             with open(cpp_file, 'w', encoding='utf-8') as f:
                 f.write(cpp_code)

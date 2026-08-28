@@ -13,7 +13,8 @@ class CppToolchain:
         compiler_name = os.path.basename(compiler_path).lower()
         temp_dir = tempfile.gettempdir()
         probe_cpp = os.path.join(temp_dir, "he_probe.cpp")
-        probe_exe = os.path.join(temp_dir, "he_probe.exe")
+        exe_ext = ".exe" if os.name == 'nt' else ""
+        probe_exe = os.path.join(temp_dir, f"he_probe{exe_ext}")
         
         with open(probe_cpp, "w", encoding="utf-8") as f:
             f.write("#include <iostream>\n#include <string>\nint main(){ std::cout << 42 << std::endl; return 0; }\n")
@@ -22,7 +23,8 @@ class CppToolchain:
             if "cl" in compiler_name and "clang" not in compiler_name:
                 cmd = [compiler_path, "/std:c++20", "/EHsc", probe_cpp, f"/Fe:{probe_exe}"]
             else:
-                cmd = [compiler_path, "-std=c++20", "-static", probe_cpp, "-o", probe_exe]
+                static_flag = [] if sys.platform == 'darwin' else ["-static"]
+                cmd = [compiler_path, "-std=c++20"] + static_flag + [probe_cpp, "-o", probe_exe]
                 
             res = subprocess.run(cmd, capture_output=True, timeout=8)
             if res.returncode != 0:
@@ -97,7 +99,8 @@ class CppToolchain:
         if "cl" in compiler_name and "clang" not in compiler_name:
             cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"]
         else:
-            cmd = [compiler, "-std=c++20", "-static", "-O2", cpp_filepath, "-o", out_exe]
+            static_flag = [] if sys.platform == 'darwin' else ["-static"]
+            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe]
 
         try:
             res = subprocess.run(cmd, capture_output=True, text=True)

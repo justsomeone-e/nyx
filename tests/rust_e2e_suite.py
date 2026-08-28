@@ -144,7 +144,8 @@ def run_rust_e2e_tests():
             rs_code = UniversalCodeGen(ast).gen_rust()
             rs_file = os.path.join(temp_dir, f"{name}.rs")
             obj_file = os.path.join(temp_dir, f"{name}.o")
-            exe_file = os.path.join(temp_dir, f"{name}.exe")
+            exe_ext = ".exe" if os.name == 'nt' else ""
+            exe_file = os.path.join(temp_dir, f"{name}{exe_ext}")
             
             with open(rs_file, 'w', encoding='utf-8') as f:
                 f.write(rs_code)
