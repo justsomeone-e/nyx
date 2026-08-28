@@ -22,11 +22,16 @@ class CppToolchain:
         try:
             if "cl" in compiler_name and "clang" not in compiler_name:
                 cmd = [compiler_path, "/std:c++20", "/EHsc", probe_cpp, f"/Fe:{probe_exe}"]
+                res = subprocess.run(cmd, capture_output=True, timeout=8)
             else:
-                static_flag = [] if sys.platform == 'darwin' else ["-static"]
+                static_flag = ["-static"] if sys.platform != 'darwin' else []
                 cmd = [compiler_path, "-std=c++20"] + static_flag + [probe_cpp, "-o", probe_exe]
+                res = subprocess.run(cmd, capture_output=True, timeout=8)
+                if res.returncode != 0:
+                    # Fallback without -static (works for MSVC Clang and systems lacking static libc)
+                    cmd = [compiler_path, "-std=c++20", probe_cpp, "-o", probe_exe]
+                    res = subprocess.run(cmd, capture_output=True, timeout=8)
                 
-            res = subprocess.run(cmd, capture_output=True, timeout=8)
             if res.returncode != 0:
                 return False
                 
@@ -98,18 +103,28 @@ class CppToolchain:
         compiler_name = os.path.basename(compiler).lower()
         if "cl" in compiler_name and "clang" not in compiler_name:
             cmd = [compiler, "/std:c++20", "/EHsc", "/O2", cpp_filepath, f"/Fe:{out_exe}"]
-        else:
-            static_flag = [] if sys.platform == 'darwin' else ["-static"]
-            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe]
-
-        try:
-            res = subprocess.run(cmd, capture_output=True, text=True)
-            if res.returncode == 0:
-                return True, out_exe
-            else:
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
                 return False, f"C++ Compilation Error:\n{res.stderr or res.stdout}"
-        except Exception as e:
-            return False, f"Failed to execute compiler '{compiler}': {e}"
+            except Exception as e:
+                return False, f"Failed to execute compiler '{compiler}': {e}"
+        else:
+            static_flag = ["-static"] if sys.platform != 'darwin' else []
+            cmd = [compiler, "-std=c++20"] + static_flag + ["-O2", cpp_filepath, "-o", out_exe]
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode != 0:
+                    # Retry without -static
+                    cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe]
+                    res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
+                else:
+                    return False, f"C++ Compilation Error:\n{res.stderr or res.stdout}"
+            except Exception as e:
+                return False, f"Failed to execute compiler '{compiler}': {e}"
 
     @classmethod
     def run_executable(cls, exe_filepath: str) -> Tuple[int, str]:

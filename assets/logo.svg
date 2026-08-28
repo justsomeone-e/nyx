@@ -1,63 +1,69 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
   <defs>
-    <!-- Deep Cosmic Matte Background -->
-    <linearGradient id="nyxBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0E1217"/>
-      <stop offset="50%" stop-color="#06080B"/>
-      <stop offset="100%" stop-color="#010204"/>
+    <!-- Dark Monolith Carbon Background -->
+    <linearGradient id="nyxObsidian" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0E14"/>
+      <stop offset="50%" stop-color="#05070A"/>
+      <stop offset="100%" stop-color="#000204"/>
     </linearGradient>
 
-    <!-- Celestial Border Ring -->
-    <linearGradient id="nyxBorder" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#2D3748"/>
-      <stop offset="50%" stop-color="#141923"/>
-      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.5"/>
+    <!-- Industrial Sharp Chamfer Gradient -->
+    <linearGradient id="nyxFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3A4659"/>
+      <stop offset="50%" stop-color="#18202C"/>
+      <stop offset="100%" stop-color="#00E5FF" stop-opacity="0.6"/>
     </linearGradient>
 
-    <!-- Electric Cyan-to-White Energy -->
-    <linearGradient id="nyxEnergy" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Cold Plasma Cyan-to-Silver Gradient -->
+    <linearGradient id="plasmaBeam" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF"/>
-      <stop offset="35%" stop-color="#C5F9FF"/>
-      <stop offset="75%" stop-color="#00F0FF"/>
-      <stop offset="100%" stop-color="#0077FF"/>
+      <stop offset="30%" stop-color="#E1FAFC"/>
+      <stop offset="70%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0072FF"/>
     </linearGradient>
 
-    <!-- Outer Glow Filter -->
-    <filter id="nyxGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="14" result="blur" />
+    <!-- Cold Plasma Core Glow -->
+    <filter id="plasmaGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <!-- Drop Shadow -->
-    <filter id="nyxShadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="16" stdDeviation="22" flood-color="#000000" flood-opacity="0.85"/>
+    <!-- Hard Industrial Shadow -->
+    <filter id="monolithShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="20" stdDeviation="24" flood-color="#000000" flood-opacity="0.95"/>
     </filter>
   </defs>
 
-  <!-- Squircle Base Container -->
-  <rect x="32" y="32" width="448" height="448" rx="116" ry="116" fill="url(#nyxBg)" stroke="url(#nyxBorder)" stroke-width="4" filter="url(#nyxShadow)"/>
+  <!-- Outer Octagonal / Chamfered Industrial Monolith Base -->
+  <path d="M 128 32 L 384 32 L 480 128 L 480 384 L 384 480 L 128 480 L 32 384 L 32 128 Z" 
+        fill="url(#nyxObsidian)" stroke="url(#nyxFrame)" stroke-width="4" filter="url(#monolithShadow)"/>
 
-  <!-- Celestial Orbit Ring -->
-  <circle cx="256" cy="256" r="168" fill="none" stroke="#161E28" stroke-width="1.5" stroke-dasharray="8 8"/>
-  <circle cx="256" cy="256" r="202" fill="none" stroke="#10151D" stroke-width="1"/>
+  <!-- Inner Architectural Grid / Precision Markings -->
+  <polygon points="256,96 416,256 256,416 96,256" fill="none" stroke="#141C26" stroke-width="1.5"/>
+  <circle cx="256" cy="256" r="140" fill="none" stroke="#1A2433" stroke-width="1" stroke-dasharray="4 8"/>
+  <circle cx="256" cy="256" r="175" fill="none" stroke="#0F1620" stroke-width="1"/>
 
-  <!-- Ambient Energy Flare behind 'N' -->
-  <path d="M280 96 L168 264 L244 264 L224 416 L344 248 L268 248 Z" 
-        fill="#00F0FF" opacity="0.18" filter="url(#nyxGlow)" />
+  <!-- Precision Corner Calibrations -->
+  <path d="M 64 144 L 64 112 L 96 112" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
+  <path d="M 448 144 L 448 112 L 416 112" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
+  <path d="M 64 368 L 64 400 L 96 400" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
+  <path d="M 448 368 L 448 400 L 416 400" fill="none" stroke="#00F0FF" stroke-width="2" opacity="0.6"/>
 
-  <!-- Stylized Monogram: 'N' with an Electric Diagonal Slash -->
-  <!-- Left Vertical Stem of 'N' -->
-  <path d="M148 148 L188 148 C192 148 196 152 196 156 L196 356 C196 360 192 364 188 364 L148 364 C144 364 140 360 140 356 L140 156 C140 152 144 148 148 148 Z" 
-        fill="#232C37"/>
+  <!-- Ambient Energy Flare -->
+  <polygon points="280,104 168,264 248,264 220,408 344,248 264,248" 
+           fill="#00F0FF" opacity="0.12" filter="url(#plasmaGlow)"/>
 
-  <!-- Right Vertical Stem of 'N' -->
-  <path d="M324 148 L364 148 C368 148 372 152 372 156 L372 356 C372 360 368 364 364 364 L324 364 C320 364 316 360 316 356 L316 156 C316 152 320 148 324 148 Z" 
-        fill="#232C37"/>
+  <!-- Monolithic Minimalist 'N' Heavy Glyph Geometry -->
+  <!-- Left Monolith Pillar -->
+  <path d="M 152 144 L 196 144 L 196 368 L 152 368 Z" fill="#1E2734"/>
+  
+  <!-- Right Monolith Pillar -->
+  <path d="M 316 144 L 360 144 L 360 368 L 316 368 Z" fill="#1E2734"/>
 
-  <!-- Dynamic Electric Lightning Center Slash forming the 'N' & Bolt -->
-  <path d="M296 104 L172 272 C168 278 172 284 180 284 L248 284 L224 408 C222 418 234 422 240 414 L344 252 C348 246 344 240 336 240 L272 240 L308 112 C310 104 300 98 296 104 Z" 
-        fill="url(#nyxEnergy)"/>
+  <!-- Razor-Sharp Diagonal Energy Beam (Connecting N and Razor Vertex) -->
+  <path d="M 296 112 L 168 276 L 244 276 L 220 400 L 344 236 L 268 236 L 304 112 Z" 
+        fill="url(#plasmaBeam)" filter="url(#plasmaGlow)"/>
 
-  <!-- Subtle Specular Reflection Cut -->
-  <path d="M296 104 L228 200 L260 240 L308 112 Z" fill="#FFFFFF" opacity="0.35"/>
+  <!-- Monolithic Specular Edge Refraction -->
+  <path d="M 296 112 L 232 196 L 256 236 L 304 112 Z" fill="#FFFFFF" opacity="0.45"/>
 </svg>

@@ -1,243 +1,222 @@
 <div align="center">
 
-  <a href="https://github.com/k4chox/HolyEasyLang">
-    <img src="assets/logo.svg" width="130" height="130" alt="Nyx Logo" style="filter: drop-shadow(0 10px 20px rgba(0,240,255,0.25));"/>
+  <a href="https://github.com/justsomeone-e/HolyEasyLang">
+    <img src="assets/logo.svg" width="136" height="136" alt="Nyx Logo" style="filter: drop-shadow(0 12px 24px rgba(0,240,255,0.2));"/>
   </a>
-  <br/>
+  <br/><br/>
 
-  <a href="https://github.com/k4chox/HolyEasyLang">
-    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=200&section=header&text=⚡%20Nyx%20(NyxLang)&fontSize=58&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Next-Gen%20Multi-Target%20Systems%20%26%20Application%20Language&descFontSize=19&descAlignY=62" width="100%" alt="Nyx Banner"/>
+  <a href="https://github.com/justsomeone-e/HolyEasyLang">
+    <img src="https://capsule-render.vercel.app/api?type=rect&color=080B10&stroke=1E2734&strokeWidth=2&height=180&section=header&text=NYX%20SYSTEMS%20COMPILER&fontSize=42&fontColor=ffffff&animation=fadeIn&fontAlignY=42&desc=Statically%20Typed%20%7C%20Zero-Cost%20Multi-Backend%20Architecture&descFontSize=16&descAlignY=66" width="100%" alt="Nyx Architecture Banner"/>
   </a>
 
   <p align="center">
-    <a href="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=3000&pause=1000&color=00F0FF&center=true&vCenter=true&width=650&lines=Zero+Boilerplate.+Instant+Compilation.;Write+Once%2C+Compile+to+C%2B%2B20%2C+JS%2C+Python+%26+Rust.;Rustc-Grade+Diagnostics+v2+%26+LSP+Built-in.;Native+Static+Binary+Outputs+with+Zero+Runtime.">
-      <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=22&duration=3000&pause=1000&color=00F0FF&center=true&vCenter=true&width=650&lines=Zero+Boilerplate.+Instant+Compilation.;Write+Once%2C+Compile+to+C%2B%2B20%2C+JS%2C+Python+%26+Rust.;Rustc-Grade+Diagnostics+v2+%26+LSP+Built-in.;Native+Static+Binary+Outputs+with+Zero+Runtime." alt="Typing SVG" />
+    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+Node.js+ES2022+%7C+Rust+2021+%7C+Python+3.;Deterministic+AST+Pipeline+with+Topological+Deduplication.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
+      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+Node.js+ES2022+%7C+Rust+2021+%7C+Python+3.;Deterministic+AST+Pipeline+with+Topological+Deduplication.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
     </a>
   </p>
 
   <p align="center">
-    <a href="https://github.com/k4chox/HolyEasyLang/releases"><img src="https://img.shields.io/badge/release-v2.0.0--beta.1-blueviolet?style=for-the-badge&logo=rocket" alt="Version"></a>
-    <a href="https://github.com/k4chox/HolyEasyLang/actions"><img src="https://img.shields.io/badge/CI-100%25%20Passing-brightgreen?style=for-the-badge&logo=githubactions&logoColor=white" alt="CI"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" alt="License"></a>
-    <a href="#"><img src="https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-informational?style=for-the-badge&logo=linux" alt="Platforms"></a>
+    <a href="https://github.com/justsomeone-e/HolyEasyLang/releases"><img src="https://img.shields.io/badge/RELEASE-v2.0.0--beta.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/HolyEasyLang/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
+    <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
   <p align="center">
-    <a href="#-quick-start">Quick Start</a> •
-    <a href="#-compiler-architecture">Architecture</a> •
-    <a href="#-language-tour">Language Tour</a> •
-    <a href="#-backend-quality-gates">Quality Gates</a> •
-    <a href="#-documentation">Docs</a> •
-    <a href="CHANGELOG.md">Changelog</a>
+    <a href="#-overview">OVERVIEW</a> •
+    <a href="#-architecture">ARCHITECTURE</a> •
+    <a href="#-toolchain-installation">INSTALLATION</a> •
+    <a href="#-language-specification">SYNTAX SPEC</a> •
+    <a href="#-conformance-matrix">CONFORMANCE</a> •
+    <a href="#-documentation">DOCS</a>
   </p>
 
 </div>
 
 ---
 
-## ✨ Why Nyx?
+### § 1.0 OVERVIEW
 
-**Nyx** (formerly *HolyEasyLang*) is a modern, high-performance systems and application language designed to bridge the gap between **high-level expressiveness** (like Python & TypeScript) and **bare-metal systems performance** (like C++ & Rust).
+**Nyx** is a compiled, statically typed systems programming language engineered for cross-compilation agility and deterministic execution. It eliminates runtime overhead by emitting optimized native C++20 machine code, Node.js ES2022 modules, Rust 2021 crates, and Python 3 canonical models directly from a single validated Abstract Syntax Tree.
 
-<table>
-  <tr>
-    <td width="50%">
-      <h3>🚀 Fast & Multi-Target</h3>
-      <p>Write once in <code>.nyx</code> (or <code>.he</code>) and compile seamlessly to <b>C++20 Native Binaries</b>, <b>Node.js ES2022 Modules</b>, <b>Rust 2021 Source</b>, or <b>Python 3 Reference</b>.</p>
-    </td>
-    <td width="50%">
-      <h3>🔍 Rustc-Grade Diagnostics v2</h3>
-      <p>Beautiful visual errors with precise caret spans (<code>^^^^</code>), path resolution traces, and actionable <code>help:</code> suggestions.</p>
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>🧩 Module & Diamond Resolution</h3>
-      <p>Robust module loader supporting local relative paths, standard library namespaces, and <b>diamond dependency graph deduplication</b>.</p>
-    </td>
-    <td width="50%">
-      <h3>🛠️ Integrated Toolchain & LSP v2</h3>
-      <p>Built-in formatter (<code>nyx fmt</code>), linter, unit test runner (<code>nyx test</code>), environment doctor (<code>nyx doctor</code>), and IDE Language Server Protocol daemon.</p>
-    </td>
-  </tr>
-</table>
+```text
+  [::] Deterministic Frontend  ──>  Lexer (Unicode UTF-8) ──> Canonical Typed AST
+  [::] Multi-Target Codegen    ──>  C++20 (LLVM/GCC) | Node.js | Rust 2021 | Python 3
+  [::] Module Topography       ──>  Directed Acyclic Graph with Diamond Deduplication
+  [::] Error Subsystem         ──>  Diagnostics v2 (Span Carets ^^^^, Code Catalogs)
+  [::] Developer Protocol      ──>  Language Server Protocol v2 JSON-RPC Built-in
+```
 
 ---
 
-## 🏛️ Compiler Architecture
+### § 2.0 COMPILER ARCHITECTURE
 
 ```text
-                                 Nyx Source (.nyx / .he)
-                                            │
-                                      ┌─────▼─────┐
-                                      │   Lexer   │  (Unicode, Tokenizer)
-                                      └─────┬─────┘
-                                            │
-                                      ┌─────▼─────┐
-                                      │   Parser  │  (Immutable Concrete AST)
-                                      └─────┬─────┘
-                                            │
-                                   ┌────────▼────────┐
-                                   │  Module Loader  │  (Topological Dependency Graph,
-                                   └────────┬────────┘   Diamond Deduplication, E1302 Collision)
-                                            │
-                                   ┌────────▼────────┐
-                                   │   TypeChecker   │  (Scope Tracking, Type Inference,
-                                   └────────┬────────┘   Option/Result Semantics)
-                                            │
-                                   ┌────────▼────────┐
-                                   │    Typed AST    │
-                                   └────────┬────────┘
-                                            │
-          ┌───────────────────────┬─────────┴─────────┬───────────────────────┐
-          │                       │                   │                       │
-    ┌─────▼─────┐           ┌─────▼─────┐       ┌─────▼─────┐           ┌─────▼─────┐
-    │   hecpp   │           │   hejs    │       │   hers    │           │   hepy    │
-    │  Gate 8 🔒│           │  Gate 8 🔒│       │  Gate 6 🟡│           │  Gate 8 📐│
-    │   C++20   │           │ Node.js   │       │ Rust 2021 │           │ Reference │
-    └─────┬─────┘           └─────┬─────┘       └─────┬─────┘           └─────┬─────┘
-          │                       │                   │                       │
-          ▼                       ▼                   ▼                       ▼
-     Native .exe             ES2022 Module       rustc Object              Python 3
+                                +─────────────────────────────────+
+                                |      Nyx Source (.nyx / .he)     |
+                                +────────────────┬────────────────+
+                                                 │
+                                       ┌─────────▼─────────┐
+                                       │   Lexical Engine  │  [Token Streams, Unicode]
+                                       └─────────┬─────────┘
+                                                 │
+                                       ┌─────────▼─────────┐
+                                       │   Syntactic AST   │  [Parser Combinator]
+                                       └─────────┬─────────┘
+                                                 │
+                                   ┌─────────────▼─────────────┐
+                                   │  Topological Graph Loader │  [Diamond Deduplication,
+                                   └─────────────┬─────────────┘   Cycle E1300, Collision E1302]
+                                                 │
+                                       ┌─────────▼─────────┐
+                                       │    TypeChecker    │  [Inference, Scopes, Bounds]
+                                       └─────────┬─────────┘
+                                                 │
+                                       ┌─────────▼─────────┐
+                                       │  Canonical AST    │
+                                       └─────────┬─────────┘
+                                                 │
+          ┌───────────────────────┬──────────────┴──────────────┬───────────────────────┐
+          │                       │                             │                       │
+    ┌─────▼─────┐           ┌─────▼─────┐                 ┌─────▼─────┐           ┌─────▼─────┐
+    │   hecpp   │           │   hejs    │                 │   hers    │           │   hepy    │
+    │  Gate 8 🔒│           │  Gate 8 🔒│                 │  Gate 6 🟡│           │  Gate 8 📐│
+    │   C++20   │           │  Node.js  │                 │ Rust 2021 │           │ Reference │
+    └─────┬─────┘           └─────┬─────┘                 └─────┬─────┘           └─────┬─────┘
+          │                       │                             │                       │
+          ▼                       ▼                             ▼                       ▼
+     Native .exe             ES2022 Module                 rustc Object              Python 3
     (Clang / GCC)
 ```
 
 ---
 
-## ⚡ Quick Start
+### § 3.0 TOOLCHAIN INSTALLATION
 
-### 1-Line Automated Install
+#### Automated Deployment
 
 <table>
   <tr>
-    <th>Platform</th>
-    <th>Command</th>
+    <th>Host Architecture</th>
+    <th>Installation Command</th>
   </tr>
   <tr>
     <td><b>Windows (PowerShell)</b></td>
-    <td><code>irm https://raw.githubusercontent.com/k4chox/HolyEasyLang/main/install.ps1 | iex</code></td>
+    <td><code>irm https://raw.githubusercontent.com/justsomeone-e/HolyEasyLang/main/install.ps1 | iex</code></td>
   </tr>
   <tr>
-    <td><b>Linux / macOS (Bash)</b></td>
-    <td><code>curl -fsSL https://raw.githubusercontent.com/k4chox/HolyEasyLang/main/install.sh | bash</code></td>
+    <td><b>Linux / macOS (POSIX)</b></td>
+    <td><code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/HolyEasyLang/main/install.sh | bash</code></td>
   </tr>
 </table>
 
-### Project Workflow
+#### Command Matrix
 
 ```bash
-# 1. Verify host compilers & runtime environment
+# Verify host compilers, environment paths & tooling
 nyx doctor
 
-# 2. Create a fresh project
-nyx new my_app
-cd my_app
+# Initialize a clean workspace
+nyx new core_engine
+cd core_engine
 
-# 3. Fast type-check
+# High-speed semantic and type verification
 nyx check
 
-# 4. Compile & Run (Native C++20 by default)
+# Compile and execute target binary (Default: C++20 Native)
 nyx run
 
-# 5. Target Node.js, Python, or Rust
-nyx run --target hejs
-nyx run --target hepy
-nyx build --target hers
+# Direct backend compilation
+nyx run --target hejs     # High-throughput Node.js ES2022
+nyx run --target hepy     # Canonical semantic reference
+nyx build --target hers   # Rust 2021 object emit
 ```
-
-*(Note: `he` command is fully supported as a backward-compatible alias).*
 
 ---
 
-## 💻 Language Tour
+### § 4.0 LANGUAGE SPECIFICATION
 
 ```holyeasy
 #target hecpp
 import "std/math"
 import "std/io"
 
-// Structs & typed fields
-struct ServerConfig {
-    host: string,
+// Typed Memory Struct Definition
+struct ClusterNode {
+    address: string,
     port: int,
-    is_active: bool
+    is_master: bool
 }
 
-// Functions with return type annotations
-fn calculate_capacity(clients: int, multiplier: int) -> int {
-    return power(clients, 2) * multiplier
+// Pure Functional Logic with Strict Type Annotations
+fn compute_shard_capacity(nodes: int, factor: int) -> int {
+    return power(nodes, 2) * factor
 }
 
-// Entrypoint logic
-var config = ServerConfig("127.0.0.1", 8080, true)
-if config.is_active {
-    var max_load = calculate_capacity(10, 2)
-    println_str("Server active at " + config.host + " -> Capacity: " + to_string(max_load))
+// Entrypoint Execution Logic
+var node = ClusterNode("10.0.0.1", 9000, true)
+if node.is_master {
+    var total_capacity = compute_shard_capacity(8, 4)
+    println_str("Cluster Node [" + node.address + "] Online -> Capacity: " + to_string(total_capacity))
 }
 
-// First-class in-file unit tests
-test "capacity calculation test" {
-    assert(calculate_capacity(2, 3) == 12, "2^2 * 3 must equal 12")
+// In-File Verification Battery
+test "shard capacity verification" {
+    assert(compute_shard_capacity(2, 3) == 12, "Mathematical invariant failure")
 }
 ```
 
 ---
 
-## 🚦 Backend Quality Gates
+### § 5.0 QUALITY GATES & CONFORMANCE MATRIX
 
-| Backend | Target | Quality Gate | Status | Execution Model |
+| Pipeline | Target | Quality Gate | Conformance Level | Compiler Driver |
 | :--- | :--- | :--- | :--- | :--- |
-| **`hecpp`** | C++20 | **Gate 8 (Stable)** | 🔒 Frozen | LLVM Clang / MinGW-w64 Native `.exe` |
-| **`hepy`** | Python 3 | **Gate 8 (Reference)**| 📐 Reference | Canonical Semantic Verification Engine |
-| **`hejs`** | JS/Node | **Gate 8 (Stable)** | 🔒 Frozen | High-speed Node.js ES2022 Modules |
-| **`hers`** | Rust | **Gate 6 (Active)** | 🟡 Conformance | `rustc` MIR / Borrow-Checked Types |
+| **`hecpp`** | C++20 | **Gate 8 (Stable)** | 🔒 Frozen / Production | LLVM Clang / GCC (Native Executable) |
+| **`hepy`** | Python 3 | **Gate 8 (Reference)**| 📐 Reference Semantics | Python 3.10+ Canonical Runner |
+| **`hejs`** | JS/Node | **Gate 8 (Stable)** | 🔒 Frozen / Production | Node.js ES2022 Module Engine |
+| **`hers`** | Rust | **Gate 6 (Active)** | 🟡 Conformance Probe | `rustc` 2021 MIR / Borrow-Check |
 
 ---
 
-## 🧪 Master Test & Conformance Matrix
+### § 6.0 VERIFICATION BATTERY STATUS
 
 ```text
-======================================================================
-⚡ NYX CORE ENTERPRISE UNIFIED TEST BATTERY
-======================================================================
-[*] Lexer & Unicode Unit Tests        -> 100% PASS
-[*] Parser AST Construction           -> 100% PASS
-[*] TypeChecker Scope & Inference     -> 100% PASS
-[*] Module Diamond Deduplication      -> 100% PASS (0 duplicate nodes)
-[*] Ambiguous Collision (E1302)       -> 100% PASS
-[*] LSP v2 IDE Suite (Hover/Comp/Def) -> 100% PASS (3/3)
-[*] Clean Machine Sandbox Smoke Test  -> 100% PASS (5/5)
-[*] Negative Rejection Tests          -> 100% PASS (10/10)
-[*] Deterministic Fuzzing (Seed=42)   -> 100% PASS (530/530, 0 Crash)
-[*] Differential Parity Tests         -> 100% PASS (10/10, 100% Parity)
-[*] JS (Node.js ES2022) E2E           -> 100% PASS (8/8)
-[*] Rust 2021 Conformance             -> 100% PASS (8/8)
-[*] C++20 Native EXE Execution        -> 100% PASS (8/8)
-[*] Exhaustive Regression Battery     -> 100% PASS (138/138)
-======================================================================
-🏆 ALL TEST SUITES PASSED (100% SUCCESS RATE)
-======================================================================
+================================================================================
+◈ NYX CORE AUTOMATED VERIFICATION MATRIX
+================================================================================
+[-] Lexical Analyzer & UTF-8 Stream Suite     ──> 100% PASS
+[-] Syntactic AST Construction Battery         ──> 100% PASS
+[-] Static Type Invariant Checks               ──> 100% PASS
+[-] Topological Graph Deduplication (Diamond)  ──> 100% PASS (0 duplicate nodes)
+[-] Ambiguous Symbol Collision (E1302)         ──> 100% PASS
+[-] Language Server Protocol (LSP v2 RPC)      ──> 100% PASS (3/3)
+[-] Clean Sandbox Isolation Smoke Battery      ──> 100% PASS (5/5)
+[-] Negative Syntax & Semantic Rejections      ──> 100% PASS (10/10)
+[-] Deterministic Fuzz Engine (Seed=42)        ──> 100% PASS (530/530, 0 Crash)
+[-] Differential Backend Parity Suite          ──> 100% PASS (10/10, 100% Parity)
+[-] Node.js ES2022 End-to-End Conformance      ──> 100% PASS (8/8)
+[-] Rust 2021 Borrow-Check Conformance         ──> 100% PASS (8/8)
+[-] C++20 Native Machine Code Conformance      ──> 100% PASS (8/8)
+[-] 138-Point Edge-Case Regression Battery     ──> 100% PASS (138/138)
+================================================================================
+[OK] ALL SUITES CONVERGED WITH ZERO REGRESSIONS (100% SUCCESS RATE)
+================================================================================
 ```
 
 ---
 
-## 📚 Complete Documentation
+### § 7.0 TECHNICAL DOCUMENTATION
 
-* 📖 [Getting Started Guide](GETTING_STARTED.md)
-* 📦 [Installation & Toolchain Setup](INSTALLATION.md)
-* 📐 [Language Reference & Syntax Specification](LANGUAGE_REFERENCE.md)
-* 🛠️ [CLI Command & Flag Reference](CLI_REFERENCE.md)
-* 🚨 [Error Reference Catalog (E1000 - E2006)](ERROR_REFERENCE.md)
-* 📜 [Changelog](CHANGELOG.md)
+* ◈ [Architecture & Toolchain Guide](GETTING_STARTED.md)
+* ◈ [Installation & Toolchain Setup](INSTALLATION.md)
+* ◈ [Language Reference & Grammar Specification](LANGUAGE_REFERENCE.md)
+* ◈ [CLI Diagnostics & Command Reference](CLI_REFERENCE.md)
+* ◈ [Diagnostic Error Catalog (E1000 - E2006)](ERROR_REFERENCE.md)
+* ◈ [Release Changelog](CHANGELOG.md)
 
 ---
 
 <div align="center">
-
-  <sub>Built with precision by the Nyx Core Team. Licensed under <a href="LICENSE">MIT</a>.</sub>
-
-  <br/><br/>
-  
-  <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=100&section=footer" width="100%"/>
-
+  <sub>Maintained by Nyx Systems Core. Licensed under <a href="LICENSE">MIT</a>.</sub>
 </div>
