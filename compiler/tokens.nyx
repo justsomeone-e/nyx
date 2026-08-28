@@ -1,0 +1,113 @@
+#target hecpp
+
+enum TokenType {
+    VAR,
+    LET,
+    SET,
+    CONST,
+    FN,
+    STRUCT,
+    TRAIT,
+    IMPL,
+    TYPE_ALIAS,
+    ENUM,
+    UNSAFE,
+    EXTERN,
+    
+    ASYNC,
+    AWAIT,
+    SPAWN,
+    CHANNEL,
+    
+    TEST,
+    ASSERT,
+    
+    IF,
+    ELSE,
+    ELIF,
+    FOR,
+    IN,
+    LOOP,
+    WHILE,
+    MATCH,
+    TRY,
+    CATCH,
+    THROW,
+    RETURN,
+    BREAK,
+    CONTINUE,
+    USE,
+    IMPORT,
+    FROM,
+    AS,
+    
+    PRINT,
+    ADDR,
+    PEEK,
+    MEMDUMP,
+    INPUT,
+    
+    IDENT,
+    NUMBER,
+    STRING,
+    BOOLEAN,
+    NULL,
+    DOC_COMMENT,
+    
+    ASSIGN,
+    ARROW,
+    FAT_ARROW,
+    PIPE,
+    SAFE_NAV,
+    NULL_COALESCE,
+    
+    PLUS,
+    MINUS,
+    MUL,
+    DIV,
+    MOD,
+    
+    EQ,
+    NEQ,
+    GTE,
+    LTE,
+    GT,
+    LT,
+    
+    AND,
+    OR,
+    NOT,
+    
+    LPAREN,
+    RPAREN,
+    LBRACKET,
+    RBRACKET,
+    LBRACE,
+    RBRACE,
+    COMMA,
+    COLON,
+    DOT,
+    DOTDOT,
+    QUESTION,
+    SEMICOLON,
+    
+    TARGET_DIR,
+    NATIVE_INCLUDE,
+    NATIVE_LINK,
+    NATIVE_RAW,
+    NATIVE_USE,
+    EOF
+}
+
+struct Token {
+    type_name: string,
+    value: string,
+    line: int,
+    col: int
+}
+
+impl Token {
+    fn to_str(self) -> string {
+        return self.type_name + "(" + self.value + ")@" + to_string(self.line) + ":" + to_string(self.col)
+    }
+}

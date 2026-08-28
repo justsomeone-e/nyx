@@ -1,0 +1,30 @@
+#target hecpp
+
+struct ASTType {
+    name: string,
+    is_optional: bool,
+    is_pointer: bool,
+    is_fn_type: bool,
+    line: int,
+    col: int
+}
+
+struct ASTParam {
+    name: string,
+    type_name: string
+}
+
+struct ASTNodeData {
+    kind: string,
+    name: string,
+    value: string,
+    op: string,
+    line: int,
+    col: int
+}
+
+impl ASTNodeData {
+    fn to_str(self) -> string {
+        return self.kind + "('" + self.name + "', '" + self.value + "')@" + to_string(self.line) + ":" + to_string(self.col)
+    }
+}

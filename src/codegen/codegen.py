@@ -117,6 +117,12 @@ class UniversalCodeGen:
             "template<typename T> uintptr_t addr(T& val) { return (uintptr_t)&val; }",
             "uintptr_t peek(uintptr_t a) { return *(uintptr_t*)a; }",
             "void delay_ms(int ms) { this_thread::sleep_for(chrono::milliseconds(ms)); }",
+            "template<typename T> int64_t len(const T& c) { return (int64_t)c.size(); }",
+            "template<typename T> int64_t length(const T& c) { return (int64_t)c.size(); }",
+            "template<typename T, typename V> void push(vector<T>& v, const V& val) { v.push_back(val); }",
+            "template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }",
+            "template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }",
+            "inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return \"\"; return string(1, s[i]); }",
             "template<typename T, typename E = string>",
             "struct Result { bool is_ok; T value; E error; Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} };",
             "template<typename T> Result<T, string> Ok(T val) { return Result<T, string>(true, val, \"\"); }",
@@ -220,16 +226,32 @@ class UniversalCodeGen:
                     return f"this->{node.member}"
                 return f"{emit_expr(node.obj)}.{node.member}"
             if isinstance(node, IndexAccessNode):
-                return f"{emit_expr(node.obj)}[{emit_expr(node.index_expr)}]"
+                return f"_nyx_at({emit_expr(node.obj)}, {emit_expr(node.index_expr)})"
             if isinstance(node, ArrayNode):
                 if not node.elements:
-                    return "vector<int64_t>{}"
+                    return "{}"
                 elems = ", ".join([emit_expr(e) for e in node.elements])
                 return f"vector{{{elems}}}"
             if isinstance(node, FunctionCallNode):
                 if node.callee == "print":
                     args_cpp = ' << " " << '.join([emit_expr(a) for a in node.args]) if node.args else '""'
                     return f"cout << {args_cpp} << endl"
+                
+                # Check if calling vector / collection / object methods
+                if isinstance(node.callee, str) and "." in node.callee:
+                    obj_part, method_part = node.callee.rsplit(".", 1)
+                    if obj_part in ("self", "this"):
+                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                        return f"this->{method_part}({args_cpp})"
+                    if method_part == "push":
+                        return f"{obj_part}.push_back({emit_expr(node.args[0])})"
+                    elif method_part in ("len", "length", "size"):
+                        return f"(int64_t){obj_part}.size()"
+                    elif method_part == "pop":
+                        return f"{obj_part}.pop_back()"
+                    else:
+                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                        return f"{obj_part}.{method_part}({args_cpp})"
                 
                 # Check if calling an extern C function
                 if node.callee in extern_c_funcs:
