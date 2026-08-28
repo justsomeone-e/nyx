@@ -98,11 +98,11 @@
   </tr>
   <tr>
     <td><b>Windows (PowerShell)</b></td>
-    <td><code>irm https://raw.githubusercontent.com/justsomeone-e/Nyx/main/install.ps1 | iex</code></td>
+    <td><code>irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex</code></td>
   </tr>
   <tr>
     <td><b>Linux / macOS (POSIX)</b></td>
-    <td><code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/Nyx/main/install.sh | bash</code></td>
+    <td><code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash</code></td>
   </tr>
 </table>
 
