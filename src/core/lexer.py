@@ -102,11 +102,25 @@ class Lexer:
                     self.tokens.append(Token(TokenType.NATIVE_LINK, lib, self.line, start_col))
                     continue
 
-                # 3. #native target: raw
+                # 3. #native use namespace std / std::vector
+                if self.source[self.pos:self.pos+3] == "use" and (self.pos + 3 >= length or self.source[self.pos+3].isspace()):
+                    self.pos += 3; self.col += 3
+                    while self.pos < length and self.source[self.pos].isspace() and self.source[self.pos] != '\n':
+                        self.pos += 1; self.col += 1
+                    start_use = self.pos
+                    while self.pos < length and self.source[self.pos] != '\n' and self.source[self.pos] != ';':
+                        self.pos += 1; self.col += 1
+                    use_target = self.source[start_use:self.pos].strip()
+                    self.tokens.append(Token(TokenType.NATIVE_USE, use_target, self.line, start_col))
+                    continue
+
+                # 4. #native target: raw
                 start_raw = self.pos
                 while self.pos < length and self.source[self.pos] != '\n':
                     self.pos += 1; self.col += 1
                 raw = self.source[start_raw:self.pos].strip()
+                if raw.startswith("raw "):
+                    raw = raw[4:].strip()
                 self.tokens.append(Token(TokenType.NATIVE_RAW, raw, self.line, start_col))
                 continue
 

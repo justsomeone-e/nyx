@@ -8,7 +8,7 @@ from .ast_nodes import (
     EnumDefNode, UnsafeBlockNode, SpawnNode, TestBlockNode, AssertNode,
     FunctionDefNode, MatchNode, TryCatchNode, IfNode, WhileNode, ForNode,
     ReturnNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
-    NativeLinkNode, NativeRawNode, ExternFnDeclNode
+    NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode
 )
 from .diagnostics import DiagnosticEmitter
 
@@ -82,6 +82,14 @@ class TypeChecker:
         # int can widen to float
         if exp_base == 'float' and act_base == 'int':
             return True
+        # Function pointer / callback compatibility
+        if (exp_base.startswith('fn(') or exp_base.startswith('fn->') or exp_base.startswith('function')) and (act_base.startswith('fn(') or act_base.startswith('fn->') or act_base.startswith('function')):
+            exp_ret = exp_base.split('->')[-1].strip() if '->' in exp_base else 'any'
+            act_ret = act_base.split('->')[-1].strip() if '->' in act_base else 'any'
+            return self.is_compatible(exp_ret, act_ret)
+        # Generic prefix compatibility: Result<T, E> matches Result, Array<T> matches Array
+        if (exp_base.startswith('Result') and act_base.startswith('Result')) or (exp_base.startswith('Array') and act_base.startswith('Array')):
+            return True
         # null compatibility with Option / Nullable types
         if actual == 'null' and ('?' in expected or 'Option' in expected):
             return True
@@ -116,7 +124,7 @@ class TypeChecker:
         if not node:
             return
 
-        if isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeRawNode, ExternFnDeclNode)):
+        if isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode)):
             return
 
         if isinstance(node, VarDeclNode):

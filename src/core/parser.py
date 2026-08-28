@@ -110,6 +110,20 @@ class Parser:
         if self.match(TokenType.MUL):
             is_pointer = True
 
+        # Function Pointer / Callback Type: fn(int, int) -> int
+        if self.match(TokenType.FN):
+            self.expect(TokenType.LPAREN)
+            param_types = []
+            while self.current().type not in (TokenType.RPAREN, TokenType.EOF):
+                param_types.append(self.parse_type())
+                if not self.match(TokenType.COMMA):
+                    break
+            self.expect(TokenType.RPAREN)
+            ret_type = TypeNode("void")
+            if self.match(TokenType.ARROW):
+                ret_type = self.parse_type()
+            return TypeNode("fn", is_fn_type=True, param_types=param_types, return_type=ret_type, line=tok.line, col=tok.col)
+
         name = self.expect(TokenType.IDENT, "E1002", "Expected a valid type name like int, string, float, bool").value
         generic_args: List[TypeNode] = []
         
@@ -144,6 +158,10 @@ class Parser:
         if tok.type == TokenType.NATIVE_RAW:
             self.advance()
             return NativeRawNode(tok.value, tok.line, tok.col)
+
+        if tok.type == TokenType.NATIVE_USE:
+            self.advance()
+            return NativeUseNode(tok.value, tok.line, tok.col)
 
         # Extern Function Declaration: extern "C" fn puts(s: string) -> int
         if tok.type == TokenType.EXTERN:

@@ -95,6 +95,7 @@ class TokenType:
     NATIVE_INCLUDE = "NATIVE_INCLUDE"
     NATIVE_LINK = "NATIVE_LINK"
     NATIVE_RAW = "NATIVE_RAW"
+    NATIVE_USE = "NATIVE_USE"
     EOF = "EOF"
 
 class Token:

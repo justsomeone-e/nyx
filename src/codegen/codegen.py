@@ -19,7 +19,7 @@ from src.core.ast_nodes import (
     TestBlockNode, AssertNode, MatchNode, TryCatchNode, MemberAccessNode,
     NullCoalesceNode, ArrayNode, IndexAccessNode, IfNode, WhileNode, ForNode,
     ReturnNode, BreakNode, ContinueNode, FunctionCallNode,
-    NativeIncludeNode, NativeLinkNode, NativeRawNode, ExternFnDeclNode
+    NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode
 )
 
 class UniversalCodeGen:
@@ -54,6 +54,7 @@ class UniversalCodeGen:
         # Collect native directives and extern declarations
         native_includes = [s.header for s in self.ast.statements if isinstance(s, NativeIncludeNode)]
         native_raws = [s.raw for s in self.ast.statements if isinstance(s, NativeRawNode)]
+        native_uses = [s.target for s in self.ast.statements if isinstance(s, NativeUseNode)]
         extern_c_funcs: Dict[str, ExternFnDeclNode] = {}
         for s in self.ast.statements:
             if isinstance(s, ExternFnDeclNode):
@@ -68,6 +69,7 @@ class UniversalCodeGen:
             "#include <set>",
             "#include <optional>",
             "#include <variant>",
+            "#include <functional>",
             "#include <thread>",
             "#include <chrono>",
             "#include <cmath>",
@@ -93,6 +95,16 @@ class UniversalCodeGen:
         for raw in native_raws:
             lines.append(raw)
 
+        # Add user-specified native uses (#native use ...)
+        for u in native_uses:
+            u_clean = u.strip().rstrip(';')
+            if u_clean.startswith("namespace ") or u_clean.startswith("using "):
+                lines.append(f"using {u_clean};" if not u_clean.startswith("using ") else f"{u_clean};")
+            elif "::" in u_clean or u_clean in ("vector", "string", "map", "set", "unique_ptr", "shared_ptr", "function"):
+                lines.append(f"using {u_clean};")
+            else:
+                lines.append(f"using namespace {u_clean};")
+
         lines.extend([
             "using namespace std;\n",
             "// --- nyx Standard Core Helpers ---",
@@ -106,7 +118,7 @@ class UniversalCodeGen:
             "uintptr_t peek(uintptr_t a) { return *(uintptr_t*)a; }",
             "void delay_ms(int ms) { this_thread::sleep_for(chrono::milliseconds(ms)); }",
             "template<typename T, typename E = string>",
-            "struct Result { bool is_ok; T value; E error; Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} };",
+            "struct Result { bool is_ok; T value; E error; Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} };",
             "template<typename T> Result<T, string> Ok(T val) { return Result<T, string>(true, val, \"\"); }",
             "template<typename T = int64_t> Result<T, string> Err(string err) { return Result<T, string>(false, T{}, err); }",
             "void memdump(uintptr_t a, size_t len) {",
@@ -123,6 +135,10 @@ class UniversalCodeGen:
 
         def cpp_type(t: Optional[TypeNode]) -> str:
             if not t: return "auto"
+            if getattr(t, 'is_fn_type', False):
+                args_s = ", ".join(cpp_type(a) for a in t.param_types)
+                ret_s = cpp_type(t.return_type) if t.return_type else "void"
+                return f"function<{ret_s}({args_s})>"
             name_map = {"int": "int64_t", "float": "double", "string": "string", "bool": "bool", "void": "void", "Array": "vector", "uintptr": "uintptr_t", "char": "char"}
             base = name_map.get(t.name, t.name)
             if t.generic_args:
@@ -136,8 +152,12 @@ class UniversalCodeGen:
 
         def c_ffi_type(t: Optional[TypeNode]) -> str:
             if not t: return "auto"
+            if getattr(t, 'is_fn_type', False):
+                args_s = ", ".join(c_ffi_type(a) for a in t.param_types)
+                ret_s = c_ffi_type(t.return_type) if t.return_type else "void"
+                return f"{ret_s}(*)({args_s})"
             name_map = {
-                "int": "int", "int64": "int64_t", "i64": "int64_t", "int32": "int32_t", "i32": "int32_t",
+                "int": "int64_t", "int64": "int64_t", "i64": "int64_t", "int32": "int32_t", "i32": "int32_t",
                 "size_t": "size_t", "float": "double", "double": "double", "string": "const char*",
                 "bool": "bool", "void": "void", "uintptr": "uintptr_t", "char": "char"
             }
@@ -165,10 +185,16 @@ class UniversalCodeGen:
                         ret = "size_t"
                     params = []
                     for p in ef.params:
-                        p_t = c_ffi_type(p.type_annot)
-                        if p.name in ("size", "len", "length", "count") and p_t == "int":
-                            p_t = "size_t"
-                        params.append(f"{p_t} {p.name}")
+                        p_t = p.type_annot
+                        if p_t and getattr(p_t, 'is_fn_type', False):
+                            args_s = ", ".join(c_ffi_type(a) for a in p_t.param_types)
+                            ret_s = c_ffi_type(p_t.return_type) if p_t.return_type else "void"
+                            params.append(f"{ret_s}(*{p.name})({args_s})")
+                        else:
+                            t_str = c_ffi_type(p_t)
+                            if p.name in ("size", "len", "length", "count") and t_str in ("int", "int64_t"):
+                                t_str = "size_t"
+                            params.append(f"{t_str} {p.name}")
                     if ef.is_varargs:
                         params.append("...")
                     lines.append(f"    {ret} {ef.name}({', '.join(params)});")
@@ -190,6 +216,8 @@ class UniversalCodeGen:
             if isinstance(node, NullCoalesceNode):
                 return f"({emit_expr(node.left)}.value_or({emit_expr(node.right)}))"
             if isinstance(node, MemberAccessNode):
+                if isinstance(node.obj, IdentifierNode) and node.obj.name in ("self", "this"):
+                    return f"this->{node.member}"
                 return f"{emit_expr(node.obj)}.{node.member}"
             if isinstance(node, IndexAccessNode):
                 return f"{emit_expr(node.obj)}[{emit_expr(node.index_expr)}]"
@@ -219,8 +247,9 @@ class UniversalCodeGen:
                         args_list.append(a_expr)
                     return f"{node.callee}({', '.join(args_list)})"
 
+                callee_name = "_nyx_user_main" if node.callee == "main" else node.callee
                 args_cpp = ", ".join([emit_expr(a) for a in node.args])
-                return f"{node.callee}({args_cpp})"
+                return f"{callee_name}({args_cpp})"
             if isinstance(node, LambdaNode):
                 params_s = ", ".join([f"auto {p}" for p in node.params])
                 return f"[=]({params_s}) {{ return {emit_expr(node.body)}; }}"
@@ -258,14 +287,37 @@ class UniversalCodeGen:
                 ctor_params = ", ".join([f"{struct_field_type(f)} {f.name} = {{}}" for f in node.fields])
                 ctor_inits = ", ".join([f"{f.name}({f.name})" for f in node.fields])
                 ctor_body = f"    {node.name}({ctor_params}) : {ctor_inits} {{}}\n" if node.fields else ""
-                res.append(f"{gen_s}struct {node.name} {{\n    {fields_decls};\n{ctor_body}}};\n")
+                
+                # Check for RAII destructor and methods declared in ImplBlockNode
+                impl_methods_decls = []
+                for imp in [s for s in self.ast.statements if isinstance(s, ImplBlockNode) and s.target_type == node.name]:
+                    for m in imp.methods:
+                        m_params = [p for p in m.params if p.name not in ("self", "this")]
+                        m_params_s = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in m_params])
+                        m_ret_t = cpp_type(m.return_type)
+                        if m_ret_t == "auto": m_ret_t = "void"
+                        impl_methods_decls.append(f"    {m_ret_t} {m.name}({m_params_s});")
+                        if m.name in ("drop", "destroy", "cleanup", "dispose"):
+                            impl_methods_decls.append(f"    ~{node.name}() {{ this->{m.name}(); }}")
+
+                methods_block = "\n".join(impl_methods_decls)
+                if methods_block:
+                    methods_block = "\n" + methods_block
+                res.append(f"{gen_s}struct {node.name} {{\n    {fields_decls};\n{ctor_body}{methods_block}\n}};\n")
             elif isinstance(node, TraitDefNode):
                 methods = ";\n    virtual ".join([f"auto {m.name}() = 0" for m in node.methods])
                 res.append(f"class {node.name} {{\npublic:\n    virtual {methods};\n}};\n")
             elif isinstance(node, ImplBlockNode):
                 res.append(f"// Implementation for {node.target_type}")
                 for m in node.methods:
-                    res.extend(emit_stmt(m, 0))
+                    gen_s = f"template<{', '.join('typename ' + g for g in m.generic_params)}>\n" if m.generic_params else ""
+                    m_params = [p for p in m.params if p.name not in ("self", "this")]
+                    params_s = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in m_params])
+                    ret_t = cpp_type(m.return_type)
+                    if ret_t == "auto": ret_t = "void"
+                    res.append(f"{gen_s}{ret_t} {node.target_type}::{m.name}({params_s}) {{")
+                    for s in m.body: res.extend(emit_stmt(s, indent + 1))
+                    res.append("}\n")
             elif isinstance(node, EnumDefNode):
                 members_s = ", ".join([f"{m[0]} = {emit_expr(m[1])}" if m[1] else m[0] for m in node.members])
                 res.append(f"enum class {node.name} {{ {members_s} }};\n")
@@ -286,7 +338,8 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in node.generic_params)}>\n" if node.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in node.params])
                 ret_t = cpp_type(node.return_type)
-                res.append(f"{gen_s}{ret_t} {node.name}({params}) {{")
+                fn_name = "_nyx_user_main" if node.name == "main" else node.name
+                res.append(f"{gen_s}{ret_t} {fn_name}({params}) {{")
                 for s in node.body: res.extend(emit_stmt(s, indent + 1))
                 res.append("}\n")
             elif isinstance(node, MatchNode):
@@ -343,7 +396,8 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in s.generic_params)}>\n" if s.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in s.params])
                 ret_t = cpp_type(s.return_type)
-                fwd_decls.append(f"{gen_s}{ret_t} {s.name}({params});")
+                fn_name = "_nyx_user_main" if s.name == "main" else s.name
+                fwd_decls.append(f"{gen_s}{ret_t} {fn_name}({params});")
         if fwd_decls:
             lines.extend(fwd_decls)
             lines.append("")

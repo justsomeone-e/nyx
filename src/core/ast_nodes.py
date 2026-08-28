@@ -12,14 +12,21 @@ class ProgramNode(ASTNode):
         self.statements = statements
 
 class TypeNode(ASTNode):
-    def __init__(self, name: str, is_optional: bool = False, is_pointer: bool = False, generic_args: Optional[List['TypeNode']] = None, line: int = 1, col: int = 1):
+    def __init__(self, name: str, is_optional: bool = False, is_pointer: bool = False, generic_args: Optional[List['TypeNode']] = None, line: int = 1, col: int = 1, is_fn_type: bool = False, param_types: Optional[List['TypeNode']] = None, return_type: Optional['TypeNode'] = None):
         super().__init__(line, col)
         self.name = name
         self.is_optional = is_optional
         self.is_pointer = is_pointer
         self.generic_args = generic_args or []
+        self.is_fn_type = is_fn_type
+        self.param_types = param_types if isinstance(param_types, list) else []
+        self.return_type = return_type
 
     def __str__(self):
+        if self.is_fn_type:
+            params = ", ".join(str(p) for p in self.param_types)
+            ret = str(self.return_type) if self.return_type else "void"
+            return f"fn({params}) -> {ret}"
         base = f"*{self.name}" if self.is_pointer else self.name
         if self.generic_args:
             args_s = ", ".join(str(a) for a in self.generic_args)
@@ -250,6 +257,11 @@ class NativeRawNode(ASTNode):
         super().__init__(line, col)
         self.raw = raw
 
+class NativeUseNode(ASTNode):
+    def __init__(self, target: str, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.target = target
+
 class ExternFnDeclNode(ASTNode):
     def __init__(self, abi: str, name: str, params: List[FunctionParam], return_type: TypeNode, is_varargs: bool = False, line: int = 1, col: int = 1):
         super().__init__(line, col)
@@ -258,4 +270,5 @@ class ExternFnDeclNode(ASTNode):
         self.params = params
         self.return_type = return_type
         self.is_varargs = is_varargs
+
 
