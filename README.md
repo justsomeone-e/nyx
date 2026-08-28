@@ -1,7 +1,12 @@
 <div align="center">
 
   <a href="https://github.com/k4chox/HolyEasyLang">
-    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=220&section=header&text=⚡%20HolyEasyLang&fontSize=65&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Next-Gen%20Multi-Target%20Systems%20%26%20Application%20Language&descFontSize=20&descAlignY=62" width="100%" alt="HolyEasyLang Banner"/>
+    <img src="assets/logo.svg" width="130" height="130" alt="HolyEasyLang Logo" style="filter: drop-shadow(0 10px 20px rgba(0,240,255,0.25));"/>
+  </a>
+  <br/>
+
+  <a href="https://github.com/k4chox/HolyEasyLang">
+    <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=1,11,21,31&height=200&section=header&text=⚡%20HolyEasyLang&fontSize=60&fontColor=ffffff&animation=fadeIn&fontAlignY=38&desc=Next-Gen%20Multi-Target%20Systems%20%26%20Application%20Language&descFontSize=19&descAlignY=62" width="100%" alt="HolyEasyLang Banner"/>
   </a>
 
   <p align="center">

@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient: Deep Matte Obsidian -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F1318"/>
+      <stop offset="50%" stop-color="#07090C"/>
+      <stop offset="100%" stop-color="#020305"/>
+    </linearGradient>
+
+    <!-- Border Ring Gradient -->
+    <linearGradient id="borderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2A323D"/>
+      <stop offset="50%" stop-color="#14181F"/>
+      <stop offset="100%" stop-color="#00F0FF" stop-opacity="0.4"/>
+    </linearGradient>
+
+    <!-- Lightning Core Gradient -->
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="40%" stop-color="#DDF8FA"/>
+      <stop offset="80%" stop-color="#00F0FF"/>
+      <stop offset="100%" stop-color="#0088FF"/>
+    </linearGradient>
+
+    <!-- Outer Glow Filter -->
+    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="12" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <!-- Subtle Drop Shadow -->
+    <filter id="dropShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Rectangle (Squircle) -->
+  <rect x="32" y="32" width="448" height="448" rx="112" ry="112" fill="url(#bgGrad)" stroke="url(#borderGrad)" stroke-width="4" filter="url(#dropShadow)"/>
+
+  <!-- Subtle Geometric Grid / Halo (Minimalist Circuit Detail) -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#1A222D" stroke-width="1.5" stroke-dasharray="6 6"/>
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#12171F" stroke-width="1"/>
+
+  <!-- Outer Ambient Glow for Lightning -->
+  <path d="M280 96 L168 264 L244 264 L224 416 L344 248 L268 248 Z" 
+        fill="#00F0FF" opacity="0.15" filter="url(#cyanGlow)" />
+
+  <!-- Minimalist Monogram: Stylized 'H' Wings & Dynamic Electric Bolt -->
+  <!-- Left Pillar of 'H' -->
+  <path d="M156 160 L188 160 C192 160 196 164 196 168 L196 344 C196 348 192 352 188 352 L156 352 C152 352 148 348 148 344 L148 168 C148 164 152 160 156 160 Z" 
+        fill="#2A3441"/>
+
+  <!-- Right Pillar of 'H' -->
+  <path d="M324 160 L356 160 C360 160 364 164 364 168 L364 344 C364 348 360 352 356 352 L324 352 C320 352 316 348 316 344 L316 168 C316 164 320 160 324 160 Z" 
+        fill="#2A3441"/>
+
+  <!-- Main Pure Vector Lightning Bolt (Sharp Minimalist Centerpiece) -->
+  <path d="M284 108 L176 268 C172 274 176 280 184 280 L248 280 L228 404 C226 414 238 418 244 410 L340 252 C344 246 340 240 332 240 L268 240 L296 116 C298 108 288 102 284 108 Z" 
+        fill="url(#boltGrad)"/>
+
+  <!-- Sleek Cyber Cut Highlights -->
+  <path d="M284 108 L220 204 L252 240 L296 116 Z" fill="#FFFFFF" opacity="0.3"/>
+</svg>
