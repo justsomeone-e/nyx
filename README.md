@@ -21,325 +21,351 @@
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
     <a href="#key-features">FEATURES</a> •
-    <a href="#tech-stack">TECH STACK</a> •
-    <a href="#project-structure">STRUCTURE</a> •
-    <a href="#getting-started">INSTALLATION</a> •
+    <a href="#architecture">ARCHITECTURE</a> •
+    <a href="#toolchain">TOOLCHAIN</a> •
+    <a href="#language">LANGUAGE</a> •
+    <a href="#installation">INSTALLATION</a> •
     <a href="#usage">USAGE</a> •
-    <a href="#contributing">CONTRIBUTING</a> •
-    <a href="#license">LICENSE</a>
+    <a href="#contributing">CONTRIBUTING</a>
   </p>
 
 </div>
 
 ---
 
-## Overview
+## `01` — Overview
 
-**Nyx** is a compiled, statically typed systems programming language and multi-target toolchain designed around a deterministic compiler pipeline.
+**Nyx** is a compiled, statically typed systems programming language built around a deterministic multi-target compiler pipeline.
 
-A single Nyx source program is parsed into a validated Abstract Syntax Tree and can then be emitted to multiple target environments:
+Instead of tying the language to a single runtime or execution environment, Nyx validates source code once, produces a canonical typed AST, and uses that representation to generate code for multiple targets.
 
-* **C++20** for native executables
-* **Node.js ES2022** for JavaScript execution
-* **Rust 2021** for Rust-based compilation
-* **Python 3** as a canonical semantic reference
-
-Nyx separates language semantics from backend implementation through a shared canonical AST. This allows different targets to consume the same validated program representation rather than implementing independent frontend logic.
+The result is a toolchain designed to combine **native performance, predictable semantics, and backend flexibility** without requiring separate language frontends for every target.
 
 ```text
-Nyx Source
-    │
-    ▼
-┌───────────────┐
-│ Lexer         │
-│ UTF-8 Tokens  │
-└───────┬───────┘
-        │
-        ▼
-┌───────────────┐
-│ Parser        │
-│ Syntax AST    │
-└───────┬───────┘
-        │
-        ▼
-┌─────────────────────┐
-│ Module Graph Loader │
-│ Topological Dedup   │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ TypeChecker         │
-│ Inference / Scopes  │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Canonical Typed AST │
-└──────────┬──────────┘
-           │
-     ┌─────┼─────┬─────┐
-     ▼     ▼     ▼     ▼
-  hecpp  hejs   hers   hepy
-   │      │      │      │
-   ▼      ▼      ▼      ▼
- C++20  Node.js  Rust  Python
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                  NYX                                         │
+│                     Multi-Target Systems Toolchain                           │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+        SOURCE
+          │
+          ▼
+┌───────────────────┐
+│  UTF-8 LEXER      │
+│  Token Stream     │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│  PARSER           │
+│  Syntax AST       │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│  MODULE GRAPH     │
+│  Topological DAG  │
+│  + Deduplication  │
+└─────────┬─────────┘
+          │
+          ▼
+┌───────────────────┐
+│  TYPECHECKER      │
+│  Inference        │
+│  Scopes / Bounds  │
+└─────────┬─────────┘
+          │
+          ▼
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         CANONICAL TYPED AST                                  ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+          │
+    ┌─────┼─────────────┬─────────────┐
+    │     │             │             │
+    ▼     ▼             ▼             ▼
+┌──────┐ ┌──────┐    ┌──────┐    ┌──────┐
+│hecpp │ │ hejs │    │ hers │    │ hepy │
+│C++20 │ │Node.js│   │Rust21│    │Python│
+└──┬───┘ └──┬───┘    └──┬───┘    └──┬───┘
+   │         │           │            │
+   ▼         ▼           ▼            ▼
+Native     ES2022       rustc       Reference
+Binary     Module       Object      Semantics
 ```
+
+Nyx's architecture keeps **language semantics separate from backend generation**, allowing each target to consume the same validated program representation.
 
 ---
 
-## Key Features
+## `02` — Key Features
 
-### Multi-Target Compilation
+<table>
+<tr>
+<td width="50%">
 
-Nyx provides a single language frontend with multiple compilation targets:
+### ⚡ Multi-Target Compilation
 
-| Target  | Output                    | Status    |
-| :------ | :------------------------ | :-------- |
-| `hecpp` | C++20 / Native executable | Stable    |
-| `hejs`  | Node.js ES2022            | Stable    |
-| `hers`  | Rust 2021                 | Active    |
-| `hepy`  | Python 3                  | Reference |
+Compile the same Nyx program toward:
 
-### Deterministic Compiler Pipeline
+* **C++20**
+* **Node.js ES2022**
+* **Rust 2021**
+* **Python 3**
 
-The compiler operates through a deterministic sequence of frontend and semantic stages:
+Each backend operates on the canonical typed AST.
+
+</td>
+<td width="50%">
+
+### 🧠 Deterministic AST Pipeline
+
+Nyx uses a predictable compilation pipeline:
 
 ```text
 Source
-  → Lexing
-  → Parsing
-  → Module Resolution
-  → Topological Ordering
-  → Type Checking
-  → Canonical AST
-  → Backend Code Generation
+  ↓
+Lexer
+  ↓
+Parser
+  ↓
+Graph Loader
+  ↓
+TypeChecker
+  ↓
+Canonical AST
+  ↓
+Backend
 ```
 
-### Topological Module Resolution
+</td>
+</tr>
 
-Nyx models module dependencies as a directed acyclic graph.
+<tr>
+<td>
 
-The module loader includes support for:
+### ◇ Topological Module Graph
 
-* Dependency ordering
+Dependencies are represented as a directed graph with:
+
+* Topological ordering
 * Diamond dependency deduplication
 * Cycle detection
 * Symbol collision detection
-* Deterministic module processing
+* Deterministic resolution
 
-Relevant diagnostic codes include:
+</td>
+<td>
 
-* `E1300` — dependency cycle
-* `E1302` — ambiguous symbol collision
+### ⌁ Diagnostics v2
 
-### Static Typing
-
-Nyx performs semantic validation before backend generation, including:
-
-* Type checking
-* Type inference
-* Scope handling
-* Bounds validation
-* Static invariants
-
-### Diagnostics v2
-
-The diagnostic subsystem provides source-aware compiler errors with precise spans.
+Compiler diagnostics provide precise source spans and structured error codes.
 
 ```text
-error[E1302]: ambiguous symbol collision
+error[E1302]
 
-  --> src/module.nyx:14:9
+14 | use value
+   |     ^^^^^
    |
-14 |     use value
-   |         ^^^^^
-   |
-   = multiple symbols resolve to the same identifier
+   └─ ambiguous symbol collision
 ```
 
-Diagnostics are designed to identify both the source location and the semantic reason for failure.
+</td>
+</tr>
 
-### Language Server Protocol
+<tr>
+<td>
 
-Nyx includes a built-in Language Server Protocol v2 JSON-RPC implementation for tooling integration.
+### ◈ Native Code Generation
 
-### Verification Infrastructure
+The `hecpp` backend targets **C++20**, allowing generated programs to be compiled into native executables through Clang or GCC.
 
-The project includes automated validation covering:
+</td>
+<td>
 
-* Lexical analysis
-* AST construction
-* Static type invariants
-* Module graph resolution
-* Diagnostic behavior
-* LSP RPC behavior
-* Sandbox isolation
-* Negative syntax and semantic cases
-* Deterministic fuzzing
-* Backend parity
-* Node.js conformance
-* Rust borrow-check conformance
-* C++20 native conformance
-* Edge-case regression testing
+### ◌ Built-In Developer Protocol
+
+Nyx includes a built-in **Language Server Protocol v2 JSON-RPC** implementation for editor and tooling integration.
+
+</td>
+</tr>
+</table>
 
 ---
 
-## Tech Stack
+## `03` — Architecture
 
-| Component               | Technology              |
-| :---------------------- | :---------------------- |
-| Native backend          | **C++20**               |
-| JavaScript backend      | **Node.js / ES2022**    |
-| Rust backend            | **Rust 2021**           |
-| Reference backend       | **Python 3**            |
-| Native compilation      | **LLVM Clang / GCC**    |
-| Rust compilation        | **`rustc`**             |
-| Language protocol       | **LSP v2 / JSON-RPC**   |
-| Source encoding         | **Unicode UTF-8**       |
-| Compiler representation | **Typed Canonical AST** |
-
-Nyx is intentionally structured around a shared compiler representation so that backend implementations operate on validated semantic data instead of raw source text.
-
----
-
-## Project Structure
-
-The repository is organized around the compiler, language specification, installation tooling, and developer documentation.
+The compiler is divided into explicit stages. Each stage has a well-defined responsibility and passes validated data to the next stage.
 
 ```text
-nyx/
-├── assets/
-│   └── logo.svg
-│
-├── install.ps1
-├── install.sh
-├── LICENSE
-├── README.md
-│
-├── GETTING_STARTED.md
-├── INSTALLATION.md
-├── LANGUAGE_REFERENCE.md
-├── CLI_REFERENCE.md
-├── ERROR_REFERENCE.md
-└── CHANGELOG.md
+                              ┌─────────────────────┐
+                              │   Nyx Source Code   │
+                              │      .nyx / .he     │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+                              ┌─────────────────────┐
+                              │   Lexical Engine    │
+                              │                     │
+                              │ UTF-8 Tokenization  │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+                              ┌─────────────────────┐
+                              │   Parser / AST      │
+                              │                     │
+                              │ Syntax Construction │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+                    ┌──────────────────────────────────────┐
+                    │         Module Graph Loader          │
+                    │                                      │
+                    │  DAG → Topological Ordering          │
+                    │  Diamond Deduplication                │
+                    │  Cycle Detection                     │
+                    │  Symbol Collision Detection          │
+                    └──────────────────┬───────────────────┘
+                                       │
+                                       ▼
+                              ┌─────────────────────┐
+                              │     TypeChecker     │
+                              │                     │
+                              │ Inference           │
+                              │ Scopes              │
+                              │ Bounds              │
+                              └──────────┬──────────┘
+                                         │
+                                         ▼
+                         ╔════════════════════════════╗
+                         ║    CANONICAL TYPED AST    ║
+                         ╚════════════╤═══════════════╝
+                                      │
+             ┌────────────────────────┼────────────────────────┐
+             │                        │                        │
+             ▼                        ▼                        ▼
+      ┌──────────────┐        ┌──────────────┐        ┌──────────────┐
+      │    hecpp     │        │    hejs      │        │    hers      │
+      │    C++20     │        │ Node.js      │        │  Rust 2021   │
+      │              │        │  ES2022      │        │              │
+      └──────┬───────┘        └──────┬───────┘        └──────┬───────┘
+             │                       │                       │
+             ▼                       ▼                       ▼
+        Native .exe              ES Module              rustc Object
+
+                              ┌──────────────┐
+                              │     hepy     │
+                              │   Python 3   │
+                              │  Reference   │
+                              └──────┬───────┘
+                                     │
+                                     ▼
+                              Canonical Semantics
 ```
 
-> The tree above intentionally lists only repository components explicitly documented by the project. Internal source directories are not inferred here.
+### Backend Philosophy
+
+The backend layer is intentionally separated from parsing and semantic validation.
+
+```text
+              ┌───────────────────────────┐
+              │      Language Frontend    │
+              │                           │
+              │ Lexer → Parser → Types    │
+              └─────────────┬─────────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │  Canonical Typed AST│
+                 └──────────┬──────────┘
+                            │
+             ┌──────────────┼──────────────┐
+             │              │              │
+             ▼              ▼              ▼
+          C++20          Node.js          Rust
+          hecpp           hejs            hers
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                            ▼
+                       Python / hepy
+                       Reference Layer
+```
+
+This architecture makes backend behavior easier to test against a shared semantic source of truth.
 
 ---
 
-## Getting Started
+## `04` — Toolchain
 
-### Prerequisites
+Nyx currently exposes four target backends.
 
-Nyx targets the following environments:
+| Backend     | Target         | Purpose                       | Status       |
+| :---------- | :------------- | :---------------------------- | :----------- |
+| **`hecpp`** | C++20          | Native executable generation  | 🔒 Stable    |
+| **`hejs`**  | Node.js ES2022 | JavaScript execution          | 🔒 Stable    |
+| **`hers`**  | Rust 2021      | Rust compilation pipeline     | 🟡 Active    |
+| **`hepy`**  | Python 3       | Canonical reference semantics | 📐 Reference |
 
-* Windows
-* Linux
-* macOS
+### `hecpp`
 
-The generated targets may additionally require their corresponding toolchains:
-
-* **C++20:** Clang or GCC
-* **Rust:** `rustc`
-* **Node.js:** Node.js with ES2022 support
-* **Python:** Python 3.10+
-
-### Windows
-
-Install Nyx through PowerShell:
-
-```powershell
-irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
+```text
+Nyx
+ │
+ ▼
+Canonical AST
+ │
+ ▼
+C++20
+ │
+ ├── Clang
+ └── GCC
+      │
+      ▼
+ Native Executable
 ```
 
-After installation, verify the environment:
+### `hejs`
 
-```powershell
-nyx doctor
+```text
+Nyx
+ │
+ ▼
+Canonical AST
+ │
+ ▼
+Node.js ES2022
+ │
+ ▼
+ES Module
 ```
 
-### Linux / macOS
+### `hers`
 
-Install Nyx through the provided POSIX installer:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
+```text
+Nyx
+ │
+ ▼
+Canonical AST
+ │
+ ▼
+Rust 2021
+ │
+ ▼
+rustc
+ │
+ ▼
+Rust Object
 ```
 
-Then verify the installation:
+### `hepy`
 
-```bash
-nyx doctor
-```
-
-### Initialize a Project
-
-Create a new Nyx workspace:
-
-```bash
-nyx new core_engine
-cd core_engine
-```
-
-Validate the project without generating a final target:
-
-```bash
-nyx check
-```
+The Python backend serves as a canonical semantic reference for validating behavior across targets.
 
 ---
 
-## Usage
+## `05` — Language
 
-### Check a Project
-
-Run semantic and type verification:
-
-```bash
-nyx check
-```
-
-This validates the source through the compiler's frontend and type-checking pipeline.
-
-### Run a Native Build
-
-The default execution target is the C++20 native backend:
-
-```bash
-nyx run
-```
-
-The resulting program is compiled through the available native C++ toolchain.
-
-### Run the Node.js Backend
-
-Generate and execute the Node.js ES2022 target:
-
-```bash
-nyx run --target hejs
-```
-
-### Run the Python Reference Backend
-
-Use the canonical Python representation:
-
-```bash
-nyx run --target hepy
-```
-
-### Build the Rust Backend
-
-Generate the Rust 2021 target:
-
-```bash
-nyx build --target hers
-```
-
----
-
-### Example Nyx Program
+Nyx source files can select a backend explicitly using a target directive.
 
 ```nyx
 #target hecpp
@@ -378,93 +404,286 @@ test "shard capacity verification" {
 }
 ```
 
-The example demonstrates:
+The example demonstrates several core language concepts:
 
-* Target selection
-* Module imports
-* Typed structures
-* Function declarations
-* Explicit return types
+* Explicit target selection
+* Imports
+* Structures
+* Static type annotations
+* Functions
+* Return types
 * Variables
-* Conditional execution
+* Conditionals
 * Function calls
-* Built-in tests
+* Built-in testing
 * Assertions
 
 ---
 
-### Verification Status
+## `06` — Installation
 
-The current verification battery reports the following results:
+### Windows
 
-```text
-Lexical Analyzer & UTF-8 Stream Suite       100% PASS
-Syntactic AST Construction                  100% PASS
-Static Type Invariant Checks                100% PASS
-Topological Graph Deduplication             100% PASS
-Ambiguous Symbol Collision (E1302)          100% PASS
-Language Server Protocol RPC                100% PASS (3/3)
-Clean Sandbox Isolation                     100% PASS (5/5)
-Negative Syntax & Semantic Rejections       100% PASS (10/10)
-Deterministic Fuzz Engine                   100% PASS (530/530)
-Differential Backend Parity                 100% PASS (10/10)
-Node.js ES2022 End-to-End                   100% PASS (8/8)
-Rust 2021 Borrow-Check                     100% PASS (8/8)
-C++20 Native Machine Code                  100% PASS (8/8)
-Edge-Case Regression Battery               100% PASS (138/138)
+Nyx provides a PowerShell installer:
+
+```powershell
+irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
+```
+
+Verify the installation:
+
+```powershell
+nyx doctor
+```
+
+### Linux / macOS
+
+Use the provided POSIX installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
+```
+
+Then verify the environment:
+
+```bash
+nyx doctor
+```
+
+### Environment Verification
+
+The `doctor` command is intended to verify the host environment, compiler availability, paths, and required tooling.
+
+```bash
+nyx doctor
 ```
 
 ---
 
-### Documentation
+## `07` — Usage
 
-Additional documentation is available in the repository:
+### Create a Workspace
 
-* [Architecture & Getting Started](GETTING_STARTED.md)
-* [Installation & Toolchain Setup](INSTALLATION.md)
-* [Language Reference & Grammar](LANGUAGE_REFERENCE.md)
-* [CLI Reference](CLI_REFERENCE.md)
-* [Diagnostic Error Catalog](ERROR_REFERENCE.md)
-* [Release Changelog](CHANGELOG.md)
+```bash
+nyx new core_engine
+cd core_engine
+```
+
+### Validate
+
+Run semantic and type validation:
+
+```bash
+nyx check
+```
+
+### Run Native C++20
+
+The default execution target is the native C++20 backend:
+
+```bash
+nyx run
+```
+
+### Run Node.js
+
+```bash
+nyx run --target hejs
+```
+
+### Run Python Reference
+
+```bash
+nyx run --target hepy
+```
+
+### Build Rust
+
+```bash
+nyx build --target hers
+```
+
+### Command Overview
+
+```text
+nyx
+ │
+ ├── doctor
+ │     └── Verify environment
+ │
+ ├── new <name>
+ │     └── Create workspace
+ │
+ ├── check
+ │     └── Validate source
+ │
+ ├── run
+ │     ├── Default → hecpp
+ │     ├── --target hejs
+ │     └── --target hepy
+ │
+ └── build
+       └── --target hers
+```
 
 ---
 
-## Contributing
+## `08` — Verification & Conformance
+
+Nyx maintains an automated verification battery covering the compiler pipeline and backend behavior.
+
+```text
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         NYX VERIFICATION MATRIX                              ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║                                                                              ║
+║  UTF-8 / Lexical Analysis                         ──► 100% PASS             ║
+║  Syntactic AST Construction                       ──► 100% PASS             ║
+║  Static Type Invariants                           ──► 100% PASS             ║
+║  Topological Graph Deduplication                  ──► 100% PASS             ║
+║  Symbol Collision Detection E1302                ──► 100% PASS             ║
+║  LSP v2 JSON-RPC                                  ──► 100% PASS (3/3)      ║
+║  Sandbox Isolation                                ──► 100% PASS (5/5)      ║
+║  Negative Syntax / Semantic Cases                ──► 100% PASS (10/10)    ║
+║  Deterministic Fuzzing                            ──► 100% PASS (530/530)  ║
+║  Differential Backend Parity                     ──► 100% PASS (10/10)    ║
+║  Node.js ES2022 Conformance                       ──► 100% PASS (8/8)      ║
+║  Rust 2021 Borrow-Check                           ──► 100% PASS (8/8)      ║
+║  C++20 Native Conformance                         ──► 100% PASS (8/8)      ║
+║  Edge-Case Regression                             ──► 100% PASS (138/138)  ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+```
+
+### Conformance Matrix
+
+| Pipeline | Target         |    Gate    | Conformance            |
+| :------- | :------------- | :--------: | :--------------------- |
+| `hecpp`  | C++20          | **Gate 8** | 🔒 Frozen / Production |
+| `hejs`   | Node.js ES2022 | **Gate 8** | 🔒 Frozen / Production |
+| `hepy`   | Python 3       | **Gate 8** | 📐 Reference Semantics |
+| `hers`   | Rust 2021      | **Gate 6** | 🟡 Conformance Probe   |
+
+---
+
+## `09` — Diagnostics
+
+Nyx's diagnostic subsystem is designed around precise source spans and stable error identifiers.
+
+```text
+error[E1302]: ambiguous symbol collision
+
+  --> src/example.nyx:14:9
+   |
+14 |     use value
+   |         ^^^^^
+   |
+   = multiple symbols resolve to the same identifier
+```
+
+Diagnostic codes allow tooling and developers to reason about compiler failures without relying exclusively on human-readable messages.
+
+The documented diagnostic catalog spans:
+
+```text
+E1000 ─────────────────────────────── E2006
+```
+
+See [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) for the complete catalog.
+
+---
+
+## `10` — Project Structure
+
+```text
+nyx/
+│
+├── assets/
+│   └── logo.svg
+│
+├── install.ps1
+├── install.sh
+│
+├── GETTING_STARTED.md
+├── INSTALLATION.md
+├── LANGUAGE_REFERENCE.md
+├── CLI_REFERENCE.md
+├── ERROR_REFERENCE.md
+├── CHANGELOG.md
+├── LICENSE
+└── README.md
+```
+
+The structure shown here is limited to files explicitly established by the project documentation rather than guessing undocumented internal directories.
+
+---
+
+## `11` — Documentation
+
+| Document                                         | Description                       |
+| :----------------------------------------------- | :-------------------------------- |
+| [`GETTING_STARTED.md`](GETTING_STARTED.md)       | Architecture and initial workflow |
+| [`INSTALLATION.md`](INSTALLATION.md)             | Toolchain installation and setup  |
+| [`LANGUAGE_REFERENCE.md`](LANGUAGE_REFERENCE.md) | Language reference and grammar    |
+| [`CLI_REFERENCE.md`](CLI_REFERENCE.md)           | CLI commands and diagnostics      |
+| [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md)       | Diagnostic error catalog          |
+| [`CHANGELOG.md`](CHANGELOG.md)                   | Release history                   |
+
+---
+
+## `12` — Contributing
 
 Contributions are welcome.
 
-Before submitting a change:
+When contributing to Nyx:
 
-1. Read the relevant documentation for the compiler subsystem you are modifying.
-2. Keep changes focused and avoid unrelated refactors.
-3. Preserve deterministic compiler behavior.
-4. Add or update verification coverage when changing language or compiler behavior.
-5. Verify affected targets before opening a pull request.
-6. Keep diagnostic behavior precise and source-aware.
-7. Update documentation when introducing user-facing functionality.
+1. Keep changes focused and easy to review.
+2. Preserve deterministic compiler behavior.
+3. Add regression coverage for language or compiler changes.
+4. Validate affected backends before submitting a pull request.
+5. Keep diagnostics precise and consistent.
+6. Update relevant documentation for user-facing changes.
+7. Avoid introducing dependencies or architecture changes without a clear reason.
 
-For larger changes, open an issue first so the design and implementation can be discussed before significant work begins.
+For larger architectural changes, discuss the design before implementing a substantial change.
 
-### Pull Requests
+### Pull Request Checklist
 
-A useful pull request should include:
-
-* A clear description of the change
-* The reason for the change
-* Relevant tests or verification results
-* Documentation updates when applicable
-* Any known limitations or target-specific differences
+```text
+[ ] Change is focused
+[ ] Existing behavior is preserved where intended
+[ ] Relevant verification suites pass
+[ ] Backend-specific behavior has been checked
+[ ] Documentation has been updated
+[ ] No unnecessary dependencies were introduced
+```
 
 ---
 
-## License
+## `13` — License
 
-Nyx is licensed under the **MIT License**.
+Nyx is distributed under the **MIT License**.
 
 See [`LICENSE`](LICENSE) for the complete license text.
 
 ---
 
 <div align="center">
-  <sub>Maintained by Nyx Systems Core.</sub>
+
+  <br/>
+
+  <img src="https://capsule-render.vercel.app/api?type=waving&color=0:05070A,50:0E1318,100:00F0FF&height=100&section=footer" width="100%" alt="Nyx footer"/>
+
+  <br/>
+
+  <sub>
+    Maintained by <b>Nyx Systems Core</b>
+  </sub>
+
+<br/><br/>
+
+  <sub>
+    Deterministic compilation. Multiple targets. One language.
+  </sub>
+
 </div>
