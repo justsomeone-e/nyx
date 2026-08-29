@@ -37,6 +37,27 @@ fn main() {
     print("Queue remaining:", q.size());
     guard q.size() == 1 else { return; }
 
-    print("[PASS] Stack and Queue polyglot parity verified!");
+    // Test Map (Associative Key-Value)
+    var m = new_map();
+    m.put("author", "nyx");
+    m.put("version", "v4.0.0-rc1");
+    m.put("status", "flawless");
+    print("Map size:", m.size());
+    guard m.size() == 3 else { return; }
+
+    print("Map get author:", m.get("author"));
+    guard m.get("author") == "nyx" else { return; }
+
+    print("Map has version:", m.has("version"));
+    guard m.has("version") == true else { return; }
+
+    var rm_ok = m.remove("version");
+    print("Map removed version:", rm_ok);
+    guard rm_ok == true else { return; }
+    print("Map size after remove:", m.size());
+    guard m.size() == 2 else { return; }
+    guard m.has("version") == false else { return; }
+
+    print("[PASS] Stack, Queue, and Map polyglot parity verified!");
 }
 main();

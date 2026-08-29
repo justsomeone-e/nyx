@@ -83,3 +83,73 @@ fn new_queue() -> Queue {
     var empty_items: Array<int> = [];
     return Queue(empty_items, 0, 0);
 }
+struct Map {
+    keys: Array<string>,
+    vals: Array<string>,
+    count: int
+}
+
+impl Map {
+    fn put(self, key: string, val: string) {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                self.vals[i] = val;
+                return;
+            }
+            i = i + 1;
+        }
+        self.keys = self.keys + [key];
+        self.vals = self.vals + [val];
+        self.count = self.count + 1;
+    }
+
+    fn get(self, key: string) -> string {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                return self.vals[i];
+            }
+            i = i + 1;
+        }
+        return "";
+    }
+
+    fn has(self, key: string) -> bool {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                return true;
+            }
+            i = i + 1;
+        }
+        return false;
+    }
+
+    fn size(self) -> int {
+        return self.count;
+    }
+
+    fn remove(self, key: string) -> bool {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                var last = self.count - 1;
+                if i != last {
+                    self.keys[i] = self.keys[last];
+                    self.vals[i] = self.vals[last];
+                }
+                self.count = self.count - 1;
+                return true;
+            }
+            i = i + 1;
+        }
+        return false;
+    }
+}
+
+fn new_map() -> Map {
+    var empty_k: Array<string> = [];
+    var empty_v: Array<string> = [];
+    return Map(empty_k, empty_v, 0);
+}

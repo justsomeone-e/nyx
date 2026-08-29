@@ -27,7 +27,25 @@ DEEPSEEK_KEY = get_env_var("DEEPSEEK_API_KEY")
 OPENROUTER_KEY = get_env_var("OPENROUTER_API_KEY")
 
 EFFORT_LEVEL = "high"
-MAX_TOKENS = 1400
+MAX_TOKENS = 1500
+
+NYX_CANONICAL_SYNTAX = """
+NYX SYSTEMS LANGUAGE SPECIFICATION:
+1. Functions: fn name(param: Type) -> RetType { ... }
+2. Variables: var x: Type = val;  or  const K: Type = val;
+3. Structs & Methods:
+   struct Name { field1: Type, field2: Type }
+   impl Name {
+       fn method(self, arg: Type) -> Type { return self.field1; }
+   }
+4. Control Flow:
+   - if cond { ... } else { ... }
+   - while cond { ... }
+   - guard cond else { return; }
+5. Builtin Types: int, float, string, bool, Array<T>. (DO NOT USE Rust types like u32, u64, i32, #[cfg]).
+6. Reserved Keywords: 'set', 'peek', 'addr' are reserved keywords. Method names MUST NOT be 'set' (use 'put' or 'insert').
+7. Arrays: var a: Array<string> = []; a = a + [item]; a[i]; len is checked via struct count or indexing.
+"""
 
 def set_effort(level):
     global EFFORT_LEVEL, MAX_TOKENS
@@ -48,7 +66,7 @@ def call_deepseek(prompt, system_prompt="You are the Lead Language Architect for
     data = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": f"{system_prompt} (Effort Level: {EFFORT_LEVEL.upper()}). Ensure mathematical and syntactical perfection."},
+            {"role": "system", "content": f"{system_prompt}\n{NYX_CANONICAL_SYNTAX}\nFollow Nyx syntax strictly."},
             {"role": "user", "content": prompt}
         ],
         "max_tokens": MAX_TOKENS
@@ -67,7 +85,7 @@ def call_auditor(prompt, system_prompt="You are the Principal Systems & Security
         data = {
             "model": "nvidia/nemotron-3-ultra-550b-a55b",
             "messages": [
-                {"role": "system", "content": f"{system_prompt} Conduct an uncompromising audit targeting zero flaws."},
+                {"role": "system", "content": f"{system_prompt}\n{NYX_CANONICAL_SYNTAX}\nAudit strictly for zero flaws in Nyx syntax."},
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": MAX_TOKENS,
@@ -93,7 +111,7 @@ def call_synthesizer(prompt, system_prompt="You are the Consensus Synthesizer an
             data = {
                 "model": "moonshotai/kimi-k3",
                 "messages": [
-                    {"role": "system", "content": f"{system_prompt} Synthesize mathematically flawless production code."},
+                    {"role": "system", "content": f"{system_prompt}\n{NYX_CANONICAL_SYNTAX}\nProduce pure Nyx syntax."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": MAX_TOKENS
@@ -123,8 +141,8 @@ def run_team_pipeline(task):
     p1 = f"""User Task: {task}
 Mission:
 1. Conduct deep architectural analysis for Nyx.
-2. Provide idiomatic, mathematically rigorous Nyx code using fn, strong types, guard statements, and methods.
-3. Keep syntax completely standard according to Nyx syntax rules."""
+2. Provide idiomatic, mathematically rigorous Nyx code using fn, strong types (int, string, bool, Array<T>), guard statements, and methods.
+3. REMEMBER: 'set' is a keyword, use 'put' or 'insert'. Do NOT use Rust types (u32, u64, i32)."""
     t1, res1 = call_deepseek(p1)
     print(f"\033[92m[1. ARCHITECT: DeepSeek Platform ({t1:.2f}s)]\033[0m")
     print(res1)
@@ -138,9 +156,9 @@ The Lead Architect proposed:
 {res1}
 ---
 Conduct an exhaustive systems audit:
-1. Flaw Detection: Find every boundary condition, overflow hazard, null safety defect, or contract inversion (e.g. min > max).
-2. Optimization: Identify instruction-level improvements (branchless CMOV, cache layout).
-3. Hardened Patch: Provide the hardened implementation with defensive assertions."""
+1. Flaw Detection: Find boundary condition errors, overflows, null safety defects, or contract inversions.
+2. Optimization: Identify instruction-level improvements.
+3. Hardened Patch: Ensure pure Nyx syntax (no Rust keywords or u32/u64)."""
     name2, t2, res2 = call_auditor(p2)
     print(f"\033[93m[2. AUDITOR: {name2} ({t2:.2f}s) reviewing Step 1]\033[0m")
     print(res2)
@@ -157,7 +175,7 @@ Auditor Critique & Hardening:
 ---
 {res2}
 ---
-Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. Include no pseudo-code."""
+Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. Follow pure Nyx syntax rules."""
     name3, t3, res3 = call_synthesizer(p3)
     print(f"\033[95m[3. CONSENSUS SYNTHESIZER: {name3} ({t3:.2f}s)]\033[0m")
     print(res3)
@@ -184,12 +202,12 @@ Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. 
             
             try:
                 # 1. Type and semantic check
-                check_res = subprocess.run(["nyx", "check", temp_path], capture_output=True, text=True, timeout=10)
+                check_res = subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "..", "cli.py"), "check", temp_path], capture_output=True, text=True, timeout=10)
                 if check_res.returncode != 0:
                     err_msg = check_res.stderr or check_res.stdout
                 else:
                     # 2. Execution test
-                    run_res = subprocess.run(["nyx", "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
+                    run_res = subprocess.run([sys.executable, os.path.join(os.path.dirname(__file__), "..", "cli.py"), "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
                     if run_res.returncode == 0:
                         print(f"\n\033[92m[+] [VERIFICATION PASS] (Round {healing_round + 1}):\033[0m")
                         print("    [OK] Static Type Check: 0 Errors")
@@ -217,7 +235,7 @@ Faulty code:
 ---
 {current_code}
 ---
-Fix the error completely. Return ONLY the corrected, 100% flawless Nyx code inside ```nyx ... ```."""
+Fix the error completely. Remember Nyx syntax: types are int, float, string, bool, Array<T>. Method name cannot be 'set'. Return ONLY valid Nyx code inside ```nyx ... ```."""
             t_heal, patch_res = call_deepseek(heal_prompt, "You are the Emergency Code Repair Specialist for Nyx compiler.")
             m_patch = re.search(r"```nyx\s*(.*?)\s*```", patch_res, re.DOTALL)
             if m_patch:
@@ -225,7 +243,19 @@ Fix the error completely. Return ONLY the corrected, 100% flawless Nyx code insi
             else:
                 break
 
-        if not is_flawless:
+        if is_flawless:
+            print("\n\033[92m[OK] Code verified with zero compiler defects.\033[0m")
+            try:
+                dest = input("\033[93m[+] Write verified code to codebase? (e.g. 'src/stdlib/collections.nyx' or press Enter to skip): \033[0m").strip()
+                if dest:
+                    abs_dest = os.path.abspath(dest)
+                    os.makedirs(os.path.dirname(abs_dest), exist_ok=True)
+                    with open(abs_dest, "a" if os.path.exists(abs_dest) else "w", encoding="utf-8") as f_out:
+                        f_out.write("\n\n" + current_code + "\n")
+                    print(f"\033[92m[OK] Code successfully committed to: {abs_dest}\033[0m")
+            except Exception as e:
+                print(f"[!] File write error: {e}")
+        else:
             print("\033[91m[!] Code required manual developer inspection.\033[0m\n")
 
 def start_console():
