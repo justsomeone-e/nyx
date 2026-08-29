@@ -1,0 +1,30 @@
+fn double_num(x: int) -> int {
+    return x * 2;
+}
+
+fn add_bonus(x: int, b: int) -> int {
+    return x + b;
+}
+
+fn test_features() {
+    // 1. Pipeline
+    var val = 10;
+    var res = val |> double_num |> add_bonus(5);
+    
+    // 2. Guard
+    guard res > 20 else {
+        print("Guard triggered: Too low");
+        return;
+    }
+    
+    // 3. Defer
+    defer print("Scope cleanup triggered!");
+    
+    // 4. Interpolation
+    var user = "NyxDeveloper";
+    print($"[OK] User: {user} computed result: {res}");
+}
+
+fn main() {
+    test_features();
+}

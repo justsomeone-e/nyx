@@ -216,13 +216,18 @@ class CppToolchain:
                 return False, f"Failed to execute compiler '{compiler}': {e}"
         else:
             lib_args = [l if (l.endswith(".a") or l.endswith(".lib") or l.endswith(".o") or os.path.exists(l)) else f"-l{l}" for l in link_libs]
-            cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe] + inc_args + libdir_args + lib_args
+            static_flag = ["-static"] if (sys.platform != 'darwin' and "-shared" not in inc_args) else []
+            cmd = [compiler, "-std=c++20", "-O2"] + static_flag + [cpp_filepath, "-o", out_exe] + inc_args + libdir_args + lib_args
             try:
                 res = subprocess.run(cmd, capture_output=True, text=True)
                 if res.returncode == 0:
                     return True, out_exe
-                else:
-                    return False, f"C++ Compilation Error:\n{res.stderr or res.stdout}"
+                # Fallback without -static
+                cmd = [compiler, "-std=c++20", "-O2", cpp_filepath, "-o", out_exe] + inc_args + libdir_args + lib_args
+                res = subprocess.run(cmd, capture_output=True, text=True)
+                if res.returncode == 0:
+                    return True, out_exe
+                return False, f"C++ Compilation Error:\n{res.stderr or res.stdout}"
             except Exception as e:
                 return False, f"Failed to execute compiler '{compiler}': {e}"
 

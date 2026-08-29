@@ -653,7 +653,7 @@ class UniversalCodeGen:
         ]
         for s in self.ast.statements:
             if isinstance(s, FunctionDefNode):
-                params_wat = " ".join([f"(param ${p.name} i32)" for p in node.params]) if hasattr(s, 'params') else ""
+                params_wat = " ".join([f"(param ${p.name} i32)" for p in s.params]) if hasattr(s, 'params') else ""
                 wat_lines.append(f'  (func (export "{s.name}") {params_wat} (result i32)')
                 wat_lines.append("    i32.const 42")
                 wat_lines.append("  )")
@@ -948,6 +948,7 @@ class UniversalCodeGen:
 
         for s in self.ast.statements:
             lines.extend(emit_py_stmt(s, 0))
+        lines.append("\nif __name__ == '__main__':\n    if 'main' in globals():\n        main()")
         return "\n".join(lines)
 
     # =====================================================
@@ -1122,6 +1123,7 @@ function len(v) { return v ? v.length : 0; }
         for s in self.ast.statements:
             lines.extend(emit_js_stmt(s, 0))
 
+        lines.append("\nif (typeof main === 'function') main();")
         return "\n".join(lines)
 
     # =====================================================
@@ -1247,6 +1249,12 @@ function len(v) { return v ? v.length : 0; }
                 val = f" {emit_rs_expr(node.expr)}" if node.expr else ""
                 return [f"{sp}return{val};"]
 
+            if isinstance(node, DeferNode): return [f"{sp}// defer {emit_rs_expr(node.expr)};"]
+            if isinstance(node, GuardNode):
+                res = [f"{sp}if !({emit_rs_expr(node.condition)}) {{"]
+                for s in node.else_body: res.extend(emit_rs_stmt(s, indent + 1))
+                res.append(f"{sp}}}")
+                return res
             if isinstance(node, BreakNode): return [f"{sp}break;"]
             if isinstance(node, ContinueNode): return [f"{sp}continue;"]
 
@@ -1276,6 +1284,8 @@ function len(v) { return v ? v.length : 0; }
         top_decls = []
         main_stmts = []
 
+        has_user_main = any(isinstance(s, FunctionDefNode) and s.name == "main" for s in self.ast.statements)
+
         for s in self.ast.statements:
             if isinstance(s, StructDefNode):
                 fields = ", ".join([f"pub {f.name}: {rust_type(f.type_annot)}" for f in s.fields])
@@ -1285,9 +1295,10 @@ function len(v) { return v ? v.length : 0; }
                 top_decls.append(f"impl {s.name} {{\n    pub fn new({ctor_params}) -> Self {{\n        Self {{ {ctor_inits} }}\n    }}\n}}\n")
                 top_decls.append(f"#[allow(non_snake_case)]\npub fn {s.name}({ctor_params}) -> {s.name} {{\n    {s.name}::new({ctor_inits})\n}}\n")
             elif isinstance(s, FunctionDefNode):
+                fn_name = "_nyx_user_main" if s.name == "main" else s.name
                 params_s = ", ".join([f"{p.name}: {rust_type(p.type_annot)}" for p in s.params])
                 ret_s = f" -> {rust_type(s.return_type)}" if s.return_type else ""
-                fn_lines = [f"pub fn {s.name}({params_s}){ret_s} {{"]
+                fn_lines = [f"pub fn {fn_name}({params_s}){ret_s} {{"]
                 for stmt in s.body:
                     fn_lines.extend(emit_rs_stmt(stmt, 1))
                 fn_lines.append("}\n")
@@ -1301,6 +1312,8 @@ function len(v) { return v ? v.length : 0; }
         out.append("fn main() {")
         for s in main_stmts:
             out.extend(emit_rs_stmt(s, 1))
+        if has_user_main:
+            out.append("    _nyx_user_main();")
         out.append("}\n")
 
         return "\n".join(out)
