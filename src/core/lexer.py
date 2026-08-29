@@ -292,6 +292,14 @@ class Lexer:
                         elif esc == 't': buf.append('\t')
                         elif esc == 'r': buf.append('\r')
                         elif esc == '0': buf.append('\0')
+                        elif esc == 'u' and self.pos + 5 < length:
+                            hex_digits = self.source[self.pos+2:self.pos+6]
+                            try:
+                                buf.append(chr(int(hex_digits, 16)))
+                                self.pos += 6; self.col += 6
+                                continue
+                            except:
+                                buf.append('u')
                         elif esc == '\\': buf.append('\\')
                         elif esc == quote: buf.append(quote)
                         else: buf.append(esc)

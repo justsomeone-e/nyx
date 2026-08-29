@@ -31,43 +31,27 @@ fn main() {
     var h_foobar = fnv1a_64_hex("foobar");
     var h_msg = fnv1a_64_hex("Nyx Parity Verification 2026");
     
-    print($"[HASH-ASCII] empty:  {h_empty}");
-    print($"[HASH-ASCII] 'a':    {h_a}");
-    print($"[HASH-ASCII] foobar: {h_foobar}");
-    print($"[HASH-ASCII] msg:    {h_msg}");
+    guard h_empty == "cbf29ce484222325" else { print("[FAIL] FNV-1a empty vector mismatch!"); return; }
+    guard h_a == "af63dc4c8601ec8c" else { print("[FAIL] FNV-1a 'a' vector mismatch!"); return; }
+    guard h_foobar == "85944171f73967e8" else { print("[FAIL] FNV-1a 'foobar' vector mismatch!"); return; }
+    guard h_msg == "0fc80ea1ce1cd7aa" else { print("[FAIL] FNV-1a 'msg' vector mismatch!"); return; }
 
-    guard h_empty == "cbf29ce484222325" else {
-        print("[FAIL] FNV-1a empty vector mismatch!");
-        return;
-    }
-    guard h_a == "af63dc4c8601ec8c" else {
-        print("[FAIL] FNV-1a 'a' vector mismatch!");
-        return;
-    }
-    guard h_foobar == "85944171f73967e8" else {
-        print("[FAIL] FNV-1a 'foobar' vector mismatch!");
-        return;
-    }
-    guard h_msg == "0fc80ea1ce1cd7aa" else {
-        print("[FAIL] FNV-1a 'msg' vector mismatch!");
-        return;
-    }
-
-    // 4. RFC 9923 UTF-8 Multi-Byte & Embedded NUL Vectors
+    // 4. RFC 9923 UTF-8 Multi-Byte, Embedded NUL, and NFC/NFD Distinction Vectors
     var h_tr = fnv1a_64_hex("İstanbul 🌙 çığ ğüşö");
     var h_nul = fnv1a_64_hex("a\0b");
+    var h_nfc = fnv1a_64_hex("é");
+    var h_nfd = fnv1a_64_hex("e\u0301");
 
     print($"[HASH-UTF8] 'İstanbul 🌙 çığ ğüşö' -> {h_tr}");
     print($"[HASH-NUL]  'a\\0b'                -> {h_nul}");
+    print($"[HASH-NFC]  'é'                   -> {h_nfc}");
+    print($"[HASH-NFD]  'e\\u0301'             -> {h_nfd}");
 
-    guard h_tr == "331b157d9d5c8685" else {
-        print($"[FAIL] UTF-8 multi-byte mismatch: got {h_tr}, expected 331b157d9d5c8685");
-        return;
-    }
-    guard h_nul == "e5d29919042666b2" else {
-        print($"[FAIL] Embedded NUL mismatch: got {h_nul}, expected e5d29919042666b2");
-        return;
-    }
+    guard h_tr == "331b157d9d5c8685" else { print("[FAIL] UTF-8 multi-byte mismatch"); return; }
+    guard h_nul == "e5d29919042666b2" else { print("[FAIL] Embedded NUL mismatch"); return; }
+    guard h_nfc == "0ac21707b7181e01" else { print("[FAIL] NFC é mismatch"); return; }
+    guard h_nfd == "c0c9d418ee802e1f" else { print("[FAIL] NFD e\\u0301 mismatch"); return; }
+    guard h_nfc != h_nfd else { print("[FAIL] NFC and NFD should produce different hashes"); return; }
 
     // 5. Time
     var t0 = now_ms();
@@ -90,5 +74,5 @@ fn main() {
     var r_ok = remove_file(temp_f);
     print($"[FS] Write={w_ok}, Exists={f_exists}, Content='{f_content}', Remove={r_ok}");
 
-    print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL Vectors Verified (hecpp == hejs == hepy)!");
+    print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL / NFC-NFD Vectors Verified (hecpp == hejs == hepy)!");
 }
