@@ -19,6 +19,9 @@ if (-not (Test-Path $SrcDir)) {
 
 # 2. Populate source tree
 $CurrentRoot = $PSScriptRoot
+$TempZip = $null
+$TempExtract = $null
+
 if ($CurrentRoot -and (Test-Path (Join-Path $CurrentRoot "src"))) {
     Write-Host "[*] Copying local files to $InstallDir..." -ForegroundColor Cyan
     Copy-Item -Path (Join-Path $CurrentRoot "src\*") -Destination $SrcDir -Recurse -Force
@@ -35,7 +38,6 @@ if ($CurrentRoot -and (Test-Path (Join-Path $CurrentRoot "src"))) {
     if (Test-Path $ExtractedSrc) {
         Copy-Item -Path (Join-Path $ExtractedSrc "*") -Destination $SrcDir -Recurse -Force
     }
-    Remove-Item -Path $TempZip, $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 # Ensure src/__init__.py exists
@@ -121,13 +123,27 @@ if ((Test-Path $MinGWPath) -and ($env:Path -notlike "*$MinGWPath*")) {
 
 # 6. Install / Sync VS Code Extension directly
 $VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
-$LocalExtDir = Join-Path $CurrentRoot "vscode-extension"
-if (Test-Path $LocalExtDir) {
+$LocalExtDir = $null
+if ($CurrentRoot) {
+    $LocalExtDir = Join-Path $CurrentRoot "vscode-extension"
+} elseif ($TempExtract -and (Test-Path $TempExtract)) {
+    $LocalExtDir = Join-Path $TempExtract "nyx-main\vscode-extension"
+}
+
+if ($LocalExtDir -and (Test-Path $LocalExtDir)) {
     if (-not (Test-Path $VsCodeExtDir)) {
         New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
     }
     Copy-Item -Path (Join-Path $LocalExtDir "*") -Destination $VsCodeExtDir -Recurse -Force
     Write-Host "[OK] Synced nyx VS Code Extension to $VsCodeExtDir" -ForegroundColor Green
+}
+
+# Cleanup temp files if downloaded
+if ($TempExtract -and (Test-Path $TempExtract)) {
+    Remove-Item -Path $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
+}
+if ($TempZip -and (Test-Path $TempZip)) {
+    Remove-Item -Path $TempZip -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host "===================================================================" -ForegroundColor Cyan
