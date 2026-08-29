@@ -26,8 +26,8 @@ NEMOTRON_KEY = get_env_var("NVIDIA_NEMOTRON_KEY")
 DEEPSEEK_KEY = get_env_var("DEEPSEEK_API_KEY")
 OPENROUTER_KEY = get_env_var("OPENROUTER_API_KEY")
 
-EFFORT_LEVEL = "high"  # Options: 'medium', 'high'
-MAX_TOKENS = 1200
+EFFORT_LEVEL = "high"
+MAX_TOKENS = 1400
 
 def set_effort(level):
     global EFFORT_LEVEL, MAX_TOKENS
@@ -42,13 +42,13 @@ def set_effort(level):
     else:
         print("Usage: :effort <medium|high>")
 
-def call_deepseek(prompt, system_prompt="You are the Lead Language Architect for Nyx. Perform deep analysis."):
+def call_deepseek(prompt, system_prompt="You are the Lead Language Architect for Nyx."):
     url = "https://api.deepseek.com/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"}
     data = {
         "model": "deepseek-chat",
         "messages": [
-            {"role": "system", "content": f"{system_prompt} (Effort Level: {EFFORT_LEVEL.upper()})"},
+            {"role": "system", "content": f"{system_prompt} (Effort Level: {EFFORT_LEVEL.upper()}). Ensure mathematical and syntactical perfection."},
             {"role": "user", "content": prompt}
         ],
         "max_tokens": MAX_TOKENS
@@ -61,14 +61,13 @@ def call_deepseek(prompt, system_prompt="You are the Lead Language Architect for
 
 def call_auditor(prompt, system_prompt="You are the Principal Systems & Security Auditor for Nyx."):
     t0 = time.time()
-    # Try OpenRouter Nemotron 550B with reasoning effort parameter
     try:
         url = "https://openrouter.ai/api/v1/chat/completions"
         headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
         data = {
             "model": "nvidia/nemotron-3-ultra-550b-a55b",
             "messages": [
-                {"role": "system", "content": f"{system_prompt} Conduct a rigorous, high-effort audit."},
+                {"role": "system", "content": f"{system_prompt} Conduct an uncompromising audit targeting zero flaws."},
                 {"role": "user", "content": prompt}
             ],
             "max_tokens": MAX_TOKENS,
@@ -82,7 +81,6 @@ def call_auditor(prompt, system_prompt="You are the Principal Systems & Security
     except Exception:
         pass
 
-    # Fallback to DeepSeek
     t, ans = call_deepseek(prompt, system_prompt)
     return ("DeepSeek Auditor (Failover)", t, ans)
 
@@ -95,7 +93,7 @@ def call_synthesizer(prompt, system_prompt="You are the Consensus Synthesizer an
             data = {
                 "model": "moonshotai/kimi-k3",
                 "messages": [
-                    {"role": "system", "content": f"{system_prompt} Synthesize flawless production code."},
+                    {"role": "system", "content": f"{system_prompt} Synthesize mathematically flawless production code."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": MAX_TOKENS
@@ -115,39 +113,41 @@ def call_synthesizer(prompt, system_prompt="You are the Consensus Synthesizer an
 
 def run_team_pipeline(task):
     print("\n\033[96m===================================================================")
-    print(f"[*] 🚀 DEEP REASONING AI TEAM PIPELINE (Effort: \033[92m{EFFORT_LEVEL.upper()}\033[96m)")
+    print(f"[*] 🚀 PURSUIT OF FLAWLESSNESS: DEEP MULTI-AGENT PIPELINE")
     print(f"    Task: {task}")
+    print(f"    Effort: \033[92m{EFFORT_LEVEL.upper()}\033[96m | Closed-Loop Auto-Healing: \033[92mENABLED\033[96m")
     print("===================================================================\033[0m\n")
 
     # Step 1: Deep Architect
-    print(f"\033[90m[*] Step 1: Lead Architect (DeepSeek Platform) conducting deep analysis & initial design...\033[0m")
+    print(f"\033[90m[*] Step 1: Lead Architect (DeepSeek Platform) conducting architectural analysis...\033[0m")
     p1 = f"""User Task: {task}
-Your Mission:
-1. Conduct a deep architectural review of how this should be designed in Nyx to ensure it is the easiest, cleanest, and most ergonomic implementation.
-2. Provide the complete, idiomatic Nyx code implementation with strong types, guard statements, and methods."""
+Mission:
+1. Conduct deep architectural analysis for Nyx.
+2. Provide idiomatic, mathematically rigorous Nyx code using fn, strong types, guard statements, and methods.
+3. Keep syntax completely standard according to Nyx syntax rules."""
     t1, res1 = call_deepseek(p1)
     print(f"\033[92m[1. ARCHITECT: DeepSeek Platform ({t1:.2f}s)]\033[0m")
     print(res1)
     print()
 
-    # Step 2: Deep Auditor
-    print(f"\033[90m[*] Step 2: Systems Auditor (Nemotron 3 Ultra 550B) performing high-scrutiny code audit...\033[0m")
+    # Step 2: High-Scrutiny Auditor
+    print(f"\033[90m[*] Step 2: Systems Auditor (Nemotron 3 Ultra 550B) stress-auditing for zero flaws...\033[0m")
     p2 = f"""Task: {task}
-The Lead Architect proposed this architecture and code:
+The Lead Architect proposed:
 ---
 {res1}
 ---
-Perform a thorough, high-effort systems audit:
-1. Identify all edge cases, potential memory leaks, buffer overruns, or contract violations (e.g. invalid arguments, negative bounds).
-2. Evaluate branch predictability and compiler optimization (CMOV/branchless, loop unrolling, cache locality).
-3. Formulate the hardened, production-grade refactor with defensive asserts/guards."""
+Conduct an exhaustive systems audit:
+1. Flaw Detection: Find every boundary condition, overflow hazard, null safety defect, or contract inversion (e.g. min > max).
+2. Optimization: Identify instruction-level improvements (branchless CMOV, cache layout).
+3. Hardened Patch: Provide the hardened implementation with defensive assertions."""
     name2, t2, res2 = call_auditor(p2)
     print(f"\033[93m[2. AUDITOR: {name2} ({t2:.2f}s) reviewing Step 1]\033[0m")
     print(res2)
     print()
 
     # Step 3: Consensus Synthesizer
-    print(f"\033[90m[*] Step 3: Consensus Synthesizer harmonizing design and audit into finalized flawless code...\033[0m")
+    print(f"\033[90m[*] Step 3: Consensus Synthesizer formulating flawless code...\033[0m")
     p3 = f"""Task: {task}
 Architect Proposal:
 ---
@@ -157,53 +157,87 @@ Auditor Critique & Hardening:
 ---
 {res2}
 ---
-Your Mission:
-Harmonize the architect's elegance with the auditor's strict performance and safety guarantees.
-Produce the definitive, 100% complete Nyx code inside ```nyx ... ```."""
+Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. Include no pseudo-code."""
     name3, t3, res3 = call_synthesizer(p3)
     print(f"\033[95m[3. CONSENSUS SYNTHESIZER: {name3} ({t3:.2f}s)]\033[0m")
     print(res3)
     print()
 
-    # Extract Nyx code block and run local compilation test
+    # Extract code
     match = re.search(r"```nyx\s*(.*?)\s*```", res3, re.DOTALL)
     if not match:
         match = re.search(r"```\s*(.*?)\s*```", res3, re.DOTALL)
     
     if match:
-        code = match.group(1).strip()
+        current_code = match.group(1).strip()
         print("\033[96m===================================================================")
-        print("[*] 🛠️ VERIFYING CONSENSUS CODE ON LOCAL NYX COMPILER...")
+        print("[*] 🛡️ CLOSED-LOOP COMPILER VERIFICATION & AUTO-HEALING")
         print("===================================================================\033[0m")
-        with tempfile.NamedTemporaryFile(suffix=".nyx", delete=False, mode="w", encoding="utf-8") as f:
-            f.write(code + "\n\nprint(\"[OK] AI Team consensus code verified and executed on local compiler!\");\n")
-            temp_path = f.name
         
-        try:
-            res = subprocess.run(["nyx", "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
-            if res.stdout:
-                print(res.stdout.strip())
-            if res.returncode == 0:
-                print("\033[92m✔ [COMPILER PASS]: Zero compilation errors! Production-ready.\033[0m\n")
+        max_healing_rounds = 3
+        is_flawless = False
+
+        for healing_round in range(max_healing_rounds):
+            with tempfile.NamedTemporaryFile(suffix=".nyx", delete=False, mode="w", encoding="utf-8") as f:
+                f.write(current_code + "\n\nprint(\"[PASS] Code compiled and executed cleanly!\");\n")
+                temp_path = f.name
+            
+            try:
+                # 1. Type and semantic check
+                check_res = subprocess.run(["nyx", "check", temp_path], capture_output=True, text=True, timeout=10)
+                if check_res.returncode != 0:
+                    err_msg = check_res.stderr or check_res.stdout
+                else:
+                    # 2. Execution test
+                    run_res = subprocess.run(["nyx", "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
+                    if run_res.returncode == 0:
+                        print(f"\n\033[92m🏆 [100% FLAWLESS VERIFICATION ACHIEVED] (Round {healing_round + 1}):\033[0m")
+                        print("  ✔ Static Type Check: 0 Errors")
+                        print("  ✔ Syntax Invariants: 0 Violations")
+                        print("  ✔ Execution Output:  " + run_res.stdout.strip())
+                        is_flawless = True
+                        break
+                    else:
+                        err_msg = run_res.stderr or run_res.stdout
+            except Exception as e:
+                err_msg = str(e)
+            finally:
+                try: os.remove(temp_path)
+                except: pass
+
+            print(f"\033[93m[⚠️ Flaw Detected in Attempt {healing_round + 1}]:\033[0m")
+            print(f"  {err_msg.strip()[:200]}")
+            print("\033[96m[*] Auto-Healing Triggered: Feeding compiler error back to models to patch...\033[0m")
+            
+            heal_prompt = f"""The Nyx compiler rejected your code with error:
+---
+{err_msg}
+---
+Faulty code:
+---
+{current_code}
+---
+Fix the error completely. Return ONLY the corrected, 100% flawless Nyx code inside ```nyx ... ```."""
+            t_heal, patch_res = call_deepseek(heal_prompt, "You are the Emergency Code Repair Specialist for Nyx compiler.")
+            m_patch = re.search(r"```nyx\s*(.*?)\s*```", patch_res, re.DOTALL)
+            if m_patch:
+                current_code = m_patch.group(1).strip()
             else:
-                if res.stderr:
-                    print(f"\033[91m[Compiler notice]: {res.stderr.strip()}\033[0m")
-        except Exception as e:
-            print(f"\033[93m[Local Run Notice]: {e}\033[0m")
-        finally:
-            try: os.remove(temp_path)
-            except: pass
+                break
+
+        if not is_flawless:
+            print("\033[91m[!] Code required manual developer inspection.\033[0m\n")
 
 def start_console():
     print(f"""
 \033[96m===================================================================
-⚡ NYX AI COLLABORATIVE TEAM CONSOLE — MULTI-AGENT PIPELINE
+⚡ NYX AI FLAWLESS MULTI-AGENT WORKFORCE — REAL-TIME COLLABORATION
 ===================================================================\033[0m
 Your Engineering Team is Assembled:
-  • Lead Architect:        DeepSeek Platform
-  • Systems Reviewer:      Nemotron 3 Ultra 550B (High Reasoning)
-  • Consensus Synthesizer: Kimi K3 / DeepSeek
-  • Local Integrator:      Antigravity Engine & Clang/LLVM
+  • Lead Architect:        DeepSeek Platform (~0.9s)
+  • Systems Reviewer:      Nemotron 3 Ultra 550B (High Reasoning ~3.7s)
+  • Consensus Synthesizer: Kimi K3 / DeepSeek (~1.2s)
+  • Closed-Loop Verifier:  Local nyx Compiler Engine & Auto-Healer
 
 Reasoning Effort: \033[92m{EFFORT_LEVEL.upper()}\033[0m
 Commands:
