@@ -359,7 +359,8 @@ class UniversalCodeGen:
             if isinstance(node, StringNode):
                 if is_embedded:
                     return json.dumps(node.value, ensure_ascii=False)
-                return f"string({json.dumps(node.value, ensure_ascii=False)})"
+                val_bytes = node.value.encode('utf-8')
+                return f"string({json.dumps(node.value, ensure_ascii=False)}, {len(val_bytes)})"
             if isinstance(node, BooleanNode): return "true" if node.value else "false"
             if isinstance(node, NullNode): return "nullptr"
             if isinstance(node, IdentifierNode): return node.name

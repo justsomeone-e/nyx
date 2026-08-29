@@ -10,8 +10,9 @@
 inline std::string _nyx_hash_fnv1a_64_hex(const std::string& str) {
     uint64_t hash = 0xcbf29ce484222325ULL;
     const uint64_t prime = 0x100000001b3ULL;
-    for (unsigned char c : str) {
-        hash ^= (uint64_t)c;
+    const uint8_t* data = reinterpret_cast<const uint8_t*>(str.data());
+    for (size_t i = 0; i < str.size(); ++i) {
+        hash ^= (uint64_t)data[i];
         hash *= prime;
     }
     std::stringstream ss;

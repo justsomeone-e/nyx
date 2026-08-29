@@ -25,16 +25,16 @@ fn main() {
         return;
     }
 
-    // 3. RFC 9923 Canonical FNV-1a 64-bit Hex Vectors
+    // 3. RFC 9923 Canonical FNV-1a 64-bit Hex ASCII Vectors
     var h_empty = fnv1a_64_hex("");
     var h_a = fnv1a_64_hex("a");
     var h_foobar = fnv1a_64_hex("foobar");
     var h_msg = fnv1a_64_hex("Nyx Parity Verification 2026");
     
-    print($"[HASH] FNV-1a hex empty:  {h_empty}");
-    print($"[HASH] FNV-1a hex 'a':    {h_a}");
-    print($"[HASH] FNV-1a hex foobar: {h_foobar}");
-    print($"[HASH] FNV-1a hex msg:    {h_msg}");
+    print($"[HASH-ASCII] empty:  {h_empty}");
+    print($"[HASH-ASCII] 'a':    {h_a}");
+    print($"[HASH-ASCII] foobar: {h_foobar}");
+    print($"[HASH-ASCII] msg:    {h_msg}");
 
     guard h_empty == "cbf29ce484222325" else {
         print("[FAIL] FNV-1a empty vector mismatch!");
@@ -48,21 +48,41 @@ fn main() {
         print("[FAIL] FNV-1a 'foobar' vector mismatch!");
         return;
     }
+    guard h_msg == "0fc80ea1ce1cd7aa" else {
+        print("[FAIL] FNV-1a 'msg' vector mismatch!");
+        return;
+    }
 
-    // 4. Time
+    // 4. RFC 9923 UTF-8 Multi-Byte & Embedded NUL Vectors
+    var h_tr = fnv1a_64_hex("İstanbul 🌙 çığ ğüşö");
+    var h_nul = fnv1a_64_hex("a\0b");
+
+    print($"[HASH-UTF8] 'İstanbul 🌙 çığ ğüşö' -> {h_tr}");
+    print($"[HASH-NUL]  'a\\0b'                -> {h_nul}");
+
+    guard h_tr == "331b157d9d5c8685" else {
+        print($"[FAIL] UTF-8 multi-byte mismatch: got {h_tr}, expected 331b157d9d5c8685");
+        return;
+    }
+    guard h_nul == "e5d29919042666b2" else {
+        print($"[FAIL] Embedded NUL mismatch: got {h_nul}, expected e5d29919042666b2");
+        return;
+    }
+
+    // 5. Time
     var t0 = now_ms();
     sleep_ms(25);
     var t1 = now_ms();
     var diff = t1 - t0;
     print($"[TIME] Elapsed: {diff}ms (Expected >= 20ms)");
 
-    // 5. JSON Lite
+    // 6. JSON Lite
     var json_doc = "{\"name\":\"nyx_polyglot\",\"version\":3,\"build\":2026}";
     var j_name = get_string(json_doc, "name");
     var j_ver = get_int(json_doc, "version");
     print($"[JSON_LITE] Extracted name={j_name}, version={j_ver}");
 
-    // 6. Filesystem
+    // 7. Filesystem
     var temp_f = "parity_temp.txt";
     var w_ok = write_string(temp_f, "Parity Data Content");
     var f_exists = exists(temp_f);
@@ -70,5 +90,5 @@ fn main() {
     var r_ok = remove_file(temp_f);
     print($"[FS] Write={w_ok}, Exists={f_exists}, Content='{f_content}', Remove={r_ok}");
 
-    print("[SUCCESS] All 6 Stdlib Modules Verified Across Target (hecpp == hejs == hepy)!");
+    print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL Vectors Verified (hecpp == hejs == hepy)!");
 }
