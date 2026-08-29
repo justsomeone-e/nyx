@@ -1,0 +1,42 @@
+import "std/collections"
+
+fn main() {
+    print("=== [NYX STD/COLLECTIONS PARITY TEST] ===");
+
+    // Test Stack
+    var s = new_stack();
+    print("Stack initial empty:", s.is_empty());
+    guard s.is_empty() == true else { return; }
+
+    s.push(10);
+    s.push(20);
+    s.push(30);
+    print("Stack size after pushes:", s.size());
+    print("Stack top:", s.top());
+    guard s.top() == 30 else { return; }
+
+    var p1 = s.pop();
+    var p2 = s.pop();
+    print("Popped:", p1, p2);
+    guard p1 == 30 && p2 == 20 else { return; }
+    print("Stack remaining size:", s.size());
+    guard s.size() == 1 else { return; }
+
+    // Test Queue (FIFO)
+    var q = new_queue();
+    q.enqueue(100);
+    q.enqueue(200);
+    q.enqueue(300);
+    print("Queue size:", q.size());
+    guard q.size() == 3 else { return; }
+
+    var q1 = q.dequeue();
+    var q2 = q.dequeue();
+    print("Dequeued:", q1, q2);
+    guard q1 == 100 && q2 == 200 else { return; }
+    print("Queue remaining:", q.size());
+    guard q.size() == 1 else { return; }
+
+    print("[PASS] Stack and Queue polyglot parity verified!");
+}
+main();

@@ -307,6 +307,12 @@ class UniversalCodeGen:
             lines.extend(helper_lines)
             lines.append("")
 
+        user_impl_methods = set()
+        for stmt in getattr(self.ast, 'statements', []):
+            if isinstance(stmt, ImplBlockNode):
+                for m in stmt.methods:
+                    user_impl_methods.add(m.name)
+
         def cpp_type(t: Optional[TypeNode]) -> str:
             if not t: return "auto"
             if getattr(t, 'is_fn_type', False):
@@ -428,15 +434,15 @@ class UniversalCodeGen:
                     if target_expr in ("self", "this"):
                         args_cpp = ", ".join([emit_expr(a) for a in node.args])
                         return f"this->{node.callee.member}({args_cpp})"
-                    if node.callee.member == "push":
-                        return f"{target_expr}.push_back({emit_expr(node.args[0])})"
-                    elif node.callee.member in ("len", "length", "size"):
-                        return f"(int64_t){target_expr}.size()"
-                    elif node.callee.member == "pop":
-                        return f"{target_expr}.pop_back()"
-                    else:
-                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
-                        return f"{target_expr}.{node.callee.member}({args_cpp})"
+                    if node.callee.member not in user_impl_methods:
+                        if node.callee.member == "push":
+                            return f"{target_expr}.push_back({emit_expr(node.args[0])})"
+                        elif node.callee.member in ("len", "length", "size"):
+                            return f"(int64_t){target_expr}.size()"
+                        elif node.callee.member == "pop":
+                            return f"{target_expr}.pop_back()"
+                    args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                    return f"{target_expr}.{node.callee.member}({args_cpp})"
 
                 # Check if calling vector / collection / object methods as string
                 if isinstance(node.callee, str) and "." in node.callee:
@@ -444,15 +450,15 @@ class UniversalCodeGen:
                     if obj_part in ("self", "this"):
                         args_cpp = ", ".join([emit_expr(a) for a in node.args])
                         return f"this->{method_part}({args_cpp})"
-                    if method_part == "push":
-                        return f"{obj_part}.push_back({emit_expr(node.args[0])})"
-                    elif method_part in ("len", "length", "size"):
-                        return f"(int64_t){obj_part}.size()"
-                    elif method_part == "pop":
-                        return f"{obj_part}.pop_back()"
-                    else:
-                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
-                        return f"{obj_part}.{method_part}({args_cpp})"
+                    if method_part not in user_impl_methods:
+                        if method_part == "push":
+                            return f"{obj_part}.push_back({emit_expr(node.args[0])})"
+                        elif method_part in ("len", "length", "size"):
+                            return f"(int64_t){obj_part}.size()"
+                        elif method_part == "pop":
+                            return f"{obj_part}.pop_back()"
+                    args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                    return f"{obj_part}.{method_part}({args_cpp})"
                 
                 # Check if calling an extern C function
                 if node.callee in extern_c_funcs:
@@ -919,6 +925,11 @@ class UniversalCodeGen:
             "        try: return int(j[pos:end])",
             "        except: return 0",
             "    return 0",
+            "_nyx_json_get_string_full = _nyx_json_get_string",
+            "_nyx_json_get_int_full = _nyx_json_get_int",
+            "def _nyx_json_get_bool_full(j, k): return _nyx_json_get_string(j, k) == 'true' or (f'\"{k}\":true' in j.replace(' ', ''))",
+            "def _nyx_json_has_key(j, k): return f'\"{k}\":' in j",
+            "def _nyx_json_escape(s): return s.replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"').replace('\\n', '\\\\n').replace('\\r', '\\\\r').replace('\\t', '\\\\t')",
             "import threading as _nyx_threading, queue as _nyx_queue, socket as _nyx_socket",
             "_nyx_mutex_list = []",
             "_nyx_channel_list = []",
@@ -1231,6 +1242,11 @@ const _nyx_json_get_int = (jsonStr, key) => {
     }
     return 0;
 };
+const _nyx_json_get_string_full = _nyx_json_get_string;
+const _nyx_json_get_int_full = _nyx_json_get_int;
+const _nyx_json_get_bool_full = (jsonStr, key) => { const pat = `"${key}":`; const idx = jsonStr.indexOf(pat); return idx !== -1 && jsonStr.substring(idx + pat.length).trim().startsWith('true'); };
+const _nyx_json_has_key = (jsonStr, key) => jsonStr.indexOf(`"${key}":`) !== -1;
+const _nyx_json_escape = (s) => JSON.stringify(s).slice(1, -1);
 
 const _nyx_mutex_list = [];
 const _nyx_channel_list = [];

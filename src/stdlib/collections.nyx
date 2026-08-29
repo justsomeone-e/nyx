@@ -1,0 +1,85 @@
+// nyx Standard Library - std/collections
+// High-Performance Core Data Structures: Stack, Queue, and Dynamic Buffers
+
+struct Stack {
+    items: Array<int>,
+    count: int
+}
+
+impl Stack {
+    fn push(self, val: int) {
+        self.items = self.items + [val];
+        self.count = self.count + 1;
+    }
+
+    fn pop(self) -> int {
+        guard self.count > 0 else {
+            return 0;
+        }
+        self.count = self.count - 1;
+        var val = self.items[self.count];
+        return val;
+    }
+
+    fn top(self) -> int {
+        guard self.count > 0 else {
+            return 0;
+        }
+        return self.items[self.count - 1];
+    }
+
+    fn is_empty(self) -> bool {
+        return self.count == 0;
+    }
+
+    fn size(self) -> int {
+        return self.count;
+    }
+}
+
+struct Queue {
+    items: Array<int>,
+    head: int,
+    tail: int
+}
+
+impl Queue {
+    fn enqueue(self, val: int) {
+        self.items = self.items + [val];
+        self.tail = self.tail + 1;
+    }
+
+    fn dequeue(self) -> int {
+        guard self.tail > self.head else {
+            return 0;
+        }
+        var val = self.items[self.head];
+        self.head = self.head + 1;
+        return val;
+    }
+
+    fn front(self) -> int {
+        guard self.tail > self.head else {
+            return 0;
+        }
+        return self.items[self.head];
+    }
+
+    fn is_empty(self) -> bool {
+        return self.head >= self.tail;
+    }
+
+    fn size(self) -> int {
+        return self.tail - self.head;
+    }
+}
+
+fn new_stack() -> Stack {
+    var empty_items: Array<int> = [];
+    return Stack(empty_items, 0);
+}
+
+fn new_queue() -> Queue {
+    var empty_items: Array<int> = [];
+    return Queue(empty_items, 0, 0);
+}
