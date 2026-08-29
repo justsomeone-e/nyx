@@ -9,7 +9,7 @@
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:nyxlang"
+    "*"
   ],
   "categories": [
     "Programming Languages",

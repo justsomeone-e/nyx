@@ -119,6 +119,17 @@ if ((Test-Path $MinGWPath) -and ($env:Path -notlike "*$MinGWPath*")) {
     $env:Path = "$MinGWPath;$env:Path"
 }
 
+# 6. Install / Sync VS Code Extension directly
+$VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
+$LocalExtDir = Join-Path $CurrentRoot "vscode-extension"
+if (Test-Path $LocalExtDir) {
+    if (-not (Test-Path $VsCodeExtDir)) {
+        New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
+    }
+    Copy-Item -Path (Join-Path $LocalExtDir "*") -Destination $VsCodeExtDir -Recurse -Force
+    Write-Host "[OK] Synced nyx VS Code Extension to $VsCodeExtDir" -ForegroundColor Green
+}
+
 Write-Host "===================================================================" -ForegroundColor Cyan
 Write-Host "[OK] nyx installed successfully!" -ForegroundColor Green
 Write-Host "     Run 'nyx doctor' or 'nyx --help' to get started." -ForegroundColor Green

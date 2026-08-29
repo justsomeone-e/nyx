@@ -1,24 +1,21 @@
 const vscode = require('vscode');
 
 function activate(context) {
-    // ---------------------------------------------------------
-    // STANDARD MODULES & C++ HEADERS REPOSITORY
-    // ---------------------------------------------------------
     const stdModules = [
-        { name: 'std/io', desc: 'Console standard input/output streams and formatting' },
+        { name: 'std/io', desc: 'Console I/O streams and formatting' },
         { name: 'std/fs', desc: 'File system operations (read, write, exists, remove)' },
-        { name: 'std/math', desc: 'Mathematical constants and functions (pow, sqrt, sin, cos, PI)' },
-        { name: 'std/time', desc: 'High-resolution timers, timestamps, and delay_ms()' },
-        { name: 'std/memory', desc: 'Low-level hardware pointers, addr(), peek(), poke(), memdump()' },
+        { name: 'std/math', desc: 'Mathematical functions (pow, sqrt, sin, cos, PI)' },
+        { name: 'std/time', desc: 'High-resolution timers and delay_ms()' },
+        { name: 'std/memory', desc: 'Low-level pointers, addr(), peek(), poke(), memdump()' },
         { name: 'std/os', desc: 'Operating system interop, platform info, env variables' },
         { name: 'std/net', desc: 'TCP/IP sockets and networking streams' },
-        { name: 'std/gpio', desc: 'Embedded microcontroller GPIO pin input/output control' },
-        { name: 'std/serial', desc: 'UART/USART serial communication port API' },
+        { name: 'std/gpio', desc: 'Microcontroller GPIO pin control' },
+        { name: 'std/serial', desc: 'UART serial communication port API' },
         { name: 'std/spi', desc: 'SPI bus hardware communication' },
         { name: 'std/i2c', desc: 'I2C two-wire hardware interface' },
-        { name: 'std/process', desc: 'Child process execution and pipeline management' },
-        { name: 'std/str', desc: 'Advanced string manipulation and Unicode helpers' },
-        { name: 'std/platform', desc: 'Cross-platform hardware architecture detection' },
+        { name: 'std/process', desc: 'Child process execution' },
+        { name: 'std/str', desc: 'Advanced string manipulation and Unicode' },
+        { name: 'std/platform', desc: 'Hardware architecture detection' },
         { name: 'std/env', desc: 'Environment configuration access' }
     ];
 
@@ -39,9 +36,6 @@ function activate(context) {
         { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' }
     ];
 
-    // ---------------------------------------------------------
-    // 1. CONTEXTUAL INTELLISENSE & CONTINUOUS AUTOCOMPLETE
-    // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
         ['nyxlang', 'nyx', 'he', 'holyeasylang'],
         {
@@ -51,7 +45,6 @@ function activate(context) {
                 const linePrefix = lineText.substring(0, position.character);
                 const fullText = document.getText();
 
-                // Detect in-file target
                 let currentTarget = 'hecpp';
                 const targetMatch = fullText.match(/^\s*#target\s+([a-zA-Z0-9_]+)/m);
                 if (targetMatch) {
@@ -67,31 +60,12 @@ function activate(context) {
                     items.push(item);
                 }
 
-                function addSimpleItem(label, insertText, detail, kind = vscode.CompletionItemKind.Value) {
-                    const item = new vscode.CompletionItem(label, kind);
-                    item.insertText = insertText;
-                    item.detail = detail;
-                    items.push(item);
-                }
-
-                // =====================================================
-                // CASE 1: Typing after "#native "
-                // =====================================================
-                if (/#native\s*$/i.test(linePrefix)) {
-                    addSnippet('include', 'include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', '#native include <header>', 'Includes native C/C++ header.');
-                    addSnippet('link', 'link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', '#native link "library"', 'Links external system library with linker.');
-                    addSnippet('raw', 'raw {\n\t${0:// raw C++20 code}\n}', '#native raw { ... }', 'Direct inline C++ code injection block.');
-                    addSnippet('use', 'use "${1|namespace std,std::chrono,std::string_view|}";', '#native use "namespace"', 'Injects C++ using namespace declaration.');
-                    return items;
-                }
-
-                // =====================================================
-                // CASE 2: Typing after "#native include" or "<"
-                // =====================================================
-                if (/#native\s+include\s*<?$/i.test(linePrefix) || (/#native\s+include\s+/i.test(linePrefix) && linePrefix.endsWith('<'))) {
+                // 1. #native include <
+                if (/#native\s+include/i.test(linePrefix)) {
+                    const hasOpenBracket = linePrefix.includes('<');
                     cppHeaders.forEach(h => {
                         const item = new vscode.CompletionItem(h, vscode.CompletionItemKind.Module);
-                        item.insertText = `<${h}>`;
+                        item.insertText = hasOpenBracket ? `${h}>` : `<${h}>`;
                         item.detail = `C++ Header: <${h}>`;
                         item.documentation = new vscode.MarkdownString(`Standard C/C++ library header \`<${h}>\``);
                         items.push(item);
@@ -99,9 +73,16 @@ function activate(context) {
                     return items;
                 }
 
-                // =====================================================
-                // CASE 3: Typing after "#target "
-                // =====================================================
+                // 2. #native (space)
+                if (/#native\s*$/i.test(linePrefix)) {
+                    addSnippet('include', 'include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', '#native include <header>', 'Includes native C/C++ header.');
+                    addSnippet('link', 'link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', '#native link "library"', 'Links system library.');
+                    addSnippet('raw', 'raw {\n\t${0:// raw C++20 code}\n}', '#native raw { ... }', 'Direct inline C++ code injection block.');
+                    addSnippet('use', 'use "${1|namespace std,std::chrono,std::string_view|}";', '#native use "namespace"', 'Injects C++ using namespace declaration.');
+                    return items;
+                }
+
+                // 3. #target (space)
                 if (/#target\s*$/i.test(linePrefix)) {
                     targetsList.forEach(t => {
                         const item = new vscode.CompletionItem(t.name, vscode.CompletionItemKind.EnumMember);
@@ -112,9 +93,7 @@ function activate(context) {
                     return items;
                 }
 
-                // =====================================================
-                // CASE 4: Typing after "import " or "use "
-                // =====================================================
+                // 4. import / use (space)
                 if (/(?:import|use)\s+["']?$/i.test(linePrefix) || /(?:import|use)\s+["']std\/$/i.test(linePrefix)) {
                     stdModules.forEach(m => {
                         const item = new vscode.CompletionItem(m.name, vscode.CompletionItemKind.Module);
@@ -126,18 +105,14 @@ function activate(context) {
                     return items;
                 }
 
-                // =====================================================
-                // CASE 5: General Top-Level Directives (Typing "#")
-                // =====================================================
+                // Top level directives
                 addSnippet('#target', '#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}', 'Target Directive', 'Sets compilation backend target.');
-                addSnippet('#native include', '#native include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', 'Native Include', 'Includes C/C++ header directly.');
+                addSnippet('#native include', '#native include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', 'Native Include', 'Includes C/C++ header.');
                 addSnippet('#native link', '#native link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', 'Native Link', 'Links system library.');
                 addSnippet('#native raw', '#native raw {\n\t${0:// raw C++20 code}\n}', 'Native Raw Block', 'Injects raw C++ code.');
-                addSnippet('#native use', '#native use "${1|namespace std,std::chrono,std::string_view|}";', 'Native Use Directive', 'Namespace injection.');
+                addSnippet('#native use', '#native use "${1|namespace std,std::chrono,std::string_view|}";', 'Native Use Directive', 'Namespace declaration.');
 
-                // =====================================================
-                // CASE 6: Core Language Features
-                // =====================================================
+                // Core keywords
                 addSnippet('fn', 'fn ${1:name}(${2:params}) -> ${3:type} {\n\t${0:// body}\n\treturn ${4:result};\n}', 'Function Definition', 'Declares a strongly-typed function.');
                 addSnippet('struct', 'struct ${1:Name} {\n\t${2:field}: ${3:type}\n}', 'Struct Definition', 'Declares a custom data structure.');
                 addSnippet('impl', 'impl ${1:StructName} {\n\tfn ${2:method_name}(self${3:, params}) -> ${4:type} {\n\t\t${0:// method body}\n\t}\n}', 'Impl Block', 'Implements methods for a struct.');
@@ -147,20 +122,21 @@ function activate(context) {
                 addSnippet('ifelse', 'if ${1:condition} {\n\t${2:// true branch}\n} else {\n\t${0:// false branch}\n}', 'If-Else Block', 'Two-way conditional branch.');
                 addSnippet('for', 'for ${1:i} in ${2:0}..${3:count}-1 {\n\t${0:// loop body}\n}', 'For Range Loop', 'Iterates over a contiguous range.');
                 addSnippet('while', 'while ${1:condition} {\n\t${0:// loop body}\n}', 'While Loop', 'Iterates while condition is true.');
+                addSnippet('continue', 'continue;', 'Continue Statement', 'Skips to next loop iteration.');
+                addSnippet('break', 'break;', 'Break Statement', 'Terminates loop.');
+                addSnippet('return', 'return ${1:result};', 'Return Statement', 'Returns from function.');
                 addSnippet('match', 'match ${1:expr} {\n\t${2:pattern} => ${3:result},\n\t"_" => ${0:default}\n}', 'Pattern Matching', 'Pattern matching block.');
                 addSnippet('print', 'print(${1:expr});', 'Print to Console', 'Prints expressions to stdout.');
                 addSnippet('import', 'import "${1:std/io}";', 'Import Module', 'Imports standard library or local module.');
+                addSnippet('use', 'use "${1:std/io}";', 'Use Module', 'Imports standard library or local module.');
                 addSnippet('test', 'test "${1:test title}" {\n\tassert(${2:condition}, "${3:failure message}");\n}', 'Unit Test Block', 'Defines an automated in-file unit test.');
                 addSnippet('assert', 'assert(${1:condition}, "${2:message}");', 'Assertion', 'Asserts condition is true; halts on failure.');
 
-                // =====================================================
-                // CASE 7: Target-Specific Features
-                // =====================================================
+                // Target specifics
                 if (currentTarget === 'hereact' || currentTarget === 'react') {
                     addSnippet('useState', 'var [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});', 'React useState Hook', 'Reactive state variable with updater.', vscode.CompletionItemKind.Function);
                     addSnippet('useEffect', 'useEffect(() => {\n\t${0:// side effect}\n}, [${1:deps}]);', 'React useEffect Hook', 'Component lifecycle side-effect hook.', vscode.CompletionItemKind.Function);
                     addSnippet('useRef', 'var ${1:ref} = useRef(${2:null});', 'React useRef Hook', 'Persistent mutable reference.', vscode.CompletionItemKind.Function);
-                    addSnippet('card', '<div style={{ background: "#0c131d", border: "1px solid #1e293b", borderRadius: 8, padding: 20 }}>\n\t<h3>${1:Title}</h3>\n\t<p>${2:Content}</p>\n</div>', 'Cyberpunk UI Card', 'Pre-styled dark theme card container.', vscode.CompletionItemKind.Snippet);
                 }
 
                 if (currentTarget === 'hecpp' || currentTarget === 'heasm' || hasNative) {
@@ -172,61 +148,13 @@ function activate(context) {
                     addSnippet('delay_ms', 'delay_ms(${1:1000});', 'High-Res Sleep', 'Thread sleep with microsecond precision.', vscode.CompletionItemKind.Function);
                 }
 
-                // Scope identifiers
-                const symRegex = /\b(?:var|let|const|fn|struct|enum)\s+([a-zA-Z_][a-zA-Z0-9_]*)/g;
-                let match;
-                const seen = new Set();
-                while ((match = symRegex.exec(fullText)) !== null) {
-                    const sym = match[1];
-                    if (!seen.has(sym)) {
-                        seen.add(sym);
-                        const symItem = new vscode.CompletionItem(sym, vscode.CompletionItemKind.Variable);
-                        symItem.detail = `Symbol: ${sym}`;
-                        items.push(symItem);
-                    }
-                }
-
                 return items;
             }
         },
-        '#', ' ', '<', '"', '/', ':', '.' // Trigger characters for continuous autocomplete
+        '#', ' ', '<', '"', '/', ':', '.', 'i', 'u', 's', 'c', 'v', 'f'
     );
 
-    // ---------------------------------------------------------
-    // 2. HOVER DOCUMENTATION PROVIDER
-    // ---------------------------------------------------------
-    const hoverProvider = vscode.languages.registerHoverProvider(['nyxlang', 'nyx', 'he', 'holyeasylang'], {
-        provideHover(document, position, token) {
-            const range = document.getWordRangeAtPosition(position, /#?[a-zA-Z_0-9]+/);
-            if (!range) return null;
-            const word = document.getText(range);
-
-            const hoverDocs = {
-                '#target': '**`#target <backend>`**\n\nSets the active compilation backend target for this file.\n\n*Supported targets:*\n- `hecpp` (C++20 Native Executable)\n- `heasm` (x86_64 Intel Assembly)\n- `hereact` (React 19 TSX UI Component)\n- `hejs` (Node.js ES2022 Module)\n- `hers` (Rust 2021 Conformance)\n- `hepy` (Python 3 Reference)\n- `hewasm` (WebAssembly Stack Engine)',
-                '#native': '**`#native <include|link|raw|use>`**\n\nEscape hatch for zero-overhead C/C++ hardware interop.\n\n```nyx\n#native include <iostream>\n#native link "ws2_32"\n#native raw { std::cout << "Direct C++"; }\n```',
-                'addr': '**`addr(variable: T) -> uintptr`**\n\nReturns the 64-bit physical memory address of a variable.\n\n*Hardware Assembly:* `mov rax, rcx` (Zero Overhead)',
-                'peek': '**`peek(ptr: uintptr) -> int`**\n\nSafely or unsafely dereferences memory at a raw 64-bit pointer address.\n\n*Hardware Assembly:* `mov rax, [rcx]`',
-                'poke': '**`poke(ptr: uintptr, value: int)`**\n\nWrites a 64-bit value directly to a memory address.',
-                'memdump': '**`memdump(ptr: uintptr, bytes: int)`**\n\nOutputs a formatted hexadecimal memory dump to console.',
-                'delay_ms': '**`delay_ms(milliseconds: int)`**\n\nPauses current execution thread with high-precision sleep.',
-                'fn': '**`fn name(params) -> ReturnType`**\n\nDefines a strongly typed nyx function.',
-                'struct': '**`struct Name { field: Type }`**\n\nDefines a custom data layout with zero padding overhead.',
-                'impl': '**`impl StructName { ... }`**\n\nEncapsulates member methods, constructors, and RAII destructors.',
-                'unsafe': '**`unsafe { ... }`**\n\nDeclares an unsafe memory boundary where raw pointer arithmetic and dereferencing are permitted.',
-                'test': '**`test "description" { ... }`**\n\nDefines an automated unit test evaluated during `nyx test`.',
-                'assert': '**`assert(condition: bool, message: string)`**\n\nVerifies condition invariant at runtime; halts with error message on failure.',
-                'useState': '**`useState<T>(initialValue: T) -> [T, (val: T) => void]`** *(React 19)*\n\nDeclares component state and reactive updater function.',
-                'useEffect': '**`useEffect(effectFn, depsArray)`** *(React 19)*\n\nExecutes side-effects on component mount, update, or unmount.'
-            };
-
-            if (hoverDocs[word]) {
-                return new vscode.Hover(new vscode.MarkdownString(hoverDocs[word]));
-            }
-            return null;
-        }
-    });
-
-    context.subscriptions.push(completionProvider, hoverProvider);
+    context.subscriptions.push(completionProvider);
 }
 
 function deactivate() {}
