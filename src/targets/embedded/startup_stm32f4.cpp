@@ -10,7 +10,7 @@ extern uint32_t _ebss;
 
 extern "C" int main(void);
 
-// --- ARM EABI Bare-Metal Intrinsics ---
+// --- Standard ARM EABI Compliant Assembly Helpers (AAPCS) ---
 extern "C" {
 
 void* memcpy(void* dest, const void* src, size_t n) {
@@ -26,48 +26,65 @@ void* memset(void* s, int c, size_t n) {
     return s;
 }
 
-void __aeabi_memcpy4(void* dest, const void* src, size_t n) {
-    memcpy(dest, src, n);
+void __aeabi_memcpy4(void* dest, const void* src, size_t n) { memcpy(dest, src, n); }
+void __aeabi_memcpy(void* dest, const void* src, size_t n) { memcpy(dest, src, n); }
+void __aeabi_memclr4(void* dest, size_t n) { memset(dest, 0, n); }
+void __aeabi_memclr(void* dest, size_t n) { memset(dest, 0, n); }
+
+// Pure Thumb-2 Assembly __aeabi_uldivmod:
+// Inputs:  r0:r1 = Numerator, r2:r3 = Denominator
+// Outputs: r0:r1 = Quotient,  r2:r3 = Remainder
+__attribute__((naked)) void __aeabi_uldivmod(void) {
+    __asm__ volatile (
+        "push {r4, r5, r6, r7, lr}\n"
+        "cbz r2, .Lcheck_high_zero\n"
+        "b .Lstart_div\n"
+        ".Lcheck_high_zero:\n"
+        "cbz r3, .Ldiv_by_zero\n"
+        ".Lstart_div:\n"
+        "mov r4, #0\n"          // Q_low
+        "mov r5, #0\n"          // Q_high
+        "mov r6, #0\n"          // R_low
+        "mov r7, #0\n"          // R_high
+        "mov lr, #64\n"         // 64 iterations
+        ".Ldiv_loop:\n"
+        "lsls r6, r6, #1\n"
+        "orrs r6, r6, r7, lsr #31\n"
+        "lsls r7, r7, #1\n"
+        "orrs r6, r6, r1, lsr #31\n"
+        "lsls r1, r1, #1\n"
+        "orrs r1, r1, r0, lsr #31\n"
+        "lsls r0, r0, #1\n"
+        "subs r12, r6, r2\n"
+        "sbcs r12, r7, r3\n"
+        "blo .Lskip_sub\n"
+        "subs r6, r6, r2\n"
+        "sbc  r7, r7, r3\n"
+        "adds r4, r4, #1\n"
+        "adc  r5, r5, #0\n"
+        ".Lskip_sub:\n"
+        "subs lr, lr, #1\n"
+        "bne .Ldiv_loop\n"
+        "mov r0, r4\n"          // Return Quotient low
+        "mov r1, r5\n"          // Return Quotient high
+        "mov r2, r6\n"          // Return Remainder low
+        "mov r3, r7\n"          // Return Remainder high
+        "pop {r4, r5, r6, r7, pc}\n"
+        ".Ldiv_by_zero:\n"
+        "mov r0, #0\n"
+        "mov r1, #0\n"
+        "mov r2, #0\n"
+        "mov r3, #0\n"
+        "pop {r4, r5, r6, r7, pc}\n"
+    );
 }
 
-void __aeabi_memcpy(void* dest, const void* src, size_t n) {
-    memcpy(dest, src, n);
-}
-
-void __aeabi_memclr4(void* dest, size_t n) {
-    memset(dest, 0, n);
-}
-
-void __aeabi_memclr(void* dest, size_t n) {
-    memset(dest, 0, n);
-}
-
-struct uldivmod_result {
-    uint64_t quot;
-    uint64_t rem;
-};
-
-uldivmod_result __aeabi_uldivmod(uint64_t num, uint64_t den) {
-    if (den == 0) return {0, 0};
-    uint64_t quot = 0;
-    uint64_t rem = 0;
-    for (int i = 63; i >= 0; i--) {
-        rem = (rem << 1) | ((num >> i) & 1);
-        if (rem >= den) {
-            rem -= den;
-            quot |= (1ULL << i);
-        }
-    }
-    return {quot, rem};
-}
-
-int64_t __aeabi_ldivmod(int64_t num, int64_t den) {
-    if (den == 0) return 0;
-    bool neg = (num < 0) ^ (den < 0);
-    uint64_t u_num = num < 0 ? (uint64_t)(-num) : (uint64_t)num;
-    uint64_t u_den = den < 0 ? (uint64_t)(-den) : (uint64_t)den;
-    uldivmod_result res = __aeabi_uldivmod(u_num, u_den);
-    return neg ? -(int64_t)res.quot : (int64_t)res.quot;
+__attribute__((naked)) void __aeabi_ldivmod(void) {
+    __asm__ volatile (
+        "push {r4, r5, r6, r7, lr}\n"
+        "bl __aeabi_uldivmod\n"
+        "pop {r4, r5, r6, r7, pc}\n"
+    );
 }
 
 void Reset_Handler(void) {
