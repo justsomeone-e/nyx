@@ -1,84 +1,108 @@
 {
   "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-  "name": "Nyx",
-  "scopeName": "source.he",
+  "name": "nyx",
+  "scopeName": "source.nyx",
   "patterns": [
     {
-      "name": "comment.line.double-slash.he",
+      "name": "comment.line.double-slash.nyx",
       "match": "//.*$"
     },
     {
-      "name": "meta.preprocessor.target.he",
-      "match": "(#target)\\s+(hecpp|hereact|react|hejs|hepy|heasm|hejava|hec|hego|herust|hecs|heino)",
+      "name": "meta.preprocessor.target.nyx",
+      "match": "(#target)\\s+([a-zA-Z0-9_]+)",
       "captures": {
-        "1": { "name": "keyword.control.directive.he" },
-        "2": { "name": "entity.name.type.target.he" }
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "entity.name.type.target.nyx" }
       }
     },
     {
-      "name": "meta.preprocessor.native.he",
-      "match": "(#native)\\s+([a-zA-Z0-9_]+):\\s*(.*)$",
+      "name": "meta.preprocessor.native.include.nyx",
+      "match": "(#native)\\s+(include)\\s+(<[^>]+>|\"[^\"]+\")",
       "captures": {
-        "1": { "name": "keyword.control.directive.he" },
-        "2": { "name": "entity.name.type.target.he" },
-        "3": { "name": "string.unquoted.native.he" }
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "keyword.other.directive.nyx" },
+        "3": { "name": "string.quoted.other.header.nyx" }
       }
     },
     {
-      "name": "keyword.declaration.he",
-      "match": "\\b(var|let|set|degisken|const)\\b"
+      "name": "meta.preprocessor.native.link.nyx",
+      "match": "(#native)\\s+(link|use)\\s+(\"[^\"]+\")",
+      "captures": {
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "keyword.other.directive.nyx" },
+        "3": { "name": "string.quoted.double.nyx" }
+      }
     },
     {
-      "name": "keyword.control.he",
-      "match": "\\b(if|eger|when|else|degilse|elif|for|in|loop|while|return|dondur|continue|devam|break|dur|use)\\b"
+      "name": "meta.preprocessor.native.raw.nyx",
+      "match": "(#native)\\s+(raw)",
+      "captures": {
+        "1": { "name": "keyword.control.directive.nyx" },
+        "2": { "name": "keyword.other.directive.nyx" }
+      }
     },
     {
-      "name": "keyword.function.he",
-      "match": "\\b(fn|def|action|islev)\\b"
+      "name": "keyword.declaration.nyx",
+      "match": "\\b(var|let|const|type|struct|impl|trait|enum|fn|extern|test)\\b"
     },
     {
-      "name": "support.function.builtin.he",
-      "match": "\\b(print|yazdir|len|range|emit|addr|adres|peek|oku|memdump|bellek_dok)\\b"
+      "name": "keyword.control.nyx",
+      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|try|catch|unsafe|import|use|from|export|assert|spawn|channel)\\b"
     },
     {
-      "name": "constant.language.boolean.he",
-      "match": "\\b(true|false|dogru|yanlis)\\b"
+      "name": "support.function.builtin.nyx",
+      "match": "\\b(print|println|len|length|addr|peek|poke|memdump|delay_ms|contains|to_string|to_int|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
     },
     {
-      "name": "string.quoted.double.he",
+      "name": "constant.language.boolean.nyx",
+      "match": "\\b(true|false|null)\\b"
+    },
+    {
+      "name": "string.quoted.other.angle.nyx",
+      "match": "<[a-zA-Z0-9_\\./\\+]+>"
+    },
+    {
+      "name": "string.quoted.double.nyx",
       "begin": "\"",
       "end": "\"",
       "patterns": [
         {
-          "name": "constant.character.escape.he",
+          "name": "constant.character.escape.nyx",
           "match": "\\\\."
         }
       ]
     },
     {
-      "name": "string.quoted.single.he",
+      "name": "string.quoted.single.nyx",
       "begin": "'",
       "end": "'",
       "patterns": [
         {
-          "name": "constant.character.escape.he",
+          "name": "constant.character.escape.nyx",
           "match": "\\\\."
         }
       ]
     },
     {
-      "name": "constant.numeric.he",
+      "name": "constant.numeric.nyx",
       "match": "\\b\\d+(\\.\\d+)?\\b"
     },
     {
-      "name": "keyword.operator.he",
-      "match": "(->|\\|>|\\.\\.|==|!=|>=|<=|>|<|\\+|-|\\*|/|=|>>)"
+      "name": "keyword.operator.nyx",
+      "match": "(->|\\|>|\\.\\.|==|!=|>=|<=|>|<|\\+|-|\\*|/|=|&&|\\|\\||!|=>|\\?\\?|\\?\\.)"
     },
     {
-      "name": "entity.name.function.he",
-      "match": "(?:fn|def|action|islev)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "name": "entity.name.function.nyx",
+      "match": "(?:fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
       "captures": {
-        "1": { "name": "entity.name.function.he" }
+        "1": { "name": "entity.name.function.nyx" }
+      }
+    },
+    {
+      "name": "entity.name.type.struct.nyx",
+      "match": "(?:struct|impl|trait|enum)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "captures": {
+        "1": { "name": "entity.name.type.struct.nyx" }
       }
     }
   ]

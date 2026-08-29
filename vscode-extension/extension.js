@@ -3,47 +3,29 @@ const fs = require('fs');
 const path = require('path');
 
 function activate(context) {
-    // ---------------------------------------------------------
-    // 1. DISCOVER ALL C++ HEADERS DYNAMICALLY & EXHAUSTIVELY
-    // ---------------------------------------------------------
     const defaultCppHeaders = [
-        // Containers & Iterators
-        "algorithm", "any", "array", "bitset", "deque", "flat_map", "flat_set", "forward_list",
-        "iterator", "list", "map", "mdspan", "queue", "ranges", "set", "span", "stack",
-        "unordered_map", "unordered_set", "vector",
+        "algorithm", "any", "array", "atomic", "barrier", "bit", "bitset", "charconv",
+        "chrono", "cmath", "compare", "complex", "concepts", "condition_variable",
+        "coroutine", "deque", "expected", "filesystem", "flat_map", "flat_set", "format",
+        "forward_list", "fstream", "functional", "future", "initializer_list", "iomanip",
+        "ios", "iosfwd", "iostream", "istream", "iterator", "latch", "list", "map",
+        "mdspan", "memory", "memory_resource", "mutex", "numbers", "numeric", "optional",
+        "ostream", "print", "queue", "random", "ranges", "ratio", "regex", "scoped_allocator",
+        "semaphore", "set", "shared_mutex", "source_location", "span", "spanstream",
+        "sstream", "stack", "stacktrace", "stdexcept", "stop_token", "streambuf", "string",
+        "string_view", "syncstream", "system_error", "thread", "tuple", "type_traits",
+        "typeindex", "typeinfo", "unordered_map", "unordered_set", "utility", "valarray",
+        "variant", "vector", "version",
 
-        // Utilities, Memory & Functional
-        "bit", "chrono", "compare", "concepts", "coroutine", "expected", "functional",
-        "initializer_list", "memory", "memory_resource", "optional", "ratio", "scoped_allocator",
-        "source_location", "stacktrace", "tuple", "type_traits", "typeindex", "typeinfo",
-        "utility", "variant", "version",
-
-        // Strings, Text & Formatting
-        "charconv", "format", "print", "regex", "string", "string_view", "text_encoding",
-
-        // Streams & I/O
-        "filesystem", "fstream", "iomanip", "ios", "iosfwd", "iostream", "istream",
-        "ostream", "spanstream", "sstream", "streambuf", "syncstream", "strstream",
-
-        // Numerics & Math
-        "cmath", "complex", "numbers", "numeric", "random", "valarray",
-
-        // Concurrency & Multi-Threading
-        "atomic", "barrier", "condition_variable", "future", "latch", "mutex",
-        "semaphore", "shared_mutex", "stop_token", "thread",
-
-        // C Standard Library Wrappers
         "cassert", "cctype", "cerrno", "cfenv", "cfloat", "cinttypes", "climits",
         "clocale", "cmath", "csetjmp", "csignal", "cstdarg", "cstddef", "cstdint",
         "cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar", "cwctype",
 
-        // Low-Level, OS & Windows APIs
         "windows.h", "winsock2.h", "ws2tcpip.h", "windowsx.h", "direct.h", "io.h",
         "fcntl.h", "conio.h", "process.h", "pthread.h", "sys/stat.h", "sys/types.h",
         "unistd.h", "directxmath.h", "d3d12.h", "d3d11.h", "GL/gl.h", "vulkan/vulkan.h"
     ];
 
-    // Attempt to load live headers from installed MinGW compiler
     const headerSet = new Set(defaultCppHeaders);
     const minGwDir = "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64";
     const stlDir = path.join(minGwDir, "include", "c++", "v1");
@@ -70,9 +52,6 @@ function activate(context) {
 
     const allHeaders = Array.from(headerSet).sort();
 
-    // ---------------------------------------------------------
-    // 2. STANDARD NYX MODULES & COMPILER TARGETS
-    // ---------------------------------------------------------
     const stdModules = [
         { name: 'std/io', desc: 'Console I/O streams and formatting' },
         { name: 'std/fs', desc: 'File system operations (read, write, exists, remove)' },
@@ -101,9 +80,6 @@ function activate(context) {
         { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' }
     ];
 
-    // ---------------------------------------------------------
-    // 3. COMPLETION PROVIDER WITH COMPLETE C++ HEADER CATALOG
-    // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
         ['nyxlang', 'nyx', 'he', 'holyeasylang'],
         {
@@ -128,14 +104,19 @@ function activate(context) {
                     items.push(item);
                 }
 
-                // 1. #native include < (Search through entire C++ repository of headers)
+                // 1. #native include < (Replaces cleanly with range)
                 if (/#native\s+include/i.test(linePrefix)) {
-                    const hasOpenBracket = linePrefix.includes('<');
+                    const openIdx = linePrefix.lastIndexOf('<');
                     allHeaders.forEach(h => {
                         const item = new vscode.CompletionItem(h, vscode.CompletionItemKind.Module);
-                        item.insertText = hasOpenBracket ? `${h}>` : `<${h}>`;
-                        item.detail = `Header: <${h}>`;
-                        item.documentation = new vscode.MarkdownString(`C/C++ Header \`<${h}>\``);
+                        if (openIdx !== -1) {
+                            item.range = new vscode.Range(new vscode.Position(position.line, openIdx), position);
+                            item.insertText = `<${h}>`;
+                        } else {
+                            item.insertText = ` <${h}>`;
+                        }
+                        item.detail = `C/C++ Header: <${h}>`;
+                        item.documentation = new vscode.MarkdownString(`Standard Header \`<${h}>\``);
                         items.push(item);
                     });
                     return items;
