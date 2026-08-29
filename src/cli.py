@@ -423,7 +423,7 @@ def cmd_run(entry_file, target):
     else:
         print(f"\033[91m[!] Unknown target '{target}'.\033[0m")
 
-def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool = True):
+def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool = False):
     if not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File '{entry_file}' not found.\033[0m")
         sys.exit(1)
@@ -443,27 +443,38 @@ def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool 
 
     emitter = BundleEmitter(ast, module_name=base_name)
     
+    # 1. Emit WebAssembly Text (.wat)
     wat_path = os.path.join(bundle_dir, f"{base_name}.wat")
     with open(wat_path, "w", encoding="utf-8") as f:
         f.write(emitter.emit_wat())
 
+    # 2. Emit WebAssembly Binary (.wasm)
+    wasm_path = os.path.join(bundle_dir, f"{base_name}.wasm")
+    with open(wasm_path, "wb") as f:
+        f.write(emitter.emit_wasm_bytes())
+
+    # 3. Emit ES Module Wrapper (.mjs)
     mjs_path = os.path.join(bundle_dir, f"{base_name}.mjs")
     with open(mjs_path, "w", encoding="utf-8") as f:
         f.write(emitter.emit_mjs())
 
+    # 4. Emit TypeScript Type Declarations (.d.ts)
     dts_path = os.path.join(bundle_dir, f"{base_name}.d.ts")
     with open(dts_path, "w", encoding="utf-8") as f:
         f.write(emitter.emit_dts())
 
-    react_path = os.path.join(bundle_dir, f"{base_name}.react.tsx")
-    with open(react_path, "w", encoding="utf-8") as f:
-        f.write(emitter.emit_react())
-
     print(f"\033[96m[*] Bundling Polyglot Web/WASM Package:\033[0m {entry_file} -> {bundle_dir}")
     print(f"\033[92m  [+] WebAssembly Text:     {wat_path}\033[0m")
+    print(f"\033[92m  [+] WebAssembly Binary:   {wasm_path}\033[0m")
     print(f"\033[92m  [+] ES Module Runtime:     {mjs_path}\033[0m")
     print(f"\033[92m  [+] TypeScript Types:      {dts_path}\033[0m")
-    print(f"\033[92m  [+] React 19 useNyxModule: {react_path}\033[0m")
+
+    # 5. Conditionally Emit React 19 Custom Hook (.react.tsx)
+    if emit_react:
+        react_path = os.path.join(bundle_dir, f"{base_name}.react.tsx")
+        with open(react_path, "w", encoding="utf-8") as f:
+            f.write(emitter.emit_react())
+        print(f"\033[92m  [+] React 19 useNyxModule: {react_path}\033[0m")
 
 def cmd_new(project_name, is_lib=False):
     if os.path.exists(project_name):
@@ -784,7 +795,8 @@ def main():
         for i, a in enumerate(sys.argv):
             if a in ("-o", "--output") and i + 1 < len(sys.argv):
                 out_dir = sys.argv[i + 1]
-        cmd_bundle(entry, out_dir=out_dir)
+        emit_react = "--react" in sys.argv
+        cmd_bundle(entry, out_dir=out_dir, emit_react=emit_react)
     elif cmd == "run":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
