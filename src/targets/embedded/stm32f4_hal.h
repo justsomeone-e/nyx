@@ -57,8 +57,10 @@ inline void nyx_stm32f4_gpio_enable_clock(STM32F4_GPIO_TypeDef* port) {
     else if (port == GPIOD) RCC_AHB1ENR |= (1UL << 3);
 }
 
-// Map logical pin (0-15 = GPIOA, 16-31 = GPIOB, 32-47 = GPIOC)
+// Map logical pin (0-15 = GPIOA, 16-31 = GPIOB, 32-47 = GPIOC, 48-63 = GPIOD)
 inline STM32F4_GPIO_TypeDef* nyx_stm32f4_get_port(int64_t pin, uint8_t* pin_num) {
+    if (pin < 0 || pin > 63) return nullptr;
+    if (pin >= 48) { *pin_num = (uint8_t)(pin - 48); return GPIOD; }
     if (pin >= 32) { *pin_num = (uint8_t)(pin - 32); return GPIOC; }
     if (pin >= 16) { *pin_num = (uint8_t)(pin - 16); return GPIOB; }
     *pin_num = (uint8_t)pin;
@@ -68,6 +70,7 @@ inline STM32F4_GPIO_TypeDef* nyx_stm32f4_get_port(int64_t pin, uint8_t* pin_num)
 inline void nyx_hal_gpio_mode(int64_t pin, int64_t mode) {
     uint8_t p = 0;
     STM32F4_GPIO_TypeDef* port = nyx_stm32f4_get_port(pin, &p);
+    if (!port) return;
     nyx_stm32f4_gpio_enable_clock(port);
     
     // Clear 2-bit mode field
@@ -89,6 +92,7 @@ inline void nyx_hal_gpio_mode(int64_t pin, int64_t mode) {
 inline void nyx_hal_gpio_write(int64_t pin, int64_t val) {
     uint8_t p = 0;
     STM32F4_GPIO_TypeDef* port = nyx_stm32f4_get_port(pin, &p);
+    if (!port) return;
     if (val) {
         port->BSRR = (1UL << p);       // Atomic Bit Set
     } else {
@@ -99,16 +103,23 @@ inline void nyx_hal_gpio_write(int64_t pin, int64_t val) {
 inline int64_t nyx_hal_gpio_read(int64_t pin) {
     uint8_t p = 0;
     STM32F4_GPIO_TypeDef* port = nyx_stm32f4_get_port(pin, &p);
+    if (!port) return 0;
     return (port->IDR & (1UL << p)) ? 1 : 0;
 }
 
+// Atomic BSRR-based toggle avoiding read-modify-write race conditions
 inline void nyx_hal_gpio_toggle(int64_t pin) {
     uint8_t p = 0;
     STM32F4_GPIO_TypeDef* port = nyx_stm32f4_get_port(pin, &p);
-    port->ODR ^= (1UL << p);
+    if (!port) return;
+    if (port->ODR & (1UL << p)) {
+        port->BSRR = (1UL << (p + 16)); // Atomic Reset
+    } else {
+        port->BSRR = (1UL << p);        // Atomic Set
+    }
 }
 
-// USART2 Driver on PA2(TX) / PA3(RX)
+// USART2 Driver on PA2(TX) / PA3(RX) with proper AFR 4-bit masking
 inline void nyx_hal_serial_init(int64_t baud) {
     // 1. Enable GPIOA and USART2 Clocks
     RCC_AHB1ENR |= (1UL << 0);
@@ -117,6 +128,9 @@ inline void nyx_hal_serial_init(int64_t baud) {
     // 2. Configure PA2 (TX) and PA3 (RX) as Alternate Function AF7
     GPIOA->MODER &= ~((3UL << 4) | (3UL << 6));
     GPIOA->MODER |= ((2UL << 4) | (2UL << 6));
+    
+    // Clear 4-bit AF fields first then write AF7
+    GPIOA->AFR[0] &= ~((0xFUL << 8) | (0xFUL << 12));
     GPIOA->AFR[0] |= ((7UL << 8) | (7UL << 12));
     
     // 3. Set Baudrate (Assuming 16 MHz HSI clock: 16000000 / 115200 = 138.88 -> 0x8A)

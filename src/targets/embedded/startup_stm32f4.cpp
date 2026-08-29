@@ -42,9 +42,13 @@ void __aeabi_memclr(void* dest, size_t n) {
     memset(dest, 0, n);
 }
 
-// 64-bit Division/Modulus for ARM Cortex-M
-uint64_t __aeabi_uldivmod(uint64_t num, uint64_t den) {
-    if (den == 0) return 0;
+struct uldivmod_result {
+    uint64_t quot;
+    uint64_t rem;
+};
+
+uldivmod_result __aeabi_uldivmod(uint64_t num, uint64_t den) {
+    if (den == 0) return {0, 0};
     uint64_t quot = 0;
     uint64_t rem = 0;
     for (int i = 63; i >= 0; i--) {
@@ -54,7 +58,7 @@ uint64_t __aeabi_uldivmod(uint64_t num, uint64_t den) {
             quot |= (1ULL << i);
         }
     }
-    return quot;
+    return {quot, rem};
 }
 
 int64_t __aeabi_ldivmod(int64_t num, int64_t den) {
@@ -62,8 +66,8 @@ int64_t __aeabi_ldivmod(int64_t num, int64_t den) {
     bool neg = (num < 0) ^ (den < 0);
     uint64_t u_num = num < 0 ? (uint64_t)(-num) : (uint64_t)num;
     uint64_t u_den = den < 0 ? (uint64_t)(-den) : (uint64_t)den;
-    uint64_t res = __aeabi_uldivmod(u_num, u_den);
-    return neg ? -(int64_t)res : (int64_t)res;
+    uldivmod_result res = __aeabi_uldivmod(u_num, u_den);
+    return neg ? -(int64_t)res.quot : (int64_t)res.quot;
 }
 
 void Reset_Handler(void) {
