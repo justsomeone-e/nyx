@@ -824,14 +824,12 @@ class UniversalCodeGen:
             "_nyx_time_sleep_ms = lambda ms: _nyx_time.sleep(ms / 1000.0)",
             "_nyx_base64_encode = lambda s: _nyx_base64.b64encode(s.encode('utf-8')).decode('ascii')",
             "_nyx_base64_decode = lambda s: _nyx_base64.b64decode(s.encode('ascii')).decode('utf-8')",
-            "def _nyx_hash_fnv1a_64(s: str) -> int:",
-            "    h = 14695981039346656037",
-            "    prime = 1099511628211",
+            "def _nyx_hash_fnv1a_64_hex(s: str) -> str:",
+            "    h = 0xcbf29ce484222325",
+            "    prime = 0x100000001b3",
             "    for b in s.encode('utf-8'):",
-            "        h ^= b",
-            "        h = (h * prime) & 0xFFFFFFFFFFFFFFFF",
-            "    if h >= 0x8000000000000000: h -= 0x10000000000000000",
-            "    return h",
+            "        h = ((h ^ b) * prime) & 0xFFFFFFFFFFFFFFFF",
+            "    return f'{h:016x}'",
             "def _nyx_fs_write_string(p, c):",
             "    try:",
             "        with open(p, 'w', encoding='utf-8') as f: f.write(c)",
@@ -1075,16 +1073,14 @@ const _nyx_time_sleep_ms = (ms) => { const start = Date.now(); while (Date.now()
 
 const _nyx_base64_encode = (str) => Buffer.from(str, 'utf-8').toString('base64');
 const _nyx_base64_decode = (b64) => Buffer.from(b64, 'base64').toString('utf-8');
-const _nyx_hash_fnv1a_64 = (str) => {
+const _nyx_hash_fnv1a_64_hex = (str) => {
     let hash = 0xcbf29ce484222325n;
     const prime = 0x100000001b3n;
     const buf = Buffer.from(str, 'utf-8');
     for (let i = 0; i < buf.length; i++) {
-        hash ^= BigInt(buf[i]);
-        hash = (hash * prime) & 0xffffffffffffffffn;
+        hash = BigInt.asUintN(64, (hash ^ BigInt(buf[i])) * prime);
     }
-    const signedVal = BigInt.asIntN(64, hash);
-    return Number(signedVal);
+    return hash.toString(16).padStart(16, '0');
 };
 
 const _nyx_fs_write_string = (p, c) => { try { require('fs').writeFileSync(p, c, 'utf-8'); return true; } catch { return false; } };

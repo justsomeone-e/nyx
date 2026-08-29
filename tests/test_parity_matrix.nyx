@@ -25,9 +25,29 @@ fn main() {
         return;
     }
 
-    // 3. RFC 9923 FNV-1a 64-bit Hash
-    var h = fnv1a_64("Nyx Parity Verification 2026");
-    print($"[HASH] FNV-1a 64-bit: {h}");
+    // 3. RFC 9923 Canonical FNV-1a 64-bit Hex Vectors
+    var h_empty = fnv1a_64_hex("");
+    var h_a = fnv1a_64_hex("a");
+    var h_foobar = fnv1a_64_hex("foobar");
+    var h_msg = fnv1a_64_hex("Nyx Parity Verification 2026");
+    
+    print($"[HASH] FNV-1a hex empty:  {h_empty}");
+    print($"[HASH] FNV-1a hex 'a':    {h_a}");
+    print($"[HASH] FNV-1a hex foobar: {h_foobar}");
+    print($"[HASH] FNV-1a hex msg:    {h_msg}");
+
+    guard h_empty == "cbf29ce484222325" else {
+        print("[FAIL] FNV-1a empty vector mismatch!");
+        return;
+    }
+    guard h_a == "af63dc4c8601ec8c" else {
+        print("[FAIL] FNV-1a 'a' vector mismatch!");
+        return;
+    }
+    guard h_foobar == "85944171f73967e8" else {
+        print("[FAIL] FNV-1a 'foobar' vector mismatch!");
+        return;
+    }
 
     // 4. Time
     var t0 = now_ms();
@@ -50,5 +70,5 @@ fn main() {
     var r_ok = remove_file(temp_f);
     print($"[FS] Write={w_ok}, Exists={f_exists}, Content='{f_content}', Remove={r_ok}");
 
-    print("[SUCCESS] All 6 Stdlib Modules Verified Across Target!");
+    print("[SUCCESS] All 6 Stdlib Modules Verified Across Target (hecpp == hejs == hepy)!");
 }
