@@ -8,6 +8,8 @@ using namespace std;
 
 // --- nyx Standard Core Helpers ---
 int to_int(const string& s) { try { return stoi(s); } catch(...) { return 0; } }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32

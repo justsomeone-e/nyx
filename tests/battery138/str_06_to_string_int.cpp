@@ -7,7 +7,12 @@
 using namespace std;
 
 // --- nyx Standard Core Helpers ---
+inline string to_string(const string& s) { return s; }
+inline string to_string(const char* s) { return string(s); }
+inline string to_string(bool b) { return b ? "true" : "false"; }
 string to_string_val(int v) { return to_string(v); }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32

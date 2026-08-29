@@ -9,7 +9,7 @@
   "Native Include Directive": {
     "prefix": "#native include",
     "body": [
-      "#native include <${1:iostream}>"
+      "#native include <${1:windows.h}>"
     ],
     "description": "Include C/C++ native header"
   },
@@ -29,10 +29,41 @@
     ],
     "description": "Link system static or dynamic library"
   },
+  "Defer Statement": {
+    "prefix": "defer",
+    "body": [
+      "defer ${1:cleanup_func()};"
+    ],
+    "description": "Executes cleanup action automatically upon scope exit (LIFO order)"
+  },
+  "Guard Statement": {
+    "prefix": "guard",
+    "body": [
+      "guard ${1:condition} else {",
+      "\t${0:return;}",
+      "}"
+    ],
+    "description": "Early-exit safety guard block"
+  },
+  "Pipeline Operator": {
+    "prefix": "|>",
+    "body": [
+      "|> ${1:func_name}"
+    ],
+    "description": "Pipes value forward as the first argument of the target function"
+  },
+  "String Interpolation": {
+    "prefix": "$\"",
+    "body": [
+      "$\"${1:Hello} {${2:name}}\""
+    ],
+    "description": "Interpolated string expression"
+  },
   "Function Definition": {
     "prefix": "fn",
     "body": [
       "fn ${1:name}(${2:params}) -> ${3:type} {",
+      "\t${0:// body}",
       "\treturn ${4:result};",
       "}"
     ],
@@ -63,52 +94,32 @@
     "body": [
       "var ${1:name} = ${2:value};"
     ],
-    "description": "Mutable variable with type inference"
+    "description": "Mutable variable declaration"
   },
   "Constant Declaration": {
     "prefix": "const",
     "body": [
       "const ${1:NAME} = ${2:value};"
     ],
-    "description": "Immutable compile-time constant"
+    "description": "Immutable constant declaration"
   },
-  "If Condition": {
+  "If Statement": {
     "prefix": "if",
     "body": [
       "if ${1:condition} {",
       "\t${0:// body}",
       "}"
     ],
-    "description": "Conditional branch"
-  },
-  "If Else": {
-    "prefix": "ifelse",
-    "body": [
-      "if ${1:condition} {",
-      "\t${2:// true branch}",
-      "} else {",
-      "\t${0:// false branch}",
-      "}"
-    ],
-    "description": "If-Else branch"
+    "description": "Conditional if branch"
   },
   "For Range Loop": {
     "prefix": "for",
     "body": [
-      "for ${1:i} in ${2:0}..${3:10}-1 {",
+      "for ${1:i} in ${2:0}..${3:count}-1 {",
       "\t${0:// body}",
       "}"
     ],
-    "description": "Contiguous range loop"
-  },
-  "For In Collection": {
-    "prefix": "for_in",
-    "body": [
-      "for ${1:item} in ${2:collection} {",
-      "\t${0:// process item}",
-      "}"
-    ],
-    "description": "Iterate over collection items"
+    "description": "Contiguous range for loop"
   },
   "While Loop": {
     "prefix": "while",
@@ -117,9 +128,9 @@
       "\t${0:// body}",
       "}"
     ],
-    "description": "While loop"
+    "description": "Conditional while loop"
   },
-  "Match Expression": {
+  "Pattern Matching": {
     "prefix": "match",
     "body": [
       "match ${1:expr} {",
@@ -127,49 +138,33 @@
       "\t\"_\" => ${0:default}",
       "}"
     ],
-    "description": "Pattern matching block"
+    "description": "Match expression with exhaustive pattern matching"
+  },
+  "Print to Console": {
+    "prefix": "print",
+    "body": [
+      "print(${1:expr});"
+    ],
+    "description": "Output expression to standard output"
   },
   "Unsafe Memory Block": {
     "prefix": "unsafe",
     "body": [
       "unsafe {",
-      "\tvar ptr = addr(${1:target});",
+      "\tvar ptr = addr(${1:variable});",
       "\tvar val = peek(ptr);",
       "\t${0}",
       "}"
     ],
-    "description": "Direct memory hardware access"
+    "description": "Hardware and raw pointer unsafe execution block"
   },
-  "In-File Unit Test": {
+  "Unit Test Block": {
     "prefix": "test",
     "body": [
-      "test \"${1:test description}\" {",
-      "\tassert(${2:condition}, \"${3:failure explanation}\");",
+      "test \"${1:test title}\" {",
+      "\tassert(${2:condition}, \"${3:failure message}\");",
       "}"
     ],
-    "description": "Automated unit test definition"
-  },
-  "Print Statement": {
-    "prefix": "print",
-    "body": [
-      "print(${1:\"message\"});"
-    ],
-    "description": "Print to console output"
-  },
-  "React useState Hook": {
-    "prefix": "useState",
-    "body": [
-      "var [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});"
-    ],
-    "description": "React state declaration hook"
-  },
-  "React useEffect Hook": {
-    "prefix": "useEffect",
-    "body": [
-      "useEffect(() => {",
-      "\t${0:// side effect}",
-      "}, [${1:deps}]);"
-    ],
-    "description": "React lifecycle side effect hook"
+    "description": "In-file automated unit test block"
   }
 }

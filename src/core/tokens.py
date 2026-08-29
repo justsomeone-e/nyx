@@ -36,6 +36,8 @@ class TokenType:
     RETURN = "RETURN"
     BREAK = "BREAK"
     CONTINUE = "CONTINUE"
+    DEFER = "DEFER"
+    GUARD = "GUARD"
     USE = "USE"
     IMPORT = "IMPORT"
     FROM = "FROM"

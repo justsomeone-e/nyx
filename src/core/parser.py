@@ -417,9 +417,19 @@ class Parser:
                 body = self.parse_block()
                 return ForNode(var_name, None, None, first_expr, body, tok.line, tok.col)
 
+        if tok.type == TokenType.DEFER:
+            self.advance()
+            expr = self.parse_expression()
+            return DeferNode(expr, tok.line, tok.col)
+        if tok.type == TokenType.GUARD:
+            self.advance()
+            cond = self.parse_expression()
+            self.expect(TokenType.ELSE)
+            else_body = self.parse_block()
+            return GuardNode(cond, else_body, tok.line, tok.col)
         if tok.type == TokenType.RETURN:
             self.advance()
-            expr = self.parse_expression() if self.current().type not in (TokenType.EOF, TokenType.RBRACE, TokenType.COMMA) else None
+            expr = self.parse_expression() if self.current().type not in (TokenType.EOF, TokenType.RBRACE, TokenType.COMMA, TokenType.SEMICOLON) else None
             return ReturnNode(expr, tok.line, tok.col)
         if tok.type == TokenType.BREAK:
             self.advance()
@@ -460,22 +470,25 @@ class Parser:
         self.expect(TokenType.LPAREN)
         params: List[FunctionParam] = []
         while self.current().type not in (TokenType.RPAREN, TokenType.EOF):
-            if self.current().type == TokenType.IDENT:
-                pname = self.advance().value
-                ptype = None
-                if self.match(TokenType.COLON):
-                    ptype = self.parse_type()
-                params.append(FunctionParam(pname, ptype))
-            self.match(TokenType.COMMA)
+            pname = self.expect(TokenType.IDENT).value
+            ptype = None
+            if self.match(TokenType.COLON):
+                ptype = self.parse_type()
+            default_val = None
+            if self.match(TokenType.ASSIGN):
+                default_val = self.parse_expression()
+            params.append(FunctionParam(pname, ptype, default_val))
+            if not self.match(TokenType.COMMA):
+                break
         self.expect(TokenType.RPAREN)
 
-        # Return type: -> int
         ret_type = None
         if self.match(TokenType.ARROW):
             ret_type = self.parse_type()
 
         body = self.parse_block()
-        return FunctionDefNode(name, params, ret_type, body, generic_params, is_async, self.last_doc_comment, tok.line, tok.col)
+        doc_comment = self.last_doc_comment
+        return FunctionDefNode(name, params, ret_type, body, is_async, generic_params, tok.line, tok.col, doc_comment)
 
     def parse_block(self) -> List[ASTNode]:
         statements: List[ASTNode] = []
@@ -501,10 +514,18 @@ class Parser:
     def parse_pipeline(self) -> ASTNode:
         node = self.parse_null_coalesce()
         while self.match(TokenType.PIPE):
-            # Can be function call or lambda
-            if self.current().type in (TokenType.IDENT, TokenType.PRINT, TokenType.INPUT):
-                callee_name = self.advance().value
-                node = FunctionCallNode(callee_name, [node])
+            if self.current().type in (TokenType.IDENT, TokenType.PRINT, TokenType.INPUT, TokenType.MEMDUMP, TokenType.PEEK, TokenType.ADDR):
+                callee_tok = self.advance()
+                callee_name = callee_tok.value
+                callee: Any = callee_name
+                while self.match(TokenType.DOT):
+                    member = self.expect(TokenType.IDENT).value
+                    callee = MemberAccessNode(IdentifierNode(callee) if isinstance(callee, str) else callee, member)
+                if self.match(TokenType.LPAREN):
+                    args = self.parse_args()
+                    node = FunctionCallNode(callee, [node] + args, callee_tok.line, callee_tok.col)
+                else:
+                    node = FunctionCallNode(callee, [node], callee_tok.line, callee_tok.col)
             else:
                 expr = self.parse_null_coalesce()
                 node = BinaryOpNode(node, "|>", expr)

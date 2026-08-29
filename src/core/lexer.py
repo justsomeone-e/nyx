@@ -197,6 +197,81 @@ class Lexer:
                 self.tokens.append(Token(TokenType.OR, "or", self.line, self.col))
                 self.pos += 2; self.col += 2; continue
 
+            # String Interpolation: $"Hello {name}!"
+            if ch == '$' and self.pos + 1 < length and self.source[self.pos + 1] in ('"', "'"):
+                start_col = self.col
+                self.pos += 1; self.col += 1
+                quote = self.source[self.pos]
+                self.pos += 1; self.col += 1
+                
+                parts = []
+                buf = []
+                while self.pos < length and self.source[self.pos] != quote:
+                    if self.source[self.pos] == '\\' and self.pos + 1 < length:
+                        esc = self.source[self.pos + 1]
+                        if esc == 'n': buf.append('\n')
+                        elif esc == 't': buf.append('\t')
+                        elif esc == 'r': buf.append('\r')
+                        elif esc == '\\': buf.append('\\')
+                        elif esc == '{': buf.append('{')
+                        elif esc == quote: buf.append(quote)
+                        else: buf.append(esc)
+                        self.pos += 2; self.col += 2
+                    elif self.source[self.pos] == '{':
+                        str_val = "".join(buf)
+                        buf = []
+                        parts.append(('str', str_val))
+                        self.pos += 1; self.col += 1
+                        expr_buf = []
+                        b_depth = 1
+                        while self.pos < length and b_depth > 0:
+                            if self.source[self.pos] == '{':
+                                b_depth += 1
+                            elif self.source[self.pos] == '}':
+                                b_depth -= 1
+                                if b_depth == 0:
+                                    break
+                            expr_buf.append(self.source[self.pos])
+                            if self.source[self.pos] == '\n':
+                                self.line += 1; self.col = 1
+                            else:
+                                self.col += 1
+                            self.pos += 1
+                        if self.pos < length and self.source[self.pos] == '}':
+                            self.pos += 1; self.col += 1
+                        expr_code = "".join(expr_buf).strip()
+                        if expr_code:
+                            parts.append(('expr', expr_code))
+                    else:
+                        if self.source[self.pos] == '\n':
+                            self.line += 1; self.col = 1
+                        else:
+                            self.col += 1
+                        buf.append(self.source[self.pos])
+                        self.pos += 1
+                if self.pos >= length:
+                    self.error("Unterminated interpolated string literal")
+                self.pos += 1; self.col += 1
+                parts.append(('str', "".join(buf)))
+
+                self.tokens.append(Token(TokenType.LPAREN, "(", self.line, start_col))
+                first = True
+                for ptype, pval in parts:
+                    if ptype == 'str':
+                        if not first:
+                            self.tokens.append(Token(TokenType.PLUS, "+", self.line, start_col))
+                        self.tokens.append(Token(TokenType.STRING, pval, self.line, start_col))
+                        first = False
+                    elif ptype == 'expr':
+                        if not first:
+                            self.tokens.append(Token(TokenType.PLUS, "+", self.line, start_col))
+                        sub_lexer = Lexer(f"to_string({pval})", self.filepath)
+                        sub_tokens = [t for t in sub_lexer.tokenize() if t.type != TokenType.EOF]
+                        self.tokens.extend(sub_tokens)
+                        first = False
+                self.tokens.append(Token(TokenType.RPAREN, ")", self.line, start_col))
+                continue
+
             # Strings
             if ch in ('"', "'"):
                 quote = ch
@@ -275,6 +350,7 @@ class Lexer:
                     "async": TokenType.ASYNC, "await": TokenType.AWAIT, "spawn": TokenType.SPAWN, "channel": TokenType.CHANNEL,
                     "test": TokenType.TEST, "assert": TokenType.ASSERT,
                     "return": TokenType.RETURN, "continue": TokenType.CONTINUE, "break": TokenType.BREAK,
+                    "defer": TokenType.DEFER, "guard": TokenType.GUARD,
                     "if": TokenType.IF, "else": TokenType.ELSE, "elif": TokenType.ELIF,
                     "for": TokenType.FOR, "in": TokenType.IN, "loop": TokenType.LOOP, "while": TokenType.WHILE,
                     "match": TokenType.MATCH, "try": TokenType.TRY, "catch": TokenType.CATCH, "throw": TokenType.THROW,

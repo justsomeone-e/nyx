@@ -6,6 +6,10 @@
 #endif
 using namespace std;
 
+// --- nyx Standard Core Helpers ---
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
+
 struct Hero {
     string name;
     int64_t hp;

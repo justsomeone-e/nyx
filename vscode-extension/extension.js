@@ -248,6 +248,9 @@ function activate(context) {
                 addSnippet('while', 'while ${1:condition} {\n\t${0:// loop body}\n}', 'While Loop', 'Iterates while condition is true.');
                 addSnippet('continue', 'continue;', 'Continue Statement', 'Skips to next loop iteration.');
                 addSnippet('break', 'break;', 'Break Statement', 'Terminates loop.');
+                addSnippet('defer', 'defer ${1:cleanup_expression};', 'Defer Statement', 'Executes cleanup expression on scope exit (LIFO).');
+                addSnippet('guard', 'guard ${1:condition} else {\n\t${0:return;}\n}', 'Guard Statement', 'Early-exit safety guard block.');
+                addSnippet('pipe', '|> ${1:func_name}', 'Pipeline Operator', 'Pipes expression forward as the first argument.');
                 addSnippet('return', 'return ${1:result};', 'Return Statement', 'Returns from function.');
                 addSnippet('match', 'match ${1:expr} {\n\t${2:pattern} => ${3:result},\n\t"_" => ${0:default}\n}', 'Pattern Matching', 'Pattern matching block.');
                 addSnippet('print', 'print(${1:expr});', 'Print to Console', 'Prints expressions to stdout.');

@@ -19,7 +19,8 @@ from src.core.ast_nodes import (
     TestBlockNode, AssertNode, MatchNode, TryCatchNode, MemberAccessNode,
     NullCoalesceNode, ArrayNode, IndexAccessNode, IfNode, WhileNode, ForNode,
     ReturnNode, BreakNode, ContinueNode, FunctionCallNode,
-    NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode
+    NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode,
+    DeferNode, GuardNode
 )
 
 class UniversalCodeGen:
@@ -151,6 +152,9 @@ class UniversalCodeGen:
         if "to_int" in used_syms:
             helper_lines.append("int to_int(const string& s) { try { return stoi(s); } catch(...) { return 0; } }")
         if "to_string_val" in used_syms or "to_string" in used_syms or "to_str" in used_syms:
+            helper_lines.append("inline string to_string(const string& s) { return s; }")
+            helper_lines.append("inline string to_string(const char* s) { return string(s); }")
+            helper_lines.append("inline string to_string(bool b) { return b ? \"true\" : \"false\"; }")
             helper_lines.append("string to_string_val(int v) { return to_string(v); }")
         if "contains" in used_syms:
             helper_lines.append("bool contains(const string& s, const string& sub) { return s.find(sub) != string::npos; }")
@@ -188,6 +192,9 @@ class UniversalCodeGen:
                 "    }",
                 "}"
             ])
+
+        helper_lines.append("template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };")
+        helper_lines.append("template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }")
 
         if helper_lines:
             lines.append("// --- nyx Standard Core Helpers ---")
@@ -480,6 +487,13 @@ class UniversalCodeGen:
             elif isinstance(node, ReturnNode): res.append(f"{sp}return {emit_expr(node.expr) if node.expr else ''};")
             elif isinstance(node, BreakNode): res.append(f"{sp}break;")
             elif isinstance(node, ContinueNode): res.append(f"{sp}continue;")
+            elif isinstance(node, DeferNode):
+                defer_id = len(declared_cpp_vars) + indent + 1000 + getattr(node, 'line', 0)
+                res.append(f"{sp}auto _nyx_defer_{defer_id} = _nyx_make_scope_exit([&]() {{ {emit_expr(node.expr)}; }});")
+            elif isinstance(node, GuardNode):
+                res.append(f"{sp}if (!({emit_expr(node.condition)})) {{")
+                for s in node.else_body: res.extend(emit_stmt(s, indent + 1))
+                res.append(f"{sp}}}")
             elif isinstance(node, NativeRawNode):
                 res.append(f"{sp}// --- BEGIN NATIVE RAW ---")
                 for raw_l in node.raw.splitlines():
@@ -822,6 +836,13 @@ class UniversalCodeGen:
                 else:
                     for s in node.body: res.extend(emit_py_stmt(s, indent + 1))
                 return res
+            if isinstance(node, DeferNode): return [f"{sp}# defer {emit_py_expr(node.expr)}"]
+            if isinstance(node, GuardNode):
+                res = [f"{sp}if not ({emit_py_expr(node.condition)}):"]
+                if not node.else_body: res.append(f"{sp}    pass")
+                else:
+                    for s in node.else_body: res.extend(emit_py_stmt(s, indent + 1))
+                return res
             if isinstance(node, BreakNode): return [f"{sp}break"]
             if isinstance(node, ContinueNode): return [f"{sp}continue"]
             if isinstance(node, ReturnNode): return [f"{sp}return {emit_py_expr(node.expr) if node.expr else ''}"]
@@ -941,6 +962,12 @@ function len(v) { return v ? v.length : 0; }
                 res.append(f"{sp}}}")
                 return res
 
+            if isinstance(node, DeferNode): return [f"{sp}// defer {emit_js_expr(node.expr)};"]
+            if isinstance(node, GuardNode):
+                res = [f"{sp}if (!({emit_js_expr(node.condition)})) {{"]
+                for s in node.else_body: res.extend(emit_js_stmt(s, indent + 1))
+                res.append(f"{sp}}}")
+                return res
             if isinstance(node, ReturnNode):
                 val = f" {emit_js_expr(node.expr)}" if node.expr else ""
                 return [f"{sp}return{val};"]

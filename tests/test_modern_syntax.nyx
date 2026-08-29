@@ -1,0 +1,49 @@
+fn double_num(x: int) -> int {
+    return x * 2;
+}
+
+fn add_bonus(x: int, bonus: int) -> int {
+    return x + bonus;
+}
+
+fn check_access(age: int) {
+    guard age >= 18 else {
+        print($"[GUARD REJECTED] Access denied: Age {age} is under 18.");
+        return;
+    }
+    print($"[GUARD ACCEPTED] Access granted: Welcome adult (Age: {age})!");
+}
+
+fn demo_pipeline() {
+    print("--- 1. Enhanced Pipeline Operator (|>) ---");
+    var initial = 10;
+    
+    // 10 |> double (20) |> add 5 (25) |> double (50)
+    var result = initial |> double_num |> add_bonus(5) |> double_num;
+    print($"Result of pipeline: {result}");
+}
+
+fn demo_defer() {
+    print("--- 2. Defer Resource Cleanup ---");
+    print("[1] Opening resource lock...");
+    defer print("[4] DEFER TRIGGERED: Resource lock automatically released on scope exit!");
+    print("[2] Processing critical work...");
+    print("[3] Work finished.");
+}
+
+fn demo_interpolation() {
+    print("--- 3. String Interpolation ($) ---");
+    var user = "Antigravity";
+    var score = 99;
+    print($"Player: {user} scored {score + 1} points in Nyx v3.0!");
+}
+
+fn main() {
+    demo_pipeline();
+    demo_defer();
+    demo_interpolation();
+    
+    print("--- 4. Guard Statement Early Exit ---");
+    check_access(15);
+    check_access(22);
+}

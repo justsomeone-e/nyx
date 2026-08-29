@@ -21,6 +21,8 @@ void memdump(uintptr_t a, size_t len) {
         cout << dec << endl;
     }
 }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32

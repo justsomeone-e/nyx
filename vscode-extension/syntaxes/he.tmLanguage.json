@@ -47,7 +47,7 @@
     },
     {
       "name": "keyword.control.nyx",
-      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|try|catch|unsafe|import|use|from|export|assert|spawn|channel)\\b"
+      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|defer|guard|try|catch|unsafe|import|use|from|export|assert|spawn|channel)\\b"
     },
     {
       "name": "support.function.builtin.nyx",

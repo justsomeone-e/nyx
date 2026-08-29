@@ -8,7 +8,8 @@ from .ast_nodes import (
     EnumDefNode, UnsafeBlockNode, SpawnNode, TestBlockNode, AssertNode,
     FunctionDefNode, MatchNode, TryCatchNode, IfNode, WhileNode, ForNode,
     ReturnNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
-    NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode
+    NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode,
+    DeferNode, GuardNode
 )
 from .diagnostics import DiagnosticEmitter
 
@@ -198,6 +199,15 @@ class TypeChecker:
                 self.visit(s)
             self.exit_scope()
             self.is_inside_unsafe = prev
+
+        elif isinstance(node, DeferNode):
+            self.visit(node.expr)
+
+        elif isinstance(node, GuardNode):
+            self.infer_type(node.condition)
+            self.enter_scope()
+            for s in node.else_body: self.visit(s)
+            self.exit_scope()
 
         elif isinstance(node, IfNode):
             self.infer_type(node.condition)

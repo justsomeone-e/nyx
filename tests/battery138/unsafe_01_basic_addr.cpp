@@ -11,6 +11,8 @@ using namespace std;
 uintptr_t addr(void* ptr) { return (uintptr_t)ptr; }
 template<typename T> uintptr_t addr(T& val) { return (uintptr_t)&val; }
 uintptr_t peek(uintptr_t a) { return *(uintptr_t*)a; }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32

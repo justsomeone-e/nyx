@@ -11,6 +11,8 @@ template<typename T, typename E = string>
 struct Result { bool is_ok; T value; E error; Result() : is_ok(false), value(), error() {} Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} T unwrap() const { return value; } };
 template<typename T> Result<T, string> Ok(T val) { return Result<T, string>(true, val, ""); }
 template<typename T = int64_t> Result<T, string> Err(string err) { return Result<T, string>(false, T{}, err); }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32

@@ -85,9 +85,10 @@ class UnaryOpNode(ASTNode):
         self.expr = expr
 
 class FunctionParam:
-    def __init__(self, name: str, type_annot: Optional[TypeNode] = None):
+    def __init__(self, name: str, type_annot: Optional[TypeNode] = None, default_val: Optional[ASTNode] = None):
         self.name = name
         self.type_annot = type_annot
+        self.default_val = default_val
 
 class FunctionDefNode(ASTNode):
     def __init__(self, name: str, params: List[FunctionParam], return_type: Optional[TypeNode], body: List[ASTNode], generic_params: Optional[List[str]] = None, is_async: bool = False, doc_comment: str = "", line: int = 1, col: int = 1):
@@ -228,6 +229,17 @@ class ReturnNode(ASTNode):
 
 class BreakNode(ASTNode): pass
 class ContinueNode(ASTNode): pass
+
+class DeferNode(ASTNode):
+    def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+
+class GuardNode(ASTNode):
+    def __init__(self, condition: ASTNode, else_body: List[ASTNode], line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.condition = condition
+        self.else_body = else_body
 
 class FunctionCallNode(ASTNode):
     def __init__(self, callee: str, args: List[ASTNode], line: int = 1, col: int = 1):

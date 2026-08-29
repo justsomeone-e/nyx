@@ -14,6 +14,8 @@ template<typename T, typename V> void push(vector<T>& v, const V& val) { v.push_
 template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }
 template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }
 inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return ""; return string(1, s[i]); }
+template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
+template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
 
 int main() {
 #ifdef _WIN32
