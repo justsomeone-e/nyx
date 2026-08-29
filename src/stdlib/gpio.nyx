@@ -1,44 +1,38 @@
-// nyx Native Hardware Library: native/gpio
-#target hecpp
+/// nyx Standard Hardware Abstraction Layer - GPIO (General Purpose I/O)
 
-const GPIO_INPUT: int = 0
-const GPIO_OUTPUT: int = 1
-const GPIO_PULLUP: int = 2
-const GPIO_PULLDOWN: int = 3
-const GPIO_LOW: int = 0
-const GPIO_HIGH: int = 1
+const PIN_INPUT = 0;
+const PIN_OUTPUT = 1;
+const PIN_PULLUP = 2;
+const PIN_PULLDOWN = 3;
 
-const PIN_INPUT: int = 0
-const PIN_OUTPUT: int = 1
-const PIN_LOW: int = 0
-const PIN_HIGH: int = 1
+const PIN_LOW = 0;
+const PIN_HIGH = 1;
 
-fn set_mode(pin: int, mode: int) {
-    print("[GPIO] Mode Pin", pin, "->", mode)
+extern "C" fn nyx_hal_gpio_mode(pin: int, mode: int);
+extern "C" fn nyx_hal_gpio_write(pin: int, value: int);
+extern "C" fn nyx_hal_gpio_read(pin: int) -> int;
+extern "C" fn nyx_hal_gpio_toggle(pin: int);
+
+fn mode(pin: int, m: int) {
+    nyx_hal_gpio_mode(pin, m);
 }
 
-fn write(pin: int, state: int) {
-    print("[GPIO] Write Pin", pin, "->", state)
+fn write(pin: int, value: int) {
+    nyx_hal_gpio_write(pin, value);
 }
 
 fn read(pin: int) -> int {
-    return 0
+    return nyx_hal_gpio_read(pin);
 }
 
-fn analog_read(pin: int) -> int {
-    return 512
+fn toggle(pin: int) {
+    nyx_hal_gpio_toggle(pin);
 }
 
-fn analog_write(pin: int, value: int) {
-    print("[GPIO] Analog Write Pin", pin, "->", value)
+fn set_high(pin: int) {
+    nyx_hal_gpio_write(pin, PIN_HIGH);
 }
 
-fn pwm_write(pin: int, duty: int) {
-    print("[GPIO] PWM Write Pin", pin, "->", duty)
-}
-
-test "native/gpio pin operations" {
-    set_mode(13, GPIO_OUTPUT)
-    write(13, GPIO_HIGH)
-    write(13, GPIO_LOW)
+fn set_low(pin: int) {
+    nyx_hal_gpio_write(pin, PIN_LOW);
 }

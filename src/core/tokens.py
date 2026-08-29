@@ -68,6 +68,12 @@ class TokenType:
     MUL = "MUL"
     DIV = "DIV"
     MOD = "MOD"
+    BIT_OR = "BIT_OR"
+    BIT_AND = "BIT_AND"
+    BIT_XOR = "BIT_XOR"
+    BIT_NOT = "BIT_NOT"
+    SHL = "SHL"
+    SHR = "SHR"
     
     EQ = "EQ"
     NEQ = "NEQ"

@@ -190,6 +190,12 @@ class Lexer:
             if self.source[self.pos:self.pos+2] == "<=":
                 self.tokens.append(Token(TokenType.LTE, "<=", self.line, self.col))
                 self.pos += 2; self.col += 2; continue
+            if self.source[self.pos:self.pos+2] == "<<":
+                self.tokens.append(Token(TokenType.SHL, "<<", self.line, self.col))
+                self.pos += 2; self.col += 2; continue
+            if self.source[self.pos:self.pos+2] == ">>":
+                self.tokens.append(Token(TokenType.SHR, ">>", self.line, self.col))
+                self.pos += 2; self.col += 2; continue
             if self.source[self.pos:self.pos+2] == "&&":
                 self.tokens.append(Token(TokenType.AND, "and", self.line, self.col))
                 self.pos += 2; self.col += 2; continue
@@ -373,6 +379,7 @@ class Lexer:
                 '=': TokenType.ASSIGN, '+': TokenType.PLUS, '-': TokenType.MINUS,
                 '*': TokenType.MUL, '/': TokenType.DIV, '%': TokenType.MOD,
                 '>': TokenType.GT, '<': TokenType.LT, '!': TokenType.NOT,
+                '|': TokenType.BIT_OR, '&': TokenType.BIT_AND, '^': TokenType.BIT_XOR, '~': TokenType.BIT_NOT,
                 '(': TokenType.LPAREN, ')': TokenType.RPAREN,
                 '[': TokenType.LBRACKET, ']': TokenType.RBRACKET,
                 '{': TokenType.LBRACE, '}': TokenType.RBRACE,

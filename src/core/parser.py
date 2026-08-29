@@ -546,10 +546,31 @@ class Parser:
         return node
 
     def parse_logic_and(self) -> ASTNode:
-        node = self.parse_equality()
+        node = self.parse_bitwise_or()
         while self.match(TokenType.AND):
-            right = self.parse_equality()
+            right = self.parse_bitwise_or()
             node = BinaryOpNode(node, "and", right)
+        return node
+
+    def parse_bitwise_or(self) -> ASTNode:
+        node = self.parse_bitwise_xor()
+        while self.match(TokenType.BIT_OR):
+            right = self.parse_bitwise_xor()
+            node = BinaryOpNode(node, "|", right)
+        return node
+
+    def parse_bitwise_xor(self) -> ASTNode:
+        node = self.parse_bitwise_and()
+        while self.match(TokenType.BIT_XOR):
+            right = self.parse_bitwise_and()
+            node = BinaryOpNode(node, "^", right)
+        return node
+
+    def parse_bitwise_and(self) -> ASTNode:
+        node = self.parse_equality()
+        while self.match(TokenType.BIT_AND):
+            right = self.parse_equality()
+            node = BinaryOpNode(node, "&", right)
         return node
 
     def parse_equality(self) -> ASTNode:
@@ -561,8 +582,16 @@ class Parser:
         return node
 
     def parse_relational(self) -> ASTNode:
-        node = self.parse_additive()
+        node = self.parse_shift()
         while self.current().type in (TokenType.GT, TokenType.GTE, TokenType.LT, TokenType.LTE):
+            op = self.advance().value
+            right = self.parse_shift()
+            node = BinaryOpNode(node, op, right)
+        return node
+
+    def parse_shift(self) -> ASTNode:
+        node = self.parse_additive()
+        while self.current().type in (TokenType.SHL, TokenType.SHR):
             op = self.advance().value
             right = self.parse_additive()
             node = BinaryOpNode(node, op, right)
@@ -585,7 +614,7 @@ class Parser:
         return node
 
     def parse_unary(self) -> ASTNode:
-        if self.current().type in (TokenType.MINUS, TokenType.NOT, TokenType.MUL):
+        if self.current().type in (TokenType.MINUS, TokenType.NOT, TokenType.MUL, TokenType.BIT_NOT):
             op = self.advance().value
             expr = self.parse_unary()
             return UnaryOpNode(op, expr)

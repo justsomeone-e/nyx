@@ -10,6 +10,28 @@ using namespace std;
 bool contains(const string& s, const string& sub) { return s.find(sub) != string::npos; }
 template<typename F> struct _NyxScopeExit { F f; ~_NyxScopeExit() { f(); } };
 template<typename F> _NyxScopeExit<F> _nyx_make_scope_exit(F f) { return {f}; }
+// --- nyx Volatile MMIO Hardware Primitives ---
+#ifndef NYX_MMIO_DEFINED
+#define NYX_MMIO_DEFINED
+extern "C" {
+    inline int64_t nyx_mmio_read8(uintptr_t addr) { return (int64_t)*(volatile uint8_t*)(addr); }
+    inline void nyx_mmio_write8(uintptr_t addr, int64_t val) { *(volatile uint8_t*)(addr) = (uint8_t)val; }
+    inline int64_t nyx_mmio_read16(uintptr_t addr) { return (int64_t)*(volatile uint16_t*)(addr); }
+    inline void nyx_mmio_write16(uintptr_t addr, int64_t val) { *(volatile uint16_t*)(addr) = (uint16_t)val; }
+    inline int64_t nyx_mmio_read32(uintptr_t addr) { return (int64_t)*(volatile uint32_t*)(addr); }
+    inline void nyx_mmio_write32(uintptr_t addr, int64_t val) { *(volatile uint32_t*)(addr) = (uint32_t)val; }
+    // Default Fallback HAL Simulation Hooks (Overridden by Target Specific BSP)
+    __attribute__((weak)) void nyx_hal_gpio_mode(int64_t pin, int64_t mode) { /* GPIO Mode Stub */ }
+    __attribute__((weak)) void nyx_hal_gpio_write(int64_t pin, int64_t val) { /* GPIO Write Stub */ }
+    __attribute__((weak)) int64_t nyx_hal_gpio_read(int64_t pin) { return 0; }
+    __attribute__((weak)) void nyx_hal_gpio_toggle(int64_t pin) { /* GPIO Toggle Stub */ }
+    __attribute__((weak)) void nyx_hal_serial_init(int64_t baud) { /* Serial Init Stub */ }
+    __attribute__((weak)) void nyx_hal_serial_write(const char* data) { if (data) printf("%s", data); }
+    __attribute__((weak)) void nyx_hal_serial_write_byte(int64_t b) { putchar((int)b); }
+    __attribute__((weak)) int64_t nyx_hal_serial_read_byte() { return getchar(); }
+    __attribute__((weak)) bool nyx_hal_serial_available() { return true; }
+}
+#endif
 
 int main() {
 #ifdef _WIN32
