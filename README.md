@@ -1,7 +1,7 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/banner_animated.svg" width="100%" alt="nyx systems compiler banner"/>
+    <img src="assets/logo.svg" width="460" alt="nyx logotype"/>
   </a>
   <br/><br/>
 
@@ -450,28 +450,12 @@ For larger architectural changes, discuss the intended design before implementin
 
 ## `12` — License
 
-Nyx is licensed under the **MIT License**.
+nyx is licensed under the **MIT License**.
 
 See [`LICENSE`](LICENSE) for the complete license text.
 
 ---
 
 <div align="center">
-  <br/>
-
-  <sub>
-    <b>Nyx Systems Core</b>
-    &nbsp;·&nbsp;
-    Deterministic compilation
-    &nbsp;·&nbsp;
-    Multiple targets
-  </sub>
-
-<br/><br/>
-
-  <sub>
-    C++20 · Node.js ES2022 · Rust 2021 · Python 3
-    &nbsp;·&nbsp;
-    <a href="LICENSE">MIT License</a>
-  </sub>
+  <img src="assets/footer_animated.svg" width="98%" alt="nyx systems footer banner"/>
 </div>
