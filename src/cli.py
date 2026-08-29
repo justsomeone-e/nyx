@@ -43,7 +43,6 @@ Project & Development Commands:
   nyx bundle [file.nyx] [-o dir]     Bundle Polyglot Web/WASM package (.wasm, .mjs, .d.ts, .tsx)
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
-  nyx ai                             Launch Multi-Model AI Engineering Console
   nyx test [file.nyx | all]          Execute in-file unit tests or test framework
   nyx clean                          Remove build artifacts and temporary files
 
@@ -946,13 +945,6 @@ def cmd_tutorial():
         print(content)
         print("-" * 60)
 
-def cmd_ai():
-    try:
-        from src.toolchain.ai_console import start_console
-        start_console()
-    except Exception as e:
-        print(f"\033[91m[!] Failed to start AI Console: {e}\033[0m")
-
 def main():
     if len(sys.argv) < 2:
         print_help()
@@ -969,8 +961,6 @@ def main():
         cmd_doctor()
     elif cmd == "repl":
         cmd_repl()
-    elif cmd in ("ai", "chat", "team"):
-        cmd_ai()
     elif cmd == "tutorial":
         cmd_tutorial()
     elif cmd == "explain":

@@ -14,6 +14,11 @@ fn abs(x: float) -> float {
     return x;
 }
 
+// Alias for abs to ensure backward compatibility
+fn abs_val(x: float) -> float {
+    return abs(x);
+}
+
 // Maximum of two floats
 fn max(a: float, b: float) -> float {
     if a >= b {
@@ -79,6 +84,11 @@ fn pow(base: float, exp: int) -> float {
         remaining_exp = remaining_exp / 2;
     }
     return result;
+}
+
+// Alias for pow to ensure backward compatibility
+fn power(base: float, exp: int) -> float {
+    return pow(base, exp);
 }
 
 // Square root using Newton-Raphson method
