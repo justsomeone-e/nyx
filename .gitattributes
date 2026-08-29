@@ -17,7 +17,9 @@ tests/** linguist-vendored=true
 install.ps1 linguist-vendored=true
 install.sh linguist-vendored=true
 
-# Exclude documentation and asset files
+# Exclude extensions, build, documentation, and asset files
+extensions/** linguist-vendored=true
+build/** linguist-vendored=true
 *.svg linguist-documentation=true
 assets/** linguist-documentation=true
 docs/** linguist-documentation=true

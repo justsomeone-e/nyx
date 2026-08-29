@@ -87,6 +87,16 @@ htmlcov/
 # Test-generated artifacts
 tests/__pycache__/
 tests/**/__pycache__/
+tests/**/*.cpp
+tests/**/*.js
+tests/**/*.py
+tests/**/*.rs
+tests/**/*.wat
+tests/**/*.bin
+tests/**/*.elf
+tests/**/*.hex
+examples/**/*.cpp
+examples/**/*.exe
 
 # Local toolchains
 .toolchains/
