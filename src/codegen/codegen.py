@@ -803,6 +803,76 @@ class UniversalCodeGen:
             "    def contains(s, sub): return str(sub) in str(s)",
             "    def Ok(v): return type('Result', (), {'is_ok': True, 'value': v, 'error': None})()",
             "    def Err(e): return type('Result', (), {'is_ok': False, 'value': None, 'error': e})()",
+            "",
+            "# --- Nyx Stdlib Python Runtime Helpers ---",
+            "import math as _nyx_math",
+            "import time as _nyx_time",
+            "import base64 as _nyx_base64",
+            "import os as _nyx_os",
+            "_nyx_math_sin = _nyx_math.sin",
+            "_nyx_math_cos = _nyx_math.cos",
+            "_nyx_math_tan = _nyx_math.tan",
+            "_nyx_math_sqrt = _nyx_math.sqrt",
+            "_nyx_math_pow = _nyx_math.pow",
+            "_nyx_math_abs = abs",
+            "_nyx_math_floor = _nyx_math.floor",
+            "_nyx_math_ceil = _nyx_math.ceil",
+            "_nyx_math_round = round",
+            "_nyx_math_clamp = lambda v, low, high: max(low, min(high, v))",
+            "_nyx_time_now_ms = lambda: int(_nyx_time.time() * 1000)",
+            "_nyx_time_now_us = lambda: int(_nyx_time.time() * 1000000)",
+            "_nyx_time_sleep_ms = lambda ms: _nyx_time.sleep(ms / 1000.0)",
+            "_nyx_base64_encode = lambda s: _nyx_base64.b64encode(s.encode('utf-8')).decode('ascii')",
+            "_nyx_base64_decode = lambda s: _nyx_base64.b64decode(s.encode('ascii')).decode('utf-8')",
+            "def _nyx_hash_fnv1a_64(s: str) -> int:",
+            "    h = 14695981039346656037",
+            "    prime = 1099511628211",
+            "    for b in s.encode('utf-8'):",
+            "        h ^= b",
+            "        h = (h * prime) & 0xFFFFFFFFFFFFFFFF",
+            "    if h >= 0x8000000000000000: h -= 0x10000000000000000",
+            "    return h",
+            "def _nyx_fs_write_string(p, c):",
+            "    try:",
+            "        with open(p, 'w', encoding='utf-8') as f: f.write(c)",
+            "        return True",
+            "    except: return False",
+            "def _nyx_fs_read_to_string(p):",
+            "    try:",
+            "        with open(p, 'r', encoding='utf-8') as f: return f.read()",
+            "    except: return ''",
+            "def _nyx_fs_append_string(p, c):",
+            "    try:",
+            "        with open(p, 'a', encoding='utf-8') as f: f.write(c)",
+            "        return True",
+            "    except: return False",
+            "def _nyx_fs_exists(p): return _nyx_os.path.exists(p)",
+            "def _nyx_fs_remove_file(p):",
+            "    try: _nyx_os.remove(p); return True",
+            "    except: return False",
+            "def _nyx_json_get_string(j, k):",
+            "    pat = f'\"{k}\":'",
+            "    idx = j.find(pat)",
+            "    if idx == -1: return ''",
+            "    pos = idx + len(pat)",
+            "    while pos < len(j) and j[pos] in (' ', '\\t'): pos += 1",
+            "    if pos < len(j) and j[pos] == '\"':",
+            "        pos += 1",
+            "        end = j.find('\"', pos)",
+            "        if end != -1: return j[pos:end]",
+            "    return ''",
+            "def _nyx_json_get_int(j, k):",
+            "    pat = f'\"{k}\":'",
+            "    idx = j.find(pat)",
+            "    if idx == -1: return 0",
+            "    pos = idx + len(pat)",
+            "    while pos < len(j) and j[pos] in (' ', '\\t'): pos += 1",
+            "    end = pos",
+            "    while end < len(j) and (j[end].isdigit() or j[end] == '-'): end += 1",
+            "    if end > pos:",
+            "        try: return int(j[pos:end])",
+            "        except: return 0",
+            "    return 0",
             ""
         ]
 
@@ -986,6 +1056,70 @@ function contains(haystack, needle) { return haystack && haystack.includes ? hay
 function to_string(v) { return String(v); }
 function to_int(v) { return parseInt(v, 10); }
 function len(v) { return v ? v.length : 0; }
+
+// --- Nyx Stdlib JavaScript Runtime Helpers ---
+const _nyx_math_sin = Math.sin;
+const _nyx_math_cos = Math.cos;
+const _nyx_math_tan = Math.tan;
+const _nyx_math_sqrt = Math.sqrt;
+const _nyx_math_pow = Math.pow;
+const _nyx_math_abs = Math.abs;
+const _nyx_math_floor = Math.floor;
+const _nyx_math_ceil = Math.ceil;
+const _nyx_math_round = Math.round;
+const _nyx_math_clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+
+const _nyx_time_now_ms = () => Date.now();
+const _nyx_time_now_us = () => Math.floor(performance.now() * 1000);
+const _nyx_time_sleep_ms = (ms) => { const start = Date.now(); while (Date.now() - start < ms); };
+
+const _nyx_base64_encode = (str) => Buffer.from(str, 'utf-8').toString('base64');
+const _nyx_base64_decode = (b64) => Buffer.from(b64, 'base64').toString('utf-8');
+const _nyx_hash_fnv1a_64 = (str) => {
+    let hash = 0xcbf29ce484222325n;
+    const prime = 0x100000001b3n;
+    const buf = Buffer.from(str, 'utf-8');
+    for (let i = 0; i < buf.length; i++) {
+        hash ^= BigInt(buf[i]);
+        hash = (hash * prime) & 0xffffffffffffffffn;
+    }
+    const signedVal = BigInt.asIntN(64, hash);
+    return Number(signedVal);
+};
+
+const _nyx_fs_write_string = (p, c) => { try { require('fs').writeFileSync(p, c, 'utf-8'); return true; } catch { return false; } };
+const _nyx_fs_read_to_string = (p) => { try { return require('fs').readFileSync(p, 'utf-8'); } catch { return ''; } };
+const _nyx_fs_append_string = (p, c) => { try { require('fs').appendFileSync(p, c, 'utf-8'); return true; } catch { return false; } };
+const _nyx_fs_exists = (p) => { try { return require('fs').existsSync(p); } catch { return false; } };
+const _nyx_fs_remove_file = (p) => { try { require('fs').unlinkSync(p); return true; } catch { return false; } };
+
+const _nyx_json_get_string = (jsonStr, key) => {
+    const pat = `"${key}":`;
+    const idx = jsonStr.indexOf(pat);
+    if (idx === -1) return "";
+    let pos = idx + pat.length;
+    while (pos < jsonStr.length && (jsonStr[pos] === ' ' || jsonStr[pos] === '\t')) pos++;
+    if (pos < jsonStr.length && jsonStr[pos] === '"') {
+        pos++;
+        const end = jsonStr.indexOf('"', pos);
+        if (end !== -1) return jsonStr.substring(pos, end);
+    }
+    return "";
+};
+const _nyx_json_get_int = (jsonStr, key) => {
+    const pat = `"${key}":`;
+    const idx = jsonStr.indexOf(pat);
+    if (idx === -1) return 0;
+    let pos = idx + pat.length;
+    while (pos < jsonStr.length && (jsonStr[pos] === ' ' || jsonStr[pos] === '\t')) pos++;
+    let end = pos;
+    while (end < jsonStr.length && (/[0-9\\-]/.test(jsonStr[end]))) end++;
+    if (end > pos) {
+        const num = parseInt(jsonStr.substring(pos, end), 10);
+        return isNaN(num) ? 0 : num;
+    }
+    return 0;
+};
 """)
 
         def emit_js_expr(node: Optional[ASTNode]) -> str:

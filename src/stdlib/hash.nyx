@@ -1,0 +1,19 @@
+// nyx Standard Library - std/hash
+// Fast Non-Cryptographic Hashing Algorithms (RFC 9923 FNV-1a)
+
+#native include "string"
+
+#native raw {
+inline int64_t _nyx_hash_fnv1a_64(const std::string& str) {
+    uint64_t hash = 14695981039346656037ULL;
+    for (unsigned char c : str) {
+        hash ^= c;
+        hash *= 1099511628211ULL;
+    }
+    return (int64_t)hash;
+}
+}
+
+fn fnv1a_64(data: string) -> int {
+    return _nyx_hash_fnv1a_64(data);
+}

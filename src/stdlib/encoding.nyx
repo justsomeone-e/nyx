@@ -1,5 +1,5 @@
-// nyx Standard Library - std/crypto
-// Cryptographic and Encoding Primitives
+// nyx Standard Library - std/encoding
+// Standard Data Encodings (Base64)
 
 #native include "string"
 #native include "vector"
@@ -39,17 +39,12 @@ inline std::string _nyx_base64_decode(const std::string& in) {
     }
     return out;
 }
-
-inline int64_t _nyx_hash_fnv1a(const std::string& str) {
-    uint64_t hash = 14695981039346656037ULL;
-    for (unsigned char c : str) {
-        hash ^= c;
-        hash *= 1099511628211ULL;
-    }
-    return (int64_t)hash;
-}
 }
 
-fn base64_encode(data: string) -> string { return _nyx_base64_encode(data); }
-fn base64_decode(data: string) -> string { return _nyx_base64_decode(data); }
-fn hash_string(data: string) -> int { return _nyx_hash_fnv1a(data); }
+fn base64_encode(data: string) -> string {
+    return _nyx_base64_encode(data);
+}
+
+fn base64_decode(data: string) -> string {
+    return _nyx_base64_decode(data);
+}

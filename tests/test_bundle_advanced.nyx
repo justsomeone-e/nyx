@@ -1,0 +1,11 @@
+fn arbitrary_formula(a: int, b: int) -> int {
+    return (a * 7) - (b << 1);
+}
+
+fn owned_echo(value: string) -> string {
+    return value;
+}
+
+fn main() {
+    print("Advanced Bundle Spec Ready.");
+}

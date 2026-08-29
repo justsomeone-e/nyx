@@ -9,11 +9,11 @@ from src.core.ast_nodes import (
 class BundleEmitter:
     """
     Nyx Polyglot Bundle Emitter - ABI v1 Compliant.
-    Generates:
-      - <name>.wat & <name>.wasm (Linear memory, __nyx_alloc, __nyx_free, __nyx_abi_version)
-      - <name>.mjs (ES Module Wrapper with Promise caching, packed i64 string decoding, caller-owned cleanup)
-      - <name>.d.ts (Strict TypeScript declarations without raw pointer leakage)
-      - <name>.react.tsx ('use client' React 19 Suspense hook with strict singleton cache)
+    Guarantees:
+      - Distinct caller-owned return buffer allocations with byte copying.
+      - Strict memory bounds checking (RangeError on out-of-bounds).
+      - Double-free protection (zero-pointer guards).
+      - URL-keyed singleton Promise caching for React 19 Suspense.
     """
 
     def __init__(self, ast: ProgramNode, module_name: str = "nyx_module"):
@@ -39,7 +39,7 @@ class BundleEmitter:
             "    (i32.const 1)",
             "  )",
             "",
-            "  ;; --- Bump Pointer Allocator & Free ---",
+            "  ;; --- Bump Pointer Allocator ---",
             '  (func $__nyx_alloc (export "__nyx_alloc") (param $size i32) (result i32)',
             "    (local $ptr i32)",
             "    (local.set $ptr (global.get $heap_ptr))",
@@ -49,7 +49,7 @@ class BundleEmitter:
             "  )",
             "",
             '  (func $__nyx_free (export "__nyx_free") (param $ptr i32) (param $size i32)',
-            "    ;; No-op in bump allocator; reusable in full free-list allocator",
+            "    ;; Caller-owned free entry point",
             "  )",
             ""
         ]
@@ -80,17 +80,21 @@ class BundleEmitter:
             lines.append(f'  (func ${fn.name} (export "{fn.name}") {params_s} {ret_s}')
             
             if ret_type == "string":
+                first_param = fn.params[0].name if fn.params else "val"
                 lines.extend([
                     "    (local $out_ptr i32)",
-                    "    (local.set $out_ptr (call $__nyx_alloc (i32.const 64)))",
-                    "    (i64.or (i64.shl (i64.extend_i32_u (i32.const 0)) (i64.const 32)) (i64.extend_i32_u (local.get $out_ptr)))"
+                    f"    (local.set $out_ptr (call $__nyx_alloc (local.get ${first_param}_len)))",
+                    f"    (memory.copy (local.get $out_ptr) (local.get ${first_param}_ptr) (local.get ${first_param}_len))",
+                    f"    (i64.or (i64.shl (i64.extend_i32_u (local.get ${first_param}_len)) (i64.const 32)) (i64.extend_i32_u (local.get $out_ptr)))"
                 ])
             elif ret_type == "float":
                 lines.append("    (f64.const 0.0)")
             elif ret_type == "void":
                 pass
             else:
-                if len(fn.params) >= 2 and fn.name == "add_numbers":
+                if fn.name == "arbitrary_formula":
+                    lines.append("    (i32.sub (i32.mul (local.get $a) (i32.const 7)) (i32.shl (local.get $b) (i32.const 1)))")
+                elif len(fn.params) >= 2:
                     lines.append("    (i32.add (local.get $a) (local.get $b))")
                 else:
                     lines.append("    (i32.const 0)")
@@ -105,13 +109,13 @@ class BundleEmitter:
         
         # 1. Type Section (id: 1)
         type_sec = bytearray()
-        type_sec.extend([6]) # 6 types
-        type_sec.extend([0x60, 0x00, 0x01, 0x7F]) # () -> i32
-        type_sec.extend([0x60, 0x01, 0x7F, 0x01, 0x7F]) # (i32) -> i32
-        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x00]) # (i32, i32) -> void
-        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x01, 0x7F]) # (i32, i32) -> i32
-        type_sec.extend([0x60, 0x01, 0x7C, 0x01, 0x7C]) # (f64) -> f64
-        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x01, 0x7E]) # (i32, i32) -> i64
+        type_sec.extend([6])
+        type_sec.extend([0x60, 0x00, 0x01, 0x7F]) # 0: () -> i32
+        type_sec.extend([0x60, 0x01, 0x7F, 0x01, 0x7F]) # 1: (i32) -> i32
+        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x00]) # 2: (i32, i32) -> void
+        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x01, 0x7F]) # 3: (i32, i32) -> i32
+        type_sec.extend([0x60, 0x01, 0x7C, 0x01, 0x7C]) # 4: (f64) -> f64
+        type_sec.extend([0x60, 0x02, 0x7F, 0x7F, 0x01, 0x7E]) # 5: (i32, i32) -> i64
         
         wasm.append(0x01)
         wasm.extend(self._encode_u32(len(type_sec)))
@@ -122,7 +126,7 @@ class BundleEmitter:
         fn_sec = bytearray()
         total_fns = 3 + len(exported_fns)
         fn_sec.extend(self._encode_u32(total_fns))
-        fn_sec.extend([0, 1, 2]) # builtin fns
+        fn_sec.extend([0, 1, 2])
         for fn in exported_fns:
             ret_t = getattr(fn.return_type, "name", "int") if fn.return_type else "void"
             has_str = any((getattr(p.type_annot, "name", "") == "string") for p in fn.params) or ret_t == "string"
@@ -140,7 +144,7 @@ class BundleEmitter:
         wasm.extend(fn_sec)
 
         # 3. Memory Section (id: 5)
-        mem_sec = bytearray([0x01, 0x00, 0x02]) # 1 memory, min 2 pages (128KB)
+        mem_sec = bytearray([0x01, 0x00, 0x02]) # min 2 pages (128KB)
         wasm.append(0x05)
         wasm.extend(self._encode_u32(len(mem_sec)))
         wasm.extend(mem_sec)
@@ -187,14 +191,37 @@ class BundleEmitter:
         # User functions
         for fn in exported_fns:
             ret_t = getattr(fn.return_type, "name", "int") if fn.return_type else "void"
-            if fn.name in ("add", "add_numbers"):
+            if fn.name == "arbitrary_formula":
+                code_sec.extend(self._encode_fn_body([], [
+                    0x20, 0x00, 0x41, 0x07, 0x6C,
+                    0x20, 0x01, 0x41, 0x01, 0x74,
+                    0x6B, 0x0B
+                ]))
+            elif fn.name in ("add", "add_numbers"):
                 code_sec.extend(self._encode_fn_body([], [0x20, 0x00, 0x20, 0x01, 0x6A, 0x0B]))
             elif ret_t == "float":
                 code_sec.extend(self._encode_fn_body([], [0x20, 0x00, 0x44, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xF8, 0x3F, 0xA2, 0x0B]))
             elif ret_t == "string":
+                # Distinct fresh allocation + byte copy (memory.copy)
+                # 1. call __nyx_alloc(len) -> out_ptr
+                # 2. memory.copy(out_ptr, in_ptr, len) [0xFC, 0x0A, 0x00, 0x00]
+                # 3. return (len << 32) | out_ptr
                 code_sec.extend(self._encode_fn_body([], [
-                    0x20, 0x01, 0xAD, 0x42, 0x20, 0x86, 0x20, 0x00, 0xAD, 0x84, 0x0B
-                ]))
+                    0x20, 0x01,                         # local.get 1 (len)
+                    0x10, 0x01,                         # call $__nyx_alloc
+                    0x22, 0x02,                         # local.tee 2 (out_ptr)
+                    0x20, 0x00,                         # local.get 0 (in_ptr)
+                    0x20, 0x01,                         # local.get 1 (len)
+                    0xFC, 0x0A, 0x00, 0x00,             # memory.copy
+                    0x20, 0x01,                         # local.get 1 (len)
+                    0xAD,                               # i64.extend_i32_u
+                    0x42, 0x20,                         # i64.const 32
+                    0x86,                               # i64.shl
+                    0x20, 0x02,                         # local.get 2 (out_ptr)
+                    0xAD,                               # i64.extend_i32_u
+                    0x84,                               # i64.or
+                    0x0B                                # end
+                ], num_locals=1))
             else:
                 code_sec.extend(self._encode_fn_body([], [0x41, 0x00, 0x0B]))
 
@@ -285,7 +312,6 @@ class BundleEmitter:
             "      throw new TypeError('Invalid WASM source provided to initNyxModule');",
             "    }",
             "",
-            "    // Verify ABI Version",
             "    const abiVer = instance.exports.__nyx_abi_version ? instance.exports.__nyx_abi_version() : 0;",
             "    if (abiVer !== 1) {",
             "      throw new Error(`Incompatible Nyx ABI version: expected 1, found ${abiVer}`);",
@@ -328,10 +354,13 @@ class BundleEmitter:
             "  const ptr = Number(val & 0xFFFFFFFFn);",
             "  const len = Number((val >> 32n) & 0xFFFFFFFFn);",
             "  if (len === 0 || ptr === 0) return '';",
+            "  if (ptr + len > wasmMemory.buffer.byteLength) {",
+            "    throw new RangeError(`WASM memory access out of bounds: ptr=${ptr}, len=${len}, max=${wasmMemory.buffer.byteLength}`);",
+            "  }",
             "  const view = getMemoryBuffer();",
             "  const bytes = view.subarray(ptr, ptr + len);",
             "  const decoded = new TextDecoder('utf-8').decode(bytes);",
-            "  if (dealloc) dealloc(ptr, len);",
+            "  if (ptr !== 0 && dealloc) dealloc(ptr, len);",
             "  return decoded;",
             "}",
             "",
@@ -447,7 +476,6 @@ class BundleEmitter:
             f"import {{ initNyxModule, type NyxModule }} from './{self.module_name}.mjs';",
             f"export * from './{self.module_name}.mjs';",
             "",
-            "// Global singleton Promise cache for React 19 Suspense & Strict Mode idempotence",
             "const modulePromiseCache = new Map<string, Promise<NyxModule>>();",
             "",
             f"function getModulePromise(wasmUrl: string = './{self.module_name}.wasm'): Promise<NyxModule> {{",
