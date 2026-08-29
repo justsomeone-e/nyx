@@ -480,6 +480,13 @@ class UniversalCodeGen:
             elif isinstance(node, ReturnNode): res.append(f"{sp}return {emit_expr(node.expr) if node.expr else ''};")
             elif isinstance(node, BreakNode): res.append(f"{sp}break;")
             elif isinstance(node, ContinueNode): res.append(f"{sp}continue;")
+            elif isinstance(node, NativeRawNode):
+                res.append(f"{sp}// --- BEGIN NATIVE RAW ---")
+                for raw_l in node.raw.splitlines():
+                    res.append(f"{sp}{raw_l}")
+                res.append(f"{sp}// --- END NATIVE RAW ---")
+            elif isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeUseNode)):
+                pass
             else: res.append(f"{sp}{emit_expr(node)};")
             return res
 

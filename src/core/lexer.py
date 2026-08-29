@@ -114,7 +114,42 @@ class Lexer:
                     self.tokens.append(Token(TokenType.NATIVE_USE, use_target, self.line, start_col))
                     continue
 
-                # 4. #native target: raw
+                # 4. #native raw { ... } or #native target: raw
+                if self.source[self.pos:self.pos+3] == "raw":
+                    self.pos += 3; self.col += 3
+                    while self.pos < length and self.source[self.pos].isspace():
+                        if self.source[self.pos] == '\n':
+                            self.line += 1
+                            self.col = 1
+                        else:
+                            self.col += 1
+                        self.pos += 1
+                    if self.pos < length and self.source[self.pos] == '{':
+                        self.pos += 1
+                        self.col += 1
+                        brace_depth = 1
+                        start_raw = self.pos
+                        while self.pos < length and brace_depth > 0:
+                            ch = self.source[self.pos]
+                            if ch == '{':
+                                brace_depth += 1
+                            elif ch == '}':
+                                brace_depth -= 1
+                                if brace_depth == 0:
+                                    break
+                            if ch == '\n':
+                                self.line += 1
+                                self.col = 1
+                            else:
+                                self.col += 1
+                            self.pos += 1
+                        raw_body = self.source[start_raw:self.pos].strip()
+                        if self.pos < length and self.source[self.pos] == '}':
+                            self.pos += 1
+                            self.col += 1
+                        self.tokens.append(Token(TokenType.NATIVE_RAW, raw_body, self.line, start_col))
+                        continue
+
                 start_raw = self.pos
                 while self.pos < length and self.source[self.pos] != '\n':
                     self.pos += 1; self.col += 1
