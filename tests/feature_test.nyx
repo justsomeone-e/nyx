@@ -1,0 +1,24 @@
+#target hecpp
+
+fn test_bitwise() {
+    var a: int = 4294967295
+    var b: int = a & 255
+    print("Bitwise:", b)
+}
+
+fn test_float() {
+    var a: float = 0.1
+    var b: float = 0.2
+    var c: float = a + b
+    print("Float parity:", c)
+}
+
+fn test_utf8() {
+    var s: string = "こんにちは"
+    var sliced = s[0]
+    print("UTF-8 Slice:", sliced)
+}
+
+test_bitwise()
+test_float()
+test_utf8()

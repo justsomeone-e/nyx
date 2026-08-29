@@ -1,0 +1,10 @@
+#target hecpp
+
+fn test_coercion() {
+    var a: int = 5
+    var b: float = 2.5
+    var c = a + b
+    print("Coercion:", c)
+}
+
+test_coercion()
