@@ -1,65 +1,175 @@
 {
   "Target Directive": {
-    "prefix": "target",
+    "prefix": "#target",
     "body": [
-      "#target ${1|hecpp,hejs,hepy,heasm|} // Note: Only 1 #target allowed per file (Tek dosyada yalnizca 1 #target kullanilabilir)"
+      "#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}"
     ],
-    "description": "Set Nyx Compilation Target"
+    "description": "Specify compilation backend target"
   },
-  "Function": {
+  "Native Include Directive": {
+    "prefix": "#native include",
+    "body": [
+      "#native include <${1:iostream}>"
+    ],
+    "description": "Include C/C++ native header"
+  },
+  "Native Raw Block": {
+    "prefix": "#native raw",
+    "body": [
+      "#native raw {",
+      "\t${0:// raw C++ code}",
+      "}"
+    ],
+    "description": "Direct native C++ code injection"
+  },
+  "Native Link Directive": {
+    "prefix": "#native link",
+    "body": [
+      "#native link \"${1:ws2_32}\""
+    ],
+    "description": "Link system static or dynamic library"
+  },
+  "Function Definition": {
     "prefix": "fn",
     "body": [
-      "fn ${1:function_name}(${2:params}):",
-      "\t${0:// body}",
-      "\treturn ${3:result}"
+      "fn ${1:name}(${2:params}) -> ${3:type} {",
+      "\treturn ${4:result};",
+      "}"
     ],
-    "description": "Define a Nyx Function"
+    "description": "Strongly typed function definition"
   },
-  "Use Module": {
-    "prefix": "use",
+  "Struct Definition": {
+    "prefix": "struct",
     "body": [
-      "use std:${1|math,time,fs,net|}"
+      "struct ${1:Name} {",
+      "\t${2:field}: ${3:type}",
+      "}"
     ],
-    "description": "Import Universal Standard Module"
+    "description": "Custom data structure definition"
+  },
+  "Impl Block": {
+    "prefix": "impl",
+    "body": [
+      "impl ${1:StructName} {",
+      "\tfn ${2:method_name}(self${3:, params}) -> ${4:type} {",
+      "\t\t${0:// body}",
+      "\t}",
+      "}"
+    ],
+    "description": "Struct method implementation block"
+  },
+  "Variable Declaration": {
+    "prefix": "var",
+    "body": [
+      "var ${1:name} = ${2:value};"
+    ],
+    "description": "Mutable variable with type inference"
+  },
+  "Constant Declaration": {
+    "prefix": "const",
+    "body": [
+      "const ${1:NAME} = ${2:value};"
+    ],
+    "description": "Immutable compile-time constant"
   },
   "If Condition": {
     "prefix": "if",
     "body": [
-      "if ${1:condition}:",
-      "\t${0:// then block}",
-      "else:",
-      "\t"
+      "if ${1:condition} {",
+      "\t${0:// body}",
+      "}"
     ],
-    "description": "If-Else Conditional Block"
+    "description": "Conditional branch"
   },
-  "For Loop": {
+  "If Else": {
+    "prefix": "ifelse",
+    "body": [
+      "if ${1:condition} {",
+      "\t${2:// true branch}",
+      "} else {",
+      "\t${0:// false branch}",
+      "}"
+    ],
+    "description": "If-Else branch"
+  },
+  "For Range Loop": {
     "prefix": "for",
     "body": [
-      "for ${1:i} in ${2:1}..${3:10}:",
-      "\t${0:print($1)}"
+      "for ${1:i} in ${2:0}..${3:10}-1 {",
+      "\t${0:// body}",
+      "}"
     ],
-    "description": "For Range Loop"
+    "description": "Contiguous range loop"
+  },
+  "For In Collection": {
+    "prefix": "for_in",
+    "body": [
+      "for ${1:item} in ${2:collection} {",
+      "\t${0:// process item}",
+      "}"
+    ],
+    "description": "Iterate over collection items"
   },
   "While Loop": {
-    "prefix": "loop",
+    "prefix": "while",
     "body": [
-      "loop ${1:condition}:",
-      "\t${0:// loop body}"
+      "while ${1:condition} {",
+      "\t${0:// body}",
+      "}"
     ],
-    "description": "Loop / While Block"
+    "description": "While loop"
   },
-  "Print": {
+  "Match Expression": {
+    "prefix": "match",
+    "body": [
+      "match ${1:expr} {",
+      "\t${2:pattern} => ${3:result},",
+      "\t\"_\" => ${0:default}",
+      "}"
+    ],
+    "description": "Pattern matching block"
+  },
+  "Unsafe Memory Block": {
+    "prefix": "unsafe",
+    "body": [
+      "unsafe {",
+      "\tvar ptr = addr(${1:target});",
+      "\tvar val = peek(ptr);",
+      "\t${0}",
+      "}"
+    ],
+    "description": "Direct memory hardware access"
+  },
+  "In-File Unit Test": {
+    "prefix": "test",
+    "body": [
+      "test \"${1:test description}\" {",
+      "\tassert(${2:condition}, \"${3:failure explanation}\");",
+      "}"
+    ],
+    "description": "Automated unit test definition"
+  },
+  "Print Statement": {
     "prefix": "print",
     "body": [
-      "print(${1:\"message\"})"
+      "print(${1:\"message\"});"
     ],
-    "description": "Print to Standard Output"
+    "description": "Print to console output"
   },
-  "Variable": {
-    "prefix": "var",
+  "React useState Hook": {
+    "prefix": "useState",
     "body": [
-      "var ${1:name} = ${2:value}"
+      "var [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});"
     ],
-    "description": "Declare Variable"
+    "description": "React state declaration hook"
+  },
+  "React useEffect Hook": {
+    "prefix": "useEffect",
+    "body": [
+      "useEffect(() => {",
+      "\t${0:// side effect}",
+      "}, [${1:deps}]);"
+    ],
+    "description": "React lifecycle side effect hook"
   }
 }
