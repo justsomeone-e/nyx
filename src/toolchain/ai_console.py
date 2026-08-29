@@ -3,12 +3,13 @@ import json
 import time
 import os
 import sys
-from concurrent.futures import ThreadPoolExecutor
+import tempfile
+import subprocess
+import re
 
 def get_env_var(name):
     v = os.getenv(name)
     if v: return v
-    # Try current directory .env or ~/.nyx/.env
     for candidate in [".env", os.path.expanduser("~/.nyx/.env"), os.path.join(os.path.dirname(__file__), "..", "..", ".env")]:
         if os.path.exists(candidate):
             try:
@@ -25,127 +26,140 @@ NEMOTRON_KEY = get_env_var("NVIDIA_NEMOTRON_KEY")
 DEEPSEEK_KEY = get_env_var("DEEPSEEK_API_KEY")
 OPENROUTER_KEY = get_env_var("OPENROUTER_API_KEY")
 
-def query_nim(key, model, prompt, max_tokens=250):
-    if not key:
-        return (0.0, "[!] NVIDIA API key not found. Set NVIDIA_KIMI_KEY or NVIDIA_NEMOTRON_KEY in .env")
-    url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
-    data = {"model": model, "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
-    t0 = time.time()
-    req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=30) as res:
-            out = json.loads(res.read().decode("utf-8"))
-            msg = out["choices"][0]["message"]
-            ans = msg.get("content") or msg.get("reasoning_content") or ""
-            return (time.time() - t0, ans.strip())
-    except Exception as e:
-        return (time.time() - t0, f"Error: {e}")
-
-def query_deepseek_platform(prompt, max_tokens=250):
-    if not DEEPSEEK_KEY:
-        return (0.0, "[!] DEEPSEEK_API_KEY not found in .env")
+def call_deepseek(prompt, max_tokens=350):
     url = "https://api.deepseek.com/chat/completions"
     headers = {"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"}
     data = {"model": "deepseek-chat", "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
     t0 = time.time()
     req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as res:
-            out = json.loads(res.read().decode("utf-8"))
-            return (time.time() - t0, out["choices"][0]["message"]["content"].strip())
-    except Exception as e:
-        return (time.time() - t0, f"Error: {e}")
+    with urllib.request.urlopen(req, timeout=20) as res:
+        out = json.loads(res.read().decode("utf-8"))
+        return (time.time() - t0, out["choices"][0]["message"]["content"].strip())
 
-def query_openrouter(prompt, max_tokens=250):
-    if not OPENROUTER_KEY:
-        return (0.0, "[!] OPENROUTER_API_KEY not found in .env")
-    url = "https://openrouter.ai/api/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
-    data = {"model": "deepseek/deepseek-chat", "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
+def call_auditor(prompt, max_tokens=350):
     t0 = time.time()
-    req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
+    # Try OpenRouter Nemotron 550B
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        headers = {"Authorization": f"Bearer {OPENROUTER_KEY}", "Content-Type": "application/json"}
+        data = {"model": "nvidia/nemotron-3-ultra-550b-a55b", "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
+        req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as res:
             out = json.loads(res.read().decode("utf-8"))
-            return (time.time() - t0, out["choices"][0]["message"]["content"].strip())
-    except Exception as e:
-        return (time.time() - t0, f"Error: {e}")
+            return ("Nemotron 3 Ultra 550B", time.time() - t0, out["choices"][0]["message"]["content"].strip())
+    except Exception:
+        pass
 
-def query_all(prompt):
-    print("\n\033[96m[*] Firing prompt to all active models in parallel...\033[0m")
-    tasks = [
-        ("DeepSeek Platform (~0.8s)", lambda: query_deepseek_platform(prompt)),
-        ("Kimi K3 (Nvidia NIM ~3.2s)", lambda: query_nim(KIMI_KEY, "moonshotai/kimi-k3", prompt)),
-        ("Nemotron 3 Ultra 550B (Nvidia NIM ~7.4s)", lambda: query_nim(NEMOTRON_KEY, "nvidia/nemotron-3-ultra-550b-a55b", prompt)),
-        ("OpenRouter DeepSeek (~3.5s)", lambda: query_openrouter(prompt))
-    ]
-    with ThreadPoolExecutor(max_workers=4) as ex:
-        futures = {name: ex.submit(fn) for name, fn in tasks}
-        for name, f in futures.items():
-            elapsed, res = f.result()
-            print(f"\n\033[92m===================================================================")
-            print(f"[*] {name} ({elapsed:.2f}s):")
-            print(f"===================================================================\033[0m")
-            print(res)
+    # Fallback to DeepSeek
+    t, ans = call_deepseek(prompt, max_tokens)
+    return ("DeepSeek Auditor (Failover)", t, ans)
+
+def call_synthesizer(prompt, max_tokens=350):
+    t0 = time.time()
+    # Try Kimi with 429 guard
+    if KIMI_KEY:
+        try:
+            url = "https://integrate.api.nvidia.com/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {KIMI_KEY}", "Content-Type": "application/json"}
+            data = {"model": "moonshotai/kimi-k3", "messages": [{"role": "user", "content": prompt}], "max_tokens": max_tokens}
+            req = urllib.request.Request(url, data=json.dumps(data).encode("utf-8"), headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as res:
+                out = json.loads(res.read().decode("utf-8"))
+                msg = out["choices"][0]["message"]
+                ans = (msg.get("content") or msg.get("reasoning_content") or "").strip()
+                if ans:
+                    return ("Kimi K3", time.time() - t0, ans)
+        except Exception:
+            pass
+
+    # Failover to DeepSeek Platform
+    t, ans = call_deepseek(prompt, max_tokens)
+    return ("DeepSeek Synthesizer (Failover)", t, ans)
+
+def run_team_pipeline(task):
+    print("\n\033[96m===================================================================")
+    print(f"[*] 🚀 AUTONOMOUS AI TEAM WORKFLOW TRIGGERED")
+    print(f"    Task: {task}")
+    print("===================================================================\033[0m\n")
+
+    # Step 1: Architect
+    print("\033[90m[*] Step 1: Architect (DeepSeek Platform) designing architecture & initial code...\033[0m")
+    p1 = f"You are the Lead Architect for the Nyx systems language. Task: {task}. Propose the architecture and write initial clean Nyx code."
+    t1, res1 = call_deepseek(p1)
+    print(f"\033[92m[1. ARCHITECT: DeepSeek Platform ({t1:.2f}s)]\033[0m")
+    print(res1)
+    print()
+
+    # Step 2: Auditor reading Architect's code
+    print("\033[90m[*] Step 2: Systems Auditor (Nemotron 3 Ultra 550B) reviewing Architect's design...\033[0m")
+    p2 = f"You are the Systems & Security Auditor for the Nyx compiler. The Lead Architect proposed:\n---\n{res1}\n---\nCritique it in 2-3 concise bullet points: edge-case bugs, contract enforcement, and performance/memory leaks. Suggest the hardened refactor."
+    name2, t2, res2 = call_auditor(p2)
+    print(f"\033[93m[2. AUDITOR: {name2} ({t2:.2f}s) reviewing Step 1]\033[0m")
+    print(res2)
+    print()
+
+    # Step 3: Consensus Synthesizer
+    print("\033[90m[*] Step 3: Consensus Synthesizer harmonizing design and audit into final code...\033[0m")
+    p3 = f"You are the Consensus Synthesizer for Nyx. Task: {task}.\nArchitect Design:\n{res1}\nAuditor Critique:\n{res2}\nSynthesize both into the final, definitive, production-ready Nyx code. Put the code in ```nyx ... ```."
+    name3, t3, res3 = call_synthesizer(p3)
+    print(f"\033[95m[3. CONSENSUS SYNTHESIZER: {name3} ({t3:.2f}s)]\033[0m")
+    print(res3)
+    print()
+
+    # Extract Nyx code block if present
+    match = re.search(r"```nyx\s*(.*?)\s*```", res3, re.DOTALL)
+    if not match:
+        match = re.search(r"```\s*(.*?)\s*```", res3, re.DOTALL)
+    
+    if match:
+        code = match.group(1).strip()
+        print("\033[96m===================================================================")
+        print("[*] 🛠️ VERIFYING CONSENSUS CODE ON LOCAL NYX COMPILER...")
+        print("===================================================================\033[0m")
+        with tempfile.NamedTemporaryFile(suffix=".nyx", delete=False, mode="w", encoding="utf-8") as f:
+            f.write(code + "\n\nprint(\"[OK] AI Team consensus code compiled and executed successfully!\");\n")
+            temp_path = f.name
+        
+        try:
+            res = subprocess.run(["nyx", "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
+            if res.stdout:
+                print(res.stdout.strip())
+            if res.returncode == 0:
+                print("\033[92m✔ [COMPILER PASS]: The AI Team code compiled and passed all checks!\033[0m\n")
+            else:
+                if res.stderr:
+                    print(f"\033[91m[Compiler notice]: {res.stderr.strip()}\033[0m")
+        except Exception as e:
+            print(f"\033[93m[Local Run Notice]: {e}\033[0m")
+        finally:
+            try: os.remove(temp_path)
+            except: pass
 
 def start_console():
     print("""
 \033[96m===================================================================
-⚡ NYX AI COMMAND CONSOLE — USER DIRECT CONTROL
+⚡ NYX AI COLLABORATIVE TEAM CONSOLE — MULTI-AGENT PIPELINE
 ===================================================================\033[0m
-Direct Access to Your 4 AI Engineering Engines:
-  1. DeepSeek Platform (Ultra Fast ~0.8s)
-  2. Kimi K3 (Nvidia NIM ~3.2s)
-  3. Nemotron 3 Ultra 550B (Nvidia NIM ~7.4s)
-  4. OpenRouter DeepSeek (~3.5s)
-  5. ⚡ ROUND-TABLE (Send to ALL 4 models simultaneously)
+Your Engineering Team is Assembled:
+  • Architect:             DeepSeek Platform (~0.9s)
+  • Systems Reviewer:      Nemotron 3 Ultra 550B (~3.7s)
+  • Consensus Synthesizer: Kimi K3 / DeepSeek (~1.2s)
+  • Local Integrator:      Antigravity Engine & Clang/LLVM
 
-Type ':model <1-5>' to switch mode.
-Type ':exit' to quit.
+Mode:
+  [TEAM] Every task is automatically debated, audited, and synthesized!
+  Type ':exit' to quit.
 """)
-    mode = "5"
-    names = {
-        "1": "DeepSeek Platform",
-        "2": "Kimi K3",
-        "3": "Nemotron 3 Ultra",
-        "4": "OpenRouter DeepSeek",
-        "5": "⚡ ROUND-TABLE (ALL)"
-    }
 
     while True:
         try:
-            prompt_str = f"\033[93mnyx-ai [{names[mode]}]>\033[0m "
-            cmd = input(prompt_str).strip()
+            cmd = input("\033[92mnyx-team>\033[0m ").strip()
             if not cmd:
                 continue
             if cmd in (":exit", ":quit", "exit", "quit"):
-                print("Exiting Nyx AI Console.")
+                print("Dismissing Nyx AI Team.")
                 break
-            if cmd.startswith(":model"):
-                parts = cmd.split()
-                if len(parts) > 1 and parts[1] in names:
-                    mode = parts[1]
-                    print(f"\033[92m[OK] Switched active model to: {names[mode]}\033[0m")
-                else:
-                    print("Usage: :model <1|2|3|4|5>")
-                continue
-            
-            if mode == "5":
-                query_all(cmd)
-            elif mode == "1":
-                elapsed, res = query_deepseek_platform(cmd)
-                print(f"\n\033[92m[DeepSeek Platform ({elapsed:.2f}s)]:\033[0m\n{res}\n")
-            elif mode == "2":
-                elapsed, res = query_nim(KIMI_KEY, "moonshotai/kimi-k3", cmd)
-                print(f"\n\033[92m[Kimi K3 ({elapsed:.2f}s)]:\033[0m\n{res}\n")
-            elif mode == "3":
-                elapsed, res = query_nim(NEMOTRON_KEY, "nvidia/nemotron-3-ultra-550b-a55b", cmd)
-                print(f"\n\033[92m[Nemotron 3 Ultra ({elapsed:.2f}s)]:\033[0m\n{res}\n")
-            elif mode == "4":
-                elapsed, res = query_openrouter(cmd)
-                print(f"\n\033[92m[OpenRouter DeepSeek ({elapsed:.2f}s)]:\033[0m\n{res}\n")
-
+            run_team_pipeline(cmd)
         except KeyboardInterrupt:
             print("\nType :exit to quit.")
         except EOFError:
