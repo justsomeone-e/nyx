@@ -21,6 +21,7 @@ if (-not (Test-Path $SrcDir)) {
 $CurrentRoot = $PSScriptRoot
 $TempZip = $null
 $TempExtract = $null
+$ExtractedRoot = $null
 
 if ($CurrentRoot -and (Test-Path (Join-Path $CurrentRoot "src"))) {
     Write-Host "[*] Copying local files to $InstallDir..." -ForegroundColor Cyan
@@ -34,7 +35,9 @@ if ($CurrentRoot -and (Test-Path (Join-Path $CurrentRoot "src"))) {
     Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing
     Expand-Archive -Path $TempZip -DestinationPath $TempExtract -Force
     
-    $ExtractedSrc = Join-Path $TempExtract "nyx-main\src"
+    $ExtractedDirs = Get-ChildItem -Path $TempExtract -Directory -ErrorAction SilentlyContinue
+    $ExtractedRoot = if ($ExtractedDirs) { $ExtractedDirs[0].FullName } else { (Join-Path $TempExtract "nyx-main") }
+    $ExtractedSrc = Join-Path $ExtractedRoot "src"
     if (Test-Path $ExtractedSrc) {
         Copy-Item -Path (Join-Path $ExtractedSrc "*") -Destination $SrcDir -Recurse -Force
     }
@@ -126,8 +129,8 @@ $VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
 $LocalExtDir = $null
 if ($CurrentRoot) {
     $LocalExtDir = Join-Path $CurrentRoot "vscode-extension"
-} elseif ($TempExtract -and (Test-Path $TempExtract)) {
-    $LocalExtDir = Join-Path $TempExtract "nyx-main\vscode-extension"
+} elseif ($ExtractedRoot -and (Test-Path $ExtractedRoot)) {
+    $LocalExtDir = Join-Path $ExtractedRoot "vscode-extension"
 }
 
 if ($LocalExtDir -and (Test-Path $LocalExtDir)) {
