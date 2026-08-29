@@ -113,7 +113,7 @@ def call_synthesizer(prompt, system_prompt="You are the Consensus Synthesizer an
 
 def run_team_pipeline(task):
     print("\n\033[96m===================================================================")
-    print(f"[*] 🚀 PURSUIT OF FLAWLESSNESS: DEEP MULTI-AGENT PIPELINE")
+    print(f"[*] MULTI-AGENT COMPILER PIPELINE")
     print(f"    Task: {task}")
     print(f"    Effort: \033[92m{EFFORT_LEVEL.upper()}\033[96m | Closed-Loop Auto-Healing: \033[92mENABLED\033[96m")
     print("===================================================================\033[0m\n")
@@ -147,7 +147,7 @@ Conduct an exhaustive systems audit:
     print()
 
     # Step 3: Consensus Synthesizer
-    print(f"\033[90m[*] Step 3: Consensus Synthesizer formulating flawless code...\033[0m")
+    print(f"\033[90m[*] Step 3: Consensus Synthesizer formulating verified code...\033[0m")
     p3 = f"""Task: {task}
 Architect Proposal:
 ---
@@ -171,7 +171,7 @@ Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. 
     if match:
         current_code = match.group(1).strip()
         print("\033[96m===================================================================")
-        print("[*] 🛡️ CLOSED-LOOP COMPILER VERIFICATION & AUTO-HEALING")
+        print("[*] CLOSED-LOOP COMPILER VERIFICATION & AUTO-HEALING")
         print("===================================================================\033[0m")
         
         max_healing_rounds = 3
@@ -191,10 +191,10 @@ Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. 
                     # 2. Execution test
                     run_res = subprocess.run(["nyx", "run", temp_path, "--target", "hepy"], capture_output=True, text=True, timeout=10)
                     if run_res.returncode == 0:
-                        print(f"\n\033[92m🏆 [100% FLAWLESS VERIFICATION ACHIEVED] (Round {healing_round + 1}):\033[0m")
-                        print("  ✔ Static Type Check: 0 Errors")
-                        print("  ✔ Syntax Invariants: 0 Violations")
-                        print("  ✔ Execution Output:  " + run_res.stdout.strip())
+                        print(f"\n\033[92m[+] [VERIFICATION PASS] (Round {healing_round + 1}):\033[0m")
+                        print("    [OK] Static Type Check: 0 Errors")
+                        print("    [OK] Syntax Invariants: 0 Violations")
+                        print("    [OK] Execution Output:  " + run_res.stdout.strip())
                         is_flawless = True
                         break
                     else:
@@ -205,7 +205,7 @@ Produce the definitive, 100% complete, flawless Nyx code inside ```nyx ... ```. 
                 try: os.remove(temp_path)
                 except: pass
 
-            print(f"\033[93m[⚠️ Flaw Detected in Attempt {healing_round + 1}]:\033[0m")
+            print(f"\033[93m[-] [Compiler Error in Attempt {healing_round + 1}]:\033[0m")
             print(f"  {err_msg.strip()[:200]}")
             print("\033[96m[*] Auto-Healing Triggered: Feeding compiler error back to models to patch...\033[0m")
             
@@ -231,13 +231,13 @@ Fix the error completely. Return ONLY the corrected, 100% flawless Nyx code insi
 def start_console():
     print(f"""
 \033[96m===================================================================
-⚡ NYX AI FLAWLESS MULTI-AGENT WORKFORCE — REAL-TIME COLLABORATION
+nyx Multi-Agent Systems Pipeline
 ===================================================================\033[0m
-Your Engineering Team is Assembled:
-  • Lead Architect:        DeepSeek Platform (~0.9s)
-  • Systems Reviewer:      Nemotron 3 Ultra 550B (High Reasoning ~3.7s)
-  • Consensus Synthesizer: Kimi K3 / DeepSeek (~1.2s)
-  • Closed-Loop Verifier:  Local nyx Compiler Engine & Auto-Healer
+Engines Configured:
+  - Lead Architect:        DeepSeek Platform (~0.9s)
+  - Systems Reviewer:      Nemotron 3 Ultra 550B (High Reasoning ~3.7s)
+  - Consensus Synthesizer: Kimi K3 / DeepSeek (~1.2s)
+  - Closed-Loop Verifier:  Local nyx Compiler Engine & Auto-Healer
 
 Reasoning Effort: \033[92m{EFFORT_LEVEL.upper()}\033[0m
 Commands:

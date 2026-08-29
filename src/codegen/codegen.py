@@ -771,7 +771,6 @@ class UniversalCodeGen:
             "    <div style={{ padding: '32px 24px', background: '#05070a', color: '#00f0ff', fontFamily: 'JetBrains Mono, monospace', minHeight: '100vh' }}>",
             "      <header style={{ borderBottom: '1px solid #1e293b', paddingBottom: 16, marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>",
             "        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>",
-            "          <span style={{ fontSize: 24 }}>⚡</span>",
             "          <div>",
             "            <h1 style={{ margin: 0, fontSize: 20, color: '#f8fafc', letterSpacing: '-0.025em' }}>nyx Reactive Application</h1>",
             "            <span style={{ fontSize: 12, color: '#64748b' }}>Target: React 19 (TSX) • High-Performance Virtual DOM</span>",
@@ -784,7 +783,7 @@ class UniversalCodeGen:
 
         if state_vars:
             lines.append("        <section style={{ background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>")
-            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>📊 Reactive States</h3>")
+            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>Reactive States</h3>")
             lines.append("          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>")
             for v in state_vars:
                 lines.append(f"            <div style={{{{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#070b12', borderRadius: 4, border: '1px solid #1e293b' }}}}>")
@@ -796,7 +795,7 @@ class UniversalCodeGen:
 
         if fn_names:
             lines.append("        <section style={{ background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>")
-            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>⚡ Interactive Actions</h3>")
+            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>Interactive Actions</h3>")
             lines.append("          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>")
             for f in fn_names:
                 lines.append(f"            <button onClick={{() => {f}()}} style={{{{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}}}>")
@@ -807,7 +806,7 @@ class UniversalCodeGen:
 
         lines.extend([
             "        <section style={{ gridColumn: '1 / -1', background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>",
-            "          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 12, fontSize: 14 }}>📜 Live Output Stream</h3>",
+            "          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 12, fontSize: 14 }}>Live Output Stream</h3>",
             "          <div style={{ background: '#020408', padding: 16, borderRadius: 6, maxHeight: 250, overflowY: 'auto', border: '1px solid #0f172a' }}>",
             "            {logs.map((log, idx) => (",
             "              <div key={idx} style={{ color: '#a5f3fc', fontSize: 13, lineHeight: 1.6 }}>&gt; {log}</div>",

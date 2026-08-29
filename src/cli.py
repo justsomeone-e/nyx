@@ -23,11 +23,11 @@ from src.toolchain import (
     DocGenerator, PackageManager, StandalonePackager
 )
 
-VERSION = "3.0.0-beta.4"
+VERSION = "3.0.0-beta.6"
 
 def print_banner():
     print("===================================================================")
-    print(f"nyx core v{VERSION} (beta 4) — systems toolchain")
+    print(f"nyx core v{VERSION} — systems toolchain")
     print("===================================================================")
 
 def print_help():
@@ -920,13 +920,13 @@ def cmd_explain(code: str):
     print(f"    Category: \033[93m{info['category']}\033[0m")
     print(f"===================================================================\033[0m\n")
     print(f"\033[1mDescription:\033[0m\n  {info['description']}\n")
-    print(f"\033[91m❌ Erroneous Code Example:\033[0m")
+    print(f"\033[91m[-] Erroneous Code Example:\033[0m")
     for l in info['bad_example'].split('\n'):
         print(f"  {l}")
-    print(f"\n\033[92m✔ Recommended Fix / Solution:\033[0m")
+    print(f"\n\033[92m[+] Recommended Fix / Solution:\033[0m")
     for l in info['good_example'].split('\n'):
         print(f"  {l}")
-    print(f"\n\033[94m💡 Guidance:\033[0m\n  {info['solution']}\n")
+    print(f"\n\033[94m[*] Guidance:\033[0m\n  {info['solution']}\n")
 
 def cmd_tutorial():
     print_banner()
