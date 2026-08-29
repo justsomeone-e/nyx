@@ -1,7 +1,7 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/logo.svg" width="480" alt="nyx logotype"/>
+    <img src="assets/logo.svg" width="600" alt="nyx logotype"/>
   </a>
   <br/><br/>
 

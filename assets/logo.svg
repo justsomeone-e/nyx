@@ -1,27 +1,56 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 280" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 320" width="100%" height="100%">
   <defs>
+    <!-- Deep Cosmic Background Aura -->
+    <radialGradient id="auroraGlow" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="rgba(0, 240, 255, 0.22)"/>
+      <stop offset="35%" stop-color="rgba(121, 40, 202, 0.16)"/>
+      <stop offset="70%" stop-color="rgba(255, 0, 128, 0.06)"/>
+      <stop offset="100%" stop-color="rgba(5, 7, 10, 0)"/>
+    </radialGradient>
+
+    <!-- Silver-White Metallic Gradient -->
     <linearGradient id="silverGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#FFFFFF"/>
       <stop offset="60%" stop-color="#E1E6EB"/>
       <stop offset="100%" stop-color="#B8C2CC"/>
     </linearGradient>
 
+    <!-- Cyan Electric Bevel Gradient -->
     <linearGradient id="cyanFacet" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#00F0FF"/>
       <stop offset="100%" stop-color="#0088FF"/>
     </linearGradient>
 
+    <!-- Dark Shadow Bevel -->
     <linearGradient id="shadeFacet" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#7B8896"/>
       <stop offset="100%" stop-color="#4B5563"/>
     </linearGradient>
 
-    <filter id="logoShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="rgba(0, 240, 255, 0.25)"/>
+    <!-- Ambient Glow Filters -->
+    <filter id="cosmicBlur" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="30" result="blur"/>
+    </filter>
+
+    <filter id="logoDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="rgba(0, 240, 255, 0.35)"/>
     </filter>
   </defs>
 
-  <g transform="translate(45, 20)" filter="url(#logoShadow)">
+  <style>
+    @keyframes auraPulse {
+      0%, 100% { transform: scale(1); opacity: 0.85; }
+      50% { transform: scale(1.08); opacity: 1; }
+    }
+    .aura-circle { animation: auraPulse 6s ease-in-out infinite; transform-origin: 450px 150px; }
+  </style>
+
+  <!-- Atmospheric Glow Orbs -->
+  <ellipse cx="450" cy="150" rx="360" ry="130" fill="url(#auroraGlow)" class="aura-circle" filter="url(#cosmicBlur)"/>
+  <ellipse cx="450" cy="150" rx="220" ry="80" fill="rgba(0, 240, 255, 0.12)" filter="url(#cosmicBlur)"/>
+
+  <!-- Main 3D Metallic Nyx Logo Centered -->
+  <g transform="translate(145, 45)" filter="url(#logoDropShadow)">
     <!-- LETTER 'n' -->
     <path d="M 60 110 L 96 130 L 96 230 L 60 230 Z" fill="url(#cyanFacet)"/>
     <path d="M 60 70 L 96 70 L 96 130 L 60 110 Z" fill="url(#silverGrad)"/>
