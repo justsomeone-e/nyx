@@ -1,0 +1,72 @@
+// nyx Standard Library - std/thread
+// Native Multi-Threading, Mutex Locks & CSP Channel Primitives
+
+#native include "thread"
+#native include "mutex"
+#native include "chrono"
+#native include "queue"
+#native include "condition_variable"
+
+#native raw {
+struct _NyxChannel {
+    std::queue<std::string> q;
+    std::mutex m;
+    std::condition_variable cv;
+};
+
+static std::vector<_NyxChannel*> _nyx_channels;
+static std::vector<std::mutex*> _nyx_mutexes;
+
+inline int64_t _nyx_mutex_create() {
+    auto m = new std::mutex();
+    _nyx_mutexes.push_back(m);
+    return (int64_t)(_nyx_mutexes.size() - 1);
+}
+
+inline void _nyx_mutex_lock(int64_t id) {
+    if (id >= 0 && (size_t)id < _nyx_mutexes.size()) {
+        _nyx_mutexes[id]->lock();
+    }
+}
+
+inline void _nyx_mutex_unlock(int64_t id) {
+    if (id >= 0 && (size_t)id < _nyx_mutexes.size()) {
+        _nyx_mutexes[id]->unlock();
+    }
+}
+
+inline int64_t _nyx_channel_create() {
+    auto ch = new _NyxChannel();
+    _nyx_channels.push_back(ch);
+    return (int64_t)(_nyx_channels.size() - 1);
+}
+
+inline void _nyx_channel_send(int64_t id, const std::string& msg) {
+    if (id >= 0 && (size_t)id < _nyx_channels.size()) {
+        auto ch = _nyx_channels[id];
+        std::unique_lock<std::mutex> lock(ch->m);
+        ch->q.push(msg);
+        ch->cv.notify_one();
+    }
+}
+
+inline std::string _nyx_channel_recv(int64_t id) {
+    if (id >= 0 && (size_t)id < _nyx_channels.size()) {
+        auto ch = _nyx_channels[id];
+        std::unique_lock<std::mutex> lock(ch->m);
+        ch->cv.wait(lock, [&]() { return !ch->q.empty(); });
+        std::string res = ch->q.front();
+        ch->q.pop();
+        return res;
+    }
+    return "";
+}
+}
+
+fn mutex_create() -> int { return _nyx_mutex_create(); }
+fn mutex_lock(id: int) { _nyx_mutex_lock(id); }
+fn mutex_unlock(id: int) { _nyx_mutex_unlock(id); }
+
+fn channel_create() -> int { return _nyx_channel_create(); }
+fn channel_send(id: int, msg: string) { _nyx_channel_send(id, msg); }
+fn channel_recv(id: int) -> string { return _nyx_channel_recv(id); }

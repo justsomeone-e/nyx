@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "===================================================================" -ForegroundColor Cyan
-Write-Host "Installing nyx Core Toolchain (v3.0.0 Beta 1)..." -ForegroundColor Cyan
+Write-Host "Installing nyx Core Toolchain (v3.0.0 Beta 4)..." -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Cyan
 
 $InstallDir = Join-Path $HOME ".nyx"

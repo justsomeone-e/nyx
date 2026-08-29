@@ -1,11 +1,104 @@
-#target hecpp
+// nyx Standard Library - std/net
+// Cross-Platform High-Performance TCP/UDP Network Primitives
 
-#native include <cstdlib>
+#native link "ws2_32"
 
-fn http_get(url: string) -> string {
-    return ""
+#native include "string"
+#native include "vector"
+
+#native raw {
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <sys/socket.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
+  #include <netdb.h>
+#endif
+
+inline bool _nyx_net_init_wsa() {
+#ifdef _WIN32
+    static bool initialized = false;
+    if (!initialized) {
+        WSADATA wsa;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) return false;
+        initialized = true;
+    }
+#endif
+    return true;
 }
 
-fn http_status() -> int {
-    return 0
+inline int64_t _nyx_net_tcp_connect(const std::string& host, int64_t port) {
+    _nyx_net_init_wsa();
+    int sock = (int)socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) return -1;
+    
+    struct sockaddr_in serv_addr;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons((uint16_t)port);
+    
+    if (inet_pton(AF_INET, host.c_str(), &serv_addr.sin_addr) <= 0) {
+        struct hostent* he = gethostbyname(host.c_str());
+        if (!he) {
+#ifdef _WIN32
+            closesocket(sock);
+#else
+            close(sock);
+#endif
+            return -1;
+        }
+        memcpy(&serv_addr.sin_addr, he->h_addr_list[0], he->h_length);
+    }
+    
+    if (connect(sock, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
+#ifdef _WIN32
+        closesocket(sock);
+#else
+        close(sock);
+#endif
+        return -1;
+    }
+    return sock;
+}
+
+inline bool _nyx_net_tcp_send(int64_t sock, const std::string& data) {
+    if (sock < 0) return false;
+    int res = send((int)sock, data.data(), (int)data.size(), 0);
+    return res >= 0;
+}
+
+inline std::string _nyx_net_tcp_recv(int64_t sock, int64_t max_bytes) {
+    if (sock < 0 || max_bytes <= 0) return "";
+    std::vector<char> buf(max_bytes);
+    int bytes_read = recv((int)sock, buf.data(), (int)max_bytes, 0);
+    if (bytes_read <= 0) return "";
+    return std::string(buf.data(), bytes_read);
+}
+
+inline void _nyx_net_tcp_close(int64_t sock) {
+    if (sock >= 0) {
+#ifdef _WIN32
+        closesocket((int)sock);
+#else
+        close((int)sock);
+#endif
+    }
+}
+}
+
+fn tcp_connect(host: string, port: int) -> int {
+    return _nyx_net_tcp_connect(host, port);
+}
+
+fn tcp_send(sock: int, data: string) -> bool {
+    return _nyx_net_tcp_send(sock, data);
+}
+
+fn tcp_recv(sock: int, max_bytes: int) -> string {
+    return _nyx_net_tcp_recv(sock, max_bytes);
+}
+
+fn tcp_close(sock: int) {
+    _nyx_net_tcp_close(sock);
 }

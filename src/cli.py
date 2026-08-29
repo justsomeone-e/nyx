@@ -23,11 +23,11 @@ from src.toolchain import (
     DocGenerator, PackageManager, StandalonePackager
 )
 
-VERSION = "3.0.0-beta.1"
+VERSION = "3.0.0-beta.4"
 
 def print_banner():
     print("===================================================================")
-    print(f"nyx core v{VERSION} (beta 1) — systems toolchain")
+    print(f"nyx core v{VERSION} (beta 4) — systems toolchain")
     print("===================================================================")
 
 def print_help():
