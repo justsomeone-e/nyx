@@ -1,0 +1,215 @@
+#target hecpp
+#native include <string>
+#native include <vector>
+
+// =========================================================
+// NYX SELF-HOSTING C++20 CODE GENERATOR (PHASE 4.0.7)
+// =========================================================
+
+struct CodeGen {
+    indent_level: int,
+    output: string,
+    in_function: bool
+}
+
+impl CodeGen {
+    fn create() -> CodeGen {
+        return CodeGen(0, "", false)
+    }
+
+    fn emit(self, s: string) {
+        self.output = self.output + s
+    }
+
+    fn emit_line(self, s: string) {
+        var indent = ""
+        for i in 0..self.indent_level-1 {
+            indent = indent + "    "
+        }
+        self.output = self.output + indent + s + "\n"
+    }
+
+    fn map_type(self, t: string) -> string {
+        if t == "int" { return "int64_t" }
+        if t == "float" { return "double" }
+        if t == "string" { return "std::string" }
+        if t == "bool" { return "bool" }
+        if t == "void" { return "void" }
+        if t == "" { return "auto" }
+        return t
+    }
+
+    fn gen_expr(self, node: ASTNode) -> string {
+        if node.kind == "Number" {
+            return node.value
+        }
+        if node.kind == "String" {
+            return "\"" + node.value + "\""
+        }
+        if node.kind == "Boolean" {
+            return node.value
+        }
+        if node.kind == "Identifier" {
+            return node.name
+        }
+        if node.kind == "BinaryOp" {
+            if len(node.children) >= 2 {
+                var left = self.gen_expr(node.children[0])
+                var right = self.gen_expr(node.children[1])
+                return "(" + left + " " + node.op + " " + right + ")"
+            }
+        }
+        if node.kind == "UnaryOp" {
+            if len(node.children) >= 1 {
+                var inner = self.gen_expr(node.children[0])
+                return "(" + node.op + inner + ")"
+            }
+        }
+        if node.kind == "FunctionCall" {
+            var args_str = ""
+            for i in 0..len(node.children)-1 {
+                if i > 0 { args_str = args_str + ", " }
+                args_str = args_str + self.gen_expr(node.children[i])
+            }
+            if node.name == "print" || node.name == "println" {
+                return "std::cout << " + args_str + " << std::endl"
+            }
+            if node.name == "len" {
+                return args_str + ".size()"
+            }
+            return node.name + "(" + args_str + ")"
+        }
+        if node.kind == "Array" {
+            var elems = ""
+            for i in 0..len(node.children)-1 {
+                if i > 0 { elems = elems + ", " }
+                elems = elems + self.gen_expr(node.children[i])
+            }
+            return "{" + elems + "}"
+        }
+        if node.kind == "IndexAccess" {
+            if len(node.children) >= 2 {
+                var arr = self.gen_expr(node.children[0])
+                var idx = self.gen_expr(node.children[1])
+                return arr + "[" + idx + "]"
+            }
+        }
+        if node.kind == "MemberAccess" {
+            if len(node.children) >= 1 {
+                var obj = self.gen_expr(node.children[0])
+                return obj + "." + node.name
+            }
+        }
+        return ""
+    }
+
+    fn gen_stmt(self, node: ASTNode) {
+        if node.kind == "VarDecl" {
+            var cpp_type = self.map_type(node.type_name)
+            var init_str = ""
+            if len(node.children) > 0 {
+                init_str = " = " + self.gen_expr(node.children[0])
+            }
+            if node.is_const {
+                self.emit_line("const " + cpp_type + " " + node.name + init_str + ";")
+            } else {
+                self.emit_line(cpp_type + " " + node.name + init_str + ";")
+            }
+            return
+        }
+
+        if node.kind == "Assign" {
+            if len(node.children) >= 1 {
+                var val = self.gen_expr(node.children[0])
+                self.emit_line(node.name + " = " + val + ";")
+            }
+            return
+        }
+
+        if node.kind == "If" {
+            if len(node.children) >= 1 {
+                var cond = self.gen_expr(node.children[0])
+                self.emit_line("if (" + cond + ") {")
+                self.indent_level = self.indent_level + 1
+                for i in 1..len(node.children)-1 {
+                    self.gen_stmt(node.children[i])
+                }
+                self.indent_level = self.indent_level - 1
+                self.emit_line("}")
+            }
+            return
+        }
+
+        if node.kind == "While" {
+            if len(node.children) >= 1 {
+                var cond = self.gen_expr(node.children[0])
+                self.emit_line("while (" + cond + ") {")
+                self.indent_level = self.indent_level + 1
+                for i in 1..len(node.children)-1 {
+                    self.gen_stmt(node.children[i])
+                }
+                self.indent_level = self.indent_level - 1
+                self.emit_line("}")
+            }
+            return
+        }
+
+        if node.kind == "Return" {
+            if len(node.children) > 0 {
+                var val = self.gen_expr(node.children[0])
+                self.emit_line("return " + val + ";")
+            } else {
+                self.emit_line("return;")
+            }
+            return
+        }
+
+        if node.kind == "FunctionCall" {
+            var expr = self.gen_expr(node)
+            self.emit_line(expr + ";")
+            return
+        }
+
+        if node.kind == "FunctionDef" {
+            var ret_type = self.map_type(node.type_name)
+            var fn_name = node.name
+            if fn_name == "main" {
+                ret_type = "int"
+            }
+            var params_str = ""
+            for i in 0..len(node.params)-1 {
+                if i > 0 { params_str = params_str + ", " }
+                var p = node.params[i]
+                params_str = params_str + self.map_type(p.type_annot) + " " + p.name
+            }
+            self.emit_line(ret_type + " " + fn_name + "(" + params_str + ") {")
+            self.indent_level = self.indent_level + 1
+            for i in 0..len(node.children)-1 {
+                self.gen_stmt(node.children[i])
+            }
+            if fn_name == "main" {
+                self.emit_line("return 0;")
+            }
+            self.indent_level = self.indent_level - 1
+            self.emit_line("}")
+            self.emit_line("")
+            return
+        }
+    }
+
+    fn generate(self, stmts: Array<ASTNode>) -> string {
+        self.output = ""
+        self.emit_line("// Auto-generated by nyx Self-Hosting Compiler (Stage 1)")
+        self.emit_line("#include <iostream>")
+        self.emit_line("#include <string>")
+        self.emit_line("#include <vector>")
+        self.emit_line("#include <cstdint>")
+        self.emit_line("")
+
+        for i in 0..len(stmts)-1 {
+            self.gen_stmt(stmts[i])
+        }
+
+        return self.output
+    }
+}

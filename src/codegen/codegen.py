@@ -377,9 +377,10 @@ class UniversalCodeGen:
                     if any(w in fn_l for w in ("is_", "active", "flag", "enabled", "done")): return "bool"
                     return "string"
                 fields_decls = ";\n    ".join([f"{struct_field_type(f)} {f.name}" for f in node.fields])
-                ctor_params = ", ".join([f"{struct_field_type(f)} {f.name} = {{}}" for f in node.fields])
+                ctor_params = ", ".join([f"{struct_field_type(f)} {f.name}" for f in node.fields])
                 ctor_inits = ", ".join([f"{f.name}({f.name})" for f in node.fields])
-                ctor_body = f"    {node.name}({ctor_params}) : {ctor_inits} {{}}\n" if node.fields else ""
+                default_inits = ", ".join([f"{f.name}()" for f in node.fields])
+                ctor_body = f"    {node.name}() : {default_inits} {{}}\n    {node.name}({ctor_params}) : {ctor_inits} {{}}\n" if node.fields else ""
                 
                 # Check for RAII destructor and methods declared in ImplBlockNode
                 impl_methods_decls = []
@@ -473,7 +474,7 @@ class UniversalCodeGen:
                 if node.collection_expr:
                     res.append(f"{sp}for (auto& {node.var_name} : {emit_expr(node.collection_expr)}) {{")
                 else:
-                    res.append(f"{sp}for (int {node.var_name} = {emit_expr(node.start_expr)}; {node.var_name} <= {emit_expr(node.end_expr)}; {node.var_name}++) {{")
+                    res.append(f"{sp}for (int64_t {node.var_name} = {emit_expr(node.start_expr)}; {node.var_name} <= (int64_t)({emit_expr(node.end_expr)}); {node.var_name}++) {{")
                 for s in node.body: res.extend(emit_stmt(s, indent + 1))
                 res.append(f"{sp}}}")
             elif isinstance(node, ReturnNode): res.append(f"{sp}return {emit_expr(node.expr) if node.expr else ''};")
@@ -504,6 +505,10 @@ class UniversalCodeGen:
                 top_levels.extend(emit_stmt(s, 0))
             else:
                 main_stmts.extend(emit_stmt(s, 1))
+
+        has_user_main = any(isinstance(s, FunctionDefNode) and s.name == "main" for s in self.ast.statements)
+        if has_user_main and "_nyx_user_main();" not in "\n".join(main_stmts):
+            main_stmts.append("    _nyx_user_main();")
 
         lines.extend(top_levels)
         lines.append("int main() {")
