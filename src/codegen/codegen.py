@@ -380,6 +380,11 @@ class UniversalCodeGen:
                     lines.append(f"    {ret} {ef.name}({', '.join(params)});")
                 lines.append("}\n")
 
+        def _cpp_fn_name(name: str) -> str:
+            if name == "main": return "_nyx_user_main"
+            if name in ("abs", "min", "max"): return f"_nyx_user_{name}"
+            return name
+
         def emit_expr(node: ASTNode) -> str:
             if isinstance(node, NumberNode): return str(node.value)
             if isinstance(node, StringNode):
@@ -476,7 +481,7 @@ class UniversalCodeGen:
                         args_list.append(a_expr)
                     return f"{node.callee}({', '.join(args_list)})"
 
-                callee_name = "_nyx_user_main" if node.callee == "main" else node.callee
+                callee_name = _cpp_fn_name(node.callee)
                 args_cpp = ", ".join([emit_expr(a) for a in node.args])
                 return f"{callee_name}({args_cpp})"
             if isinstance(node, LambdaNode):
@@ -568,7 +573,7 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in node.generic_params)}>\n" if node.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in node.params])
                 ret_t = cpp_type(node.return_type)
-                fn_name = "_nyx_user_main" if node.name == "main" else node.name
+                fn_name = _cpp_fn_name(node.name)
                 res.append(f"{gen_s}{ret_t} {fn_name}({params}) {{")
                 for s in node.body: res.extend(emit_stmt(s, indent + 1))
                 res.append("}\n")
@@ -649,7 +654,7 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in s.generic_params)}>\n" if s.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in s.params])
                 ret_t = cpp_type(s.return_type)
-                fn_name = "_nyx_user_main" if s.name == "main" else s.name
+                fn_name = _cpp_fn_name(s.name)
                 fwd_decls.append(f"{gen_s}{ret_t} {fn_name}({params});")
         if fwd_decls:
             lines.extend(fwd_decls)

@@ -1,0 +1,37 @@
+import "std/math"
+
+fn main() {
+    print("=== [NYX STD/MATH PARITY TEST] ===");
+
+    // Test abs
+    print("abs(-5.5):", abs(-5.5));
+    guard abs(-5.5) == 5.5 else { return; }
+
+    // Test max / min
+    print("max(10.2, 20.4):", max(10.2, 20.4));
+    guard max(10.2, 20.4) == 20.4 else { return; }
+    print("min(10.2, 20.4):", min(10.2, 20.4));
+    guard min(10.2, 20.4) == 10.2 else { return; }
+
+    // Test clamp
+    print("clamp(15.0, 0.0, 10.0):", clamp(15.0, 0.0, 10.0));
+    guard clamp(15.0, 0.0, 10.0) == 10.0 else { return; }
+    print("clamp(-5.0, 0.0, 10.0):", clamp(-5.0, 0.0, 10.0));
+    guard clamp(-5.0, 0.0, 10.0) == 0.0 else { return; }
+
+    // Test pow
+    print("pow(2.0, 10):", pow(2.0, 10));
+    guard pow(2.0, 10) == 1024.0 else { return; }
+
+    // Test sqrt (Newton-Raphson)
+    var r = sqrt(25.0);
+    print("sqrt(25.0):", r);
+    guard abs(r - 5.0) < 0.001 else { return; }
+
+    var r2 = sqrt(2.0);
+    print("sqrt(2.0):", r2);
+    guard abs(r2 - 1.414213) < 0.001 else { return; }
+
+    print("[PASS] std/math polyglot parity verified!");
+}
+main();

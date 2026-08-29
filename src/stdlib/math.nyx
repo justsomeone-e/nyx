@@ -1,35 +1,109 @@
-// nyx Standard Library - std/math
-// High-performance Mathematical Functions and Constants
+// std/math.nyx
+// Complete mathematical utilities for Nyx standard library
+// All functions are pure, use guard-based validation, and follow strict Nyx syntax
 
-#native include "cmath"
-#native include "algorithm"
+const SQRT_TOLERANCE: float = 0.000001;
+const SQRT_MAX_ITERATIONS: int = 100;
+const POW_MAX_EXPONENT: int = 1000;
 
-#native raw {
-inline double _nyx_math_sin(double x) { return std::sin(x); }
-inline double _nyx_math_cos(double x) { return std::cos(x); }
-inline double _nyx_math_tan(double x) { return std::tan(x); }
-inline double _nyx_math_sqrt(double x) { return std::sqrt(x); }
-inline double _nyx_math_pow(double b, double e) { return std::pow(b, e); }
-inline double _nyx_math_abs(double x) { return std::abs(x); }
-inline double _nyx_math_floor(double x) { return std::floor(x); }
-inline double _nyx_math_ceil(double x) { return std::ceil(x); }
-inline double _nyx_math_round(double x) { return std::round(x); }
-inline double _nyx_math_clamp(double val, double low, double high) { return std::clamp(val, low, high); }
+// Absolute value of a float
+fn abs(x: float) -> float {
+    guard x >= 0.0 else {
+        return -x;
+    }
+    return x;
 }
 
-const PI = 3.141592653589793;
-const E = 2.718281828459045;
+// Maximum of two floats
+fn max(a: float, b: float) -> float {
+    if a >= b {
+        return a;
+    }
+    return b;
+}
 
-fn sin(x: float) -> float { return _nyx_math_sin(x); }
-fn cos(x: float) -> float { return _nyx_math_cos(x); }
-fn tan(x: float) -> float { return _nyx_math_tan(x); }
-fn sqrt(x: float) -> float { return _nyx_math_sqrt(x); }
-fn pow(b: float, e: float) -> float { return _nyx_math_pow(b, e); }
-fn power(b: float, e: float) -> float { return _nyx_math_pow(b, e); }
-fn abs(x: float) -> float { return _nyx_math_abs(x); }
-fn abs_val(x: float) -> float { return _nyx_math_abs(x); }
-fn absolute(x: float) -> float { return _nyx_math_abs(x); }
-fn floor(x: float) -> float { return _nyx_math_floor(x); }
-fn ceil(x: float) -> float { return _nyx_math_ceil(x); }
-fn round(x: float) -> float { return _nyx_math_round(x); }
-fn clamp(val: float, low: float, high: float) -> float { return _nyx_math_clamp(val, low, high); }
+// Minimum of two floats
+fn min(a: float, b: float) -> float {
+    if a <= b {
+        return a;
+    }
+    return b;
+}
+
+// Clamp a value between min_val and max_val
+// If bounds are inverted, returns min_val
+fn clamp(val: float, min_val: float, max_val: float) -> float {
+    guard min_val <= max_val else {
+        return min_val;
+    }
+    
+    if val < min_val {
+        return min_val;
+    }
+    if val > max_val {
+        return max_val;
+    }
+    return val;
+}
+
+// Integer power function using exponentiation by squaring
+// Supports non-negative integer exponents only
+fn pow(base: float, exp: int) -> float {
+    guard exp >= 0 else {
+        return 0.0;
+    }
+    guard exp <= POW_MAX_EXPONENT else {
+        return 0.0;
+    }
+
+    if exp == 0 {
+        return 1.0;
+    }
+    if base == 0.0 {
+        return 0.0;
+    }
+    if base == 1.0 {
+        return 1.0;
+    }
+
+    var result: float = 1.0;
+    var current_base: float = base;
+    var remaining_exp: int = exp;
+
+    while remaining_exp > 0 {
+        if remaining_exp % 2 == 1 {
+            result = result * current_base;
+            remaining_exp = remaining_exp - 1;
+        }
+        current_base = current_base * current_base;
+        remaining_exp = remaining_exp / 2;
+    }
+    return result;
+}
+
+// Square root using Newton-Raphson method
+fn sqrt(x: float) -> float {
+    guard x >= 0.0 else {
+        return 0.0;
+    }
+
+    if x == 0.0 {
+        return 0.0;
+    }
+
+    var guess: float = x;
+    var iteration: int = 0;
+
+    while iteration < SQRT_MAX_ITERATIONS {
+        var better_guess: float = 0.5 * (guess + x / guess);
+        var difference: float = abs(better_guess - guess);
+
+        if difference < SQRT_TOLERANCE * max(1.0, abs(guess)) {
+            return better_guess;
+        }
+        guess = better_guess;
+        iteration = iteration + 1;
+    }
+
+    return guess;
+}
