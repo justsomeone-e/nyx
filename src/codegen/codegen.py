@@ -213,6 +213,10 @@ class UniversalCodeGen:
                 helper_lines.append("string to_string_val(int v) { return to_string(v); }")
         if "contains" in used_syms:
             helper_lines.append("bool contains(const string& s, const string& sub) { return s.find(sub) != string::npos; }")
+        if "ord" in used_syms:
+            helper_lines.append("inline int64_t ord(const string& s) { return s.empty() ? 0 : (uint8_t)s[0]; }")
+        if "char_code_at" in used_syms:
+            helper_lines.append("inline int64_t char_code_at(const string& s, int64_t i) { return (i < 0 || (size_t)i >= s.size()) ? 0 : (uint8_t)s[i]; }")
         if "addr" in used_syms:
             helper_lines.append("uintptr_t addr(void* ptr) { return (uintptr_t)ptr; }")
             helper_lines.append("template<typename T> uintptr_t addr(T& val) { return (uintptr_t)&val; }")
@@ -225,6 +229,7 @@ class UniversalCodeGen:
             helper_lines.append("template<typename T> int64_t length(const T& c) { return (int64_t)c.size(); }")
         if has_arrays or "push" in used_syms:
             helper_lines.append("template<typename T, typename V> void push(vector<T>& v, const V& val) { v.push_back(val); }")
+            helper_lines.append("template<typename T> vector<T> operator+(const vector<T>& a, const vector<T>& b) { vector<T> res = a; res.insert(res.end(), b.begin(), b.end()); return res; }")
         if has_arrays or "_nyx_at" in used_syms:
             helper_lines.append("template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }")
             helper_lines.append("template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }")
@@ -828,6 +833,8 @@ class UniversalCodeGen:
             "    def contains(s, sub): return str(sub) in str(s)",
             "    def Ok(v): return type('Result', (), {'is_ok': True, 'value': v, 'error': None})()",
             "    def Err(e): return type('Result', (), {'is_ok': False, 'value': None, 'error': e})()",
+            "    def ord(s): return builtins.ord(s[0]) if s else 0",
+            "    def char_code_at(s, i): return builtins.ord(s[i]) if (s and 0 <= i < len(s)) else 0",
             "",
             "# --- Nyx Stdlib Python Runtime Helpers ---",
             "import math as _nyx_math",
@@ -855,6 +862,9 @@ class UniversalCodeGen:
             "    for b in s.encode('utf-8'):",
             "        h = ((h ^ b) * prime) & 0xFFFFFFFFFFFFFFFF",
             "    return f'{h:016x}'",
+            "import hashlib as _nyx_hashlib",
+            "def _nyx_crypto_sha256_hex(s: str) -> str:",
+            "    return _nyx_hashlib.sha256(s.encode('utf-8')).hexdigest()",
             "def _nyx_fs_write_string(p, c):",
             "    try:",
             "        with open(p, 'w', encoding='utf-8') as f: f.write(c)",
@@ -985,6 +995,19 @@ class UniversalCodeGen:
                 for f in node.fields:
                     res.append(f"{sp}        self.{f.name} = {f.name}")
                 return res
+            if isinstance(node, ImplBlockNode):
+                res = [f"{sp}# Implementation for {node.target_type}"]
+                for m in node.methods:
+                    params_list = [p.name for p in m.params]
+                    if not params_list or params_list[0] not in ('self', 'this'):
+                        params_list.insert(0, 'self')
+                    params_s = ", ".join(params_list)
+                    res.append(f"{sp}def _{node.target_type}_{m.name}({params_s}):")
+                    if not m.body: res.append(f"{sp}    pass")
+                    else:
+                        for s in m.body: res.extend(emit_py_stmt(s, indent + 1))
+                    res.append(f"{sp}setattr({node.target_type}, '{m.name}', _{node.target_type}_{m.name})")
+                return res
             if isinstance(node, EnumDefNode):
                 res = [f"{sp}class {node.name}:"]
                 for m in node.members:
@@ -1112,6 +1135,9 @@ function contains(haystack, needle) { return haystack && haystack.includes ? hay
 function to_string(v) { return String(v); }
 function to_int(v) { return parseInt(v, 10); }
 function len(v) { return v ? v.length : 0; }
+function ord(s) { return s ? s.charCodeAt(0) : 0; }
+function char_code_at(s, i) { return (s && i >= 0 && i < s.length) ? s.charCodeAt(i) : 0; }
+const _nyx_add = (a, b) => (Array.isArray(a) && Array.isArray(b)) ? a.concat(b) : (a + b);
 
 // --- Nyx Stdlib JavaScript Runtime Helpers ---
 const _nyx_math_sin = Math.sin;
@@ -1139,6 +1165,10 @@ const _nyx_hash_fnv1a_64_hex = (str) => {
         hash = BigInt.asUintN(64, (hash ^ BigInt(buf[i])) * prime);
     }
     return hash.toString(16).padStart(16, '0');
+};
+
+const _nyx_crypto_sha256_hex = (str) => {
+    return require('crypto').createHash('sha256').update(Buffer.from(str, 'utf-8')).digest('hex');
 };
 
 const _nyx_fs_write_string = (p, c) => { try { require('fs').writeFileSync(p, c, 'utf-8'); return true; } catch { return false; } };
@@ -1199,10 +1229,12 @@ const _nyx_net_tcp_close = (i) => {};
             if isinstance(node, StringNode): return repr(node.value)
             if isinstance(node, BooleanNode): return "true" if node.value else "false"
             if isinstance(node, NullNode): return "null"
-            if isinstance(node, IdentifierNode): return node.name
+            if isinstance(node, IdentifierNode): return "this" if node.name == "self" else node.name
             if isinstance(node, ArrayNode):
                 return f"[{', '.join(emit_js_expr(e) for e in node.elements)}]"
             if isinstance(node, BinaryOpNode):
+                if node.op == '+':
+                    return f"_nyx_add({emit_js_expr(node.left)}, {emit_js_expr(node.right)})"
                 op_map = {'and': '&&', 'or': '||', '&&': '&&', '||': '||', '==': '===', '!=': '!=='}
                 op = op_map.get(node.op, node.op)
                 if op in ('&', '|', '^', '<<', '>>'):
@@ -1220,7 +1252,8 @@ const _nyx_net_tcp_close = (i) => {};
                 return f"{emit_js_expr(node.obj)}[{emit_js_expr(node.index_expr)}]"
             if isinstance(node, FunctionCallNode):
                 args_s = ", ".join(emit_js_expr(a) for a in node.args)
-                return f"{node.callee}({args_s})"
+                callee_s = emit_js_expr(node.callee) if isinstance(node.callee, ASTNode) else str(node.callee)
+                return f"{callee_s}({args_s})"
             return "undefined"
 
         def emit_js_stmt(node: Optional[ASTNode], indent: int = 0) -> List[str]:
@@ -1250,6 +1283,17 @@ const _nyx_net_tcp_close = (i) => {};
                 for f in node.fields:
                     res.append(f"{sp}    this.{f.name} = {f.name};")
                 res.append(f"{sp}}}\n")
+                return res
+
+            if isinstance(node, ImplBlockNode):
+                res = [f"{sp}// Implementation for {node.target_type}"]
+                for m in node.methods:
+                    params_s = ", ".join(p.name for p in m.params if p.name not in ('self', 'this'))
+                    res.append(f"{sp}{node.target_type}.prototype.{m.name} = function({params_s}) {{")
+                    if not m.body: res.append(f"{sp}    // empty")
+                    else:
+                        for s in m.body: res.extend(emit_js_stmt(s, indent + 1))
+                    res.append(f"{sp}}};\n")
                 return res
 
             if isinstance(node, IfNode):
@@ -1355,7 +1399,9 @@ const _nyx_net_tcp_close = (i) => {};
             "fn contains(haystack: &str, needle: &str) -> bool { haystack.contains(needle) }",
             "fn to_string<T: std::fmt::Display>(v: T) -> String { v.to_string() }",
             "fn to_int(s: &str) -> i64 { s.parse::<i64>().unwrap_or(0) }",
-            "fn len<T>(v: &[T]) -> i64 { v.len() as i64 }\n"
+            "fn len<T>(v: &[T]) -> i64 { v.len() as i64 }",
+            "fn ord(s: &str) -> i64 { s.chars().next().map(|c| c as i64).unwrap_or(0) }",
+            "fn char_code_at(s: &str, i: i64) -> i64 { if i >= 0 && (i as usize) < s.len() { s.as_bytes()[i as usize] as i64 } else { 0 } }\n"
         ]
 
         def rust_type(t_annot: Optional[TypeNode]) -> str:

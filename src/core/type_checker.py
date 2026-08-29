@@ -30,7 +30,7 @@ class TypeChecker:
             'to_int': 'int', 'contains': 'bool', 'is_number': 'bool',
             'addr': 'uintptr', 'peek': 'uintptr', 'memdump': 'void',
             'delay_ms': 'void', 'channel': 'Channel', 'Ok': 'Result',
-            'Err': 'Result', 'len': 'int'
+            'Err': 'Result', 'len': 'int', 'ord': 'int', 'char_code_at': 'int'
         }
         for b, t in self.builtins.items():
             self.scopes[0][b] = t

@@ -5,6 +5,7 @@
 #native include <cctype>
 #native include <iomanip>
 
+import "wasm_emitter.nyx"
 
 // =========================================================
 // NYX CANONICAL AST MODEL (1-TO-1 WITH src/core/ast_nodes.py)
@@ -1647,5 +1648,17 @@ fn main() {
     var cg = CodeGen(0, "", false)
     var cpp_code = cg.generate(ast.children)
     print(cpp_code)
+    
+    print("--- WASM Generation ---")
+    var we = WasmEmitter([], 0)
+    var wasm_bytes = we.generate(ast.children)
+    print("Generated " + to_string(len(wasm_bytes)) + " bytes of WASM.")
+    
+    // Dump bytes to stdout so we can capture it or write to file via python
+    var out_str = "WASM_BYTES:"
+    for i in 0..len(wasm_bytes)-1 {
+        out_str = out_str + to_string(wasm_bytes[i]) + ","
+    }
+    print(out_str)
 }
 main()
