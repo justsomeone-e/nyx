@@ -865,6 +865,19 @@ class UniversalCodeGen:
             "import hashlib as _nyx_hashlib",
             "def _nyx_crypto_sha256_hex(s: str) -> str:",
             "    return _nyx_hashlib.sha256(s.encode('utf-8')).hexdigest()",
+            "import urllib.request as _nyx_urllib_req",
+            "def _nyx_http_get(url: str) -> str:",
+            "    try:",
+            "        req = _nyx_urllib_req.Request(url, headers={'User-Agent': 'nyx/3.0'})",
+            "        with _nyx_urllib_req.urlopen(req, timeout=10) as r:",
+            "            return r.read().decode('utf-8', errors='replace')",
+            "    except: return ''",
+            "def _nyx_http_post(url: str, body: str, ct: str) -> str:",
+            "    try:",
+            "        req = _nyx_urllib_req.Request(url, data=body.encode('utf-8'), headers={'User-Agent': 'nyx/3.0', 'Content-Type': ct})",
+            "        with _nyx_urllib_req.urlopen(req, timeout=10) as r:",
+            "            return r.read().decode('utf-8', errors='replace')",
+            "    except: return ''",
             "def _nyx_fs_write_string(p, c):",
             "    try:",
             "        with open(p, 'w', encoding='utf-8') as f: f.write(c)",
@@ -1169,6 +1182,20 @@ const _nyx_hash_fnv1a_64_hex = (str) => {
 
 const _nyx_crypto_sha256_hex = (str) => {
     return require('crypto').createHash('sha256').update(Buffer.from(str, 'utf-8')).digest('hex');
+};
+
+const _nyx_http_get = (url) => {
+    try {
+        const { execSync } = require('child_process');
+        return execSync(`curl -sL "${url}"`, { encoding: 'utf-8', timeout: 10000 });
+    } catch { return ''; }
+};
+
+const _nyx_http_post = (url, body, ct) => {
+    try {
+        const { execSync } = require('child_process');
+        return execSync(`curl -sL -X POST -H "Content-Type: ${ct}" -d "${body.replace(/"/g, '\\"')}" "${url}"`, { encoding: 'utf-8', timeout: 10000 });
+    } catch { return ''; }
 };
 
 const _nyx_fs_write_string = (p, c) => { try { require('fs').writeFileSync(p, c, 'utf-8'); return true; } catch { return false; } };
