@@ -1,6 +1,78 @@
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
 
 function activate(context) {
+    // ---------------------------------------------------------
+    // 1. DISCOVER ALL C++ HEADERS DYNAMICALLY & EXHAUSTIVELY
+    // ---------------------------------------------------------
+    const defaultCppHeaders = [
+        // Containers & Iterators
+        "algorithm", "any", "array", "bitset", "deque", "flat_map", "flat_set", "forward_list",
+        "iterator", "list", "map", "mdspan", "queue", "ranges", "set", "span", "stack",
+        "unordered_map", "unordered_set", "vector",
+
+        // Utilities, Memory & Functional
+        "bit", "chrono", "compare", "concepts", "coroutine", "expected", "functional",
+        "initializer_list", "memory", "memory_resource", "optional", "ratio", "scoped_allocator",
+        "source_location", "stacktrace", "tuple", "type_traits", "typeindex", "typeinfo",
+        "utility", "variant", "version",
+
+        // Strings, Text & Formatting
+        "charconv", "format", "print", "regex", "string", "string_view", "text_encoding",
+
+        // Streams & I/O
+        "filesystem", "fstream", "iomanip", "ios", "iosfwd", "iostream", "istream",
+        "ostream", "spanstream", "sstream", "streambuf", "syncstream", "strstream",
+
+        // Numerics & Math
+        "cmath", "complex", "numbers", "numeric", "random", "valarray",
+
+        // Concurrency & Multi-Threading
+        "atomic", "barrier", "condition_variable", "future", "latch", "mutex",
+        "semaphore", "shared_mutex", "stop_token", "thread",
+
+        // C Standard Library Wrappers
+        "cassert", "cctype", "cerrno", "cfenv", "cfloat", "cinttypes", "climits",
+        "clocale", "cmath", "csetjmp", "csignal", "cstdarg", "cstddef", "cstdint",
+        "cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar", "cwctype",
+
+        // Low-Level, OS & Windows APIs
+        "windows.h", "winsock2.h", "ws2tcpip.h", "windowsx.h", "direct.h", "io.h",
+        "fcntl.h", "conio.h", "process.h", "pthread.h", "sys/stat.h", "sys/types.h",
+        "unistd.h", "directxmath.h", "d3d12.h", "d3d11.h", "GL/gl.h", "vulkan/vulkan.h"
+    ];
+
+    // Attempt to load live headers from installed MinGW compiler
+    const headerSet = new Set(defaultCppHeaders);
+    const minGwDir = "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64";
+    const stlDir = path.join(minGwDir, "include", "c++", "v1");
+    const sysIncDir = path.join(minGwDir, "include");
+
+    try {
+        if (fs.existsSync(stlDir)) {
+            const files = fs.readdirSync(stlDir);
+            for (const f of files) {
+                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap")) {
+                    headerSet.add(f);
+                }
+            }
+        }
+        if (fs.existsSync(sysIncDir)) {
+            const files = fs.readdirSync(sysIncDir);
+            for (const f of files) {
+                if (f.endsWith(".h")) {
+                    headerSet.add(f);
+                }
+            }
+        }
+    } catch (e) {}
+
+    const allHeaders = Array.from(headerSet).sort();
+
+    // ---------------------------------------------------------
+    // 2. STANDARD NYX MODULES & COMPILER TARGETS
+    // ---------------------------------------------------------
     const stdModules = [
         { name: 'std/io', desc: 'Console I/O streams and formatting' },
         { name: 'std/fs', desc: 'File system operations (read, write, exists, remove)' },
@@ -19,13 +91,6 @@ function activate(context) {
         { name: 'std/env', desc: 'Environment configuration access' }
     ];
 
-    const cppHeaders = [
-        'iostream', 'vector', 'string', 'memory', 'algorithm', 'chrono', 'thread',
-        'cstdint', 'cmath', 'fstream', 'sstream', 'map', 'set', 'unordered_map',
-        'unordered_set', 'functional', 'utility', 'tuple', 'variant', 'optional',
-        'span', 'format', 'ranges', 'concepts', 'windows.h', 'unistd.h', 'sys/socket.h'
-    ];
-
     const targetsList = [
         { name: 'hecpp', desc: 'C++20 High Performance Native Binary (Clang/GCC)' },
         { name: 'heasm', desc: 'x86_64 Intel Assembly Source (.s) with LLVM Optimizations' },
@@ -36,6 +101,9 @@ function activate(context) {
         { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' }
     ];
 
+    // ---------------------------------------------------------
+    // 3. COMPLETION PROVIDER WITH COMPLETE C++ HEADER CATALOG
+    // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
         ['nyxlang', 'nyx', 'he', 'holyeasylang'],
         {
@@ -60,14 +128,14 @@ function activate(context) {
                     items.push(item);
                 }
 
-                // 1. #native include <
+                // 1. #native include < (Search through entire C++ repository of headers)
                 if (/#native\s+include/i.test(linePrefix)) {
                     const hasOpenBracket = linePrefix.includes('<');
-                    cppHeaders.forEach(h => {
+                    allHeaders.forEach(h => {
                         const item = new vscode.CompletionItem(h, vscode.CompletionItemKind.Module);
                         item.insertText = hasOpenBracket ? `${h}>` : `<${h}>`;
-                        item.detail = `C++ Header: <${h}>`;
-                        item.documentation = new vscode.MarkdownString(`Standard C/C++ library header \`<${h}>\``);
+                        item.detail = `Header: <${h}>`;
+                        item.documentation = new vscode.MarkdownString(`C/C++ Header \`<${h}>\``);
                         items.push(item);
                     });
                     return items;
@@ -75,7 +143,7 @@ function activate(context) {
 
                 // 2. #native (space)
                 if (/#native\s*$/i.test(linePrefix)) {
-                    addSnippet('include', 'include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', '#native include <header>', 'Includes native C/C++ header.');
+                    addSnippet('include', 'include <${1:iostream}>', '#native include <header>', 'Includes native C/C++ header.');
                     addSnippet('link', 'link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', '#native link "library"', 'Links system library.');
                     addSnippet('raw', 'raw {\n\t${0:// raw C++20 code}\n}', '#native raw { ... }', 'Direct inline C++ code injection block.');
                     addSnippet('use', 'use "${1|namespace std,std::chrono,std::string_view|}";', '#native use "namespace"', 'Injects C++ using namespace declaration.');
@@ -107,7 +175,7 @@ function activate(context) {
 
                 // Top level directives
                 addSnippet('#target', '#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}', 'Target Directive', 'Sets compilation backend target.');
-                addSnippet('#native include', '#native include <${1|iostream,vector,string,memory,chrono,thread,cstdint,cmath,fstream|}>', 'Native Include', 'Includes C/C++ header.');
+                addSnippet('#native include', '#native include <${1:iostream}>', 'Native Include', 'Includes C/C++ header.');
                 addSnippet('#native link', '#native link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', 'Native Link', 'Links system library.');
                 addSnippet('#native raw', '#native raw {\n\t${0:// raw C++20 code}\n}', 'Native Raw Block', 'Injects raw C++ code.');
                 addSnippet('#native use', '#native use "${1|namespace std,std::chrono,std::string_view|}";', 'Native Use Directive', 'Namespace declaration.');
