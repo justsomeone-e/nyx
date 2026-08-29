@@ -110,8 +110,7 @@ def get_target_from_args(default_target="hecpp", entry_file=None):
                 "asm": "heasm", "heasm": "heasm", "assembly": "heasm",
                 "py": "hepy", "python": "hepy", "hepy": "hepy",
                 "js": "hejs", "node": "hejs", "hejs": "hejs",
-                "rs": "hers", "rust": "hers", "hers": "hers",
-                "react": "hereact", "wasm": "hewasm"
+                "rs": "hers", "rust": "hers", "hers": "hers"
             }
             return t_map.get(t_raw, t_raw)
             
@@ -132,8 +131,7 @@ def get_target_from_args(default_target="hecpp", entry_file=None):
                                 "asm": "heasm", "heasm": "heasm", "assembly": "heasm",
                                 "py": "hepy", "python": "hepy", "hepy": "hepy",
                                 "js": "hejs", "node": "hejs", "hejs": "hejs",
-                                "rs": "hers", "rust": "hers", "hers": "hers",
-                                "react": "hereact", "wasm": "hewasm"
+                                "rs": "hers", "rust": "hers", "hers": "hers"
                             }
                             return t_map.get(t_raw, t_raw)
         except Exception:
@@ -142,7 +140,7 @@ def get_target_from_args(default_target="hecpp", entry_file=None):
     return default_target
 
 def get_entry_file(default_entry="src/main.nyx"):
-    args = [a for a in sys.argv[2:] if not a.startswith("--") and a not in ("cpp", "hecpp", "py", "hepy", "js", "hejs", "rs", "hers", "wasm", "react")]
+    args = [a for a in sys.argv[2:] if not a.startswith("--") and a not in ("cpp", "hecpp", "asm", "heasm", "py", "hepy", "js", "hejs", "rs", "hers")]
     if args and (args[0].endswith(".nyx") or args[0].endswith(".he")):
         return args[0]
     if os.path.exists(default_entry):
