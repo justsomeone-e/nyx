@@ -264,6 +264,20 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe"):
             f.write(py_code)
         print(f"\033[92m[OK] Generated Python 3 Module:\033[0m {out_py}")
 
+    elif target in ("hereact", "react"):
+        react_code = codegen.gen_react()
+        out_tsx = os.path.join(build_dir, f"{base_name}.tsx")
+        with open(out_tsx, "w", encoding="utf-8") as f:
+            f.write(react_code)
+        print(f"\033[92m[OK] Generated React 19 TSX Component:\033[0m {out_tsx}")
+
+    elif target in ("hewasm", "wasm"):
+        wasm_code = codegen.gen_wasm()
+        out_wat = os.path.join(build_dir, f"{base_name}.wat")
+        with open(out_wat, "w", encoding="utf-8") as f:
+            f.write(wasm_code)
+        print(f"\033[92m[OK] Generated WebAssembly Module:\033[0m {out_wat}")
+
     else:
         print(f"\033[91m[!] Unknown target '{target}'\033[0m")
 
@@ -358,11 +372,28 @@ def cmd_run(entry_file, target):
             res = subprocess.run([rustc, "--edition=2021", out_rs, "-o", out_exe], capture_output=True, text=True)
             if res.returncode == 0 and os.path.exists(out_exe):
                 print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
-                print("\033[90m--------------------------------------------------\033[0m")
-                subprocess.run([out_exe])
-                print("\033[90m--------------------------------------------------\033[0m")
-            else:
-                print(res.stderr or res.stdout)
+    elif target in ("hereact", "react"):
+        out_tsx = os.path.join(build_dir, f"{base_name}.tsx")
+        react_code = codegen.gen_react()
+        with open(out_tsx, "w", encoding="utf-8") as f:
+            f.write(react_code)
+        print(f"\033[96m[*] Target [React 19 TSX]:\033[0m {out_tsx}")
+        print("\033[90m--------------------------------------------------\033[0m")
+        print(react_code)
+        print("\033[90m--------------------------------------------------\033[0m")
+        print("\033[92m[OK] React component generated successfully.\033[0m")
+    elif target in ("hewasm", "wasm"):
+        out_wat = os.path.join(build_dir, f"{base_name}.wat")
+        wasm_code = codegen.gen_wasm()
+        with open(out_wat, "w", encoding="utf-8") as f:
+            f.write(wasm_code)
+        print(f"\033[96m[*] Target [WebAssembly WAT]:\033[0m {out_wat}")
+        print("\033[90m--------------------------------------------------\033[0m")
+        print(wasm_code)
+        print("\033[90m--------------------------------------------------\033[0m")
+        print("\033[92m[OK] WebAssembly module generated successfully.\033[0m")
+    else:
+        print(f"\033[91m[!] Unknown target '{target}'.\033[0m")
 
 def cmd_new(project_name, is_lib=False):
     if os.path.exists(project_name):
