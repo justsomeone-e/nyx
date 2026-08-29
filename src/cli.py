@@ -39,6 +39,7 @@ Project & Development Commands:
   nyx init [name]                    Initialize a nyx.toml project in current directory
   nyx check [file.nyx]               Fast type-check and semantic validation
   nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
+  nyx bundle [file.nyx] [-o dir]     Bundle Polyglot Web/WASM package (.wasm, .mjs, .d.ts, .tsx)
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx test [file.nyx | all]          Execute in-file unit tests or test framework
   nyx clean                          Remove build artifacts and temporary files
@@ -422,6 +423,48 @@ def cmd_run(entry_file, target):
     else:
         print(f"\033[91m[!] Unknown target '{target}'.\033[0m")
 
+def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool = True):
+    if not os.path.exists(entry_file):
+        print(f"\033[91m[!] Error: File '{entry_file}' not found.\033[0m")
+        sys.exit(1)
+
+    base_name = os.path.splitext(os.path.basename(entry_file))[0]
+    bundle_dir = out_dir or os.path.join(os.getcwd(), "dist", base_name)
+    os.makedirs(bundle_dir, exist_ok=True)
+
+    with open(entry_file, "r", encoding="utf-8") as f:
+        code = f.read()
+
+    from src.core.module_loader import ModuleLoader
+    from src.codegen.bundle_emitter import BundleEmitter
+    loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)))
+    ast = loader.load_program(entry_file, code)
+    TypeChecker(ast, entry_file, code).check()
+
+    emitter = BundleEmitter(ast, module_name=base_name)
+    
+    wat_path = os.path.join(bundle_dir, f"{base_name}.wat")
+    with open(wat_path, "w", encoding="utf-8") as f:
+        f.write(emitter.emit_wat())
+
+    mjs_path = os.path.join(bundle_dir, f"{base_name}.mjs")
+    with open(mjs_path, "w", encoding="utf-8") as f:
+        f.write(emitter.emit_mjs())
+
+    dts_path = os.path.join(bundle_dir, f"{base_name}.d.ts")
+    with open(dts_path, "w", encoding="utf-8") as f:
+        f.write(emitter.emit_dts())
+
+    react_path = os.path.join(bundle_dir, f"{base_name}.react.tsx")
+    with open(react_path, "w", encoding="utf-8") as f:
+        f.write(emitter.emit_react())
+
+    print(f"\033[96m[*] Bundling Polyglot Web/WASM Package:\033[0m {entry_file} -> {bundle_dir}")
+    print(f"\033[92m  [+] WebAssembly Text:     {wat_path}\033[0m")
+    print(f"\033[92m  [+] ES Module Runtime:     {mjs_path}\033[0m")
+    print(f"\033[92m  [+] TypeScript Types:      {dts_path}\033[0m")
+    print(f"\033[92m  [+] React 19 useNyxModule: {react_path}\033[0m")
+
 def cmd_new(project_name, is_lib=False):
     if os.path.exists(project_name):
         print(f"\033[91m[!] Error: Directory '{project_name}' already exists.\033[0m")
@@ -734,6 +777,14 @@ def main():
         is_release = "--release" in sys.argv
         output_type = config.get("output_type", "exe")
         cmd_build(entry, target, is_release, output_type=output_type)
+    elif cmd == "bundle":
+        raw_args = [a for a in sys.argv[2:] if not a.startswith("--")]
+        entry = get_entry_file(raw_args[0] if raw_args else config.get("entry", "src/main.nyx"))
+        out_dir = None
+        for i, a in enumerate(sys.argv):
+            if a in ("-o", "--output") and i + 1 < len(sys.argv):
+                out_dir = sys.argv[i + 1]
+        cmd_bundle(entry, out_dir=out_dir)
     elif cmd == "run":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)

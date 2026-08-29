@@ -1,0 +1,19 @@
+fn add_numbers(a: int, b: int) -> int {
+    return a + b;
+}
+
+fn compute_power(base: int, exp: int) -> int {
+    var res = 1;
+    for i in 1..exp {
+        res = res * base;
+    }
+    return res;
+}
+
+fn greet_developer(name: string) -> string {
+    return $"Hello from Nyx WebAssembly, {name}!";
+}
+
+fn main() {
+    print("Bundle source ready.");
+}

@@ -599,7 +599,16 @@ class UniversalCodeGen:
             else: res.append(f"{sp}{emit_expr(node)};")
             return res
 
-        # Forward declarations for functions with explicit return types
+        # 1. First emit Structs, Enums, TypeAliases, Traits
+        struct_and_type_decls = []
+        for s in self.ast.statements:
+            if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, TypeAliasNode)):
+                struct_and_type_decls.extend(emit_stmt(s, 0))
+        if struct_and_type_decls:
+            lines.extend(struct_and_type_decls)
+            lines.append("")
+
+        # 2. Forward declarations for functions with explicit return types
         fwd_decls = []
         for s in self.ast.statements:
             if isinstance(s, FunctionDefNode) and s.return_type is not None:
@@ -615,7 +624,9 @@ class UniversalCodeGen:
         top_levels = []
         main_stmts = []
         for s in self.ast.statements:
-            if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, FunctionDefNode, TypeAliasNode)):
+            if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, TypeAliasNode)):
+                pass # Already emitted above
+            elif isinstance(s, FunctionDefNode):
                 top_levels.extend(emit_stmt(s, 0))
             elif isinstance(s, VarDeclNode) and (s.is_const or getattr(s, '_is_global', False)):
                 top_levels.extend(emit_stmt(s, 0))

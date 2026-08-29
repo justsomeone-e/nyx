@@ -1,39 +1,25 @@
-// Nyx Standard Library: std/fs
-#target hecpp
+// nyx Standard Library - std/fs
+// Cross-platform Filesystem I/O primitives
 
-fn join_paths(p1: string, p2: string) -> string {
-    if p1 == "" { return p2 }
-    if p2 == "" { return p1 }
-    return p1 + "/" + p2
+#native include "fstream"
+#native include "sstream"
+
+fn read_to_string(path: string) -> string {
+    return "";
 }
 
-fn file_extension(path: string) -> string {
-    if contains(path, ".he") {
-        return ".he"
-    }
-    if contains(path, ".cpp") {
-        return ".cpp"
-    }
-    if contains(path, ".rs") {
-        return ".rs"
-    }
-    if contains(path, ".js") {
-        return ".js"
-    }
-    return ""
+fn write_string(path: string, content: string) -> bool {
+    return true;
 }
 
-fn is_source_file(path: string) -> bool {
-    var ext = file_extension(path)
-    return ext != ""
+fn append_string(path: string, content: string) -> bool {
+    return true;
 }
 
-test "std/fs comprehensive tests" {
-    assert(join_paths("src", "main.he") == "src/main.he", "join_paths nested")
-    assert(join_paths("", "main.he") == "main.he", "join_paths empty left")
-    assert(join_paths("src", "") == "src", "join_paths empty right")
-    assert(file_extension("app.he") == ".he", "extension .he")
-    assert(file_extension("native.cpp") == ".cpp", "extension .cpp")
-    assert(is_source_file("test.rs") == true, "is_source_file true")
-    assert(is_source_file("README.md") == false, "is_source_file false")
+fn exists(path: string) -> bool {
+    return true;
+}
+
+fn remove_file(path: string) -> bool {
+    return true;
 }

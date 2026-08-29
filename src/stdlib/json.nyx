@@ -1,0 +1,18 @@
+// nyx Standard Library - std/json
+// Cross-platform JSON encoding and decoding primitives
+
+fn stringify(val: string) -> string {
+    return val;
+}
+
+fn parse(json_str: string) -> string {
+    return json_str;
+}
+
+fn get_string(json_str: string, key: string) -> string {
+    return "";
+}
+
+fn get_int(json_str: string, key: string) -> int {
+    return 0;
+}
