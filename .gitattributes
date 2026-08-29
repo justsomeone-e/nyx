@@ -1,0 +1,19 @@
+# =========================================================
+# GitHub Linguist Configuration for nyx Toolchain
+# =========================================================
+
+# Treat .nyx and .he files as first-class language code
+*.nyx linguist-detectable=true linguist-language=C++
+*.he linguist-detectable=true linguist-language=C++
+
+# Mark Python Stage 0 Bootstrap & Test Suites as Vendored Tooling
+src/**/*.py linguist-vendored
+tests/**/*.py linguist-vendored
+*.py linguist-vendored
+
+# Mark build scripts & docs
+install.ps1 linguist-vendored
+install.sh linguist-vendored
+assets/**/*.svg linguist-documentation
+docs/** linguist-documentation
+examples/** linguist-documentation
