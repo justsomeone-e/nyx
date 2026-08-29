@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 310" width="100%" height="100%">
   <defs>
     <linearGradient id="fBg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#070a0f"/>
@@ -27,59 +27,71 @@
   </style>
 
   <!-- Container -->
-  <rect width="960" height="300" rx="14" fill="url(#fBg)" stroke="#1e293b" stroke-width="1.5"/>
+  <rect width="960" height="310" rx="14" fill="url(#fBg)" stroke="#1e293b" stroke-width="1.5"/>
 
   <!-- Column 1: Zero-Cost Native ABI -->
-  <g transform="translate(30, 30)">
-    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#00f0ff" stroke-width="1.5" class="c1"/>
+  <g transform="translate(30, 25)">
+    <rect width="280" height="260" rx="10" fill="#0c131d" stroke="#00f0ff" stroke-width="1.5" class="c1"/>
     <!-- Icon Circle -->
-    <circle cx="45" cy="45" r="22" fill="rgba(0, 240, 255, 0.1)" stroke="#00f0ff" stroke-width="1.5" filter="url(#fGlow)"/>
-    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#00f0ff">⚡</text>
+    <circle cx="42" cy="42" r="20" fill="rgba(0, 240, 255, 0.1)" stroke="#00f0ff" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="42" y="49" text-anchor="middle" class="f-mono" font-size="16" fill="#00f0ff">⚡</text>
     
-    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Zero-Cost C/C++ ABI</text>
-    <text x="80" y="60" class="f-mono" font-size="11" fill="#00f0ff">Native Hardware Interop</text>
+    <text x="75" y="38" class="f-sans" font-size="14.5" font-weight="700" fill="#ffffff">Zero-Cost Native ABI</text>
+    <text x="75" y="56" class="f-mono" font-size="11" fill="#00f0ff">Hardware C/C++ Interop</text>
 
-    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8" width="230">
-      Direct C/C++ calling convention without serialization overhead. Supports raw pointers (<tspan class="f-mono" fill="#38bdf8">*T</tspan>), memory peek/poke, and direct hardware bindings.
+    <!-- Multiline Text with explicit line breaks -->
+    <text x="22" y="98" class="f-sans" font-size="12" fill="#94a3b8">
+      <tspan x="22" dy="0">Direct C/C++ calling convention</tspan>
+      <tspan x="22" dy="18">without serialization overhead.</tspan>
+      <tspan x="22" dy="18">Supports raw pointers (*T),</tspan>
+      <tspan x="22" dy="18">peek/poke, and memory dumps.</tspan>
     </text>
 
-    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
-    <text x="35" y="202" class="f-mono" font-size="11" fill="#38bdf8">addr(p) → mov rax, rcx</text>
+    <rect x="22" y="195" width="236" height="38" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="32" y="219" class="f-mono" font-size="11" fill="#38bdf8">addr(p) → mov rax, rcx</text>
   </g>
 
   <!-- Column 2: Topological Graph Engine -->
-  <g transform="translate(340, 30)">
-    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#ff007a" stroke-width="1.5" class="c2"/>
+  <g transform="translate(340, 25)">
+    <rect width="280" height="260" rx="10" fill="#0c131d" stroke="#ff007a" stroke-width="1.5" class="c2"/>
     <!-- Icon Circle -->
-    <circle cx="45" cy="45" r="22" fill="rgba(255, 0, 122, 0.1)" stroke="#ff007a" stroke-width="1.5" filter="url(#fGlow)"/>
-    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#ff007a">🛡️</text>
+    <circle cx="42" cy="42" r="20" fill="rgba(255, 0, 122, 0.1)" stroke="#ff007a" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="42" y="49" text-anchor="middle" class="f-mono" font-size="16" fill="#ff007a">🛡️</text>
     
-    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Topological Engine</text>
-    <text x="80" y="60" class="f-mono" font-size="11" fill="#ff007a">Diamond Deduplication</text>
+    <text x="75" y="38" class="f-sans" font-size="14.5" font-weight="700" fill="#ffffff">Topological Engine</text>
+    <text x="75" y="56" class="f-mono" font-size="11" fill="#ff007a">Diamond Deduplication</text>
 
-    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8">
-      Deterministic module resolution prevents cyclic import deadlocks and deduplicates multi-path dependencies before reaching the typechecker.
+    <!-- Multiline Text with explicit line breaks -->
+    <text x="22" y="98" class="f-sans" font-size="12" fill="#94a3b8">
+      <tspan x="22" dy="0">Deterministic module resolution</tspan>
+      <tspan x="22" dy="18">prevents circular deadlocks and</tspan>
+      <tspan x="22" dy="18">deduplicates shared imports</tspan>
+      <tspan x="22" dy="18">before type validation.</tspan>
     </text>
 
-    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
-    <text x="35" y="202" class="f-mono" font-size="11" fill="#f472b6">import A → B → C (0-cycle)</text>
+    <rect x="22" y="195" width="236" height="38" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="32" y="219" class="f-mono" font-size="11" fill="#f472b6">import A → B → C (0-cycle)</text>
   </g>
 
   <!-- Column 3: Diagnostics v2 -->
-  <g transform="translate(650, 30)">
-    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#4ade80" stroke-width="1.5" class="c3"/>
+  <g transform="translate(650, 25)">
+    <rect width="280" height="260" rx="10" fill="#0c131d" stroke="#4ade80" stroke-width="1.5" class="c3"/>
     <!-- Icon Circle -->
-    <circle cx="45" cy="45" r="22" fill="rgba(74, 222, 128, 0.1)" stroke="#4ade80" stroke-width="1.5" filter="url(#fGlow)"/>
-    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#4ade80">🔍</text>
+    <circle cx="42" cy="42" r="20" fill="rgba(74, 222, 128, 0.1)" stroke="#4ade80" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="42" y="49" text-anchor="middle" class="f-mono" font-size="16" fill="#4ade80">🔍</text>
     
-    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Diagnostics v2</text>
-    <text x="80" y="60" class="f-mono" font-size="11" fill="#4ade80">Sub-Character Spans</text>
+    <text x="75" y="38" class="f-sans" font-size="14.5" font-weight="700" fill="#ffffff">Diagnostics v2</text>
+    <text x="75" y="56" class="f-mono" font-size="11" fill="#4ade80">Sub-Character Spans</text>
 
-    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8">
-      Compiler error engine with exact ANSI-highlighted source context, dual rejection verification, and stable rustc-style error codes (E1000–E4000).
+    <!-- Multiline Text with explicit line breaks -->
+    <text x="22" y="98" class="f-sans" font-size="12" fill="#94a3b8">
+      <tspan x="22" dy="0">Compiler diagnostic engine with</tspan>
+      <tspan x="22" dy="18">ANSI-highlighted source context,</tspan>
+      <tspan x="22" dy="18">dual parser rejection, and</tspan>
+      <tspan x="22" dy="18">stable E1000–E4000 error codes.</tspan>
     </text>
 
-    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
-    <text x="35" y="202" class="f-mono" font-size="11" fill="#86efac">error[E2001]: Type mismatch</text>
+    <rect x="22" y="195" width="236" height="38" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="32" y="219" class="f-mono" font-size="11" fill="#86efac">error[E2001]: Type mismatch</text>
   </g>
 </svg>
