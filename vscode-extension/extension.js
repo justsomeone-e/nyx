@@ -4,13 +4,12 @@ const path = require('path');
 
 function activate(context) {
     // ---------------------------------------------------------
-    // 1. POPULAR & HIGH-PRIORITY HEADERS (SORTED TO TOP)
+    // 1. TOP PRIORITY NATIVE SYSTEM HEADERS (ALWAYS AT TOP)
     // ---------------------------------------------------------
     const priorityHeaders = [
-        { name: "iostream", cat: "C++ STL I/O Stream", desc: "std::cout, std::cin, std::endl" },
-        { name: "vector", cat: "C++ STL Dynamic Array", desc: "std::vector<T> resizable array container" },
-        { name: "string", cat: "C++ STL String", desc: "std::string UTF-8 text representation" },
         { name: "windows.h", cat: "Windows Win32 Native API", desc: "Core Windows OS SDK API, handles, messages, system calls" },
+        { name: "winsock2.h", cat: "Windows Sockets 2", desc: "Windows network sockets and TCP/IP stack API" },
+        { name: "ws2tcpip.h", cat: "Windows TCP/IP Extensions", desc: "getaddrinfo, IPv6 protocols, WinSock2 extensions" },
         { name: "unistd.h", cat: "Linux / POSIX Standard API", desc: "Standard symbolic constants and POSIX operating system API" },
         { name: "sys/socket.h", cat: "Linux / POSIX Sockets", desc: "Internet & UNIX domain socket communication" },
         { name: "sys/stat.h", cat: "Linux / POSIX File Status", desc: "File attributes, permissions, and directory inodes" },
@@ -26,22 +25,23 @@ function activate(context) {
         { name: "dlfcn.h", cat: "POSIX Dynamic Linking", desc: "dlopen, dlsym, dlclose dynamic library loading" },
         { name: "poll.h", cat: "POSIX Event Polling", desc: "poll(), synchronous I/O multiplexing" },
         { name: "sys/epoll.h", cat: "Linux High-Perf Epoll", desc: "epoll_create, epoll_ctl, epoll_wait I/O event notification" },
-        { name: "winsock2.h", cat: "Windows Sockets 2", desc: "Windows network sockets and TCP/IP stack API" },
-        { name: "ws2tcpip.h", cat: "Windows TCP/IP Extensions", desc: "getaddrinfo, IPv6 protocols, WinSock2 extensions" },
-        { name: "stdio.h", cat: "C Standard Input/Output", desc: "printf, scanf, fopen, fread, fwrite" },
-        { name: "stdlib.h", cat: "C Standard General Utilities", desc: "malloc, free, exit, rand, atoi, system" },
+        { name: "iostream", cat: "C++ STL I/O Stream", desc: "std::cout, std::cin, std::endl" },
+        { name: "vector", cat: "C++ STL Dynamic Array", desc: "std::vector<T> resizable array container" },
+        { name: "string", cat: "C++ STL String", desc: "std::string UTF-8 text representation" },
+        { name: "memory", cat: "C++ STL Smart Pointers", desc: "std::unique_ptr, std::shared_ptr, allocators" },
         { name: "chrono", cat: "C++ STL High-Res Time", desc: "std::chrono precision clocks, durations, time points" },
         { name: "thread", cat: "C++ STL Multi-Threading", desc: "std::thread, jthread, hardware concurrency" },
-        { name: "memory", cat: "C++ STL Smart Pointers", desc: "std::unique_ptr, std::shared_ptr, allocators" },
         { name: "cmath", cat: "C++ STL Math Functions", desc: "std::sin, std::cos, std::sqrt, std::pow" },
         { name: "cstdint", cat: "C++ Fixed Width Integers", desc: "int64_t, uint64_t, int32_t, uint8_t types" },
         { name: "algorithm", cat: "C++ STL Algorithms", desc: "std::sort, std::find, std::transform, ranges" },
         { name: "fstream", cat: "C++ STL File Streams", desc: "std::ifstream, std::ofstream disk file I/O" },
-        { name: "sstream", cat: "C++ STL String Streams", desc: "std::stringstream, string formatting buffers" }
+        { name: "sstream", cat: "C++ STL String Streams", desc: "std::stringstream, string formatting buffers" },
+        { name: "stdio.h", cat: "C Standard Input/Output", desc: "printf, scanf, fopen, fread, fwrite" },
+        { name: "stdlib.h", cat: "C Standard Utilities", desc: "malloc, free, exit, rand, atoi, system" }
     ];
 
     // ---------------------------------------------------------
-    // 2. EXHAUSTIVE SYSTEM & STL HEADER DISCOVERY
+    // 2. EXHAUSTIVE C++ STL & SYSTEM HEADER SET
     // ---------------------------------------------------------
     const defaultHeaders = [
         "any", "array", "atomic", "barrier", "bit", "bitset", "charconv",
@@ -69,29 +69,30 @@ function activate(context) {
     ];
 
     const headerMap = new Map();
-    // 1. Add priority headers first
+    // 1. Add priority headers first with top sortText (0000_)
     priorityHeaders.forEach((h, index) => {
-        headerMap.set(h.name, {
+        headerMap.set(h.name.toLowerCase(), {
             name: h.name,
             detail: `[${h.cat}] <${h.name}>`,
             doc: h.desc,
-            sortText: `0_${String(index).padStart(3, '0')}`
+            sortText: `0000_${String(index).padStart(3, '0')}_${h.name}`
         });
     });
 
     // 2. Add remaining default headers
     defaultHeaders.forEach(h => {
-        if (!headerMap.has(h)) {
-            headerMap.set(h, {
+        const key = h.toLowerCase();
+        if (!headerMap.has(key)) {
+            headerMap.set(key, {
                 name: h,
                 detail: `Header: <${h}>`,
                 doc: `C/C++ Header \`<${h}>\``,
-                sortText: `1_${h}`
+                sortText: `1000_${h}`
             });
         }
     });
 
-    // 3. Scan local compiler headers
+    // 3. Scan local compiler headers (filtering out dot-heavy WinRT clutter)
     const minGwDir = "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64";
     const stlDir = path.join(minGwDir, "include", "c++", "v1");
     const sysIncDir = path.join(minGwDir, "include");
@@ -100,16 +101,20 @@ function activate(context) {
         if (fs.existsSync(stlDir)) {
             const files = fs.readdirSync(stlDir);
             for (const f of files) {
-                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap") && !headerMap.has(f)) {
-                    headerMap.set(f, { name: f, detail: `[C++ STL] <${f}>`, doc: `Standard C++ Library header \`<${f}>\``, sortText: `2_${f}` });
+                const key = f.toLowerCase();
+                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap") && !headerMap.has(key)) {
+                    headerMap.set(key, { name: f, detail: `[C++ STL] <${f}>`, doc: `Standard C++ Library header \`<${f}>\``, sortText: `2000_${f}` });
                 }
             }
         }
         if (fs.existsSync(sysIncDir)) {
             const files = fs.readdirSync(sysIncDir);
             for (const f of files) {
-                if (f.endsWith(".h") && !headerMap.has(f)) {
-                    headerMap.set(f, { name: f, detail: `[System Header] <${f}>`, doc: `System header \`<${f}>\``, sortText: `3_${f}` });
+                // Filter out winrt noisy dot headers like windows.devices.bluetooth.h so windows.h stays crystal clear
+                const isWinRtNoise = (f.match(/\./g) || []).length > 1 && f.startsWith("windows.");
+                const key = f.toLowerCase();
+                if (f.endsWith(".h") && !isWinRtNoise && !headerMap.has(key)) {
+                    headerMap.set(key, { name: f, detail: `[System Header] <${f}>`, doc: `System header \`<${f}>\``, sortText: `3000_${f}` });
                 }
             }
         }
@@ -147,7 +152,7 @@ function activate(context) {
     ];
 
     // ---------------------------------------------------------
-    // 4. SMART CONTEXTUAL COMPLETION PROVIDER
+    // 4. COMPLETION PROVIDER
     // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
         ['nyxlang', 'nyx', 'he', 'holyeasylang'],
@@ -173,19 +178,19 @@ function activate(context) {
                     items.push(item);
                 }
 
-                // 1. #native include < (Search all headers with clean replacement)
+                // 1. #native include <
                 if (/#native\s+include/i.test(linePrefix)) {
                     const openIdx = linePrefix.lastIndexOf('<');
-                    headerMap.forEach((hInfo, hName) => {
-                        const item = new vscode.CompletionItem(hName, vscode.CompletionItemKind.Module);
+                    headerMap.forEach((hInfo) => {
+                        const item = new vscode.CompletionItem(hInfo.name, vscode.CompletionItemKind.Module);
                         if (openIdx !== -1) {
                             item.range = new vscode.Range(new vscode.Position(position.line, openIdx), position);
-                            item.insertText = `<${hName}>`;
+                            item.insertText = `<${hInfo.name}>`;
                         } else {
-                            item.insertText = ` <${hName}>`;
+                            item.insertText = ` <${hInfo.name}>`;
                         }
                         item.detail = hInfo.detail;
-                        item.documentation = new vscode.MarkdownString(`### \`<${hName}>\`\n\n${hInfo.doc}`);
+                        item.documentation = new vscode.MarkdownString(`### \`<${hInfo.name}>\`\n\n${hInfo.doc}`);
                         item.sortText = hInfo.sortText;
                         items.push(item);
                     });
@@ -194,7 +199,7 @@ function activate(context) {
 
                 // 2. #native (space)
                 if (/#native\s*$/i.test(linePrefix)) {
-                    addSnippet('include', 'include <${1:iostream}>', '#native include <header>', 'Includes native C/C++ header.');
+                    addSnippet('include', 'include <${1:windows.h}>', '#native include <header>', 'Includes native C/C++ header.');
                     addSnippet('link', 'link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', '#native link "library"', 'Links system library.');
                     addSnippet('raw', 'raw {\n\t${0:// raw C++20 code}\n}', '#native raw { ... }', 'Direct inline C++ code injection block.');
                     addSnippet('use', 'use "${1|namespace std,std::chrono,std::string_view|}";', '#native use "namespace"', 'Injects C++ using namespace declaration.');
@@ -226,7 +231,7 @@ function activate(context) {
 
                 // Top level directives
                 addSnippet('#target', '#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}', 'Target Directive', 'Sets compilation backend target.');
-                addSnippet('#native include', '#native include <${1:iostream}>', 'Native Include', 'Includes C/C++ header.');
+                addSnippet('#native include', '#native include <${1:windows.h}>', 'Native Include', 'Includes C/C++ header.');
                 addSnippet('#native link', '#native link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', 'Native Link', 'Links system library.');
                 addSnippet('#native raw', '#native raw {\n\t${0:// raw C++20 code}\n}', 'Native Raw Block', 'Injects raw C++ code.');
                 addSnippet('#native use', '#native use "${1|namespace std,std::chrono,std::string_view|}";', 'Native Use Directive', 'Namespace declaration.');
