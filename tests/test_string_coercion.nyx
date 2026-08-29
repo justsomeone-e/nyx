@@ -1,0 +1,10 @@
+#target hecpp
+
+fn test_string_coercion() {
+    var a: int = 5
+    var b = "value is " + a
+    var c = a + " is value"
+    print("Coercion:", b, "|", c)
+}
+
+test_string_coercion()

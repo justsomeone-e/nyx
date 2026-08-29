@@ -30,7 +30,7 @@ class TypeChecker:
             'to_int': 'int', 'contains': 'bool', 'is_number': 'bool',
             'addr': 'uintptr', 'peek': 'uintptr', 'memdump': 'void',
             'delay_ms': 'void', 'channel': 'Channel', 'Ok': 'Result',
-            'Err': 'Result', 'len': 'int'
+            'Err': 'Result', 'len': 'int', 'ord': 'int', 'char_code_at': 'int'
         }
         for b, t in self.builtins.items():
             self.scopes[0][b] = t
@@ -328,22 +328,24 @@ class TypeChecker:
     def infer_type(self, node: Optional[ASTNode]) -> str:
         if not node:
             return 'void'
+        t = 'any'
         if isinstance(node, NumberNode):
-            return 'float' if isinstance(node.value, float) else 'int'
-        if isinstance(node, StringNode):
-            return 'string'
-        if isinstance(node, BooleanNode):
-            return 'bool'
-        if isinstance(node, NullNode):
-            return 'null'
-        if isinstance(node, ArrayNode):
+            t = 'float' if isinstance(node.value, float) else 'int'
+        elif isinstance(node, StringNode):
+            t = 'string'
+        elif isinstance(node, BooleanNode):
+            t = 'bool'
+        elif isinstance(node, NullNode):
+            t = 'null'
+        elif isinstance(node, ArrayNode):
             if node.elements:
                 inner = self.infer_type(node.elements[0])
-                return f'Array<{inner}>'
-            return 'Array<any>'
-        if isinstance(node, IdentifierNode):
-            t = self.lookup(node.name)
-            if not t:
+                t = f'Array<{inner}>'
+            else:
+                t = 'Array<any>'
+        elif isinstance(node, IdentifierNode):
+            lookup_t = self.lookup(node.name)
+            if not lookup_t:
                 DiagnosticEmitter.emit_error(
                     self.filepath, self.source, node.line, node.col,
                     "E2002", f"Undefined variable '{node.name}'",
@@ -351,28 +353,33 @@ class TypeChecker:
                     found=f"'{node.name}'",
                     help_msg=f"Variable '{node.name}' is referenced before declaration or outside its scope."
                 )
-            return t if t else 'any'
-        if isinstance(node, BinaryOpNode):
+            t = lookup_t if lookup_t else 'any'
+        elif isinstance(node, BinaryOpNode):
             if node.op in ('==', '!=', '>', '<', '>=', '<=', 'and', 'or', '&&', '||'):
-                return 'bool'
-            l_t = self.infer_type(node.left)
-            r_t = self.infer_type(node.right)
-            if l_t == 'string' and r_t == 'string' and node.op == '+':
-                return 'string'
-            if l_t == 'float' or r_t == 'float':
-                return 'float'
-            return l_t if l_t != 'any' else r_t
-        if isinstance(node, FunctionCallNode):
+                t = 'bool'
+            else:
+                l_t = self.infer_type(node.left)
+                r_t = self.infer_type(node.right)
+                if (l_t == 'string' or r_t == 'string') and node.op == '+':
+                    t = 'string'
+                elif l_t == 'float' or r_t == 'float':
+                    t = 'float'
+                else:
+                    t = l_t if l_t != 'any' else r_t
+        elif isinstance(node, FunctionCallNode):
             if node.callee in self.struct_defs:
-                return node.callee
-            if node.callee in self.func_defs:
-                return self.func_defs[node.callee]['ret']
-            if node.callee in self.builtins:
-                return self.builtins[node.callee]
-            return 'any'
-        if isinstance(node, MemberAccessNode):
+                t = node.callee
+            elif node.callee in self.func_defs:
+                t = self.func_defs[node.callee]['ret']
+            elif node.callee in self.builtins:
+                t = self.builtins[node.callee]
+            else:
+                t = 'any'
+        elif isinstance(node, MemberAccessNode):
             obj_t = self.infer_type(node.obj)
             if obj_t in self.struct_defs and node.member in self.struct_defs[obj_t]:
-                return self.struct_defs[obj_t][node.member]
-            return 'any'
-        return 'any'
+                t = self.struct_defs[obj_t][node.member]
+            else:
+                t = 'any'
+        node.inferred_type = t
+        return t

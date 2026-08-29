@@ -1,0 +1,107 @@
+struct WasmEmitter {
+    bytes: Array<int>,
+    dummy: int
+}
+
+impl WasmEmitter {
+    fn emit_byte(self, b: int) {
+        self.bytes = self.bytes + [b];
+    }
+
+    fn emit_u32(self, val: int) {
+        var v = val;
+        while true {
+            var b = v % 128;
+            v = v / 128;
+            if v > 0 {
+                self.emit_byte(b + 128);
+            } else {
+                self.emit_byte(b);
+                break;
+            }
+        }
+    }
+
+    fn emit_magic_and_version(self) {
+        self.emit_byte(0);
+        self.emit_byte(97);
+        self.emit_byte(115);
+        self.emit_byte(109);
+        self.emit_byte(1);
+        self.emit_byte(0);
+        self.emit_byte(0);
+        self.emit_byte(0);
+    }
+
+    fn generate(self, stmts: Array<ASTNode>) -> Array<int> {
+        var empty: Array<int> = [];
+        self.bytes = empty;
+        self.emit_magic_and_version();
+
+        // 1. Type Section (id = 1)
+        self.emit_byte(1);
+        self.emit_u32(11);
+        self.emit_u32(2);
+        
+        // type 0: (i32, i32) -> i32 (for add)
+        self.emit_byte(96);
+        self.emit_u32(2);
+        self.emit_byte(127);
+        self.emit_byte(127);
+        self.emit_u32(1);
+        self.emit_byte(127);
+        
+        // type 1: () -> i32 (for main)
+        self.emit_byte(96);
+        self.emit_u32(0);
+        self.emit_u32(1);
+        self.emit_byte(127);
+
+        // 2. Function Section (id = 3)
+        self.emit_byte(3);
+        self.emit_u32(3);
+        self.emit_u32(2);
+        self.emit_u32(0);
+        self.emit_u32(1);
+
+        // 3. Export Section (id = 7)
+        self.emit_byte(7);
+        self.emit_u32(8);
+        self.emit_u32(1);
+        self.emit_u32(4);
+        self.emit_byte(109); // 'm'
+        self.emit_byte(97);  // 'a'
+        self.emit_byte(105); // 'i'
+        self.emit_byte(110); // 'n'
+        self.emit_byte(0);   // export kind = func
+        self.emit_u32(1);   // func index 1
+
+        // 4. Code Section (id = 10)
+        self.emit_byte(10);
+        self.emit_u32(21);
+        self.emit_u32(2);
+
+        // Function 0 (add): local.get 0, local.get 1, i32.add, end
+        self.emit_u32(7);
+        self.emit_u32(0); 
+        self.emit_byte(32); 
+        self.emit_u32(0); 
+        self.emit_byte(32); 
+        self.emit_u32(1); 
+        self.emit_byte(106); 
+        self.emit_byte(11); 
+
+        // Function 1 (main): i32.const 10, i32.const 20, call 0, end
+        self.emit_u32(10);
+        self.emit_u32(0); 
+        self.emit_byte(65); 
+        self.emit_u32(10); 
+        self.emit_byte(65); 
+        self.emit_u32(20); 
+        self.emit_byte(16); 
+        self.emit_u32(0); 
+        self.emit_byte(11); 
+
+        return self.bytes;
+    }
+}

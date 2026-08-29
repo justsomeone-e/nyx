@@ -1,0 +1,155 @@
+// nyx Standard Library - std/collections
+// High-Performance Core Data Structures: Stack, Queue, and Dynamic Buffers
+
+struct Stack {
+    items: Array<int>,
+    count: int
+}
+
+impl Stack {
+    fn push(self, val: int) {
+        self.items = self.items + [val];
+        self.count = self.count + 1;
+    }
+
+    fn pop(self) -> int {
+        guard self.count > 0 else {
+            return 0;
+        }
+        self.count = self.count - 1;
+        var val = self.items[self.count];
+        return val;
+    }
+
+    fn top(self) -> int {
+        guard self.count > 0 else {
+            return 0;
+        }
+        return self.items[self.count - 1];
+    }
+
+    fn is_empty(self) -> bool {
+        return self.count == 0;
+    }
+
+    fn size(self) -> int {
+        return self.count;
+    }
+}
+
+struct Queue {
+    items: Array<int>,
+    head: int,
+    tail: int
+}
+
+impl Queue {
+    fn enqueue(self, val: int) {
+        self.items = self.items + [val];
+        self.tail = self.tail + 1;
+    }
+
+    fn dequeue(self) -> int {
+        guard self.tail > self.head else {
+            return 0;
+        }
+        var val = self.items[self.head];
+        self.head = self.head + 1;
+        return val;
+    }
+
+    fn front(self) -> int {
+        guard self.tail > self.head else {
+            return 0;
+        }
+        return self.items[self.head];
+    }
+
+    fn is_empty(self) -> bool {
+        return self.head >= self.tail;
+    }
+
+    fn size(self) -> int {
+        return self.tail - self.head;
+    }
+}
+
+fn new_stack() -> Stack {
+    var empty_items: Array<int> = [];
+    return Stack(empty_items, 0);
+}
+
+fn new_queue() -> Queue {
+    var empty_items: Array<int> = [];
+    return Queue(empty_items, 0, 0);
+}
+struct Map {
+    keys: Array<string>,
+    vals: Array<string>,
+    count: int
+}
+
+impl Map {
+    fn put(self, key: string, val: string) {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                self.vals[i] = val;
+                return;
+            }
+            i = i + 1;
+        }
+        self.keys = self.keys + [key];
+        self.vals = self.vals + [val];
+        self.count = self.count + 1;
+    }
+
+    fn get(self, key: string) -> string {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                return self.vals[i];
+            }
+            i = i + 1;
+        }
+        return "";
+    }
+
+    fn has(self, key: string) -> bool {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                return true;
+            }
+            i = i + 1;
+        }
+        return false;
+    }
+
+    fn size(self) -> int {
+        return self.count;
+    }
+
+    fn remove(self, key: string) -> bool {
+        var i = 0;
+        while i < self.count {
+            if self.keys[i] == key {
+                var last = self.count - 1;
+                if i != last {
+                    self.keys[i] = self.keys[last];
+                    self.vals[i] = self.vals[last];
+                }
+                self.count = self.count - 1;
+                return true;
+            }
+            i = i + 1;
+        }
+        return false;
+    }
+}
+
+fn new_map() -> Map {
+    var empty_k: Array<string> = [];
+    var empty_v: Array<string> = [];
+    return Map(empty_k, empty_v, 0);
+}

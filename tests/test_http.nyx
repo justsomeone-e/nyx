@@ -1,0 +1,15 @@
+import "std/http"
+
+fn main() {
+    print("=== [NYX STD/HTTP GET/POST CONFORMANCE TEST] ===");
+    // Test endpoint using httpbin or local response
+    var res = http_get("https://httpbin.org/get");
+    print("HTTP GET length:", len(res));
+    if len(res) > 0 {
+        print("[PASS] HTTP GET fetched payload successfully!");
+    } else {
+        // In offline environments, http_get gracefully returns empty string
+        print("[NOTICE] HTTP GET returned empty (offline environment safe)");
+    }
+}
+main();

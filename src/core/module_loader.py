@@ -130,7 +130,13 @@ class ModuleLoader:
                 self.collected_declarations.append(s)
                 continue
 
-            if isinstance(s, (FunctionDefNode, StructDefNode, TraitDefNode, ImplBlockNode, TypeAliasNode, EnumDefNode, ExternFnDeclNode, VarDeclNode)):
+            if isinstance(s, ImplBlockNode):
+                if imp.symbols and s.target_type not in imp.symbols:
+                    continue
+                self.collected_declarations.append(s)
+                continue
+
+            if isinstance(s, (FunctionDefNode, StructDefNode, TraitDefNode, TypeAliasNode, EnumDefNode, ExternFnDeclNode, VarDeclNode)):
                 sym_name = getattr(s, "name", None)
                 if not sym_name:
                     continue

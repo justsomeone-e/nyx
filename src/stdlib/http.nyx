@@ -1,0 +1,57 @@
+// nyx Standard Library - std/http
+// Lightweight Cross-Platform HTTP Networking Engine
+
+#native include "string"
+#native include "cstdio"
+
+#native raw {
+inline std::string _nyx_http_get(const std::string& url) {
+    std::string cmd = "curl -sL \"" + url + "\"";
+#ifdef _WIN32
+    FILE* pipe = _popen(cmd.c_str(), "r");
+#else
+    FILE* pipe = popen(cmd.c_str(), "r");
+#endif
+    if (!pipe) return "";
+    char buffer[256];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+        result += buffer;
+    }
+#ifdef _WIN32
+    _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
+    return result;
+}
+
+inline std::string _nyx_http_post(const std::string& url, const std::string& body, const std::string& content_type) {
+    std::string cmd = "curl -sL -X POST -H \"Content-Type: " + content_type + "\" -d \"" + body + "\" \"" + url + "\"";
+#ifdef _WIN32
+    FILE* pipe = _popen(cmd.c_str(), "r");
+#else
+    FILE* pipe = popen(cmd.c_str(), "r");
+#endif
+    if (!pipe) return "";
+    char buffer[256];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe) != NULL) {
+        result += buffer;
+    }
+#ifdef _WIN32
+    _pclose(pipe);
+#else
+    pclose(pipe);
+#endif
+    return result;
+}
+}
+
+fn http_get(url: string) -> string {
+    return _nyx_http_get(url);
+}
+
+fn http_post(url: string, body: string, content_type: string) -> string {
+    return _nyx_http_post(url, body, content_type);
+}

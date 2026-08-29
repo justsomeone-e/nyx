@@ -350,10 +350,15 @@ impl Parser {
             }
             var body: Array<ASTNode> = []
             if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                var closed = false
+                while self.current().type_name != "EOF" {
+                    if self.match_type("RBRACE") {
+                        closed = true
+                        break
+                    }
                     body.push(self.parse_statement())
                 }
-                if self.current().type_name == "EOF" {
+                if not closed {
                     self.has_error = true
                     self.error_msg = "Unclosed function body block: expected '}'"
                 }
@@ -367,14 +372,19 @@ impl Parser {
             var name = self.expect("IDENT").value
             var fields: Array<FunctionParam> = []
             if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                var closed = false
+                while self.current().type_name != "EOF" {
+                    if self.match_type("RBRACE") {
+                        closed = true
+                        break
+                    }
                     var fname = self.expect("IDENT").value
                     self.expect("COLON")
                     var ftype = self.parse_type()
                     fields.push(FunctionParam(fname, ftype))
                     self.match_type("COMMA")
                 }
-                if self.current().type_name == "EOF" {
+                if not closed {
                     self.has_error = true
                     self.error_msg = "Unclosed struct definition block: expected '}'"
                 }

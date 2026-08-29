@@ -123,7 +123,7 @@ class Debugger:
         with open(filepath, 'r', encoding='utf-8') as f:
             lines = f.readlines()
 
-        print(f"\033[96m⚡ Nyx Interactive Debugger v4.0\033[0m")
+        print(f"\033[96m[*] Nyx Interactive Debugger v4.0\033[0m")
         print(f"Debugging: {filepath} ({len(lines)} lines)")
         print("Commands: (n)ext, (p)rint <var>, (m)emory <addr>, (b)reak <line>, (c)ontinue, (q)uit\n")
 
@@ -173,7 +173,7 @@ class Debugger:
 class Profiler:
     @staticmethod
     def profile_file(filepath: str):
-        print(f"\033[96m⚡ Nyx Runtime Profiler v4.0\033[0m")
+        print(f"\033[96m[*] Nyx Runtime Profiler v4.0\033[0m")
         print(f"Profiling: {filepath}\n")
         
         t0 = time.perf_counter()
@@ -235,8 +235,8 @@ class DocGenerator:
     </style>
 </head>
 <body>
-    <h1>⚡ Nyx Otomatik Dokümantasyon</h1>
-    <p>Dosya: <code>{os.path.basename(filepath)}</code></p>
+    <h1>Nyx Automated Documentation</h1>
+    <p>File: <code>{os.path.basename(filepath)}</code></p>
     <div style="margin-top: 30px;">
 """
         for it in doc_items:
@@ -255,7 +255,7 @@ class DocGenerator:
         with open(out_path, 'w', encoding='utf-8') as f:
             f.write(html_content)
 
-        print(f"\033[92m[✓] Documentation generated at:\033[0m {out_path}")
+        print(f"\033[92m[OK] Documentation generated at:\033[0m {out_path}")
 
 # =========================================================
 # 6. PACKAGE MANAGER (he pkg / he add / he remove / he.toml)
@@ -337,12 +337,12 @@ class PackageManager:
 class StandalonePackager:
     @staticmethod
     def compile_standalone(filepath: str):
-        print(f"\033[96m⚡ Packaging Standalone Binary for:\033[0m {filepath}")
+        print(f"\033[96m[*] Packaging Standalone Binary for:\033[0m {filepath}")
         base_name = os.path.splitext(filepath)[0]
         out_bat = f"{base_name}.exe.bat"
         with open(out_bat, 'w', encoding='utf-8') as f:
             f.write(f"""@echo off
 python "{os.path.abspath('he.py')}" run "{os.path.abspath(filepath)}" %*
 """)
-        print(f"\033[92m[✓] Standalone Executable Created:\033[0m {out_bat}")
-        print("You can double-click or run this file on any machine with python!")
+        print(f"\033[92m[OK] Standalone Executable Created:\033[0m {out_bat}")
+        print("You can execute this binary on any system with python.")

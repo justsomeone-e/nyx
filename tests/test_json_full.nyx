@@ -1,0 +1,37 @@
+import "std/json"
+
+fn main() {
+    print("=== [NYX STD/JSON PARSER & KEY EXTRACTOR TEST] ===");
+    var doc = "{\"title\": \"Nyx Language\", \"version\": 3, \"active\": true, \"author\": \"DeepMind\"}";
+
+    var title = get_string(doc, "title");
+    print("title:", title);
+    guard title == "Nyx Language" else {
+        print("[FAIL] Title mismatch!");
+        return;
+    }
+
+    var ver = get_int(doc, "version");
+    print("version:", ver);
+    guard ver == 3 else {
+        print("[FAIL] Version mismatch!");
+        return;
+    }
+
+    var is_active = get_bool(doc, "active");
+    print("active:", is_active);
+    guard is_active == true else {
+        print("[FAIL] Active bool mismatch!");
+        return;
+    }
+
+    var has_auth = has_key(doc, "author");
+    print("has_key(author):", has_auth);
+    guard has_auth == true else {
+        print("[FAIL] has_key mismatch!");
+        return;
+    }
+
+    print("[PASS] Full std/json cross-backend conformance verified!");
+}
+main();

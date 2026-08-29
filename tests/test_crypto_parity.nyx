@@ -1,0 +1,24 @@
+import "std/crypto"
+
+fn main() {
+    print("=== [NYX STD/CRYPTO SHA-256 EXACT PARITY TEST] ===");
+
+    var h1 = sha256_hex("");
+    print($"SHA256('') = {h1}");
+    guard h1 == "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" else {
+        print("[FAIL] Empty string SHA-256 vector mismatch!");
+        return;
+    }
+
+    var h2 = sha256_hex("abc");
+    print($"SHA256('abc') = {h2}");
+    guard h2 == "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad" else {
+        print("[FAIL] 'abc' SHA-256 vector mismatch!");
+        return;
+    }
+
+    var h3 = sha256_hex("Nyx Polyglot Compiler 2026");
+    print($"SHA256('Nyx Polyglot Compiler 2026') = {h3}");
+
+    print("[PASS] SHA-256 exact parity confirmed!");
+}

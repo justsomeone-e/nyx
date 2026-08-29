@@ -100,3 +100,5 @@ examples/**/*.exe
 
 # Local toolchains
 .toolchains/
+tools/
+crew.py

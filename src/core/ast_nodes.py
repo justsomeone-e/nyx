@@ -91,14 +91,14 @@ class FunctionParam:
         self.default_val = default_val
 
 class FunctionDefNode(ASTNode):
-    def __init__(self, name: str, params: List[FunctionParam], return_type: Optional[TypeNode], body: List[ASTNode], generic_params: Optional[List[str]] = None, is_async: bool = False, doc_comment: str = "", line: int = 1, col: int = 1):
+    def __init__(self, name: str, params: List[FunctionParam], return_type: Optional[TypeNode], body: List[ASTNode], is_async: bool = False, generic_params: Optional[List[str]] = None, line: int = 1, col: int = 1, doc_comment: str = ""):
         super().__init__(line, col)
         self.name = name
         self.params = params
         self.return_type = return_type
         self.body = body
-        self.generic_params = generic_params or []
         self.is_async = is_async
+        self.generic_params = generic_params or []
         self.doc_comment = doc_comment
 
 class LambdaNode(ASTNode):
