@@ -198,6 +198,13 @@ class NyxuageServer:
     def handle_completion(self, uri: str, pos: dict) -> list:
         items = []
 
+        # 1. Directives
+        items.append({"label": "#target", "kind": 15, "detail": "#target <hecpp|heasm|hereact|hejs|hers|hepy|hewasm>", "documentation": "Sets compiler backend target"})
+        items.append({"label": "#native include", "kind": 15, "detail": "#native include <header>", "documentation": "Includes C/C++ native header"})
+        items.append({"label": "#native link", "kind": 15, "detail": '#native link "lib"', "documentation": "Links system library"})
+        items.append({"label": "#native raw", "kind": 15, "detail": "#native raw { ... }", "documentation": "Inline C++ code block"})
+        items.append({"label": "#native use", "kind": 15, "detail": '#native use "namespace"', "documentation": "Using namespace directive"})
+
         # 1. Keywords
         for kw in KEYWORDS:
             items.append({"label": kw, "kind": 14, "detail": "Keyword"})
@@ -277,7 +284,7 @@ class NyxuageServer:
                             "hoverProvider": True,
                             "completionProvider": {
                                 "resolveProvider": False,
-                                "triggerCharacters": [".", ":", ">", "\"", "{"]
+                                "triggerCharacters": [".", ":", ">", "\"", "{", "#", " ", "<", "/"]
                             },
                             "definitionProvider": True
                         }
