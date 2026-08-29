@@ -179,9 +179,19 @@ def main():
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = (mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
-                  diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
-                  natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
+    suites = {
+        "mod_ok": mod_ok, "lsp_ok": lsp_ok, "smoke_ok": smoke_ok, "neg_ok": neg_ok,
+        "fuzz_ok": fuzz_ok, "diff_ok": diff_ok, "js_ok": js_ok, "rs_ok": rs_ok,
+        "e2e_ok": e2e_ok, "ffi_ok": ffi_ok, "natlib_ok": natlib_ok, "man_ok": man_ok,
+        "link_ok": link_ok, "plat_ok": plat_ok, "hw_ok": hw_ok, "sdk_ok": sdk_ok,
+        "interop_ok": interop_ok, "boot_lex_ok": boot_lex_ok, "boot_parse_ok": boot_parse_ok,
+        "boot_corpus_ok": boot_corpus_ok, "boot_tc_ok": boot_tc_ok, "battery_ok": battery_ok
+    }
+    for name, res in suites.items():
+        if not res:
+            print(f"  ❌ FAILED SUITE: {name}")
+
+    all_passed = all(suites.values())
     print("=" * 70)
     if all_passed:
         print("🏆 ALL TEST SUITES PASSED (100% SUCCESS RATE)")

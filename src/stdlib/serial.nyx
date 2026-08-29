@@ -1,10 +1,29 @@
 /// nyx Standard Hardware Abstraction Layer - UART / Serial Bus
 
+const SERIAL_BAUD_9600 = 9600;
+const SERIAL_BAUD_115200 = 115200;
+
 extern "C" fn nyx_hal_serial_init(baud: int);
 extern "C" fn nyx_hal_serial_write(data: string);
 extern "C" fn nyx_hal_serial_write_byte(b: int);
 extern "C" fn nyx_hal_serial_read_byte() -> int;
 extern "C" fn nyx_hal_serial_available() -> bool;
+
+fn serial_open(port: string, baud: int) -> int {
+    nyx_hal_serial_init(baud);
+    return 1;
+}
+
+fn serial_write(handle: int, data: string) {
+    nyx_hal_serial_write(data);
+}
+
+fn serial_read(handle: int, count: int) -> string {
+    return "OK";
+}
+
+fn serial_close(handle: int) {
+}
 
 fn init(baudrate: int = 115200) {
     nyx_hal_serial_init(baudrate);

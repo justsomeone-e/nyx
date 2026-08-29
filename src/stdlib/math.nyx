@@ -25,6 +25,9 @@ fn cos(x: float) -> float { return _nyx_math_cos(x); }
 fn tan(x: float) -> float { return _nyx_math_tan(x); }
 fn sqrt(x: float) -> float { return _nyx_math_sqrt(x); }
 fn pow(b: float, e: float) -> float { return _nyx_math_pow(b, e); }
+fn power(b: float, e: float) -> float { return _nyx_math_pow(b, e); }
+fn abs(x: float) -> float { return _nyx_math_abs(x); }
+fn abs_val(x: float) -> float { return _nyx_math_abs(x); }
 fn absolute(x: float) -> float { return _nyx_math_abs(x); }
 fn floor(x: float) -> float { return _nyx_math_floor(x); }
 fn ceil(x: float) -> float { return _nyx_math_ceil(x); }

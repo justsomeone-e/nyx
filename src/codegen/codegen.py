@@ -872,6 +872,32 @@ class UniversalCodeGen:
             "        try: return int(j[pos:end])",
             "        except: return 0",
             "    return 0",
+            "import threading as _nyx_threading, queue as _nyx_queue, socket as _nyx_socket",
+            "_nyx_mutex_list = []",
+            "_nyx_channel_list = []",
+            "def _nyx_mutex_create(): _nyx_mutex_list.append(_nyx_threading.Lock()); return len(_nyx_mutex_list) - 1",
+            "def _nyx_mutex_lock(i): _nyx_mutex_list[i].acquire()",
+            "def _nyx_mutex_unlock(i): _nyx_mutex_list[i].release()",
+            "def _nyx_channel_create(): _nyx_channel_list.append(_nyx_queue.Queue()); return len(_nyx_channel_list) - 1",
+            "def _nyx_channel_send(i, msg): _nyx_channel_list[i].put(msg)",
+            "def _nyx_channel_recv(i): return _nyx_channel_list[i].get()",
+            "_nyx_sockets = []",
+            "def _nyx_net_tcp_connect(h, p):",
+            "    try:",
+            "        s = _nyx_socket.socket(_nyx_socket.AF_INET, _nyx_socket.SOCK_STREAM)",
+            "        s.connect((h, p))",
+            "        _nyx_sockets.append(s)",
+            "        return len(_nyx_sockets) - 1",
+            "    except: return -1",
+            "def _nyx_net_tcp_send(i, d):",
+            "    try: _nyx_sockets[i].sendall(d.encode('utf-8')); return True",
+            "    except: return False",
+            "def _nyx_net_tcp_recv(i, m):",
+            "    try: return _nyx_sockets[i].recv(m).decode('utf-8', errors='ignore')",
+            "    except: return ''",
+            "def _nyx_net_tcp_close(i):",
+            "    try: _nyx_sockets[i].close()",
+            "    except: pass",
             ""
         ]
 
@@ -1117,6 +1143,20 @@ const _nyx_json_get_int = (jsonStr, key) => {
     }
     return 0;
 };
+
+const _nyx_mutex_list = [];
+const _nyx_channel_list = [];
+const _nyx_mutex_create = () => { _nyx_mutex_list.push(false); return _nyx_mutex_list.length - 1; };
+const _nyx_mutex_lock = (i) => { _nyx_mutex_list[i] = true; };
+const _nyx_mutex_unlock = (i) => { _nyx_mutex_list[i] = false; };
+const _nyx_channel_create = () => { _nyx_channel_list.push([]); return _nyx_channel_list.length - 1; };
+const _nyx_channel_send = (i, msg) => { _nyx_channel_list[i].push(msg); };
+const _nyx_channel_recv = (i) => { return _nyx_channel_list[i].length > 0 ? _nyx_channel_list[i].shift() : ''; };
+const _nyx_sockets = [];
+const _nyx_net_tcp_connect = (h, p) => { return 0; };
+const _nyx_net_tcp_send = (i, d) => { return true; };
+const _nyx_net_tcp_recv = (i, m) => { return ''; };
+const _nyx_net_tcp_close = (i) => {};
 """)
 
         def emit_js_expr(node: Optional[ASTNode]) -> str:

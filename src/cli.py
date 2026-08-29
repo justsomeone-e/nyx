@@ -347,8 +347,11 @@ def cmd_run(entry_file, target):
             if os.path.exists(temp_cpp):
                 try: os.remove(temp_cpp)
                 except: pass
+            if ret_code != 0:
+                sys.exit(ret_code)
         else:
             print(f"\033[91m[!] Assembly Execution failed:\033[0m\n{msg}")
+            sys.exit(1)
     elif target == "hepy":
         out_py = os.path.join(build_dir, f"{base_name}.py")
         py_code = codegen.gen_python()
@@ -356,8 +359,10 @@ def cmd_run(entry_file, target):
             f.write(py_code)
         print(f"\033[96m[*] Target [Python 3]:\033[0m {out_py}")
         print("\033[90m--------------------------------------------------\033[0m")
-        subprocess.run([sys.executable, out_py])
+        res = subprocess.run([sys.executable, out_py])
         print("\033[90m--------------------------------------------------\033[0m")
+        if res.returncode != 0:
+            sys.exit(res.returncode)
     elif target == "hejs":
         out_js = os.path.join(build_dir, f"{base_name}.js")
         js_code = codegen.gen_js()
@@ -366,11 +371,13 @@ def cmd_run(entry_file, target):
         node_path = shutil.which("node")
         if not node_path:
             print("\033[91m[!] Node.js not found on system PATH.\033[0m")
-            return
+            sys.exit(1)
         print(f"\033[96m[*] Target [Node.js ES2022]:\033[0m {out_js}")
         print("\033[90m--------------------------------------------------\033[0m")
-        subprocess.run([node_path, out_js])
+        res = subprocess.run([node_path, out_js])
         print("\033[90m--------------------------------------------------\033[0m")
+        if res.returncode != 0:
+            sys.exit(res.returncode)
     elif target == "hecpp":
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
         out_exe = os.path.join(build_dir, f"{base_name}.exe")
@@ -385,8 +392,11 @@ def cmd_run(entry_file, target):
             if out_str:
                 print(out_str.rstrip())
             print("\033[90m--------------------------------------------------\033[0m")
+            if ret_code != 0:
+                sys.exit(ret_code)
         else:
             print(f"\033[91m[!] C++ Compilation failed:\033[0m\n{msg}")
+            sys.exit(1)
     elif target == "hers":
         out_rs = os.path.join(build_dir, f"{base_name}.rs")
         with open(out_rs, "w", encoding="utf-8") as f:
