@@ -952,6 +952,15 @@ def cmd_ai():
     except Exception as e:
         print(f"\033[91m[!] Failed to start AI Console: {e}\033[0m")
 
+def cmd_crew():
+    try:
+        crew_script = os.path.join(os.path.dirname(__file__), "..", "tools", "nyx_crew.py")
+        venv_py = os.path.join(os.path.dirname(__file__), "..", ".venv", "Scripts", "python.exe")
+        py_exec = venv_py if os.path.exists(venv_py) else sys.executable
+        subprocess.run([py_exec, crew_script])
+    except Exception as e:
+        print(f"[-] Failed to launch CrewAI console: {e}")
+
 def main():
     if len(sys.argv) < 2:
         print_help()
@@ -970,6 +979,8 @@ def main():
         cmd_repl()
     elif cmd in ("ai", "chat", "team"):
         cmd_ai()
+    elif cmd in ("crew", "crewai"):
+        cmd_crew()
     elif cmd == "tutorial":
         cmd_tutorial()
     elif cmd == "explain":
