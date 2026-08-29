@@ -624,7 +624,7 @@ class UniversalCodeGen:
         top_levels = []
         main_stmts = []
         for s in self.ast.statements:
-            if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, TypeAliasNode)):
+            if isinstance(s, (StructDefNode, TraitDefNode, ImplBlockNode, EnumDefNode, TypeAliasNode, NativeRawNode, NativeIncludeNode, NativeLinkNode, NativeUseNode)):
                 pass # Already emitted above
             elif isinstance(s, FunctionDefNode):
                 top_levels.extend(emit_stmt(s, 0))
