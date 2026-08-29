@@ -24,6 +24,8 @@ dist/
 .hecache/
 *.hec
 *.hecache
+/main.nyx
+/main.he
 
 # Python
 __pycache__/
