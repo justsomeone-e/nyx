@@ -1,13 +1,17 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
+    <img src="assets/nyx-mark-dark.png?v=3.0.0" width="240" alt="nyx bird emblem"/>
+  </a>
+  <br/>
+  <a href="https://github.com/justsomeone-e/nyx">
     <img src="assets/logo.svg?v=3.0.0" width="600" alt="nyx logotype"/>
   </a>
   <br/><br/>
 
   <p align="center">
-    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Deterministic+AST+Pipeline+with+Self-Hosting+Stage+1.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
-      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Deterministic+AST+Pipeline+with+Self-Hosting+Stage+1.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
+    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Typed+HIR+Pipeline+with+Native+Stage+2+Self-Hosting.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
+      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Typed+HIR+Pipeline+with+Native+Stage+2+Self-Hosting.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
     </a>
   </p>
 
