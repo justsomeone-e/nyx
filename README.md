@@ -1,7 +1,7 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/logo.svg" width="600" alt="nyx logotype"/>
+    <img src="assets/logo.svg?v=3.0.0" width="600" alt="nyx logotype"/>
   </a>
   <br/><br/>
 
@@ -34,7 +34,7 @@
 ---
 
 <div align="center">
-  <img src="assets/terminal_animated.svg" width="92%" alt="nyx interactive live execution"/>
+  <img src="assets/terminal_animated.svg?v=3.0.0" width="92%" alt="nyx interactive live execution"/>
 </div>
 
 ---
@@ -46,7 +46,7 @@
 A nyx program is parsed, validated, type-checked, and converted into a canonical typed Abstract Syntax Tree. From that shared representation, nyx can generate code for multiple execution environments without duplicating the language frontend.
 
 <div align="center">
-  <img src="assets/pipeline_animated.svg" width="98%" alt="nyx compiler architecture pipeline"/>
+  <img src="assets/pipeline_animated.svg?v=3.0.0" width="98%" alt="nyx compiler architecture pipeline"/>
 </div>
 
 The compiler is intentionally split into frontend, semantic, graph, and backend stages. This keeps language behavior consistent across targets while allowing individual backends to evolve independently.
@@ -56,7 +56,7 @@ The compiler is intentionally split into frontend, semantic, graph, and backend 
 ## `02` — Key Features
 
 <div align="center">
-  <img src="assets/features_animated.svg" width="98%" alt="nyx key features pillars"/>
+  <img src="assets/features_animated.svg?v=3.0.0" width="98%" alt="nyx key features pillars"/>
 </div>
 
 ### ⚡ Multi-Target Code Generation
@@ -457,5 +457,5 @@ See [`LICENSE`](LICENSE) for the complete license text.
 ---
 
 <div align="center">
-  <img src="assets/footer_animated.svg" width="98%" alt="nyx systems footer banner"/>
+  <img src="assets/footer_animated.svg?v=3.0.0" width="98%" alt="nyx systems footer banner"/>
 </div>
