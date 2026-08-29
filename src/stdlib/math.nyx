@@ -1,63 +1,32 @@
-// Nyx Standard Library: std/math
-#target hecpp
+// nyx Standard Library - std/math
+// High-performance Mathematical Functions and Constants
 
-fn abs_val(x: int) -> int {
-    if x < 0 { return -x }
-    return x
+#native include "cmath"
+#native include "algorithm"
+
+#native raw {
+inline double _nyx_math_sin(double x) { return std::sin(x); }
+inline double _nyx_math_cos(double x) { return std::cos(x); }
+inline double _nyx_math_tan(double x) { return std::tan(x); }
+inline double _nyx_math_sqrt(double x) { return std::sqrt(x); }
+inline double _nyx_math_pow(double b, double e) { return std::pow(b, e); }
+inline double _nyx_math_abs(double x) { return std::abs(x); }
+inline double _nyx_math_floor(double x) { return std::floor(x); }
+inline double _nyx_math_ceil(double x) { return std::ceil(x); }
+inline double _nyx_math_round(double x) { return std::round(x); }
+inline double _nyx_math_clamp(double val, double low, double high) { return std::clamp(val, low, high); }
 }
 
-fn max_val(a: int, b: int) -> int {
-    if a > b { return a }
-    return b
-}
+const PI = 3.141592653589793;
+const E = 2.718281828459045;
 
-fn min_val(a: int, b: int) -> int {
-    if a < b { return a }
-    return b
-}
-
-fn power(base: int, exp: int) -> int {
-    var res = 1
-    for i in 1..exp {
-        res = res * base
-    }
-    return res
-}
-
-fn clamp(val: int, min_v: int, max_v: int) -> int {
-    if val < min_v { return min_v }
-    if val > max_v { return max_v }
-    return val
-}
-
-fn gcd(a: int, b: int) -> int {
-    var x = abs_val(a)
-    var y = abs_val(b)
-    while y != 0 {
-        var t = y
-        y = x % y
-        x = t
-    }
-    return x
-}
-
-fn sign(x: int) -> int {
-    if x > 0 { return 1 }
-    if x < 0 { return -1 }
-    return 0
-}
-
-test "std/math comprehensive tests" {
-    assert(abs_val(-42) == 42, "abs_val negative")
-    assert(abs_val(42) == 42, "abs_val positive")
-    assert(max_val(10, 20) == 20, "max_val")
-    assert(min_val(10, 20) == 10, "min_val")
-    assert(power(2, 5) == 32, "power exponential")
-    assert(clamp(15, 0, 10) == 10, "clamp upper")
-    assert(clamp(-5, 0, 10) == 0, "clamp lower")
-    assert(clamp(5, 0, 10) == 5, "clamp inside")
-    assert(gcd(48, 18) == 6, "gcd compute")
-    assert(sign(50) == 1, "sign positive")
-    assert(sign(-50) == -1, "sign negative")
-    assert(sign(0) == 0, "sign zero")
-}
+fn sin(x: float) -> float { return _nyx_math_sin(x); }
+fn cos(x: float) -> float { return _nyx_math_cos(x); }
+fn tan(x: float) -> float { return _nyx_math_tan(x); }
+fn sqrt(x: float) -> float { return _nyx_math_sqrt(x); }
+fn pow(b: float, e: float) -> float { return _nyx_math_pow(b, e); }
+fn absolute(x: float) -> float { return _nyx_math_abs(x); }
+fn floor(x: float) -> float { return _nyx_math_floor(x); }
+fn ceil(x: float) -> float { return _nyx_math_ceil(x); }
+fn round(x: float) -> float { return _nyx_math_round(x); }
+fn clamp(val: float, low: float, high: float) -> float { return _nyx_math_clamp(val, low, high); }

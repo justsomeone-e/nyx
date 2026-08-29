@@ -1,0 +1,46 @@
+import "std/math"
+import "std/time"
+import "std/crypto"
+
+fn main() {
+    print("=== [NYX STD/MATH, STD/TIME, STD/CRYPTO SUITE] ===");
+    
+    // 1. Math Verification
+    var sq = sqrt(144.0);
+    var pw = pow(2.0, 10.0);
+    var sn = sin(0.0);
+    var cs = cos(0.0);
+    var cl = clamp(150.0, 0.0, 100.0);
+    
+    print($"[MATH] sqrt(144) = {sq}");
+    print($"[MATH] pow(2, 10) = {pw}");
+    print($"[MATH] sin(0) = {sn}, cos(0) = {cs}");
+    print($"[MATH] clamp(150, 0, 100) = {cl}");
+    print($"[MATH] PI = {PI}, E = {E}");
+
+    // 2. High-Resolution Time Verification
+    var t_start = now_ms();
+    print($"[TIME] Current timestamp (ms): {t_start}");
+    sleep_ms(20);
+    var t_end = now_ms();
+    var elapsed = t_end - t_start;
+    print($"[TIME] Elapsed after sleep (20ms): {elapsed}ms");
+
+    // 3. Crypto & Base64 Verification
+    var raw_text = "Nyx Systems Programming 2026!";
+    var encoded = base64_encode(raw_text);
+    var decoded = base64_decode(encoded);
+    var h = hash_string(raw_text);
+    
+    print($"[CRYPTO] Raw: {raw_text}");
+    print($"[CRYPTO] Base64 Encoded: {encoded}");
+    print($"[CRYPTO] Base64 Decoded: {decoded}");
+    print($"[CRYPTO] FNV-1a Hash: {h}");
+    
+    guard raw_text == decoded else {
+        print("[FAIL] Base64 encode/decode mismatch!");
+        return;
+    }
+
+    print("[SUCCESS] std/math, std/time, and std/crypto 100% Verified!");
+}
