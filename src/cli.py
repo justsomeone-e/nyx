@@ -14,6 +14,8 @@ if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)
 
 from src.core import Lexer, Parser, TypeChecker
+from src.core.target_model import resolve_target, TARGET_REGISTRY
+from src.core.embedded_builder import EmbeddedBuilder
 from src.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
 from src.toolchain import (
@@ -190,10 +192,35 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe"):
     from src.core.module_loader import ModuleLoader
     loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)))
     ast = loader.load_program(entry_file, code)
+    if target:
+        ast.target = target
     TypeChecker(ast, entry_file, code).check()
     
     codegen = UniversalCodeGen(ast)
     
+    target_spec = resolve_target(target)
+    if target_spec and target_spec.is_freestanding:
+        cpp_code = codegen.gen_cpp()
+        target_build_dir = os.path.join("build", target_spec.name)
+        os.makedirs(target_build_dir, exist_ok=True)
+        out_cpp = os.path.join(target_build_dir, f"{base_name}.cpp")
+        with open(out_cpp, "w", encoding="utf-8") as f:
+            f.write(cpp_code)
+        print(f"\033[96m[*] Transpiled Freestanding C++20:\033[0m {out_cpp}")
+        
+        builder = EmbeddedBuilder(target_spec, os.getcwd())
+        res = builder.build_firmware(out_cpp, base_name)
+        if res.get("success"):
+            print(f"\033[92m[OK] Target Architecture:\033[0m {target_spec.description}")
+            if res.get("elf"): print(f"\033[92m[OK] Linked Embedded ELF Binary:\033[0m {res['elf']}")
+            if res.get("hex"): print(f"\033[92m[OK] Generated Intel HEX Firmware:\033[0m {res['hex']}")
+            if res.get("bin"): print(f"\033[92m[OK] Generated Raw BIN Firmware:\033[0m {res['bin']}")
+            if res.get("size"):
+                print(f"\n--- Flash / RAM Memory Footprint ---\n{res['size']}\n")
+        else:
+            print(f"\033[93m[!] Embedded Cross-Build Diagnostic:\033[0m\n{res.get('error')}\n")
+        return
+
     if target == "hecpp":
         cpp_code = codegen.gen_cpp()
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")

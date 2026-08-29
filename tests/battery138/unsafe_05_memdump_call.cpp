@@ -33,7 +33,7 @@ extern "C" {
     inline void nyx_mmio_write16(uintptr_t addr, int64_t val) { *(volatile uint16_t*)(addr) = (uint16_t)val; }
     inline int64_t nyx_mmio_read32(uintptr_t addr) { return (int64_t)*(volatile uint32_t*)(addr); }
     inline void nyx_mmio_write32(uintptr_t addr, int64_t val) { *(volatile uint32_t*)(addr) = (uint32_t)val; }
-    // Default Fallback HAL Simulation Hooks (Overridden by Target Specific BSP)
+    // Default Fallback HAL Simulation Hooks (Desktop Only)
     __attribute__((weak)) void nyx_hal_gpio_mode(int64_t pin, int64_t mode) { /* GPIO Mode Stub */ }
     __attribute__((weak)) void nyx_hal_gpio_write(int64_t pin, int64_t val) { /* GPIO Write Stub */ }
     __attribute__((weak)) int64_t nyx_hal_gpio_read(int64_t pin) { return 0; }
