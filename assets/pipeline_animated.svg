@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="pBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#05070a"/>
+      <stop offset="50%" stop-color="#0b1118"/>
+      <stop offset="100%" stop-color="#040608"/>
+    </linearGradient>
+
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="100%" stop-color="#7000ff"/>
+    </linearGradient>
+
+    <linearGradient id="neonPulse" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00f0ff"/>
+      <stop offset="50%" stop-color="#ff007a"/>
+      <stop offset="100%" stop-color="#00f0ff"/>
+    </linearGradient>
+
+    <filter id="pGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <pattern id="pGrid" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M 30 0 L 0 0 0 30" fill="none" stroke="rgba(0, 240, 255, 0.05)" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <style>
+    .font-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .font-sans { font-family: 'Inter', system-ui, sans-serif; }
+
+    @keyframes dashMove {
+      to { stroke-dashoffset: -40; }
+    }
+    .flow-line {
+      stroke: #00f0ff;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      animation: dashMove 1.5s linear infinite;
+    }
+
+    @keyframes pulseNode {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(0,240,255,0.4)); }
+      50% { transform: scale(1.02); filter: drop-shadow(0 0 14px rgba(0,240,255,0.8)); }
+    }
+    .node-active { animation: pulseNode 3s ease-in-out infinite; transform-origin: center; }
+
+    @keyframes packetFlow {
+      0% { offset-distance: 0%; opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { offset-distance: 100%; opacity: 0; }
+    }
+  </style>
+
+  <!-- Background -->
+  <rect width="960" height="480" rx="14" fill="url(#pBg)" stroke="#1e293b" stroke-width="1.5"/>
+  <rect width="960" height="480" rx="14" fill="url(#pGrid)"/>
+
+  <!-- Header -->
+  <g transform="translate(40, 35)">
+    <text class="font-sans" font-size="18" font-weight="800" fill="#ffffff" letter-spacing="-0.5">COMPILER ARCHITECTURE &amp; PIPELINE FLOW</text>
+    <text y="20" class="font-mono" font-size="12" fill="#64748b">Deterministic Multi-Stage Frontend · Canonical AST · Multi-Target CodeGen</text>
+  </g>
+
+  <!-- Connective Glowing Pipes (Background) -->
+  <!-- Main Spine: (200, 160) -> (380, 160) -> (560, 160) -> (740, 160) -->
+  <path d="M 180 160 L 260 160" class="flow-line"/>
+  <path d="M 400 160 L 480 160" class="flow-line"/>
+  <path d="M 620 160 L 700 160" class="flow-line"/>
+
+  <!-- Fan-out Cables from Canonical AST to Backends -->
+  <path d="M 770 200 L 770 290 L 140 290 L 140 340" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4,4" fill="none" opacity="0.6"/>
+  <path d="M 770 200 L 770 290 L 320 290 L 320 340" stroke="#ff007a" stroke-width="1.5" stroke-dasharray="4,4" fill="none" opacity="0.6"/>
+  <path d="M 770 200 L 770 290 L 500 290 L 500 340" stroke="#4ade80" stroke-width="1.5" stroke-dasharray="4,4" fill="none" opacity="0.6"/>
+  <path d="M 770 200 L 770 290 L 680 290 L 680 340" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,4" fill="none" opacity="0.6"/>
+  <path d="M 770 200 L 770 290 L 860 290 L 860 340" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="4,4" fill="none" opacity="0.6"/>
+
+  <!-- Stage 1: Nyx Source -->
+  <g transform="translate(40, 120)">
+    <rect width="140" height="80" rx="8" fill="#0f172a" stroke="#00f0ff" stroke-width="1.5" filter="url(#pGlow)"/>
+    <text x="70" y="32" text-anchor="middle" class="font-sans" font-size="13" font-weight="700" fill="#00f0ff">Nyx Source</text>
+    <text x="70" y="52" text-anchor="middle" class="font-mono" font-size="11" fill="#94a3b8">.nyx / .he</text>
+    <circle cx="70" cy="70" r="3" fill="#00f0ff"/>
+  </g>
+
+  <!-- Stage 2: Deterministic Frontend -->
+  <g transform="translate(260, 120)">
+    <rect width="140" height="80" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-sans" font-size="13" font-weight="700" fill="#38bdf8">Frontend</text>
+    <text x="70" y="46" text-anchor="middle" class="font-mono" font-size="10" fill="#cbd5e1">UTF-8 Lexer</text>
+    <text x="70" y="62" text-anchor="middle" class="font-mono" font-size="10" fill="#94a3b8">Recursive Parser</text>
+  </g>
+
+  <!-- Stage 3: Semantic Analysis -->
+  <g transform="translate(480, 120)">
+    <rect width="140" height="80" rx="8" fill="#0f172a" stroke="#818cf8" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-sans" font-size="13" font-weight="700" fill="#818cf8">Semantics</text>
+    <text x="70" y="46" text-anchor="middle" class="font-mono" font-size="10" fill="#cbd5e1">Module Graph</text>
+    <text x="70" y="62" text-anchor="middle" class="font-mono" font-size="10" fill="#94a3b8">Scope TypeChecker</text>
+  </g>
+
+  <!-- Stage 4: Canonical Typed AST (Central Hub) -->
+  <g transform="translate(700, 115)" class="node-active">
+    <rect width="150" height="90" rx="10" fill="#1e1b4b" stroke="url(#cyanGrad)" stroke-width="2.5" filter="url(#pGlow)"/>
+    <text x="75" y="32" text-anchor="middle" class="font-sans" font-size="12" font-weight="800" fill="#00f0ff" letter-spacing="1">CANONICAL</text>
+    <text x="75" y="52" text-anchor="middle" class="font-sans" font-size="14" font-weight="800" fill="#ffffff">TYPED AST</text>
+    <text x="75" y="72" text-anchor="middle" class="font-mono" font-size="9.5" fill="#a5f3fc">Single Source of Truth</text>
+  </g>
+
+  <!-- BACKEND EMITTERS (Bottom Row) -->
+  <!-- 1. hecpp -->
+  <g transform="translate(70, 340)">
+    <rect width="140" height="90" rx="8" fill="#091824" stroke="#00f0ff" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-mono" font-size="12" font-weight="700" fill="#00f0ff">#target hecpp</text>
+    <text x="70" y="48" text-anchor="middle" class="font-sans" font-size="11" fill="#e2e8f0">C++20 Native</text>
+    <text x="70" y="68" text-anchor="middle" class="font-mono" font-size="10" fill="#38bdf8">.exe (LLVM/Clang)</text>
+  </g>
+
+  <!-- 2. heasm -->
+  <g transform="translate(250, 340)">
+    <rect width="140" height="90" rx="8" fill="#1f0918" stroke="#ff007a" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-mono" font-size="12" font-weight="700" fill="#ff007a">#target heasm</text>
+    <text x="70" y="48" text-anchor="middle" class="font-sans" font-size="11" fill="#e2e8f0">x86_64 Assembly</text>
+    <text x="70" y="68" text-anchor="middle" class="font-mono" font-size="10" fill="#f472b6">.s (Intel Syntax)</text>
+  </g>
+
+  <!-- 3. hejs -->
+  <g transform="translate(430, 340)">
+    <rect width="140" height="90" rx="8" fill="#0c1f17" stroke="#4ade80" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-mono" font-size="12" font-weight="700" fill="#4ade80">#target hejs</text>
+    <text x="70" y="48" text-anchor="middle" class="font-sans" font-size="11" fill="#e2e8f0">Node.js ES2022</text>
+    <text x="70" y="68" text-anchor="middle" class="font-mono" font-size="10" fill="#86efac">.js (ESM Module)</text>
+  </g>
+
+  <!-- 4. hers -->
+  <g transform="translate(610, 340)">
+    <rect width="140" height="90" rx="8" fill="#241408" stroke="#f59e0b" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-mono" font-size="12" font-weight="700" fill="#f59e0b">#target hers</text>
+    <text x="70" y="48" text-anchor="middle" class="font-sans" font-size="11" fill="#e2e8f0">Rust 2021</text>
+    <text x="70" y="68" text-anchor="middle" class="font-mono" font-size="10" fill="#fde047">.rs (rustc Object)</text>
+  </g>
+
+  <!-- 5. hepy -->
+  <g transform="translate(790, 340)">
+    <rect width="140" height="90" rx="8" fill="#180e29" stroke="#a855f7" stroke-width="1.5"/>
+    <text x="70" y="28" text-anchor="middle" class="font-mono" font-size="12" font-weight="700" fill="#a855f7">#target hepy</text>
+    <text x="70" y="48" text-anchor="middle" class="font-sans" font-size="11" fill="#e2e8f0">Python 3</text>
+    <text x="70" y="68" text-anchor="middle" class="font-mono" font-size="10" fill="#d8b4fe">Reference Semantics</text>
+  </g>
+</svg>

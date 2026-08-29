@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="100%" height="100%">
+  <defs>
+    <linearGradient id="fBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#070a0f"/>
+      <stop offset="100%" stop-color="#030508"/>
+    </linearGradient>
+    <filter id="fGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <style>
+    .f-mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .f-sans { font-family: 'Inter', system-ui, sans-serif; }
+    
+    @keyframes pulseCard {
+      0%, 100% { stroke-opacity: 0.3; }
+      50% { stroke-opacity: 0.85; }
+    }
+    .c1 { animation: pulseCard 3s ease-in-out infinite; }
+    .c2 { animation: pulseCard 3.5s ease-in-out infinite 0.5s; }
+    .c3 { animation: pulseCard 4s ease-in-out infinite 1s; }
+  </style>
+
+  <!-- Container -->
+  <rect width="960" height="300" rx="14" fill="url(#fBg)" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Column 1: Zero-Cost Native ABI -->
+  <g transform="translate(30, 30)">
+    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#00f0ff" stroke-width="1.5" class="c1"/>
+    <!-- Icon Circle -->
+    <circle cx="45" cy="45" r="22" fill="rgba(0, 240, 255, 0.1)" stroke="#00f0ff" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#00f0ff">⚡</text>
+    
+    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Zero-Cost C/C++ ABI</text>
+    <text x="80" y="60" class="f-mono" font-size="11" fill="#00f0ff">Native Hardware Interop</text>
+
+    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8" width="230">
+      Direct C/C++ calling convention without serialization overhead. Supports raw pointers (<tspan class="f-mono" fill="#38bdf8">*T</tspan>), memory peek/poke, and direct hardware bindings.
+    </text>
+
+    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="35" y="202" class="f-mono" font-size="11" fill="#38bdf8">addr(p) → mov rax, rcx</text>
+  </g>
+
+  <!-- Column 2: Topological Graph Engine -->
+  <g transform="translate(340, 30)">
+    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#ff007a" stroke-width="1.5" class="c2"/>
+    <!-- Icon Circle -->
+    <circle cx="45" cy="45" r="22" fill="rgba(255, 0, 122, 0.1)" stroke="#ff007a" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#ff007a">🛡️</text>
+    
+    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Topological Engine</text>
+    <text x="80" y="60" class="f-mono" font-size="11" fill="#ff007a">Diamond Deduplication</text>
+
+    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8">
+      Deterministic module resolution prevents cyclic import deadlocks and deduplicates multi-path dependencies before reaching the typechecker.
+    </text>
+
+    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="35" y="202" class="f-mono" font-size="11" fill="#f472b6">import A → B → C (0-cycle)</text>
+  </g>
+
+  <!-- Column 3: Diagnostics v2 -->
+  <g transform="translate(650, 30)">
+    <rect width="280" height="240" rx="10" fill="#0c131d" stroke="#4ade80" stroke-width="1.5" class="c3"/>
+    <!-- Icon Circle -->
+    <circle cx="45" cy="45" r="22" fill="rgba(74, 222, 128, 0.1)" stroke="#4ade80" stroke-width="1.5" filter="url(#fGlow)"/>
+    <text x="45" y="52" text-anchor="middle" class="f-mono" font-size="18" fill="#4ade80">🔍</text>
+    
+    <text x="80" y="42" class="f-sans" font-size="15" font-weight="700" fill="#ffffff">Diagnostics v2</text>
+    <text x="80" y="60" class="f-mono" font-size="11" fill="#4ade80">Sub-Character Spans</text>
+
+    <text x="25" y="105" class="f-sans" font-size="12" fill="#94a3b8">
+      Compiler error engine with exact ANSI-highlighted source context, dual rejection verification, and stable rustc-style error codes (E1000–E4000).
+    </text>
+
+    <rect x="25" y="180" width="230" height="36" rx="6" fill="#06090e" stroke="#1e293b"/>
+    <text x="35" y="202" class="f-mono" font-size="11" fill="#86efac">error[E2001]: Type mismatch</text>
+  </g>
+</svg>

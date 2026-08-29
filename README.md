@@ -45,58 +45,9 @@
 
 A nyx program is parsed, validated, type-checked, and converted into a canonical typed Abstract Syntax Tree. From that shared representation, nyx can generate code for multiple execution environments without duplicating the language frontend.
 
-```text
-                 ┌──────────────────────────────┐
-                 │        Nyx Source Code       │
-                 │          .nyx / .he           │
-                 └──────────────┬───────────────┘
-                                │
-                                ▼
-                 ┌──────────────────────────────┐
-                 │      Deterministic Frontend  │
-                 │                              │
-                 │  UTF-8 Lexer → Parser → AST  │
-                 └──────────────┬───────────────┘
-                                │
-                                ▼
-                 ┌──────────────────────────────┐
-                 │       Module Graph           │
-                 │                              │
-                 │  Topology · Deduplication    │
-                 │  Cycle / Collision Detection│
-                 └──────────────┬───────────────┘
-                                │
-                                ▼
-                 ┌──────────────────────────────┐
-                 │        TypeChecker           │
-                 │                              │
-                 │  Inference · Scopes · Bounds │
-                 └──────────────┬───────────────┘
-                                │
-                                ▼
-              ╔══════════════════════════════════════╗
-              ║        CANONICAL TYPED AST           ║
-              ╚══════════════════╤═══════════════════╝
-                                 │
-              ┌──────────────────┼──────────────────┐
-              │                  │                  │
-              ▼                  ▼                  ▼
-          ┌────────┐         ┌────────┐         ┌────────┐
-          │ hecpp  │         │  hejs  │         │  hers  │
-          │ C++20  │         │Node.js │         │ Rust21 │
-          └───┬────┘         └───┬────┘         └───┬────┘
-              │                  │                  │
-              ▼                  ▼                  ▼
-          Native .exe        ES2022 Module      rustc Object
-
-                         ┌────────────┐
-                         │    hepy    │
-                         │  Python 3  │
-                         │ Reference  │
-                         └─────┬──────┘
-                               ▼
-                         Canonical Semantics
-```
+<div align="center">
+  <img src="assets/pipeline_animated.svg" width="98%" alt="nyx compiler architecture pipeline"/>
+</div>
 
 The compiler is intentionally split into frontend, semantic, graph, and backend stages. This keeps language behavior consistent across targets while allowing individual backends to evolve independently.
 
@@ -104,18 +55,23 @@ The compiler is intentionally split into frontend, semantic, graph, and backend 
 
 ## `02` — Key Features
 
+<div align="center">
+  <img src="assets/features_animated.svg" width="98%" alt="nyx key features pillars"/>
+</div>
+
 ### ⚡ Multi-Target Code Generation
 
-Nyx can target multiple ecosystems from the same source language:
+nyx can target multiple ecosystems from the same source language:
 
 ```text
 ┌──────────────┬─────────────────────┬──────────────────────────┐
 │ Backend      │ Target              │ Output                   │
 ├──────────────┼─────────────────────┼──────────────────────────┤
-│ hecpp        │ C++20               │ Native executable        │
-│ hejs         │ Node.js ES2022      │ ES2022 module            │
-│ hers         │ Rust 2021           │ Rust object / pipeline   │
-│ hepy         │ Python 3            │ Reference representation │
+│ hecpp        │ C++20               │ Native executable (.exe) │
+│ heasm        │ x86_64 Assembly     │ Intel syntax source (.s) │
+│ hejs         │ Node.js ES2022      │ ES2022 ESM module (.js)  │
+│ hers         │ Rust 2021           │ Rust object pipeline     │
+│ hepy         │ Python 3            │ Canonical reference tree │
 └──────────────┴─────────────────────┴──────────────────────────┘
 ```
 
