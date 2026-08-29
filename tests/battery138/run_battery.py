@@ -2,8 +2,9 @@ import sys
 import os
 import io
 
-BASE = r"C:\Users\USER\Desktop\Nyx"
-sys.path.insert(0, BASE)
+BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if BASE not in sys.path:
+    sys.path.insert(0, BASE)
 
 from src.compiler import Compiler
 

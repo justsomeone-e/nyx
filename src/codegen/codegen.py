@@ -172,7 +172,7 @@ class UniversalCodeGen:
             helper_lines.append("inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return \"\"; return string(1, s[i]); }")
         if "Result" in used_syms or "Ok" in used_syms or "Err" in used_syms:
             helper_lines.append("template<typename T, typename E = string>")
-            helper_lines.append("struct Result { bool is_ok; T value; E error; Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} };")
+            helper_lines.append("struct Result { bool is_ok; T value; E error; Result() : is_ok(false), value(), error() {} Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} T unwrap() const { return value; } };")
             helper_lines.append("template<typename T> Result<T, string> Ok(T val) { return Result<T, string>(true, val, \"\"); }")
             helper_lines.append("template<typename T = int64_t> Result<T, string> Err(string err) { return Result<T, string>(false, T{}, err); }")
         if "memdump" in used_syms:
@@ -709,7 +709,8 @@ class UniversalCodeGen:
                 return f"(lambda {p_str}: {emit_py_expr(node.body)})"
             if isinstance(node, FunctionCallNode):
                 args = ", ".join([emit_py_expr(a) for a in node.args])
-                return f"{node.callee}({args})"
+                callee_s = emit_py_expr(node.callee) if isinstance(node.callee, ASTNode) else node.callee
+                return f"{callee_s}({args})"
             return "None"
 
         def emit_py_stmt(node: ASTNode, indent: int = 0) -> List[str]:
@@ -717,7 +718,8 @@ class UniversalCodeGen:
             if isinstance(node, VarDeclNode):
                 return [f"{sp}{node.name} = {emit_py_expr(node.expr)}"]
             if isinstance(node, AssignNode):
-                return [f"{sp}{emit_py_expr(node.target)} = {emit_py_expr(node.expr)}"]
+                target_s = emit_py_expr(node.target) if isinstance(node.target, ASTNode) else node.target
+                return [f"{sp}{target_s} = {emit_py_expr(node.expr)}"]
             if isinstance(node, TypeAliasNode):
                 return [f"{sp}{node.name} = type('{node.name}', (), {{}})"]
             if isinstance(node, StructDefNode):
