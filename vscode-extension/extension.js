@@ -3,30 +3,95 @@ const fs = require('fs');
 const path = require('path');
 
 function activate(context) {
-    const defaultCppHeaders = [
-        "algorithm", "any", "array", "atomic", "barrier", "bit", "bitset", "charconv",
-        "chrono", "cmath", "compare", "complex", "concepts", "condition_variable",
-        "coroutine", "deque", "expected", "filesystem", "flat_map", "flat_set", "format",
-        "forward_list", "fstream", "functional", "future", "initializer_list", "iomanip",
-        "ios", "iosfwd", "iostream", "istream", "iterator", "latch", "list", "map",
-        "mdspan", "memory", "memory_resource", "mutex", "numbers", "numeric", "optional",
-        "ostream", "print", "queue", "random", "ranges", "ratio", "regex", "scoped_allocator",
-        "semaphore", "set", "shared_mutex", "source_location", "span", "spanstream",
-        "sstream", "stack", "stacktrace", "stdexcept", "stop_token", "streambuf", "string",
-        "string_view", "syncstream", "system_error", "thread", "tuple", "type_traits",
-        "typeindex", "typeinfo", "unordered_map", "unordered_set", "utility", "valarray",
-        "variant", "vector", "version",
-
-        "cassert", "cctype", "cerrno", "cfenv", "cfloat", "cinttypes", "climits",
-        "clocale", "cmath", "csetjmp", "csignal", "cstdarg", "cstddef", "cstdint",
-        "cstdio", "cstdlib", "cstring", "ctime", "cuchar", "cwchar", "cwctype",
-
-        "windows.h", "winsock2.h", "ws2tcpip.h", "windowsx.h", "direct.h", "io.h",
-        "fcntl.h", "conio.h", "process.h", "pthread.h", "sys/stat.h", "sys/types.h",
-        "unistd.h", "directxmath.h", "d3d12.h", "d3d11.h", "GL/gl.h", "vulkan/vulkan.h"
+    // ---------------------------------------------------------
+    // 1. POPULAR & HIGH-PRIORITY HEADERS (SORTED TO TOP)
+    // ---------------------------------------------------------
+    const priorityHeaders = [
+        { name: "iostream", cat: "C++ STL I/O Stream", desc: "std::cout, std::cin, std::endl" },
+        { name: "vector", cat: "C++ STL Dynamic Array", desc: "std::vector<T> resizable array container" },
+        { name: "string", cat: "C++ STL String", desc: "std::string UTF-8 text representation" },
+        { name: "windows.h", cat: "Windows Win32 Native API", desc: "Core Windows OS SDK API, handles, messages, system calls" },
+        { name: "unistd.h", cat: "Linux / POSIX Standard API", desc: "Standard symbolic constants and POSIX operating system API" },
+        { name: "sys/socket.h", cat: "Linux / POSIX Sockets", desc: "Internet & UNIX domain socket communication" },
+        { name: "sys/stat.h", cat: "Linux / POSIX File Status", desc: "File attributes, permissions, and directory inodes" },
+        { name: "sys/types.h", cat: "Linux / POSIX Data Types", desc: "System data type definitions (pid_t, size_t, off_t)" },
+        { name: "sys/time.h", cat: "Linux / POSIX Time API", desc: "gettimeofday, timeval, microsecond clock" },
+        { name: "sys/mman.h", cat: "Linux / POSIX Memory Map", desc: "mmap, munmap, virtual memory management" },
+        { name: "netinet/in.h", cat: "Linux / POSIX Networking", desc: "Internet protocol family, sockaddr_in structure" },
+        { name: "arpa/inet.h", cat: "Linux / POSIX IP Address", desc: "inet_addr, inet_ntoa, IP conversion functions" },
+        { name: "pthread.h", cat: "POSIX Multi-Threading", desc: "POSIX threads, mutexes, condition variables" },
+        { name: "fcntl.h", cat: "POSIX / Linux File Control", desc: "File access modes, open(), fcntl() descriptors" },
+        { name: "signal.h", cat: "POSIX / Linux Signals", desc: "Signal handling, SIGINT, SIGTERM, kill()" },
+        { name: "dirent.h", cat: "POSIX / Linux Directory", desc: "Directory entry streams, opendir(), readdir()" },
+        { name: "dlfcn.h", cat: "POSIX Dynamic Linking", desc: "dlopen, dlsym, dlclose dynamic library loading" },
+        { name: "poll.h", cat: "POSIX Event Polling", desc: "poll(), synchronous I/O multiplexing" },
+        { name: "sys/epoll.h", cat: "Linux High-Perf Epoll", desc: "epoll_create, epoll_ctl, epoll_wait I/O event notification" },
+        { name: "winsock2.h", cat: "Windows Sockets 2", desc: "Windows network sockets and TCP/IP stack API" },
+        { name: "ws2tcpip.h", cat: "Windows TCP/IP Extensions", desc: "getaddrinfo, IPv6 protocols, WinSock2 extensions" },
+        { name: "stdio.h", cat: "C Standard Input/Output", desc: "printf, scanf, fopen, fread, fwrite" },
+        { name: "stdlib.h", cat: "C Standard General Utilities", desc: "malloc, free, exit, rand, atoi, system" },
+        { name: "chrono", cat: "C++ STL High-Res Time", desc: "std::chrono precision clocks, durations, time points" },
+        { name: "thread", cat: "C++ STL Multi-Threading", desc: "std::thread, jthread, hardware concurrency" },
+        { name: "memory", cat: "C++ STL Smart Pointers", desc: "std::unique_ptr, std::shared_ptr, allocators" },
+        { name: "cmath", cat: "C++ STL Math Functions", desc: "std::sin, std::cos, std::sqrt, std::pow" },
+        { name: "cstdint", cat: "C++ Fixed Width Integers", desc: "int64_t, uint64_t, int32_t, uint8_t types" },
+        { name: "algorithm", cat: "C++ STL Algorithms", desc: "std::sort, std::find, std::transform, ranges" },
+        { name: "fstream", cat: "C++ STL File Streams", desc: "std::ifstream, std::ofstream disk file I/O" },
+        { name: "sstream", cat: "C++ STL String Streams", desc: "std::stringstream, string formatting buffers" }
     ];
 
-    const headerSet = new Set(defaultCppHeaders);
+    // ---------------------------------------------------------
+    // 2. EXHAUSTIVE SYSTEM & STL HEADER DISCOVERY
+    // ---------------------------------------------------------
+    const defaultHeaders = [
+        "any", "array", "atomic", "barrier", "bit", "bitset", "charconv",
+        "compare", "complex", "concepts", "condition_variable", "coroutine",
+        "deque", "expected", "filesystem", "flat_map", "flat_set", "format",
+        "forward_list", "functional", "future", "initializer_list", "iomanip",
+        "ios", "iosfwd", "istream", "iterator", "latch", "list", "map",
+        "mdspan", "memory_resource", "mutex", "numbers", "numeric", "optional",
+        "ostream", "print", "queue", "random", "ranges", "ratio", "regex",
+        "scoped_allocator", "semaphore", "set", "shared_mutex", "source_location",
+        "span", "spanstream", "stack", "stacktrace", "stdexcept", "stop_token",
+        "streambuf", "string_view", "syncstream", "system_error", "tuple",
+        "type_traits", "typeindex", "typeinfo", "unordered_map", "unordered_set",
+        "utility", "valarray", "variant", "version",
+
+        "cassert", "cctype", "cerrno", "cfenv", "cfloat", "cinttypes", "climits",
+        "clocale", "csetjmp", "csignal", "cstdarg", "cstddef", "cstdio", "cstdlib",
+        "cstring", "ctime", "cuchar", "cwchar", "cwctype",
+
+        "windowsx.h", "mmsystem.h", "winuser.h", "wingdi.h", "winbase.h",
+        "shellapi.h", "shlobj.h", "tlhelp32.h", "psapi.h", "dbghelp.h",
+        "direct.h", "io.h", "conio.h", "process.h", "termios.h", "utime.h",
+        "sys/wait.h", "sys/select.h", "sys/resource.h", "netinet/tcp.h",
+        "netdb.h", "directxmath.h", "d3d12.h", "d3d11.h", "GL/gl.h", "vulkan/vulkan.h"
+    ];
+
+    const headerMap = new Map();
+    // 1. Add priority headers first
+    priorityHeaders.forEach((h, index) => {
+        headerMap.set(h.name, {
+            name: h.name,
+            detail: `[${h.cat}] <${h.name}>`,
+            doc: h.desc,
+            sortText: `0_${String(index).padStart(3, '0')}`
+        });
+    });
+
+    // 2. Add remaining default headers
+    defaultHeaders.forEach(h => {
+        if (!headerMap.has(h)) {
+            headerMap.set(h, {
+                name: h,
+                detail: `Header: <${h}>`,
+                doc: `C/C++ Header \`<${h}>\``,
+                sortText: `1_${h}`
+            });
+        }
+    });
+
+    // 3. Scan local compiler headers
     const minGwDir = "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64";
     const stlDir = path.join(minGwDir, "include", "c++", "v1");
     const sysIncDir = path.join(minGwDir, "include");
@@ -35,23 +100,24 @@ function activate(context) {
         if (fs.existsSync(stlDir)) {
             const files = fs.readdirSync(stlDir);
             for (const f of files) {
-                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap")) {
-                    headerSet.add(f);
+                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap") && !headerMap.has(f)) {
+                    headerMap.set(f, { name: f, detail: `[C++ STL] <${f}>`, doc: `Standard C++ Library header \`<${f}>\``, sortText: `2_${f}` });
                 }
             }
         }
         if (fs.existsSync(sysIncDir)) {
             const files = fs.readdirSync(sysIncDir);
             for (const f of files) {
-                if (f.endsWith(".h")) {
-                    headerSet.add(f);
+                if (f.endsWith(".h") && !headerMap.has(f)) {
+                    headerMap.set(f, { name: f, detail: `[System Header] <${f}>`, doc: `System header \`<${f}>\``, sortText: `3_${f}` });
                 }
             }
         }
     } catch (e) {}
 
-    const allHeaders = Array.from(headerSet).sort();
-
+    // ---------------------------------------------------------
+    // 3. STANDARD NYX MODULES & COMPILER TARGETS
+    // ---------------------------------------------------------
     const stdModules = [
         { name: 'std/io', desc: 'Console I/O streams and formatting' },
         { name: 'std/fs', desc: 'File system operations (read, write, exists, remove)' },
@@ -80,6 +146,9 @@ function activate(context) {
         { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' }
     ];
 
+    // ---------------------------------------------------------
+    // 4. SMART CONTEXTUAL COMPLETION PROVIDER
+    // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
         ['nyxlang', 'nyx', 'he', 'holyeasylang'],
         {
@@ -104,19 +173,20 @@ function activate(context) {
                     items.push(item);
                 }
 
-                // 1. #native include < (Replaces cleanly with range)
+                // 1. #native include < (Search all headers with clean replacement)
                 if (/#native\s+include/i.test(linePrefix)) {
                     const openIdx = linePrefix.lastIndexOf('<');
-                    allHeaders.forEach(h => {
-                        const item = new vscode.CompletionItem(h, vscode.CompletionItemKind.Module);
+                    headerMap.forEach((hInfo, hName) => {
+                        const item = new vscode.CompletionItem(hName, vscode.CompletionItemKind.Module);
                         if (openIdx !== -1) {
                             item.range = new vscode.Range(new vscode.Position(position.line, openIdx), position);
-                            item.insertText = `<${h}>`;
+                            item.insertText = `<${hName}>`;
                         } else {
-                            item.insertText = ` <${h}>`;
+                            item.insertText = ` <${hName}>`;
                         }
-                        item.detail = `C/C++ Header: <${h}>`;
-                        item.documentation = new vscode.MarkdownString(`Standard Header \`<${h}>\``);
+                        item.detail = hInfo.detail;
+                        item.documentation = new vscode.MarkdownString(`### \`<${hName}>\`\n\n${hInfo.doc}`);
+                        item.sortText = hInfo.sortText;
                         items.push(item);
                     });
                     return items;
@@ -200,7 +270,7 @@ function activate(context) {
                 return items;
             }
         },
-        '#', ' ', '<', '"', '/', ':', '.', 'i', 'u', 's', 'c', 'v', 'f'
+        '#', ' ', '<', '"', '/', ':', '.', 'i', 'u', 's', 'c', 'v', 'f', 'w'
     );
 
     context.subscriptions.push(completionProvider);
