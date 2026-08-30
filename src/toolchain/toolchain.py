@@ -439,12 +439,12 @@ class PackageManager:
 class StandalonePackager:
     @staticmethod
     def compile_standalone(filepath: str):
-        print(f"\033[96m⚡ Packaging Standalone Binary for:\033[0m {filepath}")
+        print(f"\033[96m[*] Packaging Standalone Binary for:\033[0m {filepath}")
         base_name = os.path.splitext(filepath)[0]
         out_bat = f"{base_name}.exe.bat"
         with open(out_bat, 'w', encoding='utf-8') as f:
             f.write(f"""@echo off
 python "{os.path.abspath('he.py')}" run "{os.path.abspath(filepath)}" %*
 """)
-        print(f"\033[92m[✓] Standalone Executable Created:\033[0m {out_bat}")
-        print("You can double-click or run this file on any machine with python!")
+        print(f"\033[92m[OK] Standalone Executable Created:\033[0m {out_bat}")
+        print("You can execute this binary on any system with python.")

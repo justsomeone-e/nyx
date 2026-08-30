@@ -269,8 +269,14 @@ class LanguageServer:
                 if isinstance(s, (FunctionDefNode, StructDefNode, TraitDefNode)) and getattr(s, "name", None) == word:
                     target_file = getattr(s, "_origin_module", self.get_fs_path(uri))
                     target_uri = f"file:///{target_file.replace(os.sep, '/')}"
-                    line_no = max(0, getattr(s, "line", 1) - 1)
-                    col_no = max(0, getattr(s, "col", 1) - 1)
+                    try:
+                        line_no = max(0, int(getattr(s, "line", 1)) - 1)
+                    except:
+                        line_no = 0
+                    try:
+                        col_no = max(0, int(getattr(s, "col", 1)) - 1)
+                    except:
+                        col_no = 0
                     return {
                         "uri": target_uri,
                         "range": {

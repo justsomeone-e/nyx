@@ -50,7 +50,8 @@ class TypeChecker:
             'addr': 'uintptr', 'peek': 'uintptr', 'memdump': 'void',
             'buffer_ptr': 'uintptr',
             'delay_ms': 'void', 'channel': 'Channel', 'Ok': 'Result',
-            'Err': 'Result', 'len': 'int', 'args': 'Array<string>'
+            'Err': 'Result', 'len': 'int', 'ord': 'int', 'char_code_at': 'int',
+            'args': 'Array<string>'
         }
         for b, t in self.builtins.items():
             self.scopes[0][b] = t
@@ -668,6 +669,7 @@ class TypeChecker:
     def infer_type(self, node: Optional[ASTNode]) -> str:
         if not node:
             return 'void'
+        t = 'any'
         if isinstance(node, NumberNode):
             inferred = 'float' if isinstance(node.value, float) else 'int'
             node.inferred_type = inferred

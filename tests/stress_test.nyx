@@ -1,0 +1,45 @@
+
+import "std/thread"
+import "std/net"
+import "std/fs"
+import "std/json_lite"
+
+fn test_json() -> bool {
+    var j = "{\"key\": 42, \"val\": \"hello\"}"
+    var k = get_int(j, "key")
+    var v = get_string(j, "val")
+    return (k == 42) && (v == "hello")
+}
+
+fn test_fs() -> bool {
+    write_string("stress_temp.txt", "123")
+    var content = read_to_string("stress_temp.txt")
+    remove_file("stress_temp.txt")
+    return content == "123"
+}
+
+fn test_alloc() {
+    var sum = 0
+    var i = 0
+    while i < 100000 {
+        sum = sum + i
+        i = i + 1
+    }
+}
+
+fn recurse(n: int) -> int {
+    if n <= 0 {
+        return 0
+    }
+    return 1 + recurse(n - 1)
+}
+
+fn main() {
+    print("Testing json:", test_json())
+    print("Testing fs:", test_fs())
+    test_alloc()
+    print("Tested 100000 loop")
+    print("Testing deep recursion:", recurse(1000) == 1000)
+    print("ALL DONE")
+}
+

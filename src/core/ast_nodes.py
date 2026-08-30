@@ -103,8 +103,8 @@ class FunctionDefNode(ASTNode):
         self.params = params
         self.return_type = return_type
         self.body = body
-        self.generic_params = generic_params or []
         self.is_async = is_async
+        self.generic_params = generic_params or []
         self.doc_comment = doc_comment
         self.is_interrupt = is_interrupt
 

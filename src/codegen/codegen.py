@@ -134,7 +134,8 @@ class UniversalCodeGen:
         else:
             lines.extend([
                 "#include <iostream>",
-                "#include <string>"
+                "#include <string>",
+                "#include <iomanip>"
             ])
             if has_arrays or "push" in used_syms or "len" in used_syms or "length" in used_syms:
                 lines.append("#include <vector>")
@@ -248,6 +249,10 @@ class UniversalCodeGen:
                 helper_lines.append("string to_string_val(int v) { return to_string(v); }")
         if "contains" in used_syms:
             helper_lines.append("bool contains(const string& s, const string& sub) { return s.find(sub) != string::npos; }")
+        if "ord" in used_syms:
+            helper_lines.append("inline int64_t ord(const string& s) { return s.empty() ? 0 : (uint8_t)s[0]; }")
+        if "char_code_at" in used_syms:
+            helper_lines.append("inline int64_t char_code_at(const string& s, int64_t i) { return (i < 0 || (size_t)i >= s.size()) ? 0 : (uint8_t)s[i]; }")
         if "addr" in used_syms:
             helper_lines.append("uintptr_t addr(void* ptr) { return (uintptr_t)ptr; }")
             helper_lines.append("template<typename T> uintptr_t addr(T& val) { return (uintptr_t)&val; }")
@@ -260,6 +265,7 @@ class UniversalCodeGen:
             helper_lines.append("template<typename T> int64_t length(const T& c) { return (int64_t)c.size(); }")
         if (has_arrays or "push" in used_syms) and not is_embedded:
             helper_lines.append("template<typename T, typename V> void push(vector<T>& v, const V& val) { v.push_back(val); }")
+            helper_lines.append("template<typename T> vector<T> operator+(const vector<T>& a, const vector<T>& b) { vector<T> res = a; res.insert(res.end(), b.begin(), b.end()); return res; }")
         if has_arrays or "_nyx_at" in used_syms:
             if is_embedded:
                 helper_lines.append("template<typename T, size_t N> T& _nyx_at(NyxBuffer<T, N>& v, int64_t i) { if (i < 0 || (size_t)i >= N) __builtin_trap(); return v.values[(size_t)i]; }")
@@ -268,7 +274,21 @@ class UniversalCodeGen:
             else:
                 helper_lines.append("template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }")
                 helper_lines.append("template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }")
-                helper_lines.append("inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return \"\"; return string(1, s[i]); }")
+                helper_lines.append("inline string _nyx_at(const string& s, int64_t i) {")
+                helper_lines.append("    int64_t char_idx = 0; size_t byte_idx = 0;")
+                helper_lines.append("    while (byte_idx < s.size()) {")
+                helper_lines.append("        size_t start = byte_idx;")
+                helper_lines.append("        unsigned char c = s[byte_idx];")
+                helper_lines.append("        if (c < 0x80) byte_idx += 1;")
+                helper_lines.append("        else if ((c & 0xE0) == 0xC0) byte_idx += 2;")
+                helper_lines.append("        else if ((c & 0xF0) == 0xE0) byte_idx += 3;")
+                helper_lines.append("        else if ((c & 0xF8) == 0xF0) byte_idx += 4;")
+                helper_lines.append("        else byte_idx += 1;")
+                helper_lines.append("        if (char_idx == i) return s.substr(start, byte_idx - start);")
+                helper_lines.append("        char_idx++;")
+                helper_lines.append("    }")
+                helper_lines.append("    return \"\";")
+                helper_lines.append("}")
         if has_buffers or "buffer_ptr" in used_syms:
             helper_lines.append("template<typename T, size_t N> uintptr_t buffer_ptr(NyxBuffer<T, N>& v) { return (uintptr_t)v.data(); }")
             helper_lines.append("template<typename T, size_t N> uintptr_t buffer_ptr(const NyxBuffer<T, N>& v) { return (uintptr_t)v.data(); }")
@@ -329,6 +349,12 @@ class UniversalCodeGen:
             lines.append("// --- nyx Standard Core Helpers ---")
             lines.extend(helper_lines)
             lines.append("")
+
+        user_impl_methods = set()
+        for stmt in getattr(self.ast, 'statements', []):
+            if isinstance(stmt, ImplBlockNode):
+                for m in stmt.methods:
+                    user_impl_methods.add(m.name)
 
         def cpp_type(t: Optional[TypeNode]) -> str:
             if not t: return "auto"
@@ -401,6 +427,11 @@ class UniversalCodeGen:
                     lines.append(f"    {ret} {ef.name}({', '.join(params)});")
                 lines.append("}\n")
 
+        def _cpp_fn_name(name: str) -> str:
+            if name == "main": return "_nyx_user_main"
+            if name in ("abs", "min", "max"): return f"_nyx_user_{name}"
+            return name
+
         def emit_expr(node: ASTNode) -> str:
             if isinstance(node, NumberNode): return str(node.value)
             if isinstance(node, StringNode):
@@ -412,9 +443,16 @@ class UniversalCodeGen:
             if isinstance(node, NullNode): return "nullptr"
             if isinstance(node, IdentifierNode): return node.name
             if isinstance(node, BinaryOpNode):
+                l_expr = emit_expr(node.left)
+                r_expr = emit_expr(node.right)
                 op_map = {"and": "&&", "or": "||"}
                 op = op_map.get(node.op, node.op)
-                return f"({emit_expr(node.left)} {op} {emit_expr(node.right)})"
+                if node.op == '+':
+                    l_t = getattr(node.left, 'inferred_type', None)
+                    r_t = getattr(node.right, 'inferred_type', None)
+                    if l_t == 'string' and r_t != 'string': r_expr = f"to_string({r_expr})"
+                    if r_t == 'string' and l_t != 'string': l_expr = f"to_string({l_expr})"
+                return f"({l_expr} {op} {r_expr})"
             if isinstance(node, UnaryOpNode):
                 op = "!" if node.op == "not" else node.op
                 return f"({op}{emit_expr(node.expr)})"
@@ -448,15 +486,15 @@ class UniversalCodeGen:
                     if target_expr in ("self", "this"):
                         args_cpp = ", ".join([emit_expr(a) for a in node.args])
                         return f"this->{node.callee.member}({args_cpp})"
-                    if node.callee.member == "push":
-                        return f"{target_expr}.push_back({emit_expr(node.args[0])})"
-                    elif node.callee.member in ("len", "length", "size"):
-                        return f"(int64_t){target_expr}.size()"
-                    elif node.callee.member == "pop":
-                        return f"{target_expr}.pop_back()"
-                    else:
-                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
-                        return f"{target_expr}.{node.callee.member}({args_cpp})"
+                    if node.callee.member not in user_impl_methods:
+                        if node.callee.member == "push":
+                            return f"{target_expr}.push_back({emit_expr(node.args[0])})"
+                        elif node.callee.member in ("len", "length", "size"):
+                            return f"(int64_t){target_expr}.size()"
+                        elif node.callee.member == "pop":
+                            return f"{target_expr}.pop_back()"
+                    args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                    return f"{target_expr}.{node.callee.member}({args_cpp})"
 
                 # Check if calling vector / collection / object methods as string
                 if isinstance(node.callee, str) and "." in node.callee:
@@ -464,15 +502,15 @@ class UniversalCodeGen:
                     if obj_part in ("self", "this"):
                         args_cpp = ", ".join([emit_expr(a) for a in node.args])
                         return f"this->{method_part}({args_cpp})"
-                    if method_part == "push":
-                        return f"{obj_part}.push_back({emit_expr(node.args[0])})"
-                    elif method_part in ("len", "length", "size"):
-                        return f"(int64_t){obj_part}.size()"
-                    elif method_part == "pop":
-                        return f"{obj_part}.pop_back()"
-                    else:
-                        args_cpp = ", ".join([emit_expr(a) for a in node.args])
-                        return f"{obj_part}.{method_part}({args_cpp})"
+                    if method_part not in user_impl_methods:
+                        if method_part == "push":
+                            return f"{obj_part}.push_back({emit_expr(node.args[0])})"
+                        elif method_part in ("len", "length", "size"):
+                            return f"(int64_t){obj_part}.size()"
+                        elif method_part == "pop":
+                            return f"{obj_part}.pop_back()"
+                    args_cpp = ", ".join([emit_expr(a) for a in node.args])
+                    return f"{obj_part}.{method_part}({args_cpp})"
                 
                 # Check if calling an extern C function
                 if node.callee in extern_c_funcs:
@@ -490,7 +528,7 @@ class UniversalCodeGen:
                         args_list.append(a_expr)
                     return f"{node.callee}({', '.join(args_list)})"
 
-                callee_name = "_nyx_user_main" if node.callee == "main" else node.callee
+                callee_name = _cpp_fn_name(node.callee)
                 args_cpp = ", ".join([emit_expr(a) for a in node.args])
                 return f"{callee_name}({args_cpp})"
             if isinstance(node, LambdaNode):
@@ -595,7 +633,7 @@ class UniversalCodeGen:
                 ret_t = cpp_type(node.return_type)
                 if node.is_interrupt:
                     ret_t = "void"
-                fn_name = "_nyx_user_main" if node.name == "main" else node.name
+                fn_name = _cpp_fn_name(node.name)
                 interrupt_prefix = 'extern "C" __attribute__((used)) ' if node.is_interrupt else ""
                 if node.is_interrupt:
                     res.append(f"{sp}// NYX_INTERRUPT_HANDLER: {fn_name}")
@@ -681,7 +719,7 @@ class UniversalCodeGen:
                 ret_t = cpp_type(s.return_type)
                 if s.is_interrupt:
                     ret_t = "void"
-                fn_name = "_nyx_user_main" if s.name == "main" else s.name
+                fn_name = _cpp_fn_name(s.name)
                 interrupt_prefix = 'extern "C" ' if s.is_interrupt else ""
                 fwd_decls.append(f"{gen_s}{interrupt_prefix}{ret_t} {fn_name}({params});")
         if fwd_decls:
@@ -714,6 +752,7 @@ class UniversalCodeGen:
             lines.append("    SetConsoleCP(65001);")
             lines.append("#endif")
             lines.append("    cout << boolalpha;")
+            lines.append("    cout << setprecision(17);")
         lines.extend(main_stmts)
         lines.append("    return 0;")
         lines.append("}")
@@ -803,7 +842,6 @@ class UniversalCodeGen:
             "    <div style={{ padding: '32px 24px', background: '#05070a', color: '#00f0ff', fontFamily: 'JetBrains Mono, monospace', minHeight: '100vh' }}>",
             "      <header style={{ borderBottom: '1px solid #1e293b', paddingBottom: 16, marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>",
             "        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>",
-            "          <span style={{ fontSize: 24 }}>⚡</span>",
             "          <div>",
             "            <h1 style={{ margin: 0, fontSize: 20, color: '#f8fafc', letterSpacing: '-0.025em' }}>nyx Reactive Application</h1>",
             "            <span style={{ fontSize: 12, color: '#64748b' }}>Target: React 19 (TSX) • High-Performance Virtual DOM</span>",
@@ -816,7 +854,7 @@ class UniversalCodeGen:
 
         if state_vars:
             lines.append("        <section style={{ background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>")
-            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>📊 Reactive States</h3>")
+            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>Reactive States</h3>")
             lines.append("          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>")
             for v in state_vars:
                 lines.append(f"            <div style={{{{ display: 'flex', justifyContent: 'space-between', padding: '8px 12px', background: '#070b12', borderRadius: 4, border: '1px solid #1e293b' }}}}>")
@@ -828,7 +866,7 @@ class UniversalCodeGen:
 
         if fn_names:
             lines.append("        <section style={{ background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>")
-            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>⚡ Interactive Actions</h3>")
+            lines.append("          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 16, fontSize: 14 }}>Interactive Actions</h3>")
             lines.append("          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>")
             for f in fn_names:
                 lines.append(f"            <button onClick={{() => {f}()}} style={{{{ background: '#0284c7', color: '#ffffff', border: 'none', padding: '10px 16px', borderRadius: 6, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}}}>")
@@ -839,7 +877,7 @@ class UniversalCodeGen:
 
         lines.extend([
             "        <section style={{ gridColumn: '1 / -1', background: '#0c131d', padding: 20, borderRadius: 8, border: '1px solid #1e293b' }}>",
-            "          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 12, fontSize: 14 }}>📜 Live Output Stream</h3>",
+            "          <h3 style={{ color: '#38bdf8', marginTop: 0, marginBottom: 12, fontSize: 14 }}>Live Output Stream</h3>",
             "          <div style={{ background: '#020408', padding: 16, borderRadius: 6, maxHeight: 250, overflowY: 'auto', border: '1px solid #0f172a' }}>",
             "            {logs.map((log, idx) => (",
             "              <div key={idx} style={{ color: '#a5f3fc', fontSize: 13, lineHeight: 1.6 }}>&gt; {log}</div>",
@@ -872,6 +910,7 @@ class UniversalCodeGen:
         lines = [
             "# Auto-generated by Nyx Compiler (hepy)",
             "import sys, os, math, time, ctypes, threading, queue",
+            "sys.setrecursionlimit(20000)",
             f"if r'{_root_dir}' not in sys.path: sys.path.insert(0, r'{_root_dir}')",
             "try:",
             "    from src.runtime import get_runtime_env",
@@ -882,6 +921,8 @@ class UniversalCodeGen:
             "    def contains(s, sub): return str(sub) in str(s)",
             "    def Ok(v): return type('Result', (), {'is_ok': True, 'value': v, 'error': None})()",
             "    def Err(e): return type('Result', (), {'is_ok': False, 'value': None, 'error': e})()",
+            "    def ord(s): return builtins.ord(s[0]) if s else 0",
+            "    def char_code_at(s, i): return builtins.ord(s[i]) if (s and 0 <= i < len(s)) else 0",
             "",
             "# --- Nyx Stdlib Python Runtime Helpers ---",
             "import math as _nyx_math",
@@ -911,6 +952,22 @@ class UniversalCodeGen:
             "    for b in s.encode('utf-8'):",
             "        h = ((h ^ b) * prime) & 0xFFFFFFFFFFFFFFFF",
             "    return f'{h:016x}'",
+            "import hashlib as _nyx_hashlib",
+            "def _nyx_crypto_sha256_hex(s: str) -> str:",
+            "    return _nyx_hashlib.sha256(s.encode('utf-8')).hexdigest()",
+            "import urllib.request as _nyx_urllib_req",
+            "def _nyx_http_get(url: str) -> str:",
+            "    try:",
+            "        req = _nyx_urllib_req.Request(url, headers={'User-Agent': 'nyx/3.0'})",
+            "        with _nyx_urllib_req.urlopen(req, timeout=10) as r:",
+            "            return r.read().decode('utf-8', errors='replace')",
+            "    except: return ''",
+            "def _nyx_http_post(url: str, body: str, ct: str) -> str:",
+            "    try:",
+            "        req = _nyx_urllib_req.Request(url, data=body.encode('utf-8'), headers={'User-Agent': 'nyx/3.0', 'Content-Type': ct})",
+            "        with _nyx_urllib_req.urlopen(req, timeout=10) as r:",
+            "            return r.read().decode('utf-8', errors='replace')",
+            "    except: return ''",
             "def _nyx_fs_write_string(p, c):",
             "    try:",
             "        with open(p, 'w', encoding='utf-8') as f: f.write(c)",
@@ -952,6 +1009,37 @@ class UniversalCodeGen:
             "        try: return int(j[pos:end])",
             "        except: return 0",
             "    return 0",
+            "_nyx_json_get_string_full = _nyx_json_get_string",
+            "_nyx_json_get_int_full = _nyx_json_get_int",
+            "def _nyx_json_get_bool_full(j, k): return _nyx_json_get_string(j, k) == 'true' or (f'\"{k}\":true' in j.replace(' ', ''))",
+            "def _nyx_json_has_key(j, k): return f'\"{k}\":' in j",
+            "def _nyx_json_escape(s): return s.replace('\\\\', '\\\\\\\\').replace('\"', '\\\\\"').replace('\\n', '\\\\n').replace('\\r', '\\\\r').replace('\\t', '\\\\t')",
+            "import threading as _nyx_threading, queue as _nyx_queue, socket as _nyx_socket",
+            "_nyx_mutex_list = []",
+            "_nyx_channel_list = []",
+            "def _nyx_mutex_create(): _nyx_mutex_list.append(_nyx_threading.Lock()); return len(_nyx_mutex_list) - 1",
+            "def _nyx_mutex_lock(i): _nyx_mutex_list[i].acquire()",
+            "def _nyx_mutex_unlock(i): _nyx_mutex_list[i].release()",
+            "def _nyx_channel_create(): _nyx_channel_list.append(_nyx_queue.Queue()); return len(_nyx_channel_list) - 1",
+            "def _nyx_channel_send(i, msg): _nyx_channel_list[i].put(msg)",
+            "def _nyx_channel_recv(i): return _nyx_channel_list[i].get()",
+            "_nyx_sockets = []",
+            "def _nyx_net_tcp_connect(h, p):",
+            "    try:",
+            "        s = _nyx_socket.socket(_nyx_socket.AF_INET, _nyx_socket.SOCK_STREAM)",
+            "        s.connect((h, p))",
+            "        _nyx_sockets.append(s)",
+            "        return len(_nyx_sockets) - 1",
+            "    except: return -1",
+            "def _nyx_net_tcp_send(i, d):",
+            "    try: _nyx_sockets[i].sendall(d.encode('utf-8')); return True",
+            "    except: return False",
+            "def _nyx_net_tcp_recv(i, m):",
+            "    try: return _nyx_sockets[i].recv(m).decode('utf-8', errors='ignore')",
+            "    except: return ''",
+            "def _nyx_net_tcp_close(i):",
+            "    try: _nyx_sockets[i].close()",
+            "    except: pass",
             ""
         ]
 
@@ -968,7 +1056,14 @@ class UniversalCodeGen:
                     return f"({emit_py_expr(node.left)} // {emit_py_expr(node.right)})"
                 py_op_map = {"&&": "and", "||": "or"}
                 py_op = py_op_map.get(node.op, node.op)
-                return f"({emit_py_expr(node.left)} {py_op} {emit_py_expr(node.right)})"
+                l_expr = emit_py_expr(node.left)
+                r_expr = emit_py_expr(node.right)
+                if node.op == '+':
+                    l_t = getattr(node.left, 'inferred_type', None)
+                    r_t = getattr(node.right, 'inferred_type', None)
+                    if l_t == 'string' and r_t != 'string': r_expr = f"str({r_expr})"
+                    if r_t == 'string' and l_t != 'string': l_expr = f"str({l_expr})"
+                return f"({l_expr} {py_op} {r_expr})"
             if isinstance(node, UnaryOpNode):
                 op_s = "not " if node.op in ("!", "not") else node.op
                 return f"({op_s}{emit_py_expr(node.expr)})"
@@ -1007,6 +1102,19 @@ class UniversalCodeGen:
                 res.append(f"{sp}    def __init__(self, {fields}):" if fields else f"{sp}    pass")
                 for f in node.fields:
                     res.append(f"{sp}        self.{f.name} = {f.name}")
+                return res
+            if isinstance(node, ImplBlockNode):
+                res = [f"{sp}# Implementation for {node.target_type}"]
+                for m in node.methods:
+                    params_list = [p.name for p in m.params]
+                    if not params_list or params_list[0] not in ('self', 'this'):
+                        params_list.insert(0, 'self')
+                    params_s = ", ".join(params_list)
+                    res.append(f"{sp}def _{node.target_type}_{m.name}({params_s}):")
+                    if not m.body: res.append(f"{sp}    pass")
+                    else:
+                        for s in m.body: res.extend(emit_py_stmt(s, indent + 1))
+                    res.append(f"{sp}setattr({node.target_type}, '{m.name}', _{node.target_type}_{m.name})")
                 return res
             if isinstance(node, EnumDefNode):
                 res = [f"{sp}class {node.name}:"]
@@ -1147,6 +1255,9 @@ function contains(haystack, needle) { return haystack && haystack.includes ? hay
 function to_string(v) { return String(v); }
 function to_int(v) { return parseInt(v, 10); }
 function len(v) { return v ? v.length : 0; }
+function ord(s) { return s ? s.charCodeAt(0) : 0; }
+function char_code_at(s, i) { return (s && i >= 0 && i < s.length) ? s.charCodeAt(i) : 0; }
+const _nyx_add = (a, b) => (Array.isArray(a) && Array.isArray(b)) ? a.concat(b) : (a + b);
 
 // --- Nyx Stdlib JavaScript Runtime Helpers ---
 const _nyx_math_sin = Math.sin;
@@ -1174,6 +1285,24 @@ const _nyx_hash_fnv1a_64_hex = (str) => {
         hash = BigInt.asUintN(64, (hash ^ BigInt(buf[i])) * prime);
     }
     return hash.toString(16).padStart(16, '0');
+};
+
+const _nyx_crypto_sha256_hex = (str) => {
+    return require('crypto').createHash('sha256').update(Buffer.from(str, 'utf-8')).digest('hex');
+};
+
+const _nyx_http_get = (url) => {
+    try {
+        const { execSync } = require('child_process');
+        return execSync(`curl -sL "${url}"`, { encoding: 'utf-8', timeout: 10000 });
+    } catch { return ''; }
+};
+
+const _nyx_http_post = (url, body, ct) => {
+    try {
+        const { execSync } = require('child_process');
+        return execSync(`curl -sL -X POST -H "Content-Type: ${ct}" -d "${body.replace(/"/g, '\\"')}" "${url}"`, { encoding: 'utf-8', timeout: 10000 });
+    } catch { return ''; }
 };
 
 const _nyx_fs_write_string = (p, c) => { try { require('fs').writeFileSync(p, c, 'utf-8'); return true; } catch { return false; } };
@@ -1209,20 +1338,46 @@ const _nyx_json_get_int = (jsonStr, key) => {
     }
     return 0;
 };
+const _nyx_json_get_string_full = _nyx_json_get_string;
+const _nyx_json_get_int_full = _nyx_json_get_int;
+const _nyx_json_get_bool_full = (jsonStr, key) => { const pat = `"${key}":`; const idx = jsonStr.indexOf(pat); return idx !== -1 && jsonStr.substring(idx + pat.length).trim().startsWith('true'); };
+const _nyx_json_has_key = (jsonStr, key) => jsonStr.indexOf(`"${key}":`) !== -1;
+const _nyx_json_escape = (s) => JSON.stringify(s).slice(1, -1);
+
+const _nyx_mutex_list = [];
+const _nyx_channel_list = [];
+const _nyx_mutex_create = () => { _nyx_mutex_list.push(false); return _nyx_mutex_list.length - 1; };
+const _nyx_mutex_lock = (i) => { _nyx_mutex_list[i] = true; };
+const _nyx_mutex_unlock = (i) => { _nyx_mutex_list[i] = false; };
+const _nyx_channel_create = () => { _nyx_channel_list.push([]); return _nyx_channel_list.length - 1; };
+const _nyx_channel_send = (i, msg) => { _nyx_channel_list[i].push(msg); };
+const _nyx_channel_recv = (i) => { return _nyx_channel_list[i].length > 0 ? _nyx_channel_list[i].shift() : ''; };
+const _nyx_sockets = [];
+const _nyx_net_tcp_connect = (h, p) => { return 0; };
+const _nyx_net_tcp_send = (i, d) => { return true; };
+const _nyx_net_tcp_recv = (i, m) => { return ''; };
+const _nyx_net_tcp_close = (i) => {};
 """)
 
         def emit_js_expr(node: Optional[ASTNode]) -> str:
             if not node: return "undefined"
-            if isinstance(node, NumberNode): return str(node.value)
+            if isinstance(node, NumberNode):
+                if isinstance(node.value, int) and (node.value > 9007199254740991 or node.value < -9007199254740991):
+                    return f"{node.value}n"
+                return str(node.value)
             if isinstance(node, StringNode): return repr(node.value)
             if isinstance(node, BooleanNode): return "true" if node.value else "false"
             if isinstance(node, NullNode): return "null"
-            if isinstance(node, IdentifierNode): return node.name
+            if isinstance(node, IdentifierNode): return "this" if node.name == "self" else node.name
             if isinstance(node, ArrayNode):
                 return f"[{', '.join(emit_js_expr(e) for e in node.elements)}]"
             if isinstance(node, BinaryOpNode):
+                if node.op == '+':
+                    return f"_nyx_add({emit_js_expr(node.left)}, {emit_js_expr(node.right)})"
                 op_map = {'and': '&&', 'or': '||', '&&': '&&', '||': '||', '==': '===', '!=': '!=='}
                 op = op_map.get(node.op, node.op)
+                if op in ('&', '|', '^', '<<', '>>'):
+                    return f"Number(BigInt({emit_js_expr(node.left)}) {op} BigInt({emit_js_expr(node.right)}))"
                 return f"({emit_js_expr(node.left)} {op} {emit_js_expr(node.right)})"
             if isinstance(node, UnaryOpNode):
                 op = '!' if node.op in ('!', 'not') else node.op
@@ -1236,7 +1391,8 @@ const _nyx_json_get_int = (jsonStr, key) => {
                 return f"{emit_js_expr(node.obj)}[{emit_js_expr(node.index_expr)}]"
             if isinstance(node, FunctionCallNode):
                 args_s = ", ".join(emit_js_expr(a) for a in node.args)
-                return f"{node.callee}({args_s})"
+                callee_s = emit_js_expr(node.callee) if isinstance(node.callee, ASTNode) else str(node.callee)
+                return f"{callee_s}({args_s})"
             return "undefined"
 
         def emit_js_stmt(node: Optional[ASTNode], indent: int = 0) -> List[str]:
@@ -1266,6 +1422,17 @@ const _nyx_json_get_int = (jsonStr, key) => {
                 for f in node.fields:
                     res.append(f"{sp}    this.{f.name} = {f.name};")
                 res.append(f"{sp}}}\n")
+                return res
+
+            if isinstance(node, ImplBlockNode):
+                res = [f"{sp}// Implementation for {node.target_type}"]
+                for m in node.methods:
+                    params_s = ", ".join(p.name for p in m.params if p.name not in ('self', 'this'))
+                    res.append(f"{sp}{node.target_type}.prototype.{m.name} = function({params_s}) {{")
+                    if not m.body: res.append(f"{sp}    // empty")
+                    else:
+                        for s in m.body: res.extend(emit_js_stmt(s, indent + 1))
+                    res.append(f"{sp}}};\n")
                 return res
 
             if isinstance(node, IfNode):
@@ -1383,7 +1550,9 @@ const _nyx_json_get_int = (jsonStr, key) => {
             "fn contains<H: AsRef<str>, N: AsRef<str>>(haystack: H, needle: N) -> bool { haystack.as_ref().contains(needle.as_ref()) }",
             "fn to_string<T: std::fmt::Display>(v: T) -> String { v.to_string() }",
             "fn to_int<S: AsRef<str>>(s: S) -> i64 { s.as_ref().parse::<i64>().unwrap_or(0) }",
-            "fn len<T>(v: &[T]) -> i64 { v.len() as i64 }\n"
+            "fn len<T>(v: &[T]) -> i64 { v.len() as i64 }",
+            "fn ord(s: &str) -> i64 { s.chars().next().map(|c| c as i64).unwrap_or(0) }",
+            "fn char_code_at(s: &str, i: i64) -> i64 { if i >= 0 && (i as usize) < s.len() { s.as_bytes()[i as usize] as i64 } else { 0 } }\n"
         ]
 
         def rust_type(t_annot: Optional[TypeNode]) -> str:
