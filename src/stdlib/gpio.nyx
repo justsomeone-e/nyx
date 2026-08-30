@@ -52,10 +52,6 @@ fn analog_write(pin: int, val: int) {
     nyx_hal_gpio_write(pin, val);
 }
 
-fn pwm_write(pin: int, val: int) {
-    nyx_hal_gpio_write(pin, val);
-}
-
 fn analog_read(pin: int) -> int {
     var r = nyx_hal_gpio_read(pin);
     if r == 0 {

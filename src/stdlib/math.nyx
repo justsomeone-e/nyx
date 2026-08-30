@@ -5,6 +5,20 @@
 const SQRT_TOLERANCE: float = 0.000001;
 const SQRT_MAX_ITERATIONS: int = 100;
 const POW_MAX_EXPONENT: int = 1000;
+const PI: float = 3.141592653589793;
+const E: float = 2.718281828459045;
+
+fn sin(x: float) -> float {
+    return _nyx_math_sin(x);
+}
+
+fn cos(x: float) -> float {
+    return _nyx_math_cos(x);
+}
+
+fn tan(x: float) -> float {
+    return _nyx_math_tan(x);
+}
 
 // Absolute value of a float
 fn abs(x: float) -> float {

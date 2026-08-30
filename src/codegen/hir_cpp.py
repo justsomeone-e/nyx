@@ -312,6 +312,9 @@ inline std::string _nyx_to_string(const std::string& value) { return value; }
 inline std::string _nyx_to_string(const char* value) { return value ? std::string(value) : std::string(); }
 inline std::string _nyx_to_string(bool value) { return value ? "true" : "false"; }
 inline std::string _nyx_to_string(double value) { return _nyx_f64_to_string(value); }
+inline double _nyx_math_sin(double value) { return std::sin(value); }
+inline double _nyx_math_cos(double value) { return std::cos(value); }
+inline double _nyx_math_tan(double value) { return std::tan(value); }
 
 template <typename T>
 std::string _nyx_to_string(const T& value) {
@@ -1939,6 +1942,8 @@ class HIRCppEmitter:
         if existing is not None:
             return existing
         base = self._identifier(preferred)
+        if symbol.startswith("function::") and preferred in ("abs", "min", "max"):
+            base = f"_nyx_user_{preferred}"
         if symbol.startswith(("builtin::", "intrinsic::", "function::", "extern::", "type::")):
             name = base
         elif "::param::" in symbol:

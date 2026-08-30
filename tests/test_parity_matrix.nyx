@@ -10,7 +10,7 @@ fn main() {
     
     // 1. Math Functions
     var sq = sqrt(144.0);
-    var pw = pow(2.0, 8.0);
+    var pw = pow(2.0, 8);
     var sn = sin(0.0);
     var cl = clamp(50.0, 0.0, 100.0);
     print($"[MATH] sqrt(144)={sq} pow(2,8)={pw} sin(0)={sn} clamp(50)={cl}");
