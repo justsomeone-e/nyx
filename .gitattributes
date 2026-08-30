@@ -5,8 +5,8 @@
 # Nyx is not currently a language in GitHub Linguist's language database.
 # Keep C++ highlighting for .nyx/.he files, but do not misrepresent Nyx
 # source as C++ in the repository language breakdown.
-*.nyx linguist-language=C++ linguist-detectable=false
-*.he linguist-language=C++ linguist-detectable=false
+*.nyx linguist-language=C++ -linguist-detectable
+*.he linguist-language=C++ -linguist-detectable
 
 # These are authored project sources/tests, not vendored dependencies.
 # They must remain visible in the language breakdown.
@@ -22,7 +22,7 @@ install.sh linguist-vendored=true
 
 # Exclude generated build output, documentation, and asset files
 # Generated build output should not affect language statistics.
-build/** linguist-generated=true
+build/** linguist-generated
 *.svg linguist-documentation=true
 assets/** linguist-documentation=true
 docs/** linguist-documentation=true
