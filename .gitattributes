@@ -1,29 +1,58 @@
-# =========================================================
-# GitHub Linguist Configuration for nyx Toolchain
-# =========================================================
+# GitHub Linguist map for the Nyx toolchain
+# Paths are relative to this file.  Nyx is not yet a built-in Linguist
+# language, so .nyx keeps C++ highlighting while remaining out of the C++
+# language percentage.  The real implementation languages stay detectable.
 
-# Nyx is not currently a language in GitHub Linguist's language database.
-# Keep C++ highlighting for .nyx/.he files, but do not misrepresent Nyx
-# source as C++ in the repository language breakdown.
+# Nyx source and compatibility-era source extension
 *.nyx linguist-language=C++ -linguist-detectable
 *.he linguist-language=C++ -linguist-detectable
 
-# These are authored project sources/tests, not vendored dependencies.
-# They must remain visible in the language breakdown.
-*.py -linguist-vendored
-src/** -linguist-vendored
-tests/** -linguist-vendored
+# Compiler, tooling, and backend sources
+*.py linguist-language=Python -linguist-vendored
+*.cpp linguist-language=C++ -linguist-vendored
+*.h linguist-language=C++ -linguist-vendored
+*.js linguist-language=JavaScript -linguist-vendored
+*.mjs linguist-language=JavaScript -linguist-vendored
+*.tsx linguist-language=TypeScript -linguist-vendored
+*.ts linguist-language=TypeScript -linguist-vendored
+*.d.ts linguist-language=TypeScript -linguist-vendored
+*.rs linguist-language=Rust -linguist-vendored
+*.c linguist-language=C -linguist-vendored
+*.wat linguist-language=WebAssembly linguist-generated
+*.wasm linguist-language=WebAssembly binary linguist-generated
+*.ld linguist-language=Linker-Script -linguist-vendored
+*.s linguist-language=Assembly -linguist-vendored
+*.S linguist-language=Assembly -linguist-vendored
 
-# Exclude shell and automation scripts
-*.ps1 linguist-vendored=true
-*.sh linguist-vendored=true
-install.ps1 linguist-vendored=true
-install.sh linguist-vendored=true
+# Configuration, data, and project manifests
+*.json linguist-language=JSON linguist-detectable
+*.toml linguist-language=TOML linguist-detectable
+*.lock linguist-generated
 
-# Exclude generated build output, documentation, and asset files
-# Generated build output should not affect language statistics.
+# Native/embedded and platform scripts
+*.sh linguist-language=Shell -linguist-vendored
+*.ps1 linguist-language=PowerShell -linguist-vendored
+*.bat linguist-language=Batchfile -linguist-vendored
+*.yml linguist-language=YAML linguist-detectable
+*.yaml linguist-language=YAML linguist-detectable
+*.xml linguist-language=XML linguist-detectable
+
+# Documentation and markup
+*.md linguist-documentation
+*.html linguist-language=HTML linguist-documentation
+*.svg linguist-language=SVG linguist-documentation
+
+# Generated artifacts and local toolchains
 build/** linguist-generated
-*.svg linguist-documentation=true
-assets/** linguist-documentation=true
-docs/** linguist-documentation=true
-examples/** linguist-documentation=true
+dist/** linguist-generated
+target/** linguist-generated
+.toolchains/** linguist-vendored
+assets/** linguist-documentation
+vscode-extension/images/** linguist-documentation
+tests/docs/** linguist-generated linguist-documentation
+
+# Authored source directories are explicitly not vendored.
+src/** -linguist-vendored
+compiler/** -linguist-vendored
+tests/** -linguist-vendored
+examples/** -linguist-vendored -linguist-documentation
