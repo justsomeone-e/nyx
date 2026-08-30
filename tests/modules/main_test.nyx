@@ -3,5 +3,5 @@ import "./utils"
 import "std/math"
 
 var price = calculate_discount(1000, 20)
-var p = power(2, 3)
+var p = pow(2.0, 3.0)
 print("Discounted Price:", price, "Power:", p)

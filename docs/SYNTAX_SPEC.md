@@ -1,123 +1,202 @@
-# ⚡ Nyx (heLang) Titan Specification Manual v4.0
+# Nyx v4 Syntax and Semantic Contract
 
-> **Tasarım Felsefesi:** *"Low-Level gücünü C++'tan, pratikliği Python'dan, web esnekliğini React'tan al; ama hiçbirinin karmaşasını yaşama."*
+Status: `v4.0.0-rc.1` freeze candidate.
 
----
+This file defines the compatibility boundary for Nyx source. The readable
+examples live in [`../LANGUAGE_REFERENCE.md`](../LANGUAGE_REFERENCE.md). The
+machine-readable keyword and target contracts live in
+`src/core/language_surface.py` and `src/core/backend_capabilities.py`.
 
-## 1. 🚀 Hızlı Başlangıç & CLI (`he`)
+## 1. Source and lexical rules
 
-Nyx artık tek bir komut satırı aracıyla (`he`) yönetilir:
+- Source files use UTF-8 and the `.nyx` extension.
+- Whitespace separates tokens but is otherwise insignificant.
+- A semicolon is optional after a complete statement.
+- `//` starts a line comment and `///` starts a documentation comment.
+- Identifiers are case-sensitive.
+- Strings support `\\`, `\"`, `\n`, `\r`, `\t`, `\0`, and `\uXXXX` escapes.
+- Unicode normalization is never implicit.
 
-```bash
-# Programı çalıştır (Live Interactive Runner)
-he run main.he
+The stable v4 surface contains 46 keywords. Their exact grouping and editor
+order are generated from `STABLE_KEYWORD_GROUPS`; editor completion is required
+to match that contract exactly. The pre-v4 `def` alias is not a keyword;
+function declarations use only `fn`.
 
-# Hedef dilde kaynak kod üret (C++, React, Python, JS)
-he build main.he
+## 2. Grammar outline
 
-# 10/10 Otomatik derleyici testlerini çalıştır
-he test
+The following EBNF is a compact compatibility outline. Parser conformance is
+proved by exact Python/Nyx AST parity tests.
 
-# Yeni bir Nyx projesi başlat
-he new my_radar_project
+```ebnf
+program          = { item | statement } EOF ;
+
+item             = function | interrupt_function | struct | trait | implementation | enum
+                 | type_alias | extern_function | import | native_directive
+                 | test_block ;
+
+function         = [ "async" ] "fn" identifier [ generic_parameters ]
+                   "(" [ parameters ] ")" [ "->" type ] block ;
+interrupt_function = "interrupt" "fn" identifier "(" ")"
+                     [ "->" "void" ] block ;
+trait_method     = [ "async" ] "fn" identifier [ generic_parameters ]
+                   "(" [ parameters ] ")" [ "->" type ] ;
+struct           = "struct" identifier [ generic_parameters ]
+                   "{" [ fields ] "}" ;
+trait            = "trait" identifier "{" { trait_method } "}" ;
+implementation   = "impl" identifier [ "for" identifier ]
+                   "{" { function } "}" ;
+
+statement        = declaration | volatile_declaration | assignment | expression
+                 | if_statement | for_statement | while_statement
+                 | loop_statement | match_statement | try_statement
+                 | guard_statement | defer_statement | unsafe_block
+                 | critical_block
+                 | spawn_block | return_statement | throw_statement
+                 | break_statement | continue_statement ;
+
+declaration      = ( "var" | "let" | "const" ) identifier
+                   [ ":" type ] "=" expression ;
+volatile_declaration = "volatile" "var" identifier
+                       [ ":" type ] "=" expression ;
+critical_block   = "critical" block ;
+assignment       = [ "set" ] assignable "=" expression ;
+if_statement     = "if" expression block
+                   { ( "elif" expression | "else" "if" expression ) block }
+                   [ "else" block ] ;
+for_statement    = "for" identifier "in" expression block ;
+while_statement  = "while" expression block ;
+loop_statement   = "loop" block ;
+try_statement    = "try" block "catch" identifier block ;
+throw_statement  = "throw" expression ;
+
+expression       = pipeline ;
+pipeline         = null_coalesce { "|>" call_target } ;
+null_coalesce    = logical_or { "??" logical_or } ;
+unary            = ( "!" | "not" | "-" | "+" | "~" | "await" ) unary
+                 | postfix ;
+postfix          = primary { call | member | safe_member | index } ;
 ```
 
----
+Operator precedence, from tightest to loosest, is postfix, unary,
+multiplicative, additive, shifts, comparisons, equality, bitwise AND/XOR/OR,
+logical AND/OR, null coalescing, then pipeline.
 
-## 2. 🔀 Pattern Matching (`match ... with`)
+## 3. Binding contract
 
-Geleneksel `switch-case` veya uzun `if-else` zincirleri yerine **Rust / Scala** tarzı modern eşleştirme:
+- `var` creates a rebindable binding.
+- `let` and `const` create non-rebindable bindings.
+- Binding immutability is shallow. It does not imply a recursively immutable
+  object graph or a C++-style const receiver.
+- `set x = value` and `x = value` have the same assignment semantics. `set` is
+  the preferred explicit spelling.
+- HIR verification, rather than target-language syntax, enforces rebinding.
+- Trait methods are bodyless signatures. Trait implementations must name a
+  declared trait and struct, provide `self` first, and exactly match every
+  required method's async marker, value-parameter types, and return type.
+- Inherent implementations may also declare associated functions without
+  `self`; only methods called on an instance declare `self` first.
 
-```he
-#target hecpp
+## 4. Type and control-flow contract
 
-enum MetalType {
-    Gold = 5000,
-    Silver = 8700,
-    Bronze = 11300
-}
+- `int` has the canonical signed 64-bit hosted representation.
+- `float` has the canonical IEEE-754 binary64 hosted representation.
+- `i8/i16/i32/i64`, `u8/u16/u32/u64`, and `f32/f64` select concrete storage
+  widths on declaring native/freestanding backends. Literal narrowing is
+  rejected before code generation.
+- Source integer literals are restricted to
+  `-9223372036854775808..9223372036854775807`; `E2012` rejects any other
+  magnitude before HIR lowering. Direct negation of decimal or hexadecimal 2⁶³
+  forms the minimum value.
+- Signed integer overflow wraps modulo 2⁶⁴; it never invokes target-language
+  undefined behavior or loses precision through a JavaScript `Number`.
+- Integer division truncates toward zero. Remainder has the dividend's sign.
+  Shift counts are masked to six bits.
+- Floating division follows IEEE-754 binary64, including infinities and NaN.
+  Floating `%` is the truncating `fmod` operation.
+- Canonical numeric string conversion is target-independent: `nan`, `inf`,
+  `-inf`, no exponent zero-padding, and negative zero rendered as `0`.
+- Canonical boolean text is lowercase `true` or `false`.
+- Implicit `int` to `float` widening performs binary64 conversion at the use
+  boundary and never rewrites the source binding's type. No implicit `float`
+  to `int` narrowing exists.
+- Constant folding uses these same rules, including i64 wrap, masked shifts,
+  truncating division, and mixed-number widening. Optimization cannot change a
+  program's numeric result.
+- `hecpp`, `hejs`, and `hepy` advertise `int64_wrap`, `float64_ieee`, and
+  `canonical_scalar_text`. `hewasm` remains a beta `wasm32` numeric contract.
+- Conditions require `bool`; implicit truthiness is not part of v4. A value
+  whose type remains `any` is checked at the condition boundary and raises a
+  runtime type error unless its actual value is exactly Boolean.
+- `a..b` is inclusive at both ends.
+- `break` and `continue` require an enclosing loop.
+- `return` requires an enclosing function and must match its declared result.
+- `guard condition else { ... }` executes its else body when the condition is
+  false; that body is expected to leave the guarded path.
+- `defer expression` executes once when its lexical scope exits, including an
+  exit caused by return or a propagated exception.
 
-var detected = "Gold"
+## 5. Task contract
 
-match detected {
-    "Gold" => print("🎯 ALTIN REZONANSI YAKALANDI! (5000 Hz)"),
-    "Silver" => print("🥈 GÜMÜŞ REZONANSI YAKALANDI! (8700 Hz)"),
-    "_" => print("Zemin Temiz.")
-}
-```
+- Calling `async fn f(...) -> T` produces `Task<T>`.
+- `await value` is valid only in an async function.
+- The operand of `await` must be `Task<T>` and the expression type is `T`.
+- A task represents one shared completion and may be awaited repeatedly.
+- Success values and thrown errors are replayed consistently to every awaiter.
+- Task start timing is unspecified; code must not depend on eager versus deferred
+  scheduling.
+- Cancellation and structured-concurrency ownership are not part of RC1.
 
----
+`hecpp`, `hejs`, and `hepy` implement this contract respectively with a shared
+future, a Promise, and a reusable wrapper around one `asyncio.Task`.
 
-## 3. 🏗️ Structs & Enums (Özel Veri Tipleri)
+## 6. Exception contract
 
-```he
-#target hecpp
+- `throw expression` transfers control to the nearest matching `catch`.
+- The caught value uses Nyx's canonical string conversion at the exception
+  boundary.
+- An uncaught error terminates the top-level task/program with failure.
+- Exceptions cross `Task<T>` at `await`; they are not converted to success
+  values.
 
-struct TargetPoint {
-    name,
-    frequency,
-    signal_strength
-}
+Exceptions and tasks are capability-gated. A backend without the feature must
+emit `E3001` before code generation.
 
-var point1 = TargetPoint("Oda Mezarı", 700, 92)
-print("Nokta:", point1.name, "| Frekans:", point1.frequency, "Hz")
-```
+## 7. HIR authority
 
----
+The source frontend lowers to immutable typed HIR v1. A backend may only consume
+verified HIR for a stable designation. The verifier owns:
 
-## 4. 🌊 Boru Hattı (|>) ve Ters Ok (->) Akışları
+- symbol identity and declaration-before-use;
+- type compatibility and callable arity;
+- immutable-binding checks;
+- loop, return, await, and assignment placement;
+- HIR schema and structural validity.
 
-```he
-#target hecpp
+Backend-specific source rewrites or silent feature approximations are forbidden.
+Unsupported behavior must be rejected through the versioned capability registry.
 
-5000 -> freq
-fn double_val(x) { return x * 2 }
+## 8. Compatibility rule
 
-freq |> double_val |> print
-```
+After RC1, existing valid v4 source cannot change meaning within the v4 line.
+New syntax must be additive, have exact Python/Nyx frontend parity, lower to
+target-neutral HIR, and either pass runtime parity on every declaring backend or
+be rejected by an explicit capability gate.
 
----
+## 9. Embedded control contract
 
-## 5. 🛡️ Güvenli Hata Yönetimi (`try / catch`)
-
-```he
-#target hecpp
-
-try {
-    var result = 100 / 0
-} catch err {
-    print("Hata yakalandı:", err)
-}
-```
-
----
-
-## 6. 🔍 Düşük Seviye RAM & Donanım Bellek Denetimi
-
-```he
-#target hecpp
-
-var secret = 1337
-var p = addr(secret)
-
-print("RAM Pointer:", p)
-print("RAM Değeri:", peek(p))
-
-// 16 baytlık Hex RAM dökümü
-memdump(p, 16)
-```
-
----
-
-## 7. 🎯 Desteklenen Hedef Sistemler (`#target`)
-
-| Direktif | Hedef Çıktı | Kullanım Alanı |
-| :--- | :--- | :--- |
-| `#target hecpp` | **C++20 (Native)** | Yüksek performans, radar, gömülü sistemler |
-| `#target hereact` | **React TSX** | Web arayüzleri, paneller, grafikler |
-| `#target hepy` | **Python 3** | Veri analizi, yapay zeka, hızlı otomasyon |
-| `#target hejs` | **JavaScript (ES6)** | Web, Node.js, Electron |
-| `#target heino` | **Arduino / ESP32** | Donanım yazılımı (Firmware), frekans üreteçleri |
-
----
-*Nyx Titan Engine v4.0 © 2026 - Tüm Hakları Saklıdır.*
+- `volatile var` is available only on freestanding embedded targets and does
+  not imply atomicity.
+- `interrupt fn NAME() -> void` has no parameters, generics, or async marker;
+  the board profile owns the exact name-to-IRQ mapping.
+- `critical { ... }` saves PRIMASK, masks interrupts, and restores the prior
+  state on normal exit, return, guard, or deferred cleanup.
+- Physical HAL modules are embedded-only. A hosted target must emit `E1400`
+  rather than link a simulated implementation.
+- `Buffer<T, N>` is embedded-only fixed storage. `N` is a positive integer
+  const argument; dynamic `Array<T>` allocation is rejected on freestanding
+  targets. Pointer-length interop uses `buffer_ptr(buffer)` plus `len(buffer)`.
+- A board profile may narrow target-level HAL support. Importing an unavailable
+  peripheral module must emit `E1403` before code generation.
+- Built-in F4 firmware generation is still a legacy AST backend migration
+  surface. It cannot be promoted from experimental until the flags and blocks
+  above are represented in canonical typed HIR.

@@ -1,0 +1,53 @@
+#target stm32f4
+
+import "std/board"
+import "std/gpio"
+import "std/serial"
+import "std/spi"
+import "std/i2c"
+import "std/adc"
+import "std/timer"
+import "std/interrupt"
+import "std/mmio"
+
+volatile var timer_ticks: u32 = 0
+
+interrupt fn TIM5_IRQHandler() -> void {
+    timer_clear_update(5)
+    critical {
+        set timer_ticks = timer_ticks + 1
+    }
+}
+
+fn main() -> void {
+    var led = board_pin("LED")
+    var analog_input = board_pin("A0")
+    var i2c_scl = board_pin("I2C_SCL")
+    var i2c_sda = board_pin("I2C_SDA")
+
+    mode(led, PIN_OUTPUT)
+    var serial_ready = init(115200)
+
+    var tx: Buffer<u8, 4> = [159, 0, 0, 0]
+    var rx: Buffer<u8, 4> = [0, 0, 0, 0]
+    var uart_written = write_bytes(buffer_ptr(tx), len(tx))
+
+    var spi = spi_open(1, 1000000, SPI_MODE_0)
+    if spi >= 0 {
+        var received = spi_exchange(spi, buffer_ptr(tx), buffer_ptr(rx), len(tx))
+        spi_close(spi)
+    }
+
+    var i2c = i2c_open(1, 104, 400000)
+    if i2c >= 0 {
+        var sent = i2c_write(i2c, buffer_ptr(tx), len(tx))
+    }
+    var sample = adc_read(analog_input)
+
+    irq_set_priority(50, 5)
+    var timer_ready = timer_start(5, 1000, true)
+
+    // Direct register access remains available without #native raw.
+    var gpioa_odr = read32(1073872916)
+    loop { }
+}

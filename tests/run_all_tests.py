@@ -1,6 +1,7 @@
 import os
 import subprocess
 import sys
+import warnings
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -39,6 +40,17 @@ fn add_point(p1: Point, p2: Point) -> Point {
     ast = Parser(Lexer(src).tokenize(), src).parse()
     assert ast.target == 'hecpp'
     assert len(ast.statements) == 2
+
+    metadata_src = """/// Return the input value.
+async fn identity<T>(value: T) -> T { return value }
+"""
+    metadata_ast = Parser(Lexer(metadata_src).tokenize(), metadata_src).parse()
+    identity_fn = metadata_ast.statements[0]
+    assert isinstance(identity_fn, FunctionDefNode)
+    assert identity_fn.generic_params == ["T"]
+    assert identity_fn.is_async is True
+    assert identity_fn.doc_comment == "Return the input value."
+    assert identity_fn.line == 2 and identity_fn.col == 1
     print("  [PASS] Parser Struct & Function AST construction")
 
 def run_type_checker_tests():
@@ -58,17 +70,27 @@ var d = [1, 2, 3]
     print("  [PASS] TypeChecker Scope tracking & Inference")
 
 def run_codegen_tests():
-    print("[*] Running C++20 Codegen Tests...")
+    print("[*] Running C++20 / Python Codegen Tests...")
     src = """#target hecpp
-struct User { name, age }
-fn is_adult(u) { return u.age >= 18 }
+struct User { name: string, age: int }
+fn is_adult(u: User) -> bool { return u.age >= 18 }
 """
     ast = Parser(Lexer(src).tokenize(), src).parse()
     cpp = UniversalCodeGen(ast).gen_cpp()
     assert 'struct User {' in cpp
     assert 'User(' in cpp
-    assert 'auto is_adult(' in cpp
-    print("  [PASS] C++20 Structs, Constructors & Forward Declarations")
+    assert 'bool is_adult(' in cpp
+
+    coalesce_src = "var present = 100 ?? 42\nvar missing = null ?? 42\n"
+    coalesce_ast = Parser(Lexer(coalesce_src).tokenize(), coalesce_src).parse()
+    TypeChecker(coalesce_ast, '<coalesce>', coalesce_src).check()
+    python_code = UniversalCodeGen(coalesce_ast).gen_python()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", SyntaxWarning)
+        namespace = {"__name__": "nyx_codegen_test"}
+        exec(compile(python_code, "<nyx_codegen_test>", "exec"), namespace)
+    assert namespace["present"] == 100 and namespace["missing"] == 42
+    print("  [PASS] C++ declarations and lazy Python null-coalescing")
 
 def run_module_tests():
     print("[*] Running Module & Import Loader Unit Tests...")
@@ -77,7 +99,7 @@ def run_module_tests():
     loader = ModuleLoader(base_dir=os.path.dirname(main_file))
     ast = loader.load_program(main_file)
     assert any(isinstance(s, FunctionDefNode) and s.name == "calculate_discount" for s in ast.statements)
-    assert any(isinstance(s, FunctionDefNode) and s.name == "power" for s in ast.statements)
+    assert any(isinstance(s, FunctionDefNode) and s.name == "pow" for s in ast.statements)
     print("  [PASS] Multi-file local and standard library module resolution")
 
 from tests.negative_tests import run_negative_tests
@@ -101,6 +123,22 @@ from tests.bootstrap_lexer_test import run_bootstrap_lexer_test
 from tests.bootstrap_parser_test import run_bootstrap_parser_test
 from tests.bootstrap_parser_corpus_test import run_parser_validation_corpus
 from tests.bootstrap_typechecker_test import run_bootstrap_typechecker_test
+from tests.cli_process_suite import run_cli_process_suite
+from tests.bundle_suite import run_bundle_suite
+from tests.self_host_suite import run_self_host_suite
+from tests.capability_suite import run_capability_suite
+from tests.compiler_api_suite import run_compiler_api_suite
+from tests.installer_suite import run_installer_suite
+from tests.ir_suite import run_ir_suite
+from tests.hir_cpp_suite import run_hir_cpp_suite
+from tests.hir_javascript_suite import run_hir_javascript_suite
+from tests.hir_python_suite import run_hir_python_suite
+from tests.hir_rust_suite import run_hir_rust_suite
+from tests.language_surface_suite import run_language_surface_suite
+from tests.numeric_semantics_suite import run_numeric_semantics_suite
+from tests.release_packaging_suite import run_release_packaging_suite
+from tests.version_contract_suite import run_version_contract_suite
+from tests.toolchain_cli_suite import run_toolchain_cli_suite
 
 def main():
     print("=" * 70)
@@ -112,6 +150,51 @@ def main():
     run_type_checker_tests()
     run_codegen_tests()
     run_module_tests()
+
+    cli_ok = run_cli_process_suite()
+
+    toolchain_cli_ok = run_toolchain_cli_suite()
+
+    bundle_ok = run_bundle_suite()
+
+    print()
+    self_host_ok = run_self_host_suite()
+
+    print()
+    capability_ok = run_capability_suite()
+
+    print()
+    compiler_api_ok = run_compiler_api_suite()
+
+    print()
+    ir_ok = run_ir_suite()
+
+    print()
+    hir_python_ok = run_hir_python_suite()
+
+    print()
+    hir_javascript_ok = run_hir_javascript_suite()
+
+    print()
+    hir_cpp_ok = run_hir_cpp_suite()
+
+    print()
+    hir_rust_ok = run_hir_rust_suite()
+
+    print()
+    language_surface_ok = run_language_surface_suite()
+
+    print()
+    numeric_semantics_ok = run_numeric_semantics_suite()
+
+    print()
+    release_packaging_ok = run_release_packaging_suite()
+
+    print()
+    version_contract_ok = run_version_contract_suite()
+
+    print()
+    installer_ok = run_installer_suite()
     
     print()
     mod_ok = run_module_suite()
@@ -179,7 +262,7 @@ def main():
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = (mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
+    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
                   natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
     print("=" * 70)

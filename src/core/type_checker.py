@@ -2,16 +2,33 @@ from typing import Dict, List, Optional, Any, Set
 import sys
 from .ast_nodes import (
     ASTNode, ProgramNode, NumberNode, StringNode, BooleanNode, NullNode,
-    IdentifierNode, BinaryOpNode, UnaryOpNode, NullCoalesceNode, MemberAccessNode,
+    IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, NullCoalesceNode, MemberAccessNode,
     IndexAccessNode, ArrayNode, LambdaNode, FunctionCallNode, VarDeclNode,
     AssignNode, TypeAliasNode, StructDefNode, TraitDefNode, ImplBlockNode,
-    EnumDefNode, UnsafeBlockNode, SpawnNode, TestBlockNode, AssertNode,
+    EnumDefNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, TestBlockNode, AssertNode,
     FunctionDefNode, MatchNode, TryCatchNode, IfNode, WhileNode, ForNode,
-    ReturnNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
+    ReturnNode, ThrowNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
     NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode,
     DeferNode, GuardNode
 )
 from .diagnostics import DiagnosticEmitter
+
+_INT64_MIN = -(1 << 63)
+_INT64_MAX = (1 << 63) - 1
+_INTEGER_TYPES = frozenset(("int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "uintptr"))
+_FIXED_INTEGER_RANGES = {
+    "i8": (-(1 << 7), (1 << 7) - 1),
+    "i16": (-(1 << 15), (1 << 15) - 1),
+    "i32": (-(1 << 31), (1 << 31) - 1),
+    "i64": (_INT64_MIN, _INT64_MAX),
+    "int": (_INT64_MIN, _INT64_MAX),
+    "u8": (0, (1 << 8) - 1),
+    "u16": (0, (1 << 16) - 1),
+    "u32": (0, (1 << 32) - 1),
+    "u64": (0, (1 << 64) - 1),
+    "uintptr": (0, (1 << 64) - 1),
+}
+_EMBEDDED_TARGETS = frozenset(("stm32", "stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"))
 
 class TypeChecker:
     def __init__(self, ast: ProgramNode, filepath: str = '<anonymous>', source: str = ''):
@@ -23,14 +40,17 @@ class TypeChecker:
         self.func_defs: Dict[str, Dict[str, Any]] = {}
         self.is_inside_unsafe = False
         self.current_return_type: Optional[str] = None
+        self.current_is_async = False
+        self._embedded_buffer_initializer_depth = 0
         
         # Prepopulate builtin runtime functions
         self.builtins = {
             'print': 'void', 'input': 'string', 'to_string': 'string',
             'to_int': 'int', 'contains': 'bool', 'is_number': 'bool',
             'addr': 'uintptr', 'peek': 'uintptr', 'memdump': 'void',
+            'buffer_ptr': 'uintptr',
             'delay_ms': 'void', 'channel': 'Channel', 'Ok': 'Result',
-            'Err': 'Result', 'len': 'int'
+            'Err': 'Result', 'len': 'int', 'args': 'Array<string>'
         }
         for b, t in self.builtins.items():
             self.scopes[0][b] = t
@@ -77,6 +97,12 @@ class TypeChecker:
         act_base = actual.rstrip('?')
         if exp_base == act_base:
             return True
+        if exp_base in _INTEGER_TYPES and act_base in _INTEGER_TYPES:
+            return True
+        expected_buffer = self._buffer_parts(exp_base)
+        if expected_buffer and act_base.startswith('Array<') and act_base.endswith('>'):
+            actual_element = act_base[6:-1]
+            return actual_element == 'any' or self.is_compatible(expected_buffer[0], actual_element)
         # Pointer compatibility (*void can accept any *T or vice versa)
         if exp_base.startswith('*') and act_base.startswith('*'):
             return True
@@ -89,29 +115,209 @@ class TypeChecker:
             act_ret = act_base.split('->')[-1].strip() if '->' in act_base else 'any'
             return self.is_compatible(exp_ret, act_ret)
         # Generic prefix compatibility: Result<T, E> matches Result, Array<T> matches Array
-        if (exp_base.startswith('Result') and act_base.startswith('Result')) or (exp_base.startswith('Array') and act_base.startswith('Array')):
+        if (
+            (exp_base.startswith('Result') and act_base.startswith('Result'))
+            or (exp_base.startswith('Array') and act_base.startswith('Array'))
+            or (exp_base.startswith('Task') and act_base.startswith('Task'))
+        ):
             return True
         # null compatibility with Option / Nullable types
         if actual == 'null' and ('?' in expected or 'Option' in expected):
             return True
         return False
 
+    @staticmethod
+    def _buffer_parts(type_name: str):
+        text = str(type_name).strip()
+        if not (text.startswith('Buffer<') and text.endswith('>')):
+            return None
+        body = text[7:-1]
+        if ',' not in body:
+            return None
+        element, capacity = body.rsplit(',', 1)
+        element = element.strip()
+        capacity = capacity.strip()
+        if not element or not capacity.isdigit():
+            return None
+        return element, int(capacity)
+
+    def _validate_buffer_type(self, type_node: Optional[TypeNode], node: ASTNode):
+        if not type_node or type_node.name != 'Buffer':
+            return None
+        self._require_embedded(node, 'Buffer<T, N>')
+        if len(type_node.generic_args) != 2:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                'E2025', 'Buffer requires an element type and a compile-time capacity',
+                expected='Buffer<T, positive_integer>',
+                found=str(type_node),
+                help_msg='Use a declaration such as Buffer<u8, 64>.',
+            )
+        element_type, capacity_type = type_node.generic_args
+        capacity_text = capacity_type.name
+        if not capacity_text.isdigit():
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, capacity_type.line, capacity_type.col,
+                'E2025', 'Buffer capacity must be an integer literal',
+                expected='positive integer capacity',
+                found=capacity_text,
+                help_msg='Use a declaration such as Buffer<u8, 64>.',
+            )
+        capacity = int(capacity_text)
+        if capacity <= 0 or capacity > 1_048_576:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, capacity_type.line, capacity_type.col,
+                'E2026', 'Buffer capacity is outside the supported range',
+                expected='1..1048576 elements',
+                found=str(capacity),
+                help_msg='Choose a positive fixed capacity that fits the target RAM budget.',
+            )
+        return str(element_type), capacity
+
+    def _validate_embedded_storage_type(
+        self,
+        type_node: Optional[TypeNode],
+        node: ASTNode,
+        context: str,
+    ) -> None:
+        """Reject heap-backed collection types from freestanding ABI/storage."""
+        if not type_node or self.ast.target not in _EMBEDDED_TARGETS:
+            return
+        if type_node.name == 'Array':
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                'E2028', 'Dynamic Array storage is unavailable on freestanding targets',
+                expected='Buffer<T, N>',
+                found=f'{context}: {type_node}',
+                help_msg='Use a fixed-capacity declaration such as Buffer<u8, 64>.',
+            )
+        for generic_arg in type_node.generic_args:
+            self._validate_embedded_storage_type(generic_arg, node, context)
+
+    def _reject_embedded_array_value(self, type_name: str, node: ASTNode, context: str) -> None:
+        if self.ast.target not in _EMBEDDED_TARGETS:
+            return
+        normalized = str(type_name).rstrip('?')
+        if normalized.startswith('Array<') or normalized == 'Array':
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                'E2028', 'Dynamic Array storage is unavailable on freestanding targets',
+                expected='Buffer<T, N>',
+                found=f'{context}: {type_name}',
+                help_msg='Use a fixed-capacity declaration such as Buffer<u8, 64>.',
+            )
+
+    def _validate_buffer_initializer(self, node: VarDeclNode, parts):
+        if not parts or not isinstance(node.expr, ArrayNode):
+            return
+        element_type, capacity = parts
+        if len(node.expr.elements) > capacity:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.expr.line, node.expr.col,
+                'E2026', f"Buffer initializer exceeds capacity for '{node.name}'",
+                expected=f'at most {capacity} elements',
+                found=f'{len(node.expr.elements)} elements',
+                help_msg='Increase the Buffer capacity or shorten the initializer.',
+            )
+        for element in node.expr.elements:
+            actual = self.infer_type(element)
+            bounds = _FIXED_INTEGER_RANGES.get(element_type)
+            if (
+                bounds and isinstance(element, NumberNode)
+                and isinstance(element.value, int) and not isinstance(element.value, bool)
+                and not (bounds[0] <= element.value <= bounds[1])
+            ):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, element.line, element.col,
+                    'E2024', f"Buffer element literal does not fit in '{element_type}'",
+                    expected=f'{bounds[0]}..{bounds[1]}',
+                    found=str(element.value),
+                    help_msg=f"Choose a value representable by {element_type}.",
+                )
+            if not self.is_compatible(element_type, actual):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, element.line, element.col,
+                    'E2001', f"Buffer element type mismatch in '{node.name}'",
+                    expected=element_type,
+                    found=actual,
+                    help_msg=f"Every initializer element must fit Buffer<{element_type}, {capacity}>.",
+                )
+
+    def _validate_static_buffer_index(self, node: IndexAccessNode):
+        if not isinstance(node.obj, IdentifierNode) or not isinstance(node.index_expr, NumberNode):
+            return
+        if not isinstance(node.index_expr.value, int) or isinstance(node.index_expr.value, bool):
+            return
+        parts = self._buffer_parts(self.lookup(node.obj.name) or '')
+        if parts and not (0 <= node.index_expr.value < parts[1]):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.index_expr.line, node.index_expr.col,
+                'E2027', f"Buffer index is out of bounds for '{node.obj.name}'",
+                expected=f'0..{parts[1] - 1}',
+                found=str(node.index_expr.value),
+                help_msg='Use an index within the fixed Buffer capacity.',
+            )
+
+    def _require_embedded(self, node: ASTNode, construct: str):
+        if self.ast.target not in _EMBEDDED_TARGETS:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                "E2020", f"'{construct}' is only available on freestanding embedded targets",
+                expected="embedded target",
+                found=self.ast.target,
+                help_msg="Select a Nucleo board with 'nyx build --board ...' or use #target embedded.",
+            )
+
+    def _check_fixed_integer_literal(self, node: VarDeclNode):
+        if not node.type_annot or not isinstance(node.expr, NumberNode):
+            return
+        type_name = node.type_annot.name
+        bounds = _FIXED_INTEGER_RANGES.get(type_name)
+        value = node.expr.value
+        if not bounds or not isinstance(value, int) or isinstance(value, bool):
+            return
+        if not (bounds[0] <= value <= bounds[1]):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.expr.line, node.expr.col,
+                "E2024", f"Integer literal does not fit in '{type_name}'",
+                expected=f"{bounds[0]}..{bounds[1]}",
+                found=str(value),
+                help_msg=f"Choose a value representable by {type_name} or use a wider integer type.",
+            )
+
     def check(self):
+        self._validate_integer_literals(self.ast)
+
         # 1st Pass: Register all Structs & Functions
         for stmt in self.ast.statements:
             if isinstance(stmt, StructDefNode):
                 fields = {}
                 for f in stmt.fields:
+                    self._validate_embedded_storage_type(f.type_annot, stmt, f"struct field '{f.name}'")
+                    self._validate_buffer_type(f.type_annot, stmt)
                     f_type = f.type_annot.name if f.type_annot else 'any'
                     fields[f.name] = f_type
                 self.struct_defs[stmt.name] = fields
                 self.declare(stmt.name, stmt.name)
             elif isinstance(stmt, FunctionDefNode):
-                ret_t = stmt.return_type.name if stmt.return_type else 'any'
-                params = [(p.name, p.type_annot.name if p.type_annot else 'any') for p in stmt.params]
-                self.func_defs[stmt.name] = {'ret': ret_t, 'params': params}
-                self.declare(stmt.name, f'fn->{ret_t}')
+                ret_t = str(stmt.return_type) if stmt.return_type else 'any'
+                params = [(p.name, str(p.type_annot) if p.type_annot else 'any') for p in stmt.params]
+                public_ret = f'Task<{ret_t}>' if stmt.is_async else ret_t
+                self.func_defs[stmt.name] = {
+                    'ret': ret_t,
+                    'public_ret': public_ret,
+                    'params': params,
+                    'is_async': stmt.is_async,
+                }
+                self.declare(stmt.name, f'fn->{public_ret}')
             elif isinstance(stmt, ExternFnDeclNode):
+                self._validate_embedded_storage_type(stmt.return_type, stmt, f"extern fn '{stmt.name}' return")
+                self._validate_buffer_type(stmt.return_type, stmt)
+                for param in stmt.params:
+                    self._validate_embedded_storage_type(
+                        param.type_annot, stmt, f"extern fn '{stmt.name}' parameter '{param.name}'"
+                    )
+                    self._validate_buffer_type(param.type_annot, stmt)
                 ret_t = str(stmt.return_type) if stmt.return_type else 'void'
                 params = [(p.name, str(p.type_annot) if p.type_annot else 'any') for p in stmt.params]
                 self.func_defs[stmt.name] = {'ret': ret_t, 'params': params, 'is_extern': True}
@@ -121,6 +327,39 @@ class TypeChecker:
         for stmt in self.ast.statements:
             self.visit(stmt)
 
+    def _validate_integer_literals(self, value: object):
+        """Reject invalid source literals before inference can skip a subtree."""
+        if isinstance(value, NumberNode):
+            if (
+                isinstance(value.value, int)
+                and not isinstance(value.value, bool)
+                and not (_INT64_MIN <= value.value <= _INT64_MAX)
+            ):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, value.line, value.col,
+                    "E2012", "Integer literal is outside the signed 64-bit range",
+                    expected=f"{_INT64_MIN}..{_INT64_MAX}",
+                    found=str(value.value),
+                    help_msg="Use a signed 64-bit literal or compute the wrapped value at runtime.",
+                )
+        if isinstance(value, ASTNode):
+            for child in vars(value).values():
+                self._validate_integer_literals(child)
+        elif isinstance(value, (list, tuple)):
+            for child in value:
+                self._validate_integer_literals(child)
+
+    def _require_bool_condition(self, node: ASTNode, context: str):
+        actual = self.infer_type(node)
+        if actual not in ('bool', 'any'):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                "E2013", f"{context} condition must have type 'bool'",
+                expected="bool",
+                found=actual,
+                help_msg="Compare the value explicitly instead of relying on implicit truthiness.",
+            )
+
     def visit(self, node: Optional[ASTNode]):
         if not node:
             return
@@ -129,11 +368,38 @@ class TypeChecker:
             return
 
         if isinstance(node, VarDeclNode):
-            self.visit(node.expr)
+            if node.is_volatile:
+                self._require_embedded(node, "volatile var")
+            self._check_fixed_integer_literal(node)
+            self._validate_embedded_storage_type(node.type_annot, node, f"variable '{node.name}'")
+            buffer_parts = self._validate_buffer_type(node.type_annot, node)
+            if (
+                self.ast.target in _EMBEDDED_TARGETS
+                and isinstance(node.expr, ArrayNode)
+                and buffer_parts is None
+            ):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    'E2028', 'Dynamic Array storage is unavailable on freestanding targets',
+                    expected='Buffer<T, N>',
+                    found=str(node.type_annot) if node.type_annot else 'inferred Array',
+                    help_msg='Use a fixed-capacity declaration such as Buffer<u8, 64>.',
+                )
+            self._validate_buffer_initializer(node, buffer_parts)
+            if buffer_parts and isinstance(node.expr, ArrayNode):
+                self._embedded_buffer_initializer_depth += 1
+                try:
+                    self.visit(node.expr)
+                finally:
+                    self._embedded_buffer_initializer_depth -= 1
+            else:
+                self.visit(node.expr)
             val_type = self.infer_type(node.expr)
+            if buffer_parts is None:
+                self._reject_embedded_array_value(val_type, node, f"variable '{node.name}'")
             if node.type_annot:
                 if not self.is_type_compatible(node.type_annot, val_type):
-                    declared_name = f"{node.type_annot.name}?" if node.type_annot.is_optional else node.type_annot.name
+                    declared_name = str(node.type_annot)
                     DiagnosticEmitter.emit_error(
                         self.filepath, self.source, node.line, node.col,
                         "E2001", f"Type mismatch in variable declaration '{node.name}'",
@@ -141,8 +407,9 @@ class TypeChecker:
                         found=val_type,
                         help_msg=f"Cannot assign value of type '{val_type}' to variable '{node.name}' of type '{declared_name}'."
                     )
-                self.declare(node.name, node.type_annot.name)
-                node.inferred_type = node.type_annot.name
+                declared_name = str(node.type_annot)
+                self.declare(node.name, declared_name)
+                node.inferred_type = declared_name
             else:
                 self.declare(node.name, val_type)
                 node.inferred_type = val_type
@@ -165,20 +432,47 @@ class TypeChecker:
             self.visit(node.expr)
 
         elif isinstance(node, FunctionDefNode):
+            if node.is_interrupt:
+                self._require_embedded(node, "interrupt fn")
+                declared_return = str(node.return_type) if node.return_type else "void"
+                if node.is_async or node.params or declared_return != "void" or node.generic_params:
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2021", "Interrupt handlers must be synchronous fn() -> void declarations",
+                        expected="interrupt fn NAME() -> void { ... }",
+                        found=(
+                            f"{'async ' if node.is_async else ''}fn({len(node.params)} params) "
+                            f"-> {declared_return}"
+                        ),
+                        help_msg="Remove parameters, generics, async, and non-void return values from the handler.",
+                    )
             self.enter_scope()
             prev_ret = self.current_return_type
+            prev_async = self.current_is_async
             self.current_return_type = str(node.return_type) if node.return_type else None
+            self.current_is_async = node.is_async
+            self._validate_embedded_storage_type(
+                node.return_type, node, f"function '{node.name}' return"
+            )
+            self._validate_buffer_type(node.return_type, node)
             for p in node.params:
+                self._validate_embedded_storage_type(
+                    p.type_annot, node, f"function '{node.name}' parameter '{p.name}'"
+                )
+                self._validate_buffer_type(p.type_annot, node)
                 p_type = str(p.type_annot) if p.type_annot else 'any'
                 self.declare(p.name, p_type)
             for s in node.body:
                 self.visit(s)
             self.current_return_type = prev_ret
+            self.current_is_async = prev_async
             self.exit_scope()
 
         elif isinstance(node, ReturnNode):
             if node.expr:
+                self.visit(node.expr)
                 ret_val_type = self.infer_type(node.expr)
+                self._reject_embedded_array_value(ret_val_type, node, 'return value')
                 if self.current_return_type and not self.is_compatible(self.current_return_type, ret_val_type):
                     DiagnosticEmitter.emit_error(
                         self.filepath, self.source, node.line, node.col,
@@ -187,6 +481,13 @@ class TypeChecker:
                         found=ret_val_type,
                         help_msg=f"Function was declared with return type '{self.current_return_type}', but returns a value of type '{ret_val_type}'."
                     )
+
+        elif isinstance(node, ThrowNode):
+            self.visit(node.expr)
+
+        elif isinstance(node, AwaitNode):
+            self.visit(node.expr)
+            self.infer_type(node)
 
         elif isinstance(node, StructDefNode):
             pass
@@ -200,22 +501,29 @@ class TypeChecker:
             self.exit_scope()
             self.is_inside_unsafe = prev
 
+        elif isinstance(node, CriticalBlockNode):
+            self._require_embedded(node, "critical")
+            self.enter_scope()
+            for s in node.body:
+                self.visit(s)
+            self.exit_scope()
+
         elif isinstance(node, DeferNode):
             self.visit(node.expr)
 
         elif isinstance(node, GuardNode):
-            self.infer_type(node.condition)
+            self._require_bool_condition(node.condition, "guard")
             self.enter_scope()
             for s in node.else_body: self.visit(s)
             self.exit_scope()
 
         elif isinstance(node, IfNode):
-            self.infer_type(node.condition)
+            self._require_bool_condition(node.condition, "if")
             self.enter_scope()
             for s in node.then_branch: self.visit(s)
             self.exit_scope()
             for cond, branch in node.elif_branches:
-                self.infer_type(cond)
+                self._require_bool_condition(cond, "elif")
                 self.enter_scope()
                 for s in branch: self.visit(s)
                 self.exit_scope()
@@ -225,7 +533,7 @@ class TypeChecker:
                 self.exit_scope()
 
         elif isinstance(node, WhileNode):
-            self.infer_type(node.condition)
+            self._require_bool_condition(node.condition, "while")
             self.enter_scope()
             for s in node.body: self.visit(s)
             self.exit_scope()
@@ -234,7 +542,11 @@ class TypeChecker:
             self.enter_scope()
             if node.collection_expr:
                 c_type = self.infer_type(node.collection_expr)
-                elem_type = c_type.replace('Array<', '').replace('>', '') if 'Array<' in c_type else 'any'
+                buffer_parts = self._buffer_parts(c_type)
+                if buffer_parts:
+                    elem_type = buffer_parts[0]
+                else:
+                    elem_type = c_type.replace('Array<', '').replace('>', '') if 'Array<' in c_type else 'any'
                 self.declare(node.var_name, elem_type)
             else:
                 self.declare(node.var_name, 'int')
@@ -253,11 +565,39 @@ class TypeChecker:
             for s in node.try_body: self.visit(s)
             self.exit_scope()
             self.enter_scope()
-            self.declare(node.err_name, 'Exception')
+            self.declare(node.err_name, 'string')
             for s in node.catch_body: self.visit(s)
             self.exit_scope()
 
+        elif isinstance(node, ArrayNode):
+            if self.ast.target in _EMBEDDED_TARGETS and self._embedded_buffer_initializer_depth == 0:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    'E2028', 'Dynamic Array storage is unavailable on freestanding targets',
+                    expected='Buffer<T, N> initializer',
+                    found='array literal expression',
+                    help_msg='Bind the literal to a fixed-capacity Buffer<T, N> declaration.',
+                )
+            for element in node.elements:
+                self.visit(element)
+
+        elif isinstance(node, IndexAccessNode):
+            index_type = self.infer_type(node.index_expr)
+            if index_type not in _INTEGER_TYPES and index_type != 'any':
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.index_expr.line, node.index_expr.col,
+                    'E2005', 'Collection index must be an integer',
+                    expected='integer index',
+                    found=index_type,
+                    help_msg='Convert the index to an integer before indexing.',
+                )
+            self._validate_static_buffer_index(node)
+            self.visit(node.obj)
+            self.visit(node.index_expr)
+
         elif isinstance(node, FunctionCallNode):
+            if node.callee == 'buffer_ptr':
+                self._require_embedded(node, 'buffer_ptr()')
             if node.callee in ('peek', 'memdump') and not self.is_inside_unsafe:
                 DiagnosticEmitter.emit_error(
                     self.filepath, self.source, node.line, node.col,
@@ -329,18 +669,42 @@ class TypeChecker:
         if not node:
             return 'void'
         if isinstance(node, NumberNode):
-            return 'float' if isinstance(node.value, float) else 'int'
+            inferred = 'float' if isinstance(node.value, float) else 'int'
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, StringNode):
+            node.inferred_type = 'string'
             return 'string'
         if isinstance(node, BooleanNode):
+            node.inferred_type = 'bool'
             return 'bool'
         if isinstance(node, NullNode):
+            node.inferred_type = 'null'
             return 'null'
         if isinstance(node, ArrayNode):
             if node.elements:
                 inner = self.infer_type(node.elements[0])
-                return f'Array<{inner}>'
-            return 'Array<any>'
+                for element in node.elements[1:]:
+                    self.infer_type(element)
+                inferred = f'Array<{inner}>'
+            else:
+                inferred = 'Array<any>'
+            node.inferred_type = inferred
+            return inferred
+        if isinstance(node, IndexAccessNode):
+            collection_type = self.infer_type(node.obj)
+            self.infer_type(node.index_expr)
+            buffer_parts = self._buffer_parts(collection_type)
+            if buffer_parts:
+                inferred = buffer_parts[0]
+            elif collection_type.startswith('Array<') and collection_type.endswith('>'):
+                inferred = collection_type[6:-1]
+            elif collection_type == 'string':
+                inferred = 'string'
+            else:
+                inferred = 'any'
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, IdentifierNode):
             t = self.lookup(node.name)
             if not t:
@@ -351,28 +715,67 @@ class TypeChecker:
                     found=f"'{node.name}'",
                     help_msg=f"Variable '{node.name}' is referenced before declaration or outside its scope."
                 )
-            return t if t else 'any'
+            inferred = t if t else 'any'
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, BinaryOpNode):
-            if node.op in ('==', '!=', '>', '<', '>=', '<=', 'and', 'or', '&&', '||'):
-                return 'bool'
             l_t = self.infer_type(node.left)
             r_t = self.infer_type(node.right)
-            if l_t == 'string' and r_t == 'string' and node.op == '+':
-                return 'string'
-            if l_t == 'float' or r_t == 'float':
-                return 'float'
-            return l_t if l_t != 'any' else r_t
+            if node.op in ('==', '!=', '>', '<', '>=', '<=', 'and', 'or', '&&', '||'):
+                inferred = 'bool'
+            elif l_t == 'string' and r_t == 'string' and node.op == '+':
+                inferred = 'string'
+            elif l_t == 'float' or r_t == 'float':
+                inferred = 'float'
+            else:
+                inferred = l_t if l_t != 'any' else r_t
+            node.inferred_type = inferred
+            return inferred
+        if isinstance(node, AwaitNode):
+            if not self.current_is_async:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2010", "'await' is only valid inside an async function",
+                    expected="async fn context",
+                    found="synchronous context",
+                    help_msg="Mark the containing function 'async' or remove 'await'.",
+                )
+            operand_type = self.infer_type(node.expr)
+            if operand_type == 'any':
+                node.inferred_type = 'any'
+                return 'any'
+            if not (operand_type.startswith('Task<') and operand_type.endswith('>')):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2011", "'await' operand is not a Task",
+                    expected="Task<T>",
+                    found=operand_type,
+                    help_msg="Await an async function call or another Task value.",
+                )
+            inferred = operand_type[5:-1]
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, FunctionCallNode):
             if node.callee in self.struct_defs:
-                return node.callee
-            if node.callee in self.func_defs:
-                return self.func_defs[node.callee]['ret']
-            if node.callee in self.builtins:
-                return self.builtins[node.callee]
-            return 'any'
+                inferred = node.callee
+            elif node.callee in self.func_defs:
+                inferred = self.func_defs[node.callee].get(
+                    'public_ret',
+                    self.func_defs[node.callee]['ret'],
+                )
+            elif node.callee in self.builtins:
+                inferred = self.builtins[node.callee]
+            else:
+                inferred = 'any'
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, MemberAccessNode):
             obj_t = self.infer_type(node.obj)
             if obj_t in self.struct_defs and node.member in self.struct_defs[obj_t]:
-                return self.struct_defs[obj_t][node.member]
+                inferred = self.struct_defs[obj_t][node.member]
+                node.inferred_type = inferred
+                return inferred
+            node.inferred_type = 'any'
             return 'any'
+        node.inferred_type = 'any'
         return 'any'

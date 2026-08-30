@@ -1,0 +1,16 @@
+/// Cortex-M NVIC control. `interrupt fn NAME()` declares the handler itself;
+/// this module controls enable state, priority, and pending flags.
+
+extern "C" fn nyx_hal_irq_enable(irq: int) -> void
+extern "C" fn nyx_hal_irq_disable(irq: int) -> void
+extern "C" fn nyx_hal_irq_set_priority(irq: int, priority: int) -> void
+extern "C" fn nyx_hal_irq_is_pending(irq: int) -> bool
+extern "C" fn nyx_hal_irq_clear_pending(irq: int) -> void
+
+fn irq_enable(irq: int) -> void { nyx_hal_irq_enable(irq) }
+fn irq_disable(irq: int) -> void { nyx_hal_irq_disable(irq) }
+fn irq_set_priority(irq: int, priority: int) -> void {
+    nyx_hal_irq_set_priority(irq, priority)
+}
+fn irq_is_pending(irq: int) -> bool { return nyx_hal_irq_is_pending(irq) }
+fn irq_clear_pending(irq: int) -> void { nyx_hal_irq_clear_pending(irq) }

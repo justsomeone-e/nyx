@@ -1,5 +1,3 @@
-import sys
-import os
 from typing import List, Dict, Any, Optional, Tuple, Set
 
 # Import tokens and AST nodes
@@ -11,33 +9,6 @@ except (ImportError, ValueError):
     from tokens import TokenType, Token
     from diagnostics import DiagnosticEmitter
     from ast_nodes import *
-
-# =========================================================
-# 1. RUST-GRADE DIAGNOSTIC EMITTER
-# =========================================================
-class DiagnosticEmitter:
-    @staticmethod
-    def emit_error(filepath: str, source: str, line: int, col: int, code: str, title: str, expected: str = "", found: str = "", help_msg: str = ""):
-        lines = source.splitlines()
-        line_content = lines[line - 1] if 0 < line <= len(lines) else ""
-        pointer = " " * max(0, col - 1) + "^^^^^"
-        
-        print(f"\n\033[91m\033[1merror[{code}]: {title}\033[0m")
-        print(f"  \033[94m-->\033[0m {filepath}:{line}:{col}")
-        print(f"   \033[94m|\033[0m")
-        print(f"\033[94m{line:2d} |\033[0m {line_content}")
-        print(f"   \033[94m|\033[0m \033[91m{pointer}\033[0m")
-        if expected or found:
-            print(f"   \033[94m=\033[0m \033[1mexpected:\033[0m \033[92m{expected}\033[0m")
-            print(f"   \033[94m=\033[0m \033[1mfound:   \033[0m \033[91m{found}\033[0m")
-        if help_msg:
-            print(f"   \033[94m=\033[0m \033[96m\033[1mhelp:\033[0m {help_msg}")
-        print()
-        sys.exit(1)
-
-    @staticmethod
-    def emit_warning(filepath: str, line: int, col: int, code: str, msg: str):
-        print(f"\033[93m\033[1mwarning[{code}]:\033[0m {msg} (at {filepath}:{line}:{col})")
 
 # =========================================================
 # 2. RECURSIVE DESCENT PARSER
@@ -127,10 +98,23 @@ class Parser:
         name = self.expect(TokenType.IDENT, "E1002", "Expected a valid type name like int, string, float, bool").value
         generic_args: List[TypeNode] = []
         
-        # Generic arguments: Array<int>, Map<string, User>
+        # Generic arguments: Array<int>, Map<string, User>, Buffer<u8, 64>.
+        # Integer arguments are compile-time capacities, not runtime values.
         if self.match(TokenType.LT):
             while self.current().type not in (TokenType.GT, TokenType.EOF):
-                generic_args.append(self.parse_type())
+                if self.current().type == TokenType.NUMBER:
+                    capacity = self.advance()
+                    if not isinstance(capacity.value, int) or isinstance(capacity.value, bool):
+                        DiagnosticEmitter.emit_error(
+                            self.filepath, self.source, capacity.line, capacity.col,
+                            "E1025", "Const generic arguments must be integer literals",
+                            expected="positive integer capacity",
+                            found=str(capacity.value),
+                            help_msg="Use a declaration such as Buffer<u8, 64>.",
+                        )
+                    generic_args.append(TypeNode(str(capacity.value), line=capacity.line, col=capacity.col))
+                else:
+                    generic_args.append(self.parse_type())
                 self.match(TokenType.COMMA)
             self.expect(TokenType.GT, "E1003", "Close generic arguments with '>'")
 
@@ -210,9 +194,32 @@ class Parser:
                 alias = self.expect(TokenType.IDENT).value
             return ImportNode(path, alias, symbols, tok.line, tok.col)
 
-        # Variable Declaration: var x: int = 10, let y = 20
-        if tok.type in (TokenType.VAR, TokenType.LET, TokenType.SET, TokenType.CONST):
-            is_const = (tok.type == TokenType.CONST)
+        # Explicit reassignment: set target = value
+        if tok.type == TokenType.SET:
+            self.advance()
+            target = self.parse_expression()
+            self.expect(TokenType.ASSIGN, "E1004", "Expected '=' after assignment target")
+            expr = self.parse_expression()
+            return AssignNode(target, expr, tok.line, tok.col)
+
+        # Volatile storage for memory shared with hardware/interrupt handlers.
+        if tok.type == TokenType.VOLATILE:
+            self.advance()
+            self.expect(TokenType.VAR, "E1020", "Use 'volatile var name: u32 = value'")
+            name = self.expect(TokenType.IDENT).value
+            type_annot = None
+            if self.match(TokenType.COLON):
+                type_annot = self.parse_type()
+            self.expect(TokenType.ASSIGN, "E1004", f"Initialize volatile variable '{name}' with '='")
+            expr = self.parse_expression()
+            return VarDeclNode(
+                name, type_annot, expr, False, tok.line, tok.col, is_volatile=True
+            )
+
+        # Variable declaration.  ``let`` and ``const`` are immutable; ``var``
+        # is the mutable binding form.
+        if tok.type in (TokenType.VAR, TokenType.LET, TokenType.CONST):
+            is_const = tok.type in (TokenType.LET, TokenType.CONST)
             self.advance()
             name = self.expect(TokenType.IDENT).value
             type_annot = None
@@ -237,7 +244,7 @@ class Parser:
             self.expect(TokenType.LBRACE)
             methods: List[FunctionDefNode] = []
             while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
-                if self.current().type == TokenType.FN:
+                if self.current().type in (TokenType.FN, TokenType.ASYNC):
                     methods.append(self.parse_function())
                 else:
                     self.advance()
@@ -250,14 +257,16 @@ class Parser:
             first_ident = self.expect(TokenType.IDENT).value
             trait_name = None
             target_type = first_ident
-            if self.current().type == TokenType.IDENT and self.current().value == "for":
+            if self.current().type == TokenType.FOR or (
+                self.current().type == TokenType.IDENT and self.current().value == "for"
+            ):
                 self.advance()
                 trait_name = first_ident
                 target_type = self.expect(TokenType.IDENT).value
             self.expect(TokenType.LBRACE)
             methods: List[FunctionDefNode] = []
             while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
-                if self.current().type == TokenType.FN:
+                if self.current().type in (TokenType.FN, TokenType.ASYNC):
                     methods.append(self.parse_function())
                 else:
                     self.advance()
@@ -321,6 +330,13 @@ class Parser:
             body = self.parse_block()
             return UnsafeBlockNode(body, tok.line, tok.col)
 
+        # Interrupt-masked scope. The backend restores the previous PRIMASK
+        # state on every exit path (including return/guard).
+        if tok.type == TokenType.CRITICAL:
+            self.advance()
+            body = self.parse_block()
+            return CriticalBlockNode(body, tok.line, tok.col)
+
         # Concurrency: spawn { ... }
         if tok.type == TokenType.SPAWN:
             self.advance()
@@ -350,6 +366,15 @@ class Parser:
             self.expect(TokenType.RPAREN)
             return AssertNode(cond, msg, tok.line, tok.col)
 
+        # Hardware interrupt handler: interrupt fn TIM2_IRQHandler() { ... }
+        if tok.type == TokenType.INTERRUPT:
+            self.advance()
+            function = self.parse_function()
+            function.is_interrupt = True
+            function.line = tok.line
+            function.col = tok.col
+            return function
+
         # Function Definition (Sync or Async)
         if tok.type in (TokenType.FN, TokenType.ASYNC):
             return self.parse_function()
@@ -363,8 +388,11 @@ class Parser:
                 while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
                     pat = self.parse_expression()
                     self.expect(TokenType.FAT_ARROW)
-                    stmt = self.parse_statement()
-                    cases.append((pat, stmt))
+                    if self.current().type in (TokenType.LBRACE, TokenType.COLON):
+                        case_body = self.parse_block()
+                    else:
+                        case_body = [self.parse_statement()]
+                    cases.append((pat, case_body))
                     self.match(TokenType.COMMA)
                 self.expect(TokenType.RBRACE)
             return MatchNode(expr, cases, tok.line, tok.col)
@@ -387,14 +415,23 @@ class Parser:
             then_body = self.parse_block()
             elif_branches = []
             else_body = None
-            while self.current().type == TokenType.ELIF:
-                self.advance()
-                elif_cond = self.parse_expression()
-                elif_body = self.parse_block()
-                elif_branches.append((elif_cond, elif_body))
-            if self.current().type == TokenType.ELSE:
-                self.advance()
-                else_body = self.parse_block()
+            while True:
+                if self.current().type == TokenType.ELIF:
+                    self.advance()
+                    elif_cond = self.parse_expression()
+                    elif_body = self.parse_block()
+                    elif_branches.append((elif_cond, elif_body))
+                    continue
+                if self.current().type == TokenType.ELSE:
+                    self.advance()
+                    if self.current().type == TokenType.IF:
+                        self.advance()
+                        elif_cond = self.parse_expression()
+                        elif_body = self.parse_block()
+                        elif_branches.append((elif_cond, elif_body))
+                        continue
+                    else_body = self.parse_block()
+                break
             return IfNode(cond, then_body, elif_branches, else_body, tok.line, tok.col)
 
         # Loops
@@ -431,6 +468,10 @@ class Parser:
             self.advance()
             expr = self.parse_expression() if self.current().type not in (TokenType.EOF, TokenType.RBRACE, TokenType.COMMA, TokenType.SEMICOLON) else None
             return ReturnNode(expr, tok.line, tok.col)
+        if tok.type == TokenType.THROW:
+            self.advance()
+            expr = self.parse_expression()
+            return ThrowNode(expr, tok.line, tok.col)
         if tok.type == TokenType.BREAK:
             self.advance()
             return BreakNode(tok.line, tok.col)
@@ -488,7 +529,17 @@ class Parser:
 
         body = self.parse_block()
         doc_comment = self.last_doc_comment
-        return FunctionDefNode(name, params, ret_type, body, is_async, generic_params, tok.line, tok.col, doc_comment)
+        return FunctionDefNode(
+            name=name,
+            params=params,
+            return_type=ret_type,
+            body=body,
+            generic_params=generic_params,
+            is_async=is_async,
+            doc_comment=doc_comment,
+            line=tok.line,
+            col=tok.col,
+        )
 
     def parse_block(self) -> List[ASTNode]:
         statements: List[ASTNode] = []
@@ -513,14 +564,21 @@ class Parser:
 
     def parse_pipeline(self) -> ASTNode:
         node = self.parse_null_coalesce()
-        while self.match(TokenType.PIPE):
+        while self.current().type == TokenType.PIPE:
+            pipe_tok = self.advance()
             if self.current().type in (TokenType.IDENT, TokenType.PRINT, TokenType.INPUT, TokenType.MEMDUMP, TokenType.PEEK, TokenType.ADDR):
                 callee_tok = self.advance()
                 callee_name = callee_tok.value
                 callee: Any = callee_name
                 while self.match(TokenType.DOT):
-                    member = self.expect(TokenType.IDENT).value
-                    callee = MemberAccessNode(IdentifierNode(callee) if isinstance(callee, str) else callee, member)
+                    member_tok = self.expect(TokenType.IDENT)
+                    member = member_tok.value
+                    callee = MemberAccessNode(
+                        IdentifierNode(callee, callee_tok.line, callee_tok.col) if isinstance(callee, str) else callee,
+                        member,
+                        line=member_tok.line,
+                        col=member_tok.col,
+                    )
                 if self.match(TokenType.LPAREN):
                     args = self.parse_args()
                     node = FunctionCallNode(callee, [node] + args, callee_tok.line, callee_tok.col)
@@ -528,122 +586,158 @@ class Parser:
                     node = FunctionCallNode(callee, [node], callee_tok.line, callee_tok.col)
             else:
                 expr = self.parse_null_coalesce()
-                node = BinaryOpNode(node, "|>", expr)
+                node = BinaryOpNode(node, "|>", expr, pipe_tok.line, pipe_tok.col)
         return node
 
     def parse_null_coalesce(self) -> ASTNode:
         node = self.parse_logic_or()
-        while self.match(TokenType.NULL_COALESCE):
+        while self.current().type == TokenType.NULL_COALESCE:
+            op_tok = self.advance()
             right = self.parse_logic_or()
-            node = NullCoalesceNode(node, right)
+            node = NullCoalesceNode(node, right, op_tok.line, op_tok.col)
         return node
 
     def parse_logic_or(self) -> ASTNode:
         node = self.parse_logic_and()
-        while self.match(TokenType.OR):
+        while self.current().type == TokenType.OR:
+            op_tok = self.advance()
             right = self.parse_logic_and()
-            node = BinaryOpNode(node, "or", right)
+            node = BinaryOpNode(node, "or", right, op_tok.line, op_tok.col)
         return node
 
     def parse_logic_and(self) -> ASTNode:
         node = self.parse_bitwise_or()
-        while self.match(TokenType.AND):
+        while self.current().type == TokenType.AND:
+            op_tok = self.advance()
             right = self.parse_bitwise_or()
-            node = BinaryOpNode(node, "and", right)
+            node = BinaryOpNode(node, "and", right, op_tok.line, op_tok.col)
         return node
 
     def parse_bitwise_or(self) -> ASTNode:
         node = self.parse_bitwise_xor()
-        while self.match(TokenType.BIT_OR):
+        while self.current().type == TokenType.BIT_OR:
+            op_tok = self.advance()
             right = self.parse_bitwise_xor()
-            node = BinaryOpNode(node, "|", right)
+            node = BinaryOpNode(node, "|", right, op_tok.line, op_tok.col)
         return node
 
     def parse_bitwise_xor(self) -> ASTNode:
         node = self.parse_bitwise_and()
-        while self.match(TokenType.BIT_XOR):
+        while self.current().type == TokenType.BIT_XOR:
+            op_tok = self.advance()
             right = self.parse_bitwise_and()
-            node = BinaryOpNode(node, "^", right)
+            node = BinaryOpNode(node, "^", right, op_tok.line, op_tok.col)
         return node
 
     def parse_bitwise_and(self) -> ASTNode:
         node = self.parse_equality()
-        while self.match(TokenType.BIT_AND):
+        while self.current().type == TokenType.BIT_AND:
+            op_tok = self.advance()
             right = self.parse_equality()
-            node = BinaryOpNode(node, "&", right)
+            node = BinaryOpNode(node, "&", right, op_tok.line, op_tok.col)
         return node
 
     def parse_equality(self) -> ASTNode:
         node = self.parse_relational()
         while self.current().type in (TokenType.EQ, TokenType.NEQ):
-            op = self.advance().value
+            op_tok = self.advance()
+            op = op_tok.value
             right = self.parse_relational()
-            node = BinaryOpNode(node, op, right)
+            node = BinaryOpNode(node, op, right, op_tok.line, op_tok.col)
         return node
 
     def parse_relational(self) -> ASTNode:
         node = self.parse_shift()
         while self.current().type in (TokenType.GT, TokenType.GTE, TokenType.LT, TokenType.LTE):
-            op = self.advance().value
+            op_tok = self.advance()
+            op = op_tok.value
             right = self.parse_shift()
-            node = BinaryOpNode(node, op, right)
+            node = BinaryOpNode(node, op, right, op_tok.line, op_tok.col)
         return node
 
     def parse_shift(self) -> ASTNode:
         node = self.parse_additive()
         while self.current().type in (TokenType.SHL, TokenType.SHR):
-            op = self.advance().value
+            op_tok = self.advance()
+            op = op_tok.value
             right = self.parse_additive()
-            node = BinaryOpNode(node, op, right)
+            node = BinaryOpNode(node, op, right, op_tok.line, op_tok.col)
         return node
 
     def parse_additive(self) -> ASTNode:
         node = self.parse_multiplicative()
         while self.current().type in (TokenType.PLUS, TokenType.MINUS):
-            op = self.advance().value
+            op_tok = self.advance()
+            op = op_tok.value
             right = self.parse_multiplicative()
-            node = BinaryOpNode(node, op, right)
+            node = BinaryOpNode(node, op, right, op_tok.line, op_tok.col)
         return node
 
     def parse_multiplicative(self) -> ASTNode:
         node = self.parse_unary()
         while self.current().type in (TokenType.MUL, TokenType.DIV, TokenType.MOD):
-            op = self.advance().value
+            op_tok = self.advance()
+            op = op_tok.value
             right = self.parse_unary()
-            node = BinaryOpNode(node, op, right)
+            node = BinaryOpNode(node, op, right, op_tok.line, op_tok.col)
         return node
 
     def parse_unary(self) -> ASTNode:
-        if self.current().type in (TokenType.MINUS, TokenType.NOT, TokenType.MUL, TokenType.BIT_NOT):
-            op = self.advance().value
+        if self.current().type == TokenType.AWAIT:
+            await_tok = self.advance()
+            return AwaitNode(self.parse_unary(), await_tok.line, await_tok.col)
+        if self.current().type in (
+            TokenType.PLUS, TokenType.MINUS, TokenType.NOT, TokenType.MUL, TokenType.BIT_NOT
+        ):
+            op_tok = self.advance()
+            op = op_tok.value
             expr = self.parse_unary()
-            return UnaryOpNode(op, expr)
+            # The positive magnitude 2^63 is not a valid Nyx int literal, but
+            # its directly negated form is the signed i64 minimum.  Fold that
+            # one lexical edge here so semantic validation sees the value that
+            # the programmer wrote rather than rejecting its magnitude first.
+            if (
+                op == "-"
+                and isinstance(expr, NumberNode)
+                and isinstance(expr.value, int)
+                and not isinstance(expr.value, bool)
+                and expr.value == (1 << 63)
+            ):
+                return NumberNode(-(1 << 63), op_tok.line, op_tok.col)
+            return UnaryOpNode(op, expr, op_tok.line, op_tok.col)
         return self.parse_postfix()
 
     def parse_postfix(self) -> ASTNode:
         node = self.parse_primary()
         while True:
             # Safe navigation: user?.name
-            if self.match(TokenType.SAFE_NAV):
-                member_name = self.advance().value
-                node = MemberAccessNode(node, member_name, is_safe=True)
+            if self.current().type == TokenType.SAFE_NAV:
+                self.advance()
+                member_tok = self.advance()
+                member_name = member_tok.value
+                node = MemberAccessNode(node, member_name, is_safe=True, line=member_tok.line, col=member_tok.col)
             # Regular Member access: user.name or obj.method()
-            elif self.match(TokenType.DOT):
-                member_name = self.advance().value
+            elif self.current().type == TokenType.DOT:
+                self.advance()
+                member_tok = self.advance()
+                member_name = member_tok.value
+                member = MemberAccessNode(node, member_name, is_safe=False, line=member_tok.line, col=member_tok.col)
                 if self.match(TokenType.LPAREN):
                     args = self.parse_args()
-                    node = FunctionCallNode(MemberAccessNode(node, member_name), args)
+                    node = FunctionCallNode(member, args, member_tok.line, member_tok.col)
                 else:
-                    node = MemberAccessNode(node, member_name, is_safe=False)
+                    node = member
             # Array index: arr[0]
-            elif self.match(TokenType.LBRACKET):
+            elif self.current().type == TokenType.LBRACKET:
+                bracket_tok = self.advance()
                 idx = self.parse_expression()
                 self.expect(TokenType.RBRACKET)
-                node = IndexAccessNode(node, idx)
+                node = IndexAccessNode(node, idx, bracket_tok.line, bracket_tok.col)
             # Function Call: fn(a, b)
-            elif isinstance(node, IdentifierNode) and self.match(TokenType.LPAREN):
+            elif isinstance(node, IdentifierNode) and self.current().type == TokenType.LPAREN:
+                self.advance()
                 args = self.parse_args()
-                node = FunctionCallNode(node.name, args)
+                node = FunctionCallNode(node.name, args, node.line, node.col)
             else:
                 break
         return node

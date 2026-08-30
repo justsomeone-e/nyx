@@ -1,0 +1,21 @@
+{
+  "stableKeywords": [
+    "var", "let", "set", "const", "fn", "struct", "trait", "impl",
+    "type", "enum", "extern", "volatile", "interrupt", "if", "elif", "else", "for", "in",
+    "loop", "while", "match", "try", "catch", "throw", "return", "break",
+    "continue", "await", "defer", "guard", "unsafe", "critical", "spawn", "async", "use", "import",
+    "from", "as", "test", "assert", "and", "or", "not", "true",
+    "false", "null"
+  ],
+  "experimentalKeywords": [],
+  "reservedKeywords": [],
+  "builtinNames": [
+    "print", "input", "addr", "peek", "memdump", "channel", "Ok", "Err",
+    "len", "buffer_ptr", "to_string", "to_int", "contains", "is_number", "delay_ms"
+  ],
+  "typeNames": [
+    "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
+    "float", "f32", "f64", "bool", "string", "char", "uintptr", "void", "any",
+    "Array", "Buffer", "Option", "Result", "Channel", "Task"
+  ]
+}

@@ -2,6 +2,7 @@ import sys
 from typing import List, Any
 from .tokens import TokenType, Token
 from .diagnostics import DiagnosticEmitter
+from .language_surface import KEYWORD_TOKEN_TYPES
 
 class Lexer:
     def __init__(self, source: str, filepath: str = "<memory>"):
@@ -357,28 +358,8 @@ class Lexer:
                 ident = self.source[start_pos:self.pos]
                 clean = ident.lstrip('$')
 
-                kw = {
-                    "var": TokenType.VAR, "let": TokenType.LET, "set": TokenType.SET, "const": TokenType.CONST,
-                    "fn": TokenType.FN, "def": TokenType.FN,
-                    "struct": TokenType.STRUCT, "trait": TokenType.TRAIT, "impl": TokenType.IMPL,
-                    "type": TokenType.TYPE_ALIAS, "enum": TokenType.ENUM,
-                    "unsafe": TokenType.UNSAFE, "extern": TokenType.EXTERN,
-                    "async": TokenType.ASYNC, "await": TokenType.AWAIT, "spawn": TokenType.SPAWN, "channel": TokenType.CHANNEL,
-                    "test": TokenType.TEST, "assert": TokenType.ASSERT,
-                    "return": TokenType.RETURN, "continue": TokenType.CONTINUE, "break": TokenType.BREAK,
-                    "defer": TokenType.DEFER, "guard": TokenType.GUARD,
-                    "if": TokenType.IF, "else": TokenType.ELSE, "elif": TokenType.ELIF,
-                    "for": TokenType.FOR, "in": TokenType.IN, "loop": TokenType.LOOP, "while": TokenType.WHILE,
-                    "match": TokenType.MATCH, "try": TokenType.TRY, "catch": TokenType.CATCH, "throw": TokenType.THROW,
-                    "use": TokenType.USE, "import": TokenType.IMPORT, "from": TokenType.FROM, "as": TokenType.AS,
-                    "print": TokenType.PRINT, "input": TokenType.INPUT,
-                    "addr": TokenType.ADDR, "peek": TokenType.PEEK, "memdump": TokenType.MEMDUMP,
-                    "and": TokenType.AND, "or": TokenType.OR, "not": TokenType.NOT,
-                    "true": TokenType.BOOLEAN, "false": TokenType.BOOLEAN, "null": TokenType.NULL
-                }
-
-                if clean in kw:
-                    tt = kw[clean]
+                if clean in KEYWORD_TOKEN_TYPES:
+                    tt = KEYWORD_TOKEN_TYPES[clean]
                     v = True if clean == "true" else (False if clean == "false" else (None if clean == "null" else clean))
                     self.tokens.append(Token(tt, v, self.line, start_col))
                 else:

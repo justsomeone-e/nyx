@@ -117,6 +117,7 @@ void Default_Handler(void) {
 } // extern "C"
 
 // ARM Cortex-M Vector Table
+#ifndef NYX_GENERATED_VECTOR_TABLE
 __attribute__((section(".isr_vector"), used))
 void (* const g_pfnVectors[])(void) = {
     (void (*)(void))(&_estack),
@@ -133,3 +134,4 @@ void (* const g_pfnVectors[])(void) = {
     Default_Handler, // PendSV_Handler
     Default_Handler, // SysTick_Handler
 };
+#endif

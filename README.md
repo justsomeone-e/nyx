@@ -1,36 +1,38 @@
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/nyx-mark-dark.png?v=3.0.0" width="240" alt="nyx bird emblem"/>
+    <img src="assets/nyx-mark-dark.png?v=4.0.0-rc1" width="240" alt="nyx bird emblem"/>
   </a>
   <br/>
   <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/logo.svg?v=3.0.0" width="600" alt="nyx logotype"/>
+    <img src="assets/logo.svg?v=4.0.0-rc1" width="600" alt="nyx logotype"/>
   </a>
   <br/><br/>
 
   <p align="center">
-    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Typed+HIR+Pipeline+with+Native+Stage+2+Self-Hosting.;Diagnostics+v2+with+Sub-Character+Span+Precision.">
-      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=700&lines=High-Performance+Multi-Target+Systems+Toolchain.;C%2B%2B20+Native+Binaries+%7C+x86_64+Assembly+%7C+Node.js+%7C+Rust+%7C+Python.;Typed+HIR+Pipeline+with+Native+Stage+2+Self-Hosting.;Diagnostics+v2+with+Sub-Character+Span+Precision." alt="Typing SVG" />
+    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=One+Language.+Verified+HIR.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics.">
+      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=One+Language.+Verified+HIR.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics." alt="Typing SVG" />
     </a>
   </p>
 
   <p align="center">
-    <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/RELEASE-v3.0.0--beta.4-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/nyx/actions"><img src="https://img.shields.io/badge/CI%20BUILD-PASSING-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="CI"></a>
+    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/nyx/actions"><img src="https://img.shields.io/badge/NEXT-v4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Next release"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
+  <p><strong>v4 release line: NIRVANA · RC1 codename: SAMSARA</strong></p>
+
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
-    <a href="#key-features">FEATURES</a> •
-    <a href="#tech-stack">TECH STACK</a> •
-    <a href="#project-structure">STRUCTURE</a> •
-    <a href="#installation">INSTALLATION</a> •
-    <a href="#usage">USAGE</a> •
-    <a href="#contributing">CONTRIBUTING</a> •
-    <a href="#license">LICENSE</a>
+    <a href="#features">FEATURES</a> •
+    <a href="#backends">BACKENDS</a> •
+    <a href="#installation">INSTALL</a> •
+    <a href="#vscode">VS CODE</a> •
+    <a href="#bundle">BUNDLE</a> •
+    <a href="#verification">VERIFICATION</a> •
+    <a href="#documentation">DOCS</a>
   </p>
 
 </div>
@@ -38,50 +40,92 @@
 ---
 
 <div align="center">
-  <img src="assets/terminal_animated.svg?v=3.0.0" width="92%" alt="nyx interactive live execution"/>
+  <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
 </div>
 
 ---
+
+<a id="overview"></a>
 
 ## `01` — Overview
 
-**nyx** is a compiled, statically typed systems programming language and multi-target toolchain designed around a deterministic compiler architecture.
+**Nyx** is a compiled, statically typed systems language and multi-target toolchain built around one verified semantic boundary: canonical typed **HIR v1**.
 
-A nyx program is parsed, validated, type-checked, and converted into a canonical typed Abstract Syntax Tree. From that shared representation, nyx can generate code for multiple execution environments without duplicating the language frontend.
+A source file is lexed, parsed, type-checked, lowered, verified, optimized, and only then handed to a backend. Stable backends do not reinterpret the AST independently, so one language contract drives native C++20, Node.js ES2022, and Python 3 output.
 
 <div align="center">
-  <img src="assets/pipeline_animated.svg?v=3.0.0" width="98%" alt="nyx compiler architecture pipeline"/>
+  <img src="assets/pipeline_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx compiler architecture pipeline"/>
 </div>
 
-The compiler is intentionally split into frontend, semantic, graph, and backend stages. This keeps language behavior consistent across targets while allowing individual backends to evolve independently.
+The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `hepy` target, but it is not required by the distributed native `nyxc` path.
+
+> **Release status:** this branch reports `4.0.0-dev.1` and is the `v4.0.0-rc.1` candidate. Stable `v4.0.0` is intentionally gated behind cross-platform RC evidence and a soak period.
 
 ---
+
+<a id="features"></a>
 
 ## `02` — Key Features
 
 <div align="center">
-  <img src="assets/features_animated.svg?v=3.0.0" width="98%" alt="nyx key features pillars"/>
+  <img src="assets/features_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx key features pillars"/>
 </div>
 
-### ⚡ Multi-Target Code Generation
+### ⚡ One frontend, capability-gated targets
 
-nyx can target multiple ecosystems from the same source language:
+Nyx exposes eight target families without pretending they all have the same maturity. `nyx targets --json` is the machine-readable source of truth.
 
 ```text
-┌──────────────┬─────────────────────┬──────────────────────────┐
-│ Backend      │ Target              │ Output                   │
-├──────────────┼─────────────────────┼──────────────────────────┤
-│ hecpp        │ C++20               │ Native executable (.exe) │
-│ heasm        │ x86_64 Assembly     │ Intel syntax source (.s) │
-│ hejs         │ Node.js ES2022      │ ES2022 ESM module (.js)  │
-│ hers         │ Rust 2021           │ Rust object pipeline     │
-│ hepy         │ Python 3            │ Canonical reference tree │
-└──────────────┴─────────────────────┴──────────────────────────┘
+┌─────────────┬──────────────────────────────┬──────────────┬───────────────┐
+│ Target      │ Artifact                     │ Maturity     │ HIR authority │
+├─────────────┼──────────────────────────────┼──────────────┼───────────────┤
+│ hecpp       │ C++20 / native executable    │ stable       │ yes           │
+│ hejs        │ ES2022 / Node.js module      │ stable       │ yes           │
+│ hepy        │ Python 3 program             │ stable       │ yes           │
+│ hewasm      │ WAT + WASM ABI v1            │ beta         │ yes           │
+│ hers        │ Rust 2021 source/object      │ beta         │ yes           │
+│ hereact     │ React 19 TSX tooling         │ beta         │ tooling       │
+│ heasm       │ x86_64 assembly via C++      │ beta         │ migration     │
+│ embedded    │ ELF / HEX / BIN firmware     │ experimental │ migration     │
+└─────────────┴──────────────────────────────┴──────────────┴───────────────┘
 ```
 
-The frontend remains shared, so target selection happens after parsing and semantic validation.
+Unsupported syntax or standard-library modules fail with a capability diagnostic; a narrow backend may not silently change the program's meaning.
 
-### ◇ Deterministic AST Pipeline
+### ◈ First-class Cortex-M hardware surface
+
+Embedded programs can use `volatile var`, `interrupt fn`, `critical {}`,
+fixed-width scalars, board connector aliases, MMIO, GPIO, UART, SPI, I²C, ADC,
+PWM, timers, NVIC control, and allocation-free `Buffer<T, N>` bulk I/O without
+injecting C++ through `#native raw`.
+
+```nyx
+#target stm32f4
+import "std/board"
+import "std/gpio"
+import "std/timer"
+
+volatile var ticks: u32 = 0
+
+interrupt fn TIM3_IRQHandler() -> void {
+    timer_clear_update(3)
+    critical { set ticks = ticks + 1 }
+}
+
+fn main() -> void {
+    mode(board_pin("LED"), PIN_OUTPUT)
+    timer_start(3, 1000, true)
+    loop { }
+}
+```
+
+The built-in register-level BSP currently produces ELF/HEX/BIN for the
+NUCLEO-F401RE, F410RB, F411RE, and F446RE. Twenty-one additional Nucleo profiles
+are recognized but remain explicitly CMSIS/custom-BSP gated; the CLI never
+pretends those boards are build-ready. `nyx flash --dry-run` exposes the exact
+STM32CubeProgrammer/OpenOCD command before a physical device is touched.
+
+### ◇ Deterministic typed-HIR pipeline
 
 Nyx uses a deterministic compilation flow:
 
@@ -92,16 +136,29 @@ SOURCE
   │
   ├──► Syntax Parser
   │
-  ├──► Module Graph
+  ├──► Module Graph + Type Checker
   │
-  ├──► Type Checker
+  ├──► Typed HIR v1 Lowering
   │
-  ├──► Canonical Typed AST
+  ├──► Verification + Deterministic Passes
   │
   └──► Backend Code Generation
 ```
 
-This structure provides a stable semantic boundary between the language itself and its output targets.
+HIR has a deterministic serializer and verifier. The Python and Nyx-authored frontends are checked for byte-identical HIR across accepted and rejected corpora.
+
+### ⟳ Reproducible native self-hosting
+
+```text
+stage 0 bootstrap
+      │
+      ▼
+native nyxc stage 1 ──► stage-2 C++ ──► native stage 2
+                               │
+                               └──────► byte-identical stage-3 C++
+```
+
+The installed native compiler handles `check`, `emit-cpp`, `compile`, `targets`, and version queries without starting Python.
 
 ### ◆ Topological Module Resolution
 
@@ -153,7 +210,7 @@ The `hecpp` backend emits C++20 suitable for compilation through Clang or GCC.
 Nyx Source
     │
     ▼
-Canonical AST
+Verified HIR
     │
     ▼
 C++20
@@ -165,27 +222,29 @@ C++20
     Native Binary
 ```
 
-### ⌘ Built-In Language Server
+### ⌘ Compiler-aware editor tooling
 
-Nyx includes a Language Server Protocol v2 JSON-RPC implementation intended to provide compiler-aware editor tooling.
+Nyx includes an LSP JSON-RPC server and a local VS Code package with diagnostics, hover, completion, go-to-definition, syntax highlighting, snippets, one-click Run/Build/Check, and a toolchain doctor. Native output runs in a persistent integrated terminal so a completed `.exe` does not disappear immediately.
 
 ---
 
-## `03` — Tech Stack
+<a id="backends"></a>
 
-| Component                   | Technology              |
-| :-------------------------- | :---------------------- |
-| Native target               | **C++20**               |
-| JavaScript target           | **Node.js / ES2022**    |
-| Rust target                 | **Rust 2021**           |
-| Reference target            | **Python 3**            |
-| Native compiler             | **LLVM Clang / GCC**    |
-| Rust compiler               | **`rustc`**             |
-| Protocol                    | **LSP v2 / JSON-RPC**   |
-| Source encoding             | **Unicode UTF-8**       |
-| Intermediate representation | **Canonical Typed AST** |
+## `03` — Compiler & Backend Contract
 
-Nyx is built around the idea that semantic validation should happen before target-specific code generation. Backends therefore consume the same validated representation instead of independently interpreting source code.
+| Layer | Contract |
+| :-- | :-- |
+| Source | UTF-8 `.nyx`, 46 canonical v4 keywords |
+| Portable integer | Signed i64 with specified wrapping, division, remainder, and shift behavior |
+| Portable float | IEEE-754 binary64 with canonical `nan`, `inf`, exponent, and negative-zero text |
+| Strings | Unicode, embedded NUL, `\uXXXX`, interpolation; no implicit NFC/NFD normalization |
+| Semantic boundary | Canonical typed HIR v1 + verifier + deterministic passes |
+| Stable semantic set | `hecpp`, `hejs`, `hepy` exact hosted parity |
+| Web ABI | `hewasm` beta `wasm32` + Bundle ABI v1 |
+| Native linker path | Clang++, GCC/G++, or MSVC `cl` with C++20 support |
+| Tooling | Native `nyxc`, `nyx` CLI, LSP JSON-RPC, local VS Code VSIX |
+
+Every backend declares numeric, string, ownership, error, control-flow, artifact, and standard-library capabilities. New targets begin as experimental and must cross eight gates before they can be called stable: registration, HIR coverage, semantic definition, official-toolchain validation, negative diagnostics, fuzzing, differential parity, and cross-platform release evidence.
 
 ---
 
@@ -193,69 +252,106 @@ Nyx is built around the idea that semantic validation should happen before targe
 
 ```text
 nyx/
-│
-├── assets/
-│   └── logo.svg
-│
-├── install.ps1
-├── install.sh
-│
-├── GETTING_STARTED.md
-├── INSTALLATION.md
-├── LANGUAGE_REFERENCE.md
-├── CLI_REFERENCE.md
-├── ERROR_REFERENCE.md
-├── CHANGELOG.md
-│
-├── LICENSE
-└── README.md
+├── compiler/          # Nyx-authored frontend, HIR lowerer, and HIR C++ emitter
+├── src/
+│   ├── core/          # Stage-0 lexer, parser, type checker, modules, diagnostics
+│   ├── ir/            # Typed HIR v1, verifier, serializer, optimization passes
+│   ├── codegen/       # HIR backends, Bundle ABI emitter, native toolchain bridge
+│   ├── self_host/     # Bootstrap and reproducibility orchestration
+│   ├── stdlib/        # Capability-gated standard library modules
+│   └── cli.py         # Full nyx command surface
+├── vscode-extension/ # Local VSIX, LSP client, commands, syntax, snippets, icons
+├── tests/             # Runtime, parity, negative, fuzz, ABI, and release gates
+├── tools/             # Deterministic packaging and release utilities
+├── docs/              # Frozen specs, roadmaps, compatibility and internals
+├── assets/            # Logos and preserved animated README visuals
+├── install.ps1        # Native-first Windows installer
+├── install.sh         # Native-first Linux/macOS installer
+└── VERSION            # Single version source
 ```
 
-The documented tree intentionally contains only repository components established by the project documentation. Undocumented internal compiler directories are not fabricated here.
+The production architecture lives at the HIR boundary. Direct AST emitters are migration-only and cannot be promoted to stable.
 
 ---
 
+<a id="installation"></a>
+
 ## `05` — Installation
 
-Nyx provides installation scripts for Windows, Linux, and macOS.
+Nyx ships native-first installers for Windows, Linux, and macOS. Release archives contain the standalone `nyxc` compiler; Python is only needed for stage-0 recreation, optional orchestration commands, or the `hepy` target.
 
 ### Windows
 
-Run the PowerShell installer:
+From a downloaded source/release directory:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install.ps1
+```
+
+Or install the latest repository script directly:
 
 ```powershell
 irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
 ```
 
-Then verify the environment:
-
-```powershell
-nyx doctor
-```
-
 ### Linux / macOS
 
-Run the POSIX installer:
+From an extracted source/release directory:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+Or use the repository installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
 ```
 
-Verify the installation:
+### Toolchain requirements
 
-```bash
+| Target | Host requirement |
+| :-- | :-- |
+| `hecpp` / native `nyxc compile` | C++20-capable Clang++, GCC/G++, or MSVC `cl` |
+| `hejs` | Node.js with ES2022 support |
+| `hepy` | Python 3 |
+| `hers` | Rust toolchain / `rustc` |
+| `hewasm` bundle | Built-in WAT/WASM emitter; Node.js is used by live wrapper tests |
+
+The C++ compiler must be on `PATH`, or its absolute executable path can be supplied with `NYX_CXX`.
+
+Verify the complete environment after installation:
+
+```text
 nyx doctor
+nyx version
+nyx targets
 ```
 
-### Environment Check
+<a id="vscode"></a>
 
-The `doctor` command verifies the host environment and available toolchain components.
+### VS Code — local one-click package
 
-```bash
-nyx doctor
+Download or build `nyx-language-support-<version>.vsix`, then either double-click it and choose **Install**, use **Extensions: Install from VSIX...**, or run:
+
+```text
+code --install-extension nyx-language-support-<version>.vsix
 ```
+
+No Marketplace account or repository checkout is required to install a local VSIX. The extension contributes:
+
+- compiler-backed diagnostics, hover, completion, and go-to-definition;
+- canonical v4 keyword completion, snippets, syntax highlighting, and Nyx file icons;
+- **Nyx: Run Current File**, **Build**, **Check**, and **Toolchain Doctor** commands;
+- an editor-title ▶ button and a persistent integrated terminal.
+
+For native builds, install Clang++, GCC/G++, or MSVC first. If none is found, the extension explains the requirement and points to `NYX_CXX` / `nyx doctor` instead of failing silently.
 
 ---
+
+<a id="usage"></a>
 
 ## `06` — Usage
 
@@ -271,7 +367,7 @@ cd core_engine
 Run semantic and type validation:
 
 ```bash
-nyx check
+nyx check src/main.nyx
 ```
 
 ### Run Native C++20
@@ -279,8 +375,20 @@ nyx check
 The default execution backend is `hecpp`:
 
 ```bash
-nyx run
+nyx run src/main.nyx --target hecpp
+nyx build src/main.nyx --target hecpp --release
 ```
+
+> **Why does a generated `.exe` close immediately?** When launched from Explorer, Windows owns the temporary console and closes it as soon as the process returns or crashes. Run it from a terminal, or use **Nyx: Run Current File** in VS Code; the integrated terminal remains open and preserves stdout, stderr, and the exit code.
+
+### Inspect target capabilities
+
+```bash
+nyx targets
+nyx targets --json
+```
+
+Use this before selecting a beta backend or importing a target-specific standard-library module.
 
 ### Emit & Run x86_64 Assembly (Intel Syntax)
 
@@ -307,107 +415,199 @@ fn main() {
 ### Run Node.js
 
 ```bash
-nyx run --target hejs
+nyx run src/main.nyx --target hejs
 ```
 
 ### Run Python Reference
 
 ```bash
-nyx run --target hepy
+nyx run src/main.nyx --target hepy
 ```
 
 ### Build Rust
 
 ```bash
-nyx build --target hers
+nyx build src/main.nyx --target hers
+```
+
+### Verify local tooling behavior
+
+```bash
+nyx fmt src/main.nyx
+nyx lint src/main.nyx
+nyx profile src/main.nyx --target hepy
+nyx doc src/main.nyx
+nyx add telemetry @2.3.4
+nyx pkg
+```
+
+`fmt` is string/comment-safe and idempotent. `profile` reports measured
+whole-program compile+run wall time rather than synthetic per-function data.
+`debug` is currently a validated source-line inspector and does not fabricate
+runtime values. The RC1 package contract mutates `nyx.toml`/`nyx.lock`; remote
+registry download is not implemented and `nyx install` states that limit.
+
+### Verify or invoke the native self-host compiler
+
+```bash
+nyx self-host verify
+nyx self-host build
+nyxc check src/main.nyx
+nyxc emit-cpp src/main.nyx -o build/main.cpp
+nyxc compile src/main.nyx -o build/main
 ```
 
 ---
 
-## `07` — Language Example
+## `07` — Language Surface
 
-A minimal Nyx program can combine typed structures, functions, conditions, imports, and tests:
+Nyx keeps familiar control flow, but adds explicit cleanup, early-exit, matching, pipelines, traits, strict booleans, and reusable tasks without requiring a wall of ceremony:
 
 ```nyx
 #target hecpp
 
-import "std/math"
-import "std/io"
-
-struct ClusterNode {
-    address: string,
-    port: int,
-    is_master: bool
+struct Build {
+    name: string,
+    score: int
 }
 
-fn compute_shard_capacity(nodes: int, factor: int) -> int {
-    return power(nodes, 2) * factor
+trait Show {
+    fn show(self) -> string
 }
 
-var node = ClusterNode("10.0.0.1", 9000, true)
-
-if node.is_master {
-    var total_capacity = compute_shard_capacity(8, 4)
-
-    println_str(
-        "Cluster Node [" +
-        node.address +
-        "] Online -> Capacity: " +
-        to_string(total_capacity)
-    )
+impl Show for Build {
+    fn show(self) -> string {
+        return $"{self.name}: {self.score}"
+    }
 }
 
-test "shard capacity verification" {
-    assert(
-        compute_shard_capacity(2, 3) == 12,
-        "Mathematical invariant failure"
-    )
+async fn double_score(value: int) -> int {
+    guard value >= 0 else { throw "score cannot be negative" }
+    return value |> doubled
+}
+
+fn doubled(value: int) -> int {
+    return value * 2
+}
+
+async fn main() {
+    let build = Build("native-self-host", 21)
+    defer print("done")
+
+    let task: Task<int> = double_score(build.score)
+    let final_score: int = await task
+
+    for pass in 1..3 {
+        if pass == 2 { continue }
+        print($"pass {pass}")
+    }
+
+    print(Build(build.name, final_score).show())
 }
 ```
 
-The same frontend representation can then be directed toward another supported backend.
+Core v4 includes `var`/`let`/`const`, explicit `set`, `if`/`elif`/`else`, `for`, `while`, `loop`, `break`, `continue`, `guard`, `defer`, `match`, `try`/`catch`/`throw`, `async`/`await`, interpolation, null-safe access, pipelines, structs, traits, implementations, tests, modules, and explicit `unsafe` boundaries. The exact grammar is frozen in [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md).
 
 ---
 
-## `08` — Verification & Conformance
+<a id="bundle"></a>
 
-Nyx maintains an automated verification battery covering lexical analysis, parsing, semantic validation, graph resolution, diagnostics, tooling, fuzzing, and backend behavior.
+## `08` — Bundle ABI v1
+
+One compilation pass can turn an exported Nyx module into a browser/Node/React package:
+
+```bash
+nyx bundle src/math.nyx --output dist/math
+nyx bundle src/math.nyx --output dist/math --react
+```
+
+| Artifact | Purpose |
+| :-- | :-- |
+| `<module>.wat` | Inspectable WebAssembly text |
+| `<module>.wasm` | Binary WebAssembly module |
+| `<module>.mjs` | ES2022 loader, Promise cache, memory and string marshaling |
+| `<module>.d.ts` | Pointer-free TypeScript API declarations |
+| `<module>.react.tsx` | Optional React 19 client/Suspense hook |
+
+ABI v1 requires `memory`, `__nyx_alloc(i32)`, `__nyx_free(i32, i32)`, and `__nyx_abi_version() -> 1`. Strings use UTF-8 and a packed i64 `(len << 32) | ptr`; JavaScript refreshes views after memory growth, validates bounds, frees input buffers in `finally`, and releases caller-owned returned buffers after decoding. Embedded NUL, Turkish text, emoji, empty strings, and distinct input/output allocation are covered by live runtime tests.
+
+React clients can load a URL-keyed singleton module through the generated hook:
+
+```tsx
+'use client'
+
+const { add, compute } = useNyxModule()
+```
+
+The generated Promise cache prevents duplicate WebAssembly instantiation during React Strict Mode's development double render.
+
+---
+
+## `09` — Native Self-Hosting Boundary
+
+Nyx no longer depends on one Python compiler implementation for production compilation:
+
+| Component | Authored in | Release role |
+| :-- | :-- | :-- |
+| Lexer, parser, type checker | Nyx | Native frontend inside `nyxc` |
+| Typed-HIR lowerer | Nyx | Canonical semantic output |
+| HIR-to-C++ emitter | Nyx | Native bootstrap/backend path |
+| Stage-0 frontend | Python | Rebuild from zero and independent parity oracle |
+| `hepy` backend | Python target code | Stable language target, not compiler dependency |
+
+The release gate checks accepted/rejected corpus parity, byte-identical HIR, stage1→stage2→stage3 reproducibility, native fixture compilation, and the absence of machine-specific paths in generated output.
+
+---
+
+<a id="verification"></a>
+
+## `10` — Verification & Conformance
+
+The RC1 candidate is not qualified by a single happy-path build. The unified framework covers syntax, semantics, HIR, native execution, hosted parity, Bundle ABI, self-hosting, LSP/editor contracts, installers, packaging, fuzzing, and negative diagnostics.
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════╗
 ║                    NYX VERIFICATION BATTERY                         ║
 ╠══════════════════════════════════════════════════════════════════════╣
 ║                                                                      ║
-║  Lexical Analyzer & UTF-8 Stream Suite       ──► 100% PASS          ║
-║  Syntactic AST Construction                   ──► 100% PASS          ║
-║  Static Type Invariant Checks                 ──► 100% PASS          ║
-║  Topological Graph Deduplication              ──► 100% PASS          ║
-║  Ambiguous Symbol Collision E1302            ──► 100% PASS          ║
-║  LSP v2 RPC                                   ──► 100% PASS (3/3)   ║
-║  Clean Sandbox Isolation                      ──► 100% PASS (5/5)   ║
-║  Negative Syntax / Semantic Rejections        ──► 100% PASS (10/10) ║
-║  Deterministic Fuzz Engine                    ──► 100% PASS (530/530)║
-║  Differential Backend Parity                  ──► 100% PASS (10/10) ║
-║  Node.js ES2022 End-to-End                    ──► 100% PASS (8/8)   ║
-║  Rust 2021 Borrow-Check                       ──► 100% PASS (8/8)   ║
-║  C++20 Native Machine Code                    ──► 100% PASS (8/8)   ║
-║  Edge-Case Regression                         ──► 100% PASS (138/138)║
+║  Edge-case regression                         ──► 138 / 138 PASS    ║
+║  HIR corpus emission                          ──► 162 programs PASS ║
+║  Nyx/Python canonical HIR byte parity         ──► 182 cases PASS    ║
+║  Stable backend runtime parity                ──► 3 × 138 PASS      ║
+║  Deterministic backend fixtures               ──► 3 × 10 PASS       ║
+║  Standard-library HIR coverage                ──► 21 modules PASS   ║
+║  Bundle ABI isolated + allocation stress      ──► 100,000 PASS      ║
+║  Native self-host reproducibility             ──► stage 1/2/3 PASS ║
+║  Deterministic fuzz engine                    ──► 530 / 530 PASS    ║
+║  LSP JSON-RPC contract                        ──► 4 / 4 PASS        ║
+║  C/C++ native interoperability                ──► 5 / 5 PASS        ║
+║  Installer + VS Code extension contracts      ──► PASS             ║
 ║                                                                      ║
 ╚══════════════════════════════════════════════════════════════════════╝
 ```
 
-### Conformance Matrix
+### Backend maturity matrix
 
-| Pipeline    | Target         | Quality Gate | Status                 |
-| :---------- | :------------- | :----------: | :--------------------- |
-| **`hecpp`** | C++20          |  **Gate 8**  | 🔒 Frozen / Production |
-| **`hejs`**  | Node.js ES2022 |  **Gate 8**  | 🔒 Frozen / Production |
-| **`hepy`**  | Python 3       |  **Gate 8**  | 📐 Reference Semantics |
-| **`hers`**  | Rust 2021      |  **Gate 6**  | 🟡 Conformance Probe   |
+| Target | Language semantics | HIR | RC1 role |
+| :-- | :--: | :--: | :-- |
+| **`hecpp`** | frozen v4 | authoritative | stable native candidate |
+| **`hejs`** | frozen v4 | authoritative | stable hosted candidate |
+| **`hepy`** | frozen v4 | authoritative | stable parity/reference candidate |
+| **`hewasm`** | explicit `wasm32` subset | authoritative | beta ABI |
+| **`hers`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
+| **`hereact`** | wrapper/tooling contract | N/A | beta tooling |
+| **`heasm`** | native subset | via C++ | beta |
+| **embedded** | target-specific subset | migration pending | experimental |
+
+The figures above are local RC-candidate evidence. Promotion to `v4.0.0-rc.1` still requires retained clean-run evidence from Windows, Linux x64, macOS x64, and macOS arm64. Stable `v4.0.0` additionally requires an uneventful RC soak and published compatibility/rollback policies.
+
+### Release integrity
+
+The release workflow is configured to produce deterministic ZIP/TAR source archives, four native platform artifacts, the local-install VSIX, SHA-256 manifests, an SPDX 2.3 SBOM, and signed provenance/SBOM attestations. Version strings are checked against the root [`VERSION`](VERSION) file before packaging.
 
 ---
 
-## `09` — Diagnostics
+## `11` — Diagnostics
 
 Nyx diagnostics are built around structured error codes and precise source spans.
 
@@ -431,20 +631,25 @@ See [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) for the diagnostic catalog.
 
 ---
 
-## `10` — Documentation
+<a id="documentation"></a>
 
-| Documentation                                    | Description                       |
-| :----------------------------------------------- | :-------------------------------- |
-| [`GETTING_STARTED.md`](GETTING_STARTED.md)       | Architecture and initial workflow |
-| [`INSTALLATION.md`](INSTALLATION.md)             | Installation and toolchain setup  |
-| [`LANGUAGE_REFERENCE.md`](LANGUAGE_REFERENCE.md) | Language reference and grammar    |
-| [`CLI_REFERENCE.md`](CLI_REFERENCE.md)           | CLI and command reference         |
-| [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md)       | Diagnostic error catalog          |
-| [`CHANGELOG.md`](CHANGELOG.md)                   | Release history                   |
+## `12` — Documentation
+
+| Documentation | Description |
+| :-- | :-- |
+| [`GETTING_STARTED.md`](GETTING_STARTED.md) | First project and compiler workflow |
+| [`INSTALLATION.md`](INSTALLATION.md) | Host and native toolchain setup |
+| [`LANGUAGE_REFERENCE.md`](LANGUAGE_REFERENCE.md) | Frozen v4 language semantics |
+| [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md) | Grammar, type, Task, exception, and HIR contract |
+| [`CLI_REFERENCE.md`](CLI_REFERENCE.md) | CLI command reference |
+| [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) | Structured diagnostic catalog |
+| [`docs/internals/ROADMAP_AND_BACKEND_GATES.md`](docs/internals/ROADMAP_AND_BACKEND_GATES.md) | RC1 decision, backend gates, self-host and post-RC target order |
+| [`docs/TODO.md`](docs/TODO.md) | Live RC1/stable checklist |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history and current candidate changes |
 
 ---
 
-## `11` — Contributing
+## `13` — Contributing
 
 Nyx welcomes contributions that improve the compiler, language, tooling, documentation, and verification infrastructure.
 
@@ -474,7 +679,7 @@ For larger architectural changes, discuss the intended design before implementin
 
 ---
 
-## `12` — License
+## `14` — License
 
 nyx is licensed under the **MIT License**.
 
@@ -483,5 +688,5 @@ See [`LICENSE`](LICENSE) for the complete license text.
 ---
 
 <div align="center">
-  <img src="assets/footer_animated.svg?v=3.0.0" width="98%" alt="nyx systems footer banner"/>
+  <img src="assets/footer_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx systems footer banner"/>
 </div>

@@ -33,9 +33,9 @@ def run_parser_validation_corpus() -> bool:
 
     with open(os.path.join(_root_dir, "compiler", "lexer.nyx"), "r", encoding="utf-8") as f:
         lexer_content = f.read()
-    lexer_impl_start = lexer_content.index("struct Lexer")
+    lexer_support_start = lexer_content.index("// NYX_LEXER_SUPPORT_BEGIN:")
     lexer_impl_end = lexer_content.index("fn main()") if "fn main()" in lexer_content else len(lexer_content)
-    lexer_code = lexer_content[lexer_impl_start:lexer_impl_end].strip()
+    lexer_code = lexer_content[lexer_support_start:lexer_impl_end].strip()
 
     combined_base = f"""#target hecpp
 #native include <string>
@@ -72,7 +72,7 @@ fn main() {{
     var code = "{escaped_src}"
     var lex = Lexer(code, 0, 1, 1)
     var tokens = lex.tokenize()
-    var p = Parser(tokens, 0)
+    var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
     print(ast.to_str())
 }}
@@ -115,7 +115,7 @@ main()
         ("unclosed_parenthesis", "var x = (10 + 20;"),
         ("missing_colon_in_decl", "var x int = 10;"),
         ("trailing_plus_operator", "var a = 10 + ;"),
-        ("unclosed_brace_block", "fn test() { var a = 10;")
+        ("unclosed_brace_block", "fn demo() { var a = 10;")
     ]
 
     for name, src in invalid_corpus:
@@ -140,7 +140,7 @@ fn main() {{
     var code = "{escaped_src}"
     var lex = Lexer(code, 0, 1, 1)
     var tokens = lex.tokenize()
-    var p = Parser(tokens, 0, false, "")
+    var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
     if p.has_error {{
         print("REJECTED:", p.error_msg)

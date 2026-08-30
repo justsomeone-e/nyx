@@ -1,36 +1,60 @@
 import sys
 import json
 import os
-import re
 from typing import Dict, List, Optional, Any
+from urllib.parse import unquote, urlparse
 
 _root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)
 
-from src.core.lexer import Lexer
-from src.core.parser import Parser
-from src.core.type_checker import TypeChecker
-from src.core.module_loader import ModuleLoader
-from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
+from src.api import NyxCompiler
+from src.core.backend_capabilities import BACKENDS
 from src.core.ast_nodes import FunctionDefNode, StructDefNode, TraitDefNode, VarDeclNode, ProgramNode
+from src.core.language_surface import (
+    BUILTIN_NAMES,
+    EXPERIMENTAL_KEYWORDS,
+    STABLE_KEYWORDS,
+    TYPE_NAMES,
+)
 
-# Core language keywords and builtins for intelligent completion
-KEYWORDS = [
-    "fn", "var", "val", "return", "if", "else", "while", "for", "in",
-    "struct", "trait", "impl", "import", "from", "as", "test",
-    "match", "unsafe", "Ok", "Err", "null", "true", "false"
-]
+# Public aliases are retained for clients/tests that import this module.
+KEYWORDS = list(STABLE_KEYWORDS)
+TYPES = list(TYPE_NAMES)
+
+_BUILTIN_SIGNATURES = {
+    "print": "fn print(...args) -> void",
+    "input": "fn input(prompt: string = \"\") -> string",
+    "addr": "unsafe fn addr(value) -> uintptr",
+    "peek": "unsafe fn peek(address: uintptr) -> int",
+    "memdump": "unsafe fn memdump(address: uintptr, count: int = 16) -> void",
+    "channel": "fn channel<T>() -> Channel<T>",
+    "Ok": "fn Ok<T>(value: T) -> Result<T, string>",
+    "Err": "fn Err<E>(error: E) -> Result<int, E>",
+    "len": "fn len<T>(value: T) -> int",
+    "to_string": "fn to_string<T>(value: T) -> string",
+    "to_int": "fn to_int(value: string) -> int",
+    "contains": "fn contains(value: string, part: string) -> bool",
+    "is_number": "fn is_number(value: string) -> bool",
+    "delay_ms": "fn delay_ms(milliseconds: int) -> void",
+}
+_BUILTIN_DOCS = {
+    "print": "Core language output function",
+    "input": "Reads a line from standard input",
+    "addr": "Returns the address of a value inside an unsafe boundary",
+    "peek": "Reads an integer from a raw address inside an unsafe boundary",
+    "memdump": "Prints bytes from a raw address inside an unsafe boundary",
+}
 BUILTINS = [
-    {"label": "print", "detail": "fn print(...args)", "doc": "Core language output function"},
-    {"label": "input", "detail": "fn input(prompt: string) -> string", "doc": "Reads a line from standard input"},
-    {"label": "addr", "detail": "unsafe fn addr(var_name: string) -> int", "doc": "Returns variable memory address"},
-    {"label": "peek", "detail": "unsafe fn peek(addr: int) -> int", "doc": "Direct memory read"},
-    {"label": "memdump", "detail": "unsafe fn memdump(addr: int, count: int)", "doc": "Dumps memory buffer"}
+    {
+        "label": name,
+        "detail": _BUILTIN_SIGNATURES[name],
+        "doc": _BUILTIN_DOCS.get(name, "Nyx core runtime function"),
+    }
+    for name in BUILTIN_NAMES
 ]
-TYPES = ["int", "float", "string", "bool", "Array", "Result", "Option", "void"]
 
-class NyxuageServer:
+class LanguageServer:
     def __init__(self):
         self.documents: Dict[str, str] = {}
         self.parsed_asts: Dict[str, ProgramNode] = {}
@@ -70,52 +94,36 @@ class NyxuageServer:
         })
 
     def get_fs_path(self, uri: str) -> str:
-        path = uri.replace("file:///", "").replace("file://", "")
+        parsed = urlparse(uri)
+        path = unquote(parsed.path) if parsed.scheme == "file" else uri
+        if parsed.netloc:
+            path = f"//{parsed.netloc}{path}"
         if os.name == 'nt' and path.startswith("/") and len(path) > 2 and path[2] == ':':
             path = path[1:]
         return os.path.normpath(path)
 
     def validate_document(self, uri: str, text: str):
-        diagnostics = []
         filepath = self.get_fs_path(uri)
-        orig_exit = DiagnosticEmitter.EXIT_ON_ERROR
-        DiagnosticEmitter.EXIT_ON_ERROR = False
-
-        try:
-            base_dir = os.path.dirname(os.path.abspath(filepath)) if filepath else os.getcwd()
-            loader = ModuleLoader(base_dir=base_dir)
-            ast = loader.load_program(filepath, text)
-            self.parsed_asts[uri] = ast
-            TypeChecker(ast, filepath, text).check()
-        except DiagnosticError as de:
-            line = max(0, de.line - 1)
-            col = max(0, de.col - 1)
-            diagnostics.append({
-                "range": {
-                    "start": {"line": line, "character": col},
-                    "end": {"line": line, "character": col + 8}
-                },
-                "severity": 1,
-                "code": de.code,
-                "source": "nyx",
-                "message": f"[{de.code}] {de.title}"
-            })
-        except Exception as e:
-            err_str = str(e)
-            m = re.search(r':(\d+):(\d+)', err_str)
-            line = max(0, int(m.group(1)) - 1) if m else 0
-            col = max(0, int(m.group(2)) - 1) if m else 0
-            diagnostics.append({
-                "range": {
-                    "start": {"line": line, "character": col},
-                    "end": {"line": line, "character": col + 8}
-                },
-                "severity": 1,
-                "source": "nyx",
-                "message": err_str
-            })
-        finally:
-            DiagnosticEmitter.EXIT_ON_ERROR = orig_exit
+        base_dir = os.path.dirname(os.path.abspath(filepath)) if filepath else os.getcwd()
+        result = NyxCompiler(base_dir).check_source(text, filename=filepath)
+        diagnostics = []
+        if result.success and result.ast is not None:
+            self.parsed_asts[uri] = result.ast
+        else:
+            self.parsed_asts.pop(uri, None)
+            for diagnostic in result.diagnostics:
+                line = max(0, diagnostic.line - 1)
+                col = max(0, diagnostic.column - 1)
+                diagnostics.append({
+                    "range": {
+                        "start": {"line": line, "character": col},
+                        "end": {"line": line, "character": col + diagnostic.length}
+                    },
+                    "severity": 1,
+                    "code": diagnostic.code,
+                    "source": "nyx",
+                    "message": f"[{diagnostic.code}] {diagnostic.message}"
+                })
 
         self.send_diagnostics(uri, diagnostics)
 
@@ -191,7 +199,8 @@ class NyxuageServer:
         if isinstance(p, tuple):
             return f"{p[0]}: {p[1]}" if len(p) > 1 and p[1] else str(p[0])
         if hasattr(p, "name"):
-            t = getattr(p.type_node, "name", str(p.type_node)) if getattr(p, "type_node", None) else ""
+            type_node = getattr(p, "type_annot", None) or getattr(p, "type_node", None)
+            t = getattr(type_node, "name", str(type_node)) if type_node else ""
             return f"{p.name}: {t}" if t else p.name
         return str(p)
 
@@ -199,7 +208,8 @@ class NyxuageServer:
         items = []
 
         # 1. Directives
-        items.append({"label": "#target", "kind": 15, "detail": "#target <hecpp|heasm|hereact|hejs|hers|hepy|hewasm>", "documentation": "Sets compiler backend target"})
+        target_names = "|".join(BACKENDS)
+        items.append({"label": "#target", "kind": 15, "detail": f"#target <{target_names}>", "documentation": "Sets compiler backend target"})
         items.append({"label": "#native include", "kind": 15, "detail": "#native include <header>", "documentation": "Includes C/C++ native header"})
         items.append({"label": "#native link", "kind": 15, "detail": '#native link "lib"', "documentation": "Links system library"})
         items.append({"label": "#native raw", "kind": 15, "detail": "#native raw { ... }", "documentation": "Inline C++ code block"})
@@ -207,7 +217,14 @@ class NyxuageServer:
 
         # 1. Keywords
         for kw in KEYWORDS:
-            items.append({"label": kw, "kind": 14, "detail": "Keyword"})
+            items.append({"label": kw, "kind": 14, "detail": "Nyx stable keyword"})
+        for kw in EXPERIMENTAL_KEYWORDS:
+            items.append({
+                "label": kw,
+                "kind": 14,
+                "detail": "Nyx experimental keyword",
+                "documentation": "Parsed by the frontend; cross-target semantics are not stable yet.",
+            })
 
         # 2. Builtins
         for b in BUILTINS:
@@ -340,5 +357,9 @@ class NyxuageServer:
             elif method == "exit":
                 sys.exit(0)
 
+# Backwards compatibility for integrations that imported the original typo.
+NyxuageServer = LanguageServer
+
+
 if __name__ == "__main__":
-    NyxuageServer().run()
+    LanguageServer().run()

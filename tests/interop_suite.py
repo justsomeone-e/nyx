@@ -125,6 +125,28 @@ fn main() {
 main()
 """,
             "Success: 42\nCaught Error: Operation failed intentionally"
+        ),
+        (
+            "interop_05_generic_result_context",
+            """#target hecpp
+
+fn metric(should_fail: bool) -> Result<float, string> {
+    if should_fail {
+        return Err("metric failed")
+    }
+    return Ok(3.5)
+}
+
+fn main() {
+    var good = metric(false)
+    var bad = metric(true)
+    print("Metric:", good.value)
+    print("Metric error:", bad.error)
+}
+
+main()
+""",
+            "Metric: 3.5\nMetric error: metric failed"
         )
     ]
 

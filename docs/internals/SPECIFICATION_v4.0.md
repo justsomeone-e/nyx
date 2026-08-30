@@ -98,7 +98,7 @@ All compile-time syntax and semantic errors produce rustc-style source-located d
 
 ---
 
-## 4. Package Management (`he.toml` & `he.lock`)
+## 4. Package Management (`nyx.toml` & `nyx.lock`)
 
 ```toml
 [package]
@@ -110,15 +110,17 @@ edition = "2026"
 std = "4.0.0"
 math = "1.0.0"
 
-[targets]
-default = "hecpp"
+[build]
+opt_level = 2
+output_type = "exe"
 ```
 
 CLI Commands:
-* `he init [name]`
-* `he add <package>`
-* `he remove <package>`
-* `he install`
-* `he test [file.he]`
-* `he build <file.he>`
-* `he run <file.he>`
+* `nyx init [name]`
+* `nyx add <package> [@version]`
+* `nyx remove <package>`
+* `nyx install` (manifest validation and deterministic lockfile refresh; no remote registry fetch in RC1)
+* `nyx pkg`
+* `nyx test [file.nyx]`
+* `nyx build [file.nyx]`
+* `nyx run [file.nyx]`

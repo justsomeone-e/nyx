@@ -1,32 +1,35 @@
 # 💻 Nyx CLI & Command Reference
 
-The Nyx toolchain binary (`he`) provides project scaffolding, validation, multi-target compilation, testing, formatting, and language services.
+The `nyx` toolchain provides project scaffolding, validation, multi-target
+compilation, testing, formatting, language services, and deterministic
+manifest/lockfile management.
 
 ---
 
 ## 🛠️ Commands Overview
 
 ```bash
-he <command> [arguments] [options]
+nyx <command> [arguments] [options]
 ```
 
-### 1. `he new <project_name>`
+### 1. `nyx new <project_name>`
 Creates a standard Nyx project structure:
 ```text
 my_project/
-├── he.toml
+├── nyx.toml
+├── nyx.lock
 ├── .gitignore
 └── src/
-    └── main.he
+    └── main.nyx
 ```
 
-### 2. `he init [name]`
-Initializes a `he.toml` project manifest in the current directory.
+### 2. `nyx init [name]`
+Initializes `nyx.toml` and `nyx.lock`. Existing manifests require explicit `--force`.
 
-### 3. `he check [file.he]`
+### 3. `nyx check [file.nyx]`
 Performs fast static semantic and type-checking across project source files without invoking backend compilers.
 
-### 4. `he build [file.he] [--target <backend>] [--release]`
+### 4. `nyx build [file.nyx] [--target <backend>] [--board <profile>] [--release]`
 Transpiles and builds the program into the `build/<target>/` directory.
 Supported targets:
 * `--target hecpp` (Default: C++20 / Native Executable)
@@ -34,21 +37,68 @@ Supported targets:
 * `--target hepy` (Python 3)
 * `--target hers` (Rust 2021 Source)
 
-### 5. `he run [file.he] [--target <backend>]`
+For a freestanding board, `--board` selects MCU flags, linker memory, BSP,
+connector aliases, interrupt vectors, and programmer metadata. Native console
+executables finish when `main` returns; use `nyx run file.nyx` to keep their
+output visible in the current terminal instead of double-clicking the EXE.
+
+### 5. `nyx run [file.nyx] [--target <backend>]`
 Builds and executes the entrypoint immediately on the specified host backend.
 
-### 6. `he test [file.he | all]`
+### 6. `nyx test [file.nyx | all]`
 * If a file is specified: Runs in-file `test "..." { assert(...) }` blocks.
 * If omitted or `all`: Runs the master regression test framework.
 
-### 7. `he doctor`
+### 7. `nyx doctor`
 Diagnoses host system dependencies (Python, LLVM Clang, Node.js, Rust, and Git) and outputs remediation instructions for missing compilers.
 
-### 8. `he lsp`
+### 8. `nyx lsp`
 Launches the JSON-RPC 2.0 Language Server Protocol daemon for editor integrations (VS Code, Neovim, Emacs).
 
-### 9. `he fmt <file.he>`
-Auto-formats and indents source code according to Nyx standards.
+### 9. `nyx fmt <file.nyx>`
+Applies string/comment-safe, idempotent source formatting. Missing files return nonzero.
 
-### 10. `he clean`
+### 10. `nyx clean`
 Removes temporary build artifacts and directories (`build/`, `target/`, `__pycache__`).
+
+### 11. `nyx lint <file.nyx>`
+Reports style and unsafe-boundary warnings without treating warnings as process failures.
+
+### 12. `nyx debug <file.nyx>`
+Opens the validated source-line inspector. Runtime values are not fabricated;
+runtime source maps and variable inspection are not part of RC1.
+
+### 13. `nyx profile <file.nyx> [--target <backend>]`
+Runs the real compile+execute path and reports measured whole-program wall time.
+It does not print synthetic function timings.
+
+### 14. `nyx doc <file.nyx>`
+Generates escaped HTML API documentation from `///` comments.
+
+### 15. `nyx add <package> [@version]`
+Adds an explicit dependency version to `nyx.toml` and regenerates `nyx.lock`.
+
+### 16. `nyx remove <package>`
+Removes a dependency from the manifest and lockfile. Missing dependencies return nonzero.
+
+### 17. `nyx install`
+Validates manifest dependencies and regenerates `nyx.lock`. RC1 has no remote
+package registry download; the command reports that limit explicitly.
+
+### 18. `nyx pkg`
+Displays project metadata, dependencies, native settings, and build configuration.
+
+### 19. `nyx targets [--json]`
+Displays the human-readable or machine-readable backend and standard-library
+capability contract.
+
+### 20. `nyx boards [--json]`
+Lists recognized Nucleo/embedded profiles and distinguishes built-in standalone
+BSPs from profiles that still require STM32Cube/CMSIS configuration.
+
+`nyx boards --init [board.toml]` writes a non-overwriting custom-board template.
+
+### 21. `nyx flash <firmware.elf|.hex|.bin> --board <profile>`
+Programs an explicitly selected firmware image through STM32CubeProgrammer or
+OpenOCD. `--dry-run` prints the exact command without touching hardware;
+`--probe`, `--probe-serial`, and connect-under-reset options select the probe.

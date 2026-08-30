@@ -1,0 +1,16 @@
+/// STM32 12-bit ADC input API. A negative result indicates an invalid pin or
+/// a hardware conversion timeout.
+
+const ADC_MAX_12BIT: int = 4095
+
+extern "C" fn nyx_hal_adc_read(pin: int) -> int
+
+fn adc_read(pin: int) -> int {
+    return nyx_hal_adc_read(pin)
+}
+
+fn adc_read_mv(pin: int, reference_mv: int = 3300) -> int {
+    var sample = nyx_hal_adc_read(pin)
+    if sample < 0 { return sample }
+    return (sample * reference_mv) / ADC_MAX_12BIT
+}

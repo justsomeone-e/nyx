@@ -14,6 +14,10 @@ fn main() {
     var sn = sin(0.0);
     var cl = clamp(50.0, 0.0, 100.0);
     print($"[MATH] sqrt(144)={sq} pow(2,8)={pw} sin(0)={sn} clamp(50)={cl}");
+    guard sq == 12.0 and pw == 256.0 and sn == 0.0 and cl == 50.0 else {
+        print("[FAIL] Math parity mismatch!");
+        return;
+    }
 
     // 2. Encoding (Base64)
     var msg = "Nyx Parity Verification 2026";
@@ -59,12 +63,14 @@ fn main() {
     var t1 = now_ms();
     var diff = t1 - t0;
     print($"[TIME] Elapsed: {diff}ms (Expected >= 20ms)");
+    guard diff >= 20 else { print("[FAIL] Time elapsed below requested sleep!"); return; }
 
     // 6. JSON Lite
     var json_doc = "{\"name\":\"nyx_polyglot\",\"version\":3,\"build\":2026}";
     var j_name = get_string(json_doc, "name");
     var j_ver = get_int(json_doc, "version");
     print($"[JSON_LITE] Extracted name={j_name}, version={j_ver}");
+    guard j_name == "nyx_polyglot" and j_ver == 3 else { print("[FAIL] JSON Lite mismatch!"); return; }
 
     // 7. Filesystem
     var temp_f = "parity_temp.txt";
@@ -73,6 +79,10 @@ fn main() {
     var f_content = read_to_string(temp_f);
     var r_ok = remove_file(temp_f);
     print($"[FS] Write={w_ok}, Exists={f_exists}, Content='{f_content}', Remove={r_ok}");
+    guard w_ok and f_exists and f_content == "Parity Data Content" and r_ok else {
+        print("[FAIL] Filesystem parity mismatch!");
+        return;
+    }
 
     print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL / NFC-NFD Vectors Verified (hecpp == hejs == hepy)!");
 }

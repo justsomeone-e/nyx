@@ -2,6 +2,7 @@ import os
 import sys
 import subprocess
 import tempfile
+import shutil
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -140,8 +141,8 @@ def run_differential_tests():
         out_js = js_res.stdout.strip()
         
         # 4. Rust 2021 Backend Verification (rustc)
-        rustc_path = r"C:\Program Files\Rust stable MSVC 1.98\bin\rustc.exe"
-        if os.path.exists(rustc_path):
+        rustc_path = shutil.which("rustc")
+        if rustc_path:
             rs_code = UniversalCodeGen(ast).gen_rust()
             temp_rs = os.path.join(tempfile.gettempdir(), f"{name}_diff.rs")
             temp_obj = os.path.join(tempfile.gettempdir(), f"{name}_diff.o")

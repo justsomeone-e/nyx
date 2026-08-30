@@ -1,0 +1,7 @@
+/// Connector aliases supplied by the selected --board profile.
+
+extern "C" fn nyx_hal_board_pin(name: string) -> int
+
+fn board_pin(name: string) -> int {
+    return nyx_hal_board_pin(name)
+}

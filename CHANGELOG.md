@@ -4,6 +4,66 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [Unreleased] - v4.0.0-rc.1 candidate
+
+### Compiler architecture
+
+* Nyx-authored lexer, parser, type checker, typed-HIR lowerer, and HIR C++
+  emitter now form a reproducible native stage1 -> stage2 bootstrap.
+* `hecpp`, `hejs`, `hepy`, `hers`, and `hewasm` consume canonical verified HIR;
+  non-HIR targets retain beta or experimental status.
+* The Rust 2021 emitter now preserves Nyx value semantics, strict Boolean
+  boundaries, Option/Result lowering, lexical `defer`, and wrapping i64 code
+  directly from HIR. Unsupported Task, exception, spawn, and channel semantics
+  fail with `E3001`; beta status remains until runtime and Gate 8 evidence.
+* Native-first installers provide `nyxc check`, `emit-cpp`, and `compile`
+  without a Python runtime.
+
+### Frozen v4 semantics
+
+* 46 canonical keywords with `fn` as the sole function declaration spelling;
+  embedded targets add `volatile`, `interrupt`, and `critical`.
+* Signed i64 wrapping arithmetic, IEEE binary64, canonical scalar text, and
+  optimizer/backend parity.
+* Strict Boolean conditions, including runtime type checks at dynamic `any`
+  boundaries.
+* Verified trait contracts, shallow immutable bindings, reusable `Task<T>`,
+  and exception propagation across awaits.
+* Fixed-width scalar spellings and a first-class embedded control surface
+  replace routine `#native raw` use for shared state and interrupt handlers.
+* Embedded-only `Buffer<T, N>` adds allocation-free fixed storage, checked
+  capacities/indexes, and pointer-length bulk-I/O interop without native code.
+
+### Embedded systems
+
+* Data-driven Nucleo profiles, custom `board.toml`, STM32CubeProgrammer/OpenOCD
+  command generation, and board connector aliases.
+* Register-level STM32F4 GPIO, UART, SPI, I2C, ADC, PWM, timers, NVIC, and
+  volatile MMIO APIs with bounded error paths and buffer-based bulk transfers.
+* F410 now uses its real TIM5/TIM6 and IRQ map and rejects unavailable
+  TIM2-backed PWM; F401/F411/F446 retain their board-specific timer maps.
+* Standalone ELF/HEX/BIN builds for NUCLEO-F401RE, F410RB, F411RE, and F446RE;
+  other registered profiles remain explicitly CMSIS/custom-BSP gated.
+* Removed desktop HAL simulations that previously printed success without
+  touching hardware.
+
+### Release engineering
+
+* Deterministic ZIP/TAR source archives from canonical Git blobs.
+* Four native platform artifacts, SHA-256 manifests, SPDX 2.3 SBOM output,
+  and signed GitHub provenance/SBOM attestations.
+
+### CLI toolchain integrity
+
+* `fmt`, `lint`, `debug`, `profile`, `doc`, `add`, `remove`, `install`, and
+  `pkg` now propagate failure exit codes and are covered by real filesystem and
+  process-effect tests.
+* Formatting is string/comment-safe and idempotent; profiling measures an
+  actual compile+run instead of printing synthetic routines; the source
+  inspector no longer invents runtime variables or memory.
+* Package commands mutate and verify `nyx.toml`/`nyx.lock` with explicit
+  versions. RC1 intentionally exposes no remote registry fetch and says so.
+
 ## [2.0.0-beta.1] - 2026-08-28 (Beta 1 Public Release)
 
 ### 🚀 Major Additions

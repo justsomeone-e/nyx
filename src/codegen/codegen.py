@@ -15,7 +15,7 @@ from src.core.ast_nodes import (
     ASTNode, ProgramNode, TypeNode, VarDeclNode, AssignNode, NumberNode,
     StringNode, BooleanNode, NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode,
     FunctionParam, FunctionDefNode, LambdaNode, StructDefNode, TraitDefNode,
-    ImplBlockNode, TypeAliasNode, EnumDefNode, UnsafeBlockNode, SpawnNode,
+    ImplBlockNode, TypeAliasNode, EnumDefNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode,
     TestBlockNode, AssertNode, MatchNode, TryCatchNode, MemberAccessNode,
     NullCoalesceNode, ArrayNode, IndexAccessNode, IfNode, WhileNode, ForNode,
     ReturnNode, BreakNode, ContinueNode, FunctionCallNode,
@@ -37,6 +37,8 @@ class UniversalCodeGen:
             return self.gen_python()
         elif target in ("hejs", "js"):
             return self.gen_js()
+        elif target in ("hers", "rs", "rust"):
+            return self.gen_rust()
         else:
             return self.gen_cpp()
 
@@ -52,6 +54,21 @@ class UniversalCodeGen:
     # 1. C++20 CODE GENERATOR (NATIVE FFI & ZERO-OVERHEAD)
     # =====================================================
     def gen_cpp(self) -> str:
+        """Emit hosted hecpp from HIR; retain legacy freestanding targets temporarily."""
+        if self.ast.target.lower() not in ("hecpp", "cpp", "c++"):
+            return self._gen_cpp_legacy()
+
+        from src.codegen.hir_cpp import emit_cpp
+        from src.ir import lower_to_hir, optimize_hir, verify_hir
+
+        hir = lower_to_hir(self.ast, "<hecpp>")
+        verify_hir(hir)
+        optimized = optimize_hir(hir).module
+        verify_hir(optimized)
+        return emit_cpp(optimized)
+
+    def _gen_cpp_legacy(self) -> str:
+        """Pre-HIR emitter retained for freestanding and migration diagnostics."""
         # Collect native directives and extern declarations
         native_includes = [s.header for s in self.ast.statements if isinstance(s, NativeIncludeNode)]
         native_raws = [s.raw for s in self.ast.statements if isinstance(s, NativeRawNode)]
@@ -64,12 +81,18 @@ class UniversalCodeGen:
         # Scan AST to detect which runtime helpers & headers are actually required
         used_syms = set()
         has_arrays = False
+        has_buffers = False
         has_spawn = False
 
         def scan_ast(n):
-            nonlocal has_arrays, has_spawn
+            nonlocal has_arrays, has_buffers, has_spawn
             if not n: return
-            if isinstance(n, FunctionCallNode):
+            if isinstance(n, TypeNode):
+                if n.name == "Buffer":
+                    has_buffers = True
+                for arg in n.generic_args:
+                    scan_ast(arg)
+            elif isinstance(n, FunctionCallNode):
                 if isinstance(n.callee, str):
                     used_syms.add(n.callee)
                 for a in n.args: scan_ast(a)
@@ -159,6 +182,18 @@ class UniversalCodeGen:
         helper_lines = []
         if is_embedded:
             helper_lines.extend([
+                "// --- nyx Allocation-Free Fixed Buffer ---",
+                "template<typename T, size_t N>",
+                "struct NyxBuffer {",
+                "    T values[N]{};",
+                "    constexpr size_t size() const { return N; }",
+                "    T* data() { return values; }",
+                "    const T* data() const { return values; }",
+                "    T* begin() { return values; }",
+                "    T* end() { return values + N; }",
+                "    const T* begin() const { return values; }",
+                "    const T* end() const { return values + N; }",
+                "};",
                 "// --- nyx Freestanding Embedded Stack String Engine ---",
                 "struct NyxStr {",
                 "    char buf[128];",
@@ -169,6 +204,7 @@ class UniversalCodeGen:
                 "        buf[i] = 0;",
                 "    }",
                 "    const char* c_str() const { return buf; }",
+                "    size_t size() const { size_t n = 0; while (buf[n]) ++n; return n; }",
                 "    operator const char*() const { return buf; }",
                 "};",
                 "inline NyxStr operator+(const NyxStr& a, const char* b) {",
@@ -222,12 +258,20 @@ class UniversalCodeGen:
         if has_arrays or "len" in used_syms or "length" in used_syms:
             helper_lines.append("template<typename T> int64_t len(const T& c) { return (int64_t)c.size(); }")
             helper_lines.append("template<typename T> int64_t length(const T& c) { return (int64_t)c.size(); }")
-        if has_arrays or "push" in used_syms:
+        if (has_arrays or "push" in used_syms) and not is_embedded:
             helper_lines.append("template<typename T, typename V> void push(vector<T>& v, const V& val) { v.push_back(val); }")
         if has_arrays or "_nyx_at" in used_syms:
-            helper_lines.append("template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }")
-            helper_lines.append("template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }")
-            helper_lines.append("inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return \"\"; return string(1, s[i]); }")
+            if is_embedded:
+                helper_lines.append("template<typename T, size_t N> T& _nyx_at(NyxBuffer<T, N>& v, int64_t i) { if (i < 0 || (size_t)i >= N) __builtin_trap(); return v.values[(size_t)i]; }")
+                helper_lines.append("template<typename T, size_t N> const T& _nyx_at(const NyxBuffer<T, N>& v, int64_t i) { if (i < 0 || (size_t)i >= N) __builtin_trap(); return v.values[(size_t)i]; }")
+                helper_lines.append("inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return string(\"\"); char one[2] = {s.buf[i], 0}; return string(one); }")
+            else:
+                helper_lines.append("template<typename T> auto& _nyx_at(vector<T>& v, int64_t i) { return v[i]; }")
+                helper_lines.append("template<typename T> const auto& _nyx_at(const vector<T>& v, int64_t i) { return v[i]; }")
+                helper_lines.append("inline string _nyx_at(const string& s, int64_t i) { if (i < 0 || (size_t)i >= s.size()) return \"\"; return string(1, s[i]); }")
+        if has_buffers or "buffer_ptr" in used_syms:
+            helper_lines.append("template<typename T, size_t N> uintptr_t buffer_ptr(NyxBuffer<T, N>& v) { return (uintptr_t)v.data(); }")
+            helper_lines.append("template<typename T, size_t N> uintptr_t buffer_ptr(const NyxBuffer<T, N>& v) { return (uintptr_t)v.data(); }")
         if "Result" in used_syms or "Ok" in used_syms or "Err" in used_syms:
             helper_lines.append("template<typename T, typename E = string>")
             helper_lines.append("struct Result { bool is_ok; T value; E error; Result() : is_ok(false), value(), error() {} Result(bool ok, T val, E err) : is_ok(ok), value(val), error(err) {} template<typename U> Result(const Result<U, E>& o) : is_ok(o.is_ok), value((T)o.value), error(o.error) {} T unwrap() const { return value; } };")
@@ -263,18 +307,17 @@ class UniversalCodeGen:
             "    inline int64_t nyx_mmio_read32(uintptr_t addr) { return (int64_t)*(volatile uint32_t*)(addr); }",
             "    inline void nyx_mmio_write32(uintptr_t addr, int64_t val) { *(volatile uint32_t*)(addr) = (uint32_t)val; }",
         ]
-        if not is_embedded:
+        if is_embedded:
             mmio_lines.extend([
-                "    // Default Fallback HAL Simulation Hooks (Desktop Only)",
-                "    __attribute__((weak)) void nyx_hal_gpio_mode(int64_t pin, int64_t mode) { /* GPIO Mode Stub */ }",
-                "    __attribute__((weak)) void nyx_hal_gpio_write(int64_t pin, int64_t val) { /* GPIO Write Stub */ }",
-                "    __attribute__((weak)) int64_t nyx_hal_gpio_read(int64_t pin) { return 0; }",
-                "    __attribute__((weak)) void nyx_hal_gpio_toggle(int64_t pin) { /* GPIO Toggle Stub */ }",
-                "    __attribute__((weak)) void nyx_hal_serial_init(int64_t baud) { /* Serial Init Stub */ }",
-                "    __attribute__((weak)) void nyx_hal_serial_write(const char* data) { if (data) printf(\"%s\", data); }",
-                "    __attribute__((weak)) void nyx_hal_serial_write_byte(int64_t b) { putchar((int)b); }",
-                "    __attribute__((weak)) int64_t nyx_hal_serial_read_byte() { return getchar(); }",
-                "    __attribute__((weak)) bool nyx_hal_serial_available() { return true; }",
+                "    inline uint32_t nyx_irq_save() {",
+                "        uint32_t state;",
+                "        __asm__ volatile(\"mrs %0, primask\" : \"=r\"(state) :: \"memory\");",
+                "        __asm__ volatile(\"cpsid i\" ::: \"memory\");",
+                "        return state;",
+                "    }",
+                "    inline void nyx_irq_restore(uint32_t state) {",
+                "        if ((state & 1U) == 0U) __asm__ volatile(\"cpsie i\" ::: \"memory\");",
+                "    }",
             ])
         mmio_lines.extend([
             "}",
@@ -293,7 +336,12 @@ class UniversalCodeGen:
                 args_s = ", ".join(cpp_type(a) for a in t.param_types)
                 ret_s = cpp_type(t.return_type) if t.return_type else "void"
                 return f"function<{ret_s}({args_s})>"
-            name_map = {"int": "int64_t", "float": "double", "string": "string", "bool": "bool", "void": "void", "Array": "vector", "uintptr": "uintptr_t", "char": "char"}
+            name_map = {
+                "int": "int64_t", "i8": "int8_t", "i16": "int16_t", "i32": "int32_t", "i64": "int64_t",
+                "u8": "uint8_t", "u16": "uint16_t", "u32": "uint32_t", "u64": "uint64_t",
+                "float": "double", "f32": "float", "f64": "double", "string": "string", "bool": "bool",
+                "void": "void", "Array": "vector", "Buffer": "NyxBuffer", "uintptr": "uintptr_t", "char": "char"
+            }
             base = name_map.get(t.name, t.name)
             if t.generic_args:
                 args = ", ".join(cpp_type(a) for a in t.generic_args)
@@ -312,6 +360,7 @@ class UniversalCodeGen:
                 return f"{ret_s}(*)({args_s})"
             name_map = {
                 "int": "int64_t", "int64": "int64_t", "i64": "int64_t", "int32": "int32_t", "i32": "int32_t",
+                "i8": "int8_t", "i16": "int16_t", "u8": "uint8_t", "u16": "uint16_t", "u32": "uint32_t", "u64": "uint64_t",
                 "size_t": "size_t", "float": "double", "double": "double", "string": "const char*",
                 "bool": "bool", "void": "void", "uintptr": "uintptr_t", "char": "char"
             }
@@ -346,8 +395,6 @@ class UniversalCodeGen:
                             params.append(f"{ret_s}(*{p.name})({args_s})")
                         else:
                             t_str = c_ffi_type(p_t)
-                            if p.name in ("size", "len", "length", "count") and t_str in ("int", "int64_t"):
-                                t_str = "size_t"
                             params.append(f"{t_str} {p.name}")
                     if ef.is_varargs:
                         params.append("...")
@@ -383,13 +430,13 @@ class UniversalCodeGen:
                 if not node.elements:
                     return "{}"
                 elems = ", ".join([emit_expr(e) for e in node.elements])
-                return f"vector{{{elems}}}"
+                return f"{{{elems}}}" if is_embedded else f"vector{{{elems}}}"
             if isinstance(node, FunctionCallNode):
                 if node.callee == "print":
                     if is_embedded:
                         if not node.args:
                             return 'nyx_hal_serial_write("\\r\\n")'
-                        parts = [f'nyx_hal_serial_write({emit_expr(a)})' for a in node.args]
+                        parts = [f'nyx_hal_serial_write(to_string({emit_expr(a)}))' for a in node.args]
                         parts.append('nyx_hal_serial_write("\\r\\n")')
                         return f"({', '.join(parts)})"
                     args_cpp = ' << " " << '.join([emit_expr(a) for a in node.args]) if node.args else '""'
@@ -460,7 +507,8 @@ class UniversalCodeGen:
                 declared_cpp_vars.add(node.name)
                 t_str = cpp_type(node.type_annot)
                 const_prefix = "const " if node.is_const else ""
-                res.append(f"{sp}{const_prefix}{t_str} {node.name} = {emit_expr(node.expr)};")
+                volatile_prefix = "volatile " if node.is_volatile else ""
+                res.append(f"{sp}{volatile_prefix}{const_prefix}{t_str} {node.name} = {emit_expr(node.expr)};")
             elif isinstance(node, AssignNode):
                 if isinstance(node.target, IdentifierNode) and node.target.name not in declared_cpp_vars:
                     declared_cpp_vars.add(node.target.name)
@@ -522,6 +570,16 @@ class UniversalCodeGen:
                 res.append(f"{sp}// --- BEGIN UNSAFE BLOCK ---")
                 for s in node.body: res.extend(emit_stmt(s, indent))
                 res.append(f"{sp}// --- END UNSAFE BLOCK ---")
+            elif isinstance(node, CriticalBlockNode):
+                critical_id = f"{getattr(node, 'line', 0)}_{getattr(node, 'col', 0)}"
+                res.append(f"{sp}{{")
+                res.append(f"{sp}    uint32_t _nyx_irq_state_{critical_id} = nyx_irq_save();")
+                res.append(
+                    f"{sp}    auto _nyx_irq_restore_{critical_id} = _nyx_make_scope_exit([&]() {{ "
+                    f"nyx_irq_restore(_nyx_irq_state_{critical_id}); }});"
+                )
+                for s in node.body: res.extend(emit_stmt(s, indent + 1))
+                res.append(f"{sp}}}")
             elif isinstance(node, SpawnNode):
                 res.append(f"{sp}thread([=]() {{")
                 for s in node.body: res.extend(emit_stmt(s, indent + 1))
@@ -535,8 +593,13 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in node.generic_params)}>\n" if node.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in node.params])
                 ret_t = cpp_type(node.return_type)
+                if node.is_interrupt:
+                    ret_t = "void"
                 fn_name = "_nyx_user_main" if node.name == "main" else node.name
-                res.append(f"{gen_s}{ret_t} {fn_name}({params}) {{")
+                interrupt_prefix = 'extern "C" __attribute__((used)) ' if node.is_interrupt else ""
+                if node.is_interrupt:
+                    res.append(f"{sp}// NYX_INTERRUPT_HANDLER: {fn_name}")
+                res.append(f"{gen_s}{interrupt_prefix}{ret_t} {fn_name}({params}) {{")
                 for s in node.body: res.extend(emit_stmt(s, indent + 1))
                 res.append("}\n")
             elif isinstance(node, MatchNode):
@@ -616,8 +679,11 @@ class UniversalCodeGen:
                 gen_s = f"template<{', '.join('typename ' + g for g in s.generic_params)}>\n" if s.generic_params else ""
                 params = ", ".join([f"{cpp_type(p.type_annot)} {p.name}" for p in s.params])
                 ret_t = cpp_type(s.return_type)
+                if s.is_interrupt:
+                    ret_t = "void"
                 fn_name = "_nyx_user_main" if s.name == "main" else s.name
-                fwd_decls.append(f"{gen_s}{ret_t} {fn_name}({params});")
+                interrupt_prefix = 'extern "C" ' if s.is_interrupt else ""
+                fwd_decls.append(f"{gen_s}{interrupt_prefix}{ret_t} {fn_name}({params});")
         if fwd_decls:
             lines.extend(fwd_decls)
             lines.append("")
@@ -629,7 +695,7 @@ class UniversalCodeGen:
                 pass # Already emitted above
             elif isinstance(s, FunctionDefNode):
                 top_levels.extend(emit_stmt(s, 0))
-            elif isinstance(s, VarDeclNode) and (s.is_const or getattr(s, '_is_global', False)):
+            elif isinstance(s, VarDeclNode) and (s.is_const or s.is_volatile or getattr(s, '_is_global', False)):
                 top_levels.extend(emit_stmt(s, 0))
             else:
                 main_stmts.extend(emit_stmt(s, 1))
@@ -791,6 +857,18 @@ class UniversalCodeGen:
     # 4. PYTHON 3 GENERATOR
     # =====================================================
     def gen_python(self) -> str:
+        """Emit Python from the canonical verified HIR pipeline."""
+        from src.codegen.hir_python import emit_python
+        from src.ir import lower_to_hir, optimize_hir, verify_hir
+
+        hir = lower_to_hir(self.ast, "<hepy>")
+        verify_hir(hir)
+        optimized = optimize_hir(hir).module
+        verify_hir(optimized)
+        return emit_python(optimized)
+
+    def _gen_python_legacy(self) -> str:
+        """Pre-HIR emitter retained temporarily for migration diagnostics."""
         lines = [
             "# Auto-generated by Nyx Compiler (hepy)",
             "import sys, os, math, time, ctypes, threading, queue",
@@ -823,6 +901,8 @@ class UniversalCodeGen:
             "_nyx_time_now_ms = lambda: int(_nyx_time.time() * 1000)",
             "_nyx_time_now_us = lambda: int(_nyx_time.time() * 1000000)",
             "_nyx_time_sleep_ms = lambda ms: _nyx_time.sleep(ms / 1000.0)",
+            "def _nyx_coalesce(value, fallback):",
+            "    return value if value is not None else fallback()",
             "_nyx_base64_encode = lambda s: _nyx_base64.b64encode(s.encode('utf-8')).decode('ascii')",
             "_nyx_base64_decode = lambda s: _nyx_base64.b64decode(s.encode('ascii')).decode('utf-8')",
             "def _nyx_hash_fnv1a_64_hex(s: str) -> str:",
@@ -893,7 +973,7 @@ class UniversalCodeGen:
                 op_s = "not " if node.op in ("!", "not") else node.op
                 return f"({op_s}{emit_py_expr(node.expr)})"
             if isinstance(node, NullCoalesceNode):
-                return f"({emit_py_expr(node.left)} if {emit_py_expr(node.left)} is not None else {emit_py_expr(node.right)})"
+                return f"_nyx_coalesce({emit_py_expr(node.left)}, lambda: {emit_py_expr(node.right)})"
             if isinstance(node, MemberAccessNode):
                 if node.is_safe:
                     return f"(getattr({emit_py_expr(node.obj)}, '{node.member}', None) if {emit_py_expr(node.obj)} is not None else None)"
@@ -1035,6 +1115,18 @@ class UniversalCodeGen:
     # 5. JAVASCRIPT (ES2022 / Node.js) GENERATOR
     # =====================================================
     def gen_js(self) -> str:
+        """Emit JavaScript from the canonical verified HIR pipeline."""
+        from src.codegen.hir_javascript import emit_javascript
+        from src.ir import lower_to_hir, optimize_hir, verify_hir
+
+        hir = lower_to_hir(self.ast, "<hejs>")
+        verify_hir(hir)
+        optimized = optimize_hir(hir).module
+        verify_hir(optimized)
+        return emit_javascript(optimized)
+
+    def _gen_js_legacy(self) -> str:
+        """Pre-HIR emitter retained temporarily for migration diagnostics."""
         lines = [
             "// Auto-generated by Nyx (hejs)",
             "// Target: JavaScript ES2022 / Node.js\n"
@@ -1272,13 +1364,25 @@ const _nyx_json_get_int = (jsonStr, key) => {
     # 6. RUST (hers - 2021 Edition) GENERATOR
     # =====================================================
     def gen_rust(self) -> str:
+        """Emit Rust 2021 from canonical verified HIR."""
+        from src.codegen.hir_rust import emit_rust
+        from src.ir import lower_to_hir, optimize_hir, verify_hir
+
+        hir = lower_to_hir(self.ast, "<hers>")
+        verify_hir(hir)
+        optimized = optimize_hir(hir).module
+        verify_hir(optimized)
+        return emit_rust(optimized)
+
+    def _gen_rust_legacy(self) -> str:
+        """Pre-HIR Rust emitter retained only for migration archaeology."""
         header = [
             "// Auto-generated by Nyx (hers)",
             "// Target: Rust 2021 Edition (rustc)",
             "#![allow(unused_variables, dead_code, unused_mut, non_snake_case, unused_parens, unused_doc_comments)]\n",
-            "fn contains(haystack: &str, needle: &str) -> bool { haystack.contains(needle) }",
+            "fn contains<H: AsRef<str>, N: AsRef<str>>(haystack: H, needle: N) -> bool { haystack.as_ref().contains(needle.as_ref()) }",
             "fn to_string<T: std::fmt::Display>(v: T) -> String { v.to_string() }",
-            "fn to_int(s: &str) -> i64 { s.parse::<i64>().unwrap_or(0) }",
+            "fn to_int<S: AsRef<str>>(s: S) -> i64 { s.as_ref().parse::<i64>().unwrap_or(0) }",
             "fn len<T>(v: &[T]) -> i64 { v.len() as i64 }\n"
         ]
 

@@ -10,6 +10,92 @@ struct Token {
     col: int
 }
 
+// NYX_LEXER_SUPPORT_BEGIN: parser.nyx owns Token when compiler units are composed.
+
+fn lexer_text_slice(value: string, start: int, end_exclusive: int) -> string {
+    var result = ""
+    var i = start
+    while i < end_exclusive and i < len(value) {
+        if i >= 0 { result = result + value[i] }
+        i = i + 1
+    }
+    return result
+}
+
+fn lexer_trim(value: string) -> string {
+    var start = 0
+    var end_exclusive = len(value)
+    while start < end_exclusive and (value[start] == " " or value[start] == "\t" or value[start] == "\r" or value[start] == "\n") {
+        start = start + 1
+    }
+    while end_exclusive > start and (value[end_exclusive - 1] == " " or value[end_exclusive - 1] == "\t" or value[end_exclusive - 1] == "\r" or value[end_exclusive - 1] == "\n") {
+        end_exclusive = end_exclusive - 1
+    }
+    return lexer_text_slice(value, start, end_exclusive)
+}
+
+fn lexer_hex_digit(ch: string) -> int {
+    if ch >= "0" and ch <= "9" { return to_int(ch) }
+    if ch == "a" or ch == "A" { return 10 }
+    if ch == "b" or ch == "B" { return 11 }
+    if ch == "c" or ch == "C" { return 12 }
+    if ch == "d" or ch == "D" { return 13 }
+    if ch == "e" or ch == "E" { return 14 }
+    if ch == "f" or ch == "F" { return 15 }
+    return -1
+}
+
+fn lexer_decimal_mul_add(value: string, multiplier: int, addend: int) -> string {
+    var result = ""
+    var carry = addend
+    var index = len(value) - 1
+    while index >= 0 {
+        var digit = lexer_hex_digit(value[index])
+        var total = digit * multiplier + carry
+        result = to_string(total % 10) + result
+        carry = total / 10
+        index = index - 1
+    }
+    while carry > 0 {
+        result = to_string(carry % 10) + result
+        carry = carry / 10
+    }
+    return result
+}
+
+fn lexer_normalize_number(value: string) -> string {
+    if len(value) > 2 and value[0] == "0" and (value[1] == "x" or value[1] == "X") {
+        // Keep the magnitude as decimal text.  Converting through Nyx int here
+        // would wrap before the type checker can reject an out-of-range literal.
+        var number = "0"
+        for i in 2..len(value)-1 {
+            var digit = lexer_hex_digit(value[i])
+            if digit >= 0 { number = lexer_decimal_mul_add(number, 16, digit) }
+        }
+        return number
+    }
+    if contains(value, ".") {
+        var dot_index = 0
+        for i in 0..len(value)-1 {
+            if value[i] == "." { dot_index = i; break }
+        }
+        var whole = lexer_text_slice(value, 0, dot_index)
+        var fraction = lexer_text_slice(value, dot_index + 1, len(value))
+        while len(whole) > 1 and whole[0] == "0" {
+            whole = lexer_text_slice(whole, 1, len(whole))
+        }
+        if whole == "" { whole = "0" }
+        while len(fraction) > 1 and fraction[len(fraction) - 1] == "0" {
+            fraction = lexer_text_slice(fraction, 0, len(fraction) - 1)
+        }
+        if fraction == "" { fraction = "0" }
+        return whole + "." + fraction
+    }
+    var start = 0
+    while start < len(value) - 1 and value[start] == "0" { start = start + 1 }
+    return lexer_text_slice(value, start, len(value))
+}
+
 impl Token {
     fn to_str(self) -> string {
         return self.type_name + ":" + self.value + "@" + to_string(self.line) + ":" + to_string(self.col)
@@ -91,13 +177,22 @@ impl Lexer {
                 var start_col = self.col
                 self.pos = self.pos + 3
                 self.col = self.col + 3
+                while self.pos < length and (self.peek_char() == " " or self.peek_char() == "\t") {
+                    self.pos = self.pos + 1
+                    self.col = self.col + 1
+                }
                 var start_doc = self.pos
                 while self.pos < length and self.peek_char() != "\n" {
                     self.pos = self.pos + 1
                     self.col = self.col + 1
                 }
+                var end_doc = self.pos
+                while end_doc > start_doc and (self.source[end_doc - 1] == " " or
+                    self.source[end_doc - 1] == "\t" or self.source[end_doc - 1] == "\r") {
+                    end_doc = end_doc - 1
+                }
                 var doc_text = ""
-                for i in start_doc..self.pos-1 {
+                for i in start_doc..end_doc-1 {
                     doc_text = doc_text + self.source[i]
                 }
                 tokens.push(Token("DOC_COMMENT", doc_text, self.line, start_col))
@@ -223,6 +318,54 @@ impl Lexer {
                     continue
                 }
 
+                if self.match_str("raw") {
+                    self.pos = self.pos + 3
+                    self.col = self.col + 3
+                    while self.pos < length and (self.peek_char() == " " or self.peek_char() == "\t") {
+                        self.pos = self.pos + 1
+                        self.col = self.col + 1
+                    }
+
+                    if self.pos < length and self.peek_char() == "{" {
+                        self.pos = self.pos + 1
+                        self.col = self.col + 1
+                        var brace_depth = 1
+                        var start_body = self.pos
+                        while self.pos < length and brace_depth > 0 {
+                            var raw_ch = self.peek_char()
+                            if raw_ch == "{" {
+                                brace_depth = brace_depth + 1
+                            } elif raw_ch == "}" {
+                                brace_depth = brace_depth - 1
+                                if brace_depth == 0 { break }
+                            }
+                            if raw_ch == "\n" {
+                                self.line = self.line + 1
+                                self.col = 1
+                            } else {
+                                self.col = self.col + 1
+                            }
+                            self.pos = self.pos + 1
+                        }
+                        var raw_body = lexer_trim(lexer_text_slice(self.source, start_body, self.pos))
+                        if self.pos < length and self.peek_char() == "}" {
+                            self.pos = self.pos + 1
+                            self.col = self.col + 1
+                        }
+                        tokens.push(Token("NATIVE_RAW", raw_body, self.line, start_col))
+                        continue
+                    }
+
+                    var start_raw_line = self.pos
+                    while self.pos < length and self.peek_char() != "\n" {
+                        self.pos = self.pos + 1
+                        self.col = self.col + 1
+                    }
+                    var raw_line = lexer_trim(lexer_text_slice(self.source, start_raw_line, self.pos))
+                    tokens.push(Token("NATIVE_RAW", raw_line, self.line, start_col))
+                    continue
+                }
+
                 // Raw native
                 var start_raw = self.pos
                 while self.pos < length and self.peek_char() != "\n" {
@@ -244,6 +387,8 @@ impl Lexer {
             if self.match_str("->") { tokens.push(Token("ARROW", "->", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
             if self.match_str("|>") { tokens.push(Token("PIPE", "|>", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
             if self.match_str("..") { tokens.push(Token("DOTDOT", "..", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
+            if self.match_str("<<") { tokens.push(Token("SHL", "<<", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
+            if self.match_str(">>") { tokens.push(Token("SHR", ">>", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
             if self.match_str("==") { tokens.push(Token("EQ", "==", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
             if self.match_str("!=") { tokens.push(Token("NEQ", "!=", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
             if self.match_str(">=") { tokens.push(Token("GTE", ">=", self.line, self.col)); self.pos = self.pos + 2; self.col = self.col + 2; continue }
@@ -264,6 +409,23 @@ impl Lexer {
                         if esc == "n" { str_val = str_val + "\n" }
                         elif esc == "t" { str_val = str_val + "\t" }
                         elif esc == "r" { str_val = str_val + "\r" }
+                        elif esc == "0" { str_val = str_val + "\0" }
+                        elif esc == "u" and self.pos + 5 < length {
+                            var codepoint = 0
+                            var valid_escape = true
+                            for offset in 2..5 {
+                                var digit = lexer_hex_digit(self.peek_ahead(offset))
+                                if digit < 0 { valid_escape = false }
+                                else { codepoint = codepoint * 16 + digit }
+                            }
+                            if valid_escape {
+                                str_val = str_val + _nyx_utf8_from_codepoint(codepoint)
+                                self.pos = self.pos + 6
+                                self.col = self.col + 6
+                                continue
+                            }
+                            str_val = str_val + "u"
+                        }
                         elif esc == "\\" { str_val = str_val + "\\" }
                         elif esc == quote { str_val = str_val + quote }
                         else { str_val = str_val + esc }
@@ -301,7 +463,7 @@ impl Lexer {
                     for i in start_pos..self.pos-1 {
                         hex_val = hex_val + self.source[i]
                     }
-                    tokens.push(Token("NUMBER", hex_val, self.line, start_col))
+                    tokens.push(Token("NUMBER", lexer_normalize_number(hex_val), self.line, start_col))
                     continue
                 }
 
@@ -316,7 +478,7 @@ impl Lexer {
                 for i in start_pos..self.pos-1 {
                     num_val = num_val + self.source[i]
                 }
-                tokens.push(Token("NUMBER", num_val, self.line, start_col))
+                tokens.push(Token("NUMBER", lexer_normalize_number(num_val), self.line, start_col))
                 continue
             }
 
@@ -341,17 +503,28 @@ impl Lexer {
                 elif ident == "let" { tt = "LET" }
                 elif ident == "set" { tt = "SET" }
                 elif ident == "const" { tt = "CONST" }
-                elif ident == "fn" or ident == "def" { tt = "FN" }
+                elif ident == "volatile" { tt = "VOLATILE" }
+                elif ident == "fn" { tt = "FN" }
                 elif ident == "struct" { tt = "STRUCT" }
                 elif ident == "trait" { tt = "TRAIT" }
                 elif ident == "impl" { tt = "IMPL" }
                 elif ident == "type" { tt = "TYPE_ALIAS" }
                 elif ident == "enum" { tt = "ENUM" }
                 elif ident == "unsafe" { tt = "UNSAFE" }
+                elif ident == "interrupt" { tt = "INTERRUPT" }
+                elif ident == "critical" { tt = "CRITICAL" }
                 elif ident == "extern" { tt = "EXTERN" }
+                elif ident == "async" { tt = "ASYNC" }
+                elif ident == "await" { tt = "AWAIT" }
+                elif ident == "spawn" { tt = "SPAWN" }
+                elif ident == "channel" { tt = "CHANNEL" }
+                elif ident == "test" { tt = "TEST" }
+                elif ident == "assert" { tt = "ASSERT" }
                 elif ident == "return" { tt = "RETURN" }
                 elif ident == "continue" { tt = "CONTINUE" }
                 elif ident == "break" { tt = "BREAK" }
+                elif ident == "defer" { tt = "DEFER" }
+                elif ident == "guard" { tt = "GUARD" }
                 elif ident == "if" { tt = "IF" }
                 elif ident == "else" { tt = "ELSE" }
                 elif ident == "elif" { tt = "ELIF" }
@@ -362,11 +535,13 @@ impl Lexer {
                 elif ident == "match" { tt = "MATCH" }
                 elif ident == "try" { tt = "TRY" }
                 elif ident == "catch" { tt = "CATCH" }
+                elif ident == "throw" { tt = "THROW" }
                 elif ident == "use" { tt = "USE" }
                 elif ident == "import" { tt = "IMPORT" }
                 elif ident == "from" { tt = "FROM" }
                 elif ident == "as" { tt = "AS" }
                 elif ident == "print" { tt = "PRINT" }
+                elif ident == "input" { tt = "INPUT" }
                 elif ident == "addr" { tt = "ADDR" }
                 elif ident == "peek" { tt = "PEEK" }
                 elif ident == "memdump" { tt = "MEMDUMP" }
@@ -388,6 +563,10 @@ impl Lexer {
             elif ch == "*" { single_tt = "MUL" }
             elif ch == "/" { single_tt = "DIV" }
             elif ch == "%" { single_tt = "MOD" }
+            elif ch == "|" { single_tt = "BIT_OR" }
+            elif ch == "&" { single_tt = "BIT_AND" }
+            elif ch == "^" { single_tt = "BIT_XOR" }
+            elif ch == "~" { single_tt = "BIT_NOT" }
             elif ch == ">" { single_tt = "GT" }
             elif ch == "<" { single_tt = "LT" }
             elif ch == "!" { single_tt = "NOT" }

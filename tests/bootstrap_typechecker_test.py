@@ -31,7 +31,7 @@ def run_bootstrap_typechecker_test() -> bool:
 
     with open(os.path.join(_root_dir, "compiler", "lexer.nyx"), "r", encoding="utf-8") as f:
         lexer_content = f.read()
-    lexer_impl_start = lexer_content.index("struct Lexer")
+    lexer_impl_start = lexer_content.index("// NYX_LEXER_SUPPORT_BEGIN:")
     lexer_impl_end = lexer_content.index("fn main()") if "fn main()" in lexer_content else len(lexer_content)
     lexer_code = lexer_content[lexer_impl_start:lexer_impl_end].strip()
 
@@ -55,7 +55,9 @@ def run_bootstrap_typechecker_test() -> bool:
         ("valid_types_and_arithmetic", "var x: int = 10 + 20; var f: float = 10; var s: string = \"hello\";"),
         ("valid_function_return", "fn calc(a: int, b: int) -> int { return a + b; }"),
         ("valid_optional_types", "var opt1: string? = null; var opt2: string? = \"active\";"),
-        ("valid_struct_field_access", "struct Point { x: int, y: int }\nvar p: Point = Point(10, 20); var px: int = p.x;")
+        ("valid_struct_field_access", "struct Point { x: int, y: int }\nvar p: Point = Point(10, 20); var px: int = p.x;"),
+        ("valid_async_await", "async fn compute() -> int { return 42; } async fn run() -> int { let task: Task<int> = compute(); return await task; }"),
+        ("valid_i64_min_literals", "let decimal: int = -9223372036854775808; let hex: int = -0x8000000000000000; let positive: int = +1;")
     ]
 
     all_passed = True
@@ -81,9 +83,9 @@ fn main() {{
     var code = "{escaped_src}"
     var lex = Lexer(code, 0, 1, 1)
     var tokens = lex.tokenize()
-    var p = Parser(tokens, 0, false, "")
+    var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], [], "", false, "")
+    var tc = TypeChecker([], [], [], "", false, false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")
@@ -128,7 +130,16 @@ main()
         ("undefined_variable", "var a: int = 10; var b: int = undefined_var + 5;"),
         ("wrong_function_arg_type", "fn square(x: int) -> int { return x * x; }\nsquare(\"invalid\");"),
         ("wrong_argument_count", "fn mult(a: int, b: int) -> int { return a * b; }\nmult(10);"),
-        ("scope_leak", "fn compute() -> int { if true { var local_val: int = 42; } return local_val; }")
+        ("scope_leak", "fn compute() -> int { if true { var local_val: int = 42; } return local_val; }"),
+        ("elif_scope_leak", "fn compute() -> int { if false { return 0; } elif true { var branch_val: int = 42; } return branch_val; }"),
+        ("await_outside_async", "async fn compute() -> int { return 1; } fn bad() -> int { return await compute(); }"),
+        ("await_non_task", "async fn bad() -> int { return await 1; }"),
+        ("positive_i64_literal_overflow", "let bad: int = 9223372036854775808;"),
+        ("negative_i64_literal_overflow", "let bad: int = -9223372036854775809;"),
+        ("hex_i64_literal_overflow", "let bad: int = 0x8000000000000000;"),
+        ("if_int_truthiness", "if 1 { print(\"bad\"); }"),
+        ("while_string_truthiness", "while \"yes\" { break; }"),
+        ("guard_int_truthiness", "fn bad() { guard 1 else { return; } }")
     ]
 
     for name, src in invalid_cases:
@@ -155,9 +166,9 @@ fn main() {{
     var code = "{escaped_src}"
     var lex = Lexer(code, 0, 1, 1)
     var tokens = lex.tokenize()
-    var p = Parser(tokens, 0, false, "")
+    var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], [], "", false, "")
+    var tc = TypeChecker([], [], [], "", false, false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")

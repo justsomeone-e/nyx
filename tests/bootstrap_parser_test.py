@@ -17,11 +17,13 @@ from src.core.lexer import Lexer as PyLexer
 from src.core.parser import Parser as PyParser
 from src.core.ast_nodes import (
     ProgramNode, VarDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
-    NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, FunctionCallNode,
+    NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, FunctionCallNode,
     FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
-    ForNode, MatchNode, UnsafeBlockNode, SpawnNode, ReturnNode, BreakNode, ContinueNode,
+    ForNode, MatchNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
     NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
-    MemberAccessNode, IndexAccessNode
+    MemberAccessNode, IndexAccessNode, NullCoalesceNode, LambdaNode, ArrayNode,
+    TypeAliasNode, EnumDefNode, TestBlockNode, AssertNode, TryCatchNode,
+    DeferNode, GuardNode, ImportNode
 )
 from src.codegen.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
@@ -34,7 +36,8 @@ def py_ast_to_canonical(node) -> str:
         t = str(node.type_annot) if node.type_annot else ""
         const_s = " const=true" if node.is_const else ""
         type_s = f" type='{t}'" if t else ""
-        return f"(VarDecl name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
+        kind = "VolatileVarDecl" if node.is_volatile else "VarDecl"
+        return f"({kind} name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, AssignNode):
         return f"(Assign op='=' body=[{py_ast_to_canonical(node.target)} {py_ast_to_canonical(node.expr)}])"
     if isinstance(node, NumberNode):
@@ -51,6 +54,17 @@ def py_ast_to_canonical(node) -> str:
         return f"(BinaryOp op='{node.op}' body=[{py_ast_to_canonical(node.left)} {py_ast_to_canonical(node.right)}])"
     if isinstance(node, UnaryOpNode):
         return f"(UnaryOp op='{node.op}' body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, AwaitNode):
+        return f"(Await body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, NullCoalesceNode):
+        return f"(NullCoalesce op='??' body=[{py_ast_to_canonical(node.left)} {py_ast_to_canonical(node.right)}])"
+    if isinstance(node, LambdaNode):
+        params_s = ", ".join(f"{name}: " for name in node.params)
+        params_attr = f" params=[{params_s}]" if params_s else ""
+        return f"(Lambda{params_attr} body=[{py_ast_to_canonical(node.body)}])"
+    if isinstance(node, ArrayNode):
+        elements = " ".join(py_ast_to_canonical(element) for element in node.elements)
+        return f"(Array body=[{elements}])"
     if isinstance(node, FunctionCallNode):
         if isinstance(node.callee, MemberAccessNode):
             callee_s = py_ast_to_canonical(node.callee.obj)
@@ -62,30 +76,51 @@ def py_ast_to_canonical(node) -> str:
         params_s = ", ".join(f"{p.name}: {str(p.type_annot) if p.type_annot else ''}" for p in node.params)
         ret = str(node.return_type) if node.return_type else "void"
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        value_attr = f" val='{node.doc_comment}'" if node.doc_comment else ""
+        async_attr = " async=true" if node.is_async else ""
         params_attr = f" params=[{params_s}]" if params_s else ""
-        return f"(FunctionDef name='{node.name}' type='{ret}'{params_attr} body=[{body}])"
+        kind = "InterruptFn" if node.is_interrupt else "FunctionDef"
+        return f"({kind} name='{node.name}'{value_attr} type='{ret}'{async_attr}{params_attr} body=[{body}])"
     if isinstance(node, StructDefNode):
         params_s = ", ".join(f"{p.name}: {str(p.type_annot) if p.type_annot else ''}" for p in node.fields)
-        return f"(StructDef name='{node.name}' params=[{params_s}])"
+        value_attr = f" val='{node.doc_comment}'" if node.doc_comment else ""
+        return f"(StructDef name='{node.name}'{value_attr} params=[{params_s}])"
     if isinstance(node, ImplBlockNode):
         methods = " ".join(py_ast_to_canonical(m) for m in node.methods)
-        return f"(ImplBlock name='{node.target_type}' body=[{methods}])"
+        trait_attr = f" val='{node.trait_name}'" if node.trait_name else ""
+        return f"(ImplBlock name='{node.target_type}'{trait_attr} body=[{methods}])"
     if isinstance(node, TraitDefNode):
         methods = " ".join(py_ast_to_canonical(m) for m in node.methods)
         return f"(TraitDef name='{node.name}' body=[{methods}])"
+    if isinstance(node, TypeAliasNode):
+        return f"(TypeAlias name='{node.name}' type='{node.actual_type}')"
+    if isinstance(node, EnumDefNode):
+        members = []
+        for name, value in node.members:
+            value_attr = f" body=[{py_ast_to_canonical(value)}]" if value else ""
+            members.append(f"(EnumMember name='{name}'{value_attr})")
+        return f"(EnumDef name='{node.name}' body=[{' '.join(members)}])"
+    if isinstance(node, ImportNode):
+        name_attr = f" name='{node.alias}'" if node.alias else ""
+        return f"(Import{name_attr} val='{node.path}')"
     if isinstance(node, IfNode):
         then_b = " ".join(py_ast_to_canonical(s) for s in node.then_branch)
+        elif_b = ""
+        for elif_cond, elif_body in node.elif_branches:
+            elif_stmts = " ".join(py_ast_to_canonical(s) for s in elif_body)
+            elif_b += f" (ElifBlock body=[{py_ast_to_canonical(elif_cond)} {elif_stmts}])"
         else_b = ""
         if node.else_branch:
             else_stmts = " ".join(py_ast_to_canonical(s) for s in node.else_branch)
             else_b = f" (ElseBlock body=[{else_stmts}])"
-        return f"(If body=[{py_ast_to_canonical(node.condition)} {then_b}{else_b}])"
+        return f"(If body=[{py_ast_to_canonical(node.condition)} {then_b}{elif_b}{else_b}])"
     if isinstance(node, WhileNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(While body=[{py_ast_to_canonical(node.condition)} {body}])"
     if isinstance(node, ForNode):
-        start = py_ast_to_canonical(node.start_expr) if node.start_expr else "(Null val='null' type='null')"
-        end = py_ast_to_canonical(node.end_expr) if node.end_expr else "(Null val='null' type='null')"
+        first = node.start_expr if node.start_expr is not None else node.collection_expr
+        start = py_ast_to_canonical(first) if first else "(Null)"
+        end = py_ast_to_canonical(node.end_expr) if node.end_expr else "(Null)"
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(For name='{node.var_name}' body=[{start} {end} {body}])"
     if isinstance(node, MemberAccessNode):
@@ -95,6 +130,9 @@ def py_ast_to_canonical(node) -> str:
     if isinstance(node, UnsafeBlockNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(UnsafeBlock body=[{body}])"
+    if isinstance(node, CriticalBlockNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(CriticalBlock body=[{body}])"
     if isinstance(node, SpawnNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(Spawn body=[{body}])"
@@ -110,12 +148,34 @@ def py_ast_to_canonical(node) -> str:
             cases_s.append(f"{py_ast_to_canonical(pat)} (MatchCase body=[{blk_s}])")
         return f"(Match body=[{py_ast_to_canonical(node.expr)} {' '.join(cases_s)}])"
     if isinstance(node, ReturnNode):
-        expr = py_ast_to_canonical(node.expr) if node.expr else "(Null val='null' type='null')"
-        return f"(Return body=[{expr}])"
+        if node.expr is None:
+            return "(Return)"
+        return f"(Return body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, ThrowNode):
+        return f"(Throw body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, BreakNode):
         return "(Break)"
     if isinstance(node, ContinueNode):
         return "(Continue)"
+    if isinstance(node, DeferNode):
+        return f"(Defer body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, GuardNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.else_body)
+        return f"(Guard body=[{py_ast_to_canonical(node.condition)} {body}])"
+    if isinstance(node, AssertNode):
+        value_attr = f" val='{node.message}'" if node.message else ""
+        return f"(Assert{value_attr} body=[{py_ast_to_canonical(node.condition)}])"
+    if isinstance(node, TestBlockNode):
+        body = " ".join(py_ast_to_canonical(s) for s in node.body)
+        return f"(TestBlock val='{node.description}' body=[{body}])"
+    if isinstance(node, TryCatchNode):
+        try_body = " ".join(py_ast_to_canonical(s) for s in node.try_body)
+        catch_body = " ".join(py_ast_to_canonical(s) for s in node.catch_body)
+        return (
+            f"(TryCatch name='{node.err_name}' body=["
+            f"(TryBlock body=[{try_body}]) "
+            f"(CatchBlock name='{node.err_name}' body=[{catch_body}])])"
+        )
     if isinstance(node, ExternFnDeclNode):
         params_s = ", ".join(f"{p.name}: {p.type_annot.name if p.type_annot else ''}" for p in node.params)
         ret = node.return_type.name if node.return_type else "void"
@@ -145,10 +205,10 @@ def run_bootstrap_parser_test() -> bool:
     with open(os.path.join(_root_dir, "compiler", "lexer.nyx"), "r", encoding="utf-8") as f:
         lexer_content = f.read()
 
-    # Extract clean Lexer struct and its impl
-    lexer_impl_start = lexer_content.index("struct Lexer")
+    # Reuse lexer support while keeping parser.nyx's canonical Token struct.
+    lexer_support_start = lexer_content.index("// NYX_LEXER_SUPPORT_BEGIN:")
     lexer_impl_end = lexer_content.index("fn main()") if "fn main()" in lexer_content else len(lexer_content)
-    lexer_code = lexer_content[lexer_impl_start:lexer_impl_end].strip()
+    lexer_code = lexer_content[lexer_support_start:lexer_impl_end].strip()
 
     combined_base = f"""#target hecpp
 #native include <string>
@@ -165,68 +225,126 @@ def run_bootstrap_parser_test() -> bool:
         ("struct_definition", "struct Point { x: int, y: int }"),
         ("impl_and_methods", "impl Point { fn dist(self) -> int { return self.x + self.y; } }"),
         ("if_else_branches", "if a > 10 { print(\"Large\"); } else { print(\"Small\"); }"),
+        ("if_elif_else_branches", "if a > 10 { print(\"Large\"); } elif a == 10 { print(\"Equal\"); } else { print(\"Small\"); }"),
+        ("else_if_alias", "if a > 10 { print(\"Large\"); } else if a == 10 { print(\"Equal\"); } else { print(\"Small\"); }"),
+        ("let_and_set", "let limit: int = 10; var current: int = 0; set current = limit;"),
         ("while_and_break", "while true { break; }"),
         ("for_range_loop", "for i in 0..10 { continue; }"),
         ("unsafe_block", "unsafe { var ptr = addr(x); }"),
+        ("embedded_control_surface", "volatile var ticks: u32 = 0; interrupt fn TIM2_IRQHandler() -> void { critical { set ticks = ticks + 1; } }"),
+        ("fixed_buffer_const_generic", "var packet: Buffer<u8, 64> = [1, 2, 3]; set packet[1] = 9;"),
         ("match_pattern", "match x { 1 => { print(\"One\"); } 2 => { print(\"Two\"); } }"),
+        ("match_result_commas", 'match r { Ok(v) => print("OK", v), Err(e) => print("ERR", e), "_" => print("OTHER") }'),
         ("extern_ffi_decl", "extern \"C\" fn puts(s: string) -> int;"),
-        ("native_directives", "#native include <vector>\n#native link \"user32.lib\"\n#native use std::vector;")
+        ("native_directives", "#native include <vector>\n#native link \"user32.lib\"\n#native use std::vector;"),
+        ("bitwise_shift_precedence", "var x = 1 | 2 ^ 3 & 4 << 1 + 2;"),
+        ("null_coalesce", "var x = maybe ?? \"fallback\";"),
+        ("pipeline_simple", "var x = 5 |> double;"),
+        ("pipeline_call", "var x = 5 |> clamp(0, 10);"),
+        ("lambda_single", "var twice = x => x * 2;"),
+        ("lambda_empty", "var answer = () => 42;"),
+        ("generic_channel_and_input", "var ch = channel<int>(); var name = input();"),
+        ("unary_pointer_bit_not_and_plus", "var value = *ptr; var inverted = ~mask; var positive = +1;"),
+        ("signed_i64_min_literals", "let decimal: int = -9223372036854775808; let hex: int = -0x8000000000000000;"),
+        ("async_generic_with_doc", "/// identity docs\nasync fn identity<T>(value: T) -> T { return value; }"),
+        ("async_await", "async fn compute() -> int { return 42; } async fn run() -> int { return await compute(); }"),
+        ("generic_struct_with_doc", "/// box docs\nstruct Box<T> { value: T }"),
+        ("type_alias_and_enum", "type UserID = int; enum Color { Red, Green = 5, Blue }"),
+        ("trait_impl_target", "trait Show { fn show(self) { return; } } impl Show for Item { fn show(self) { return; } }"),
+        ("imports", "import \"std/math\"; import \"./item\" as item; import { add, sub } from \"./ops\";"),
+        ("test_and_assert", "test \"math works\" { assert(1 + 1 == 2, \"bad math\"); }"),
+        ("try_catch", "try { print(\"work\"); } catch err { print(err); }"),
+        ("throw_and_catch", "fn fail() { throw \"boom\"; } try { fail(); } catch err { print(err); }"),
+        ("defer_and_guard", "fn guarded(ok: bool) { defer cleanup(); guard ok else { return; } }"),
+        ("collection_for", "for item in items { print(item); }"),
+        ("loop_sugar", "loop { break; }")
     ]
 
-    all_passed = True
-    for name, src in test_cases:
-        print(f"[*] Verifying AST Parity: {name} ...", end=" ")
-
-        # A. Python Reference Parser
+    expected = []
+    native_sections = []
+    for index, (name, src) in enumerate(test_cases):
         py_tokens = PyLexer(src, f"{name}.nyx").tokenize()
         py_ast = PyParser(py_tokens, src, f"{name}.nyx").parse()
-        py_canon = py_ast_to_canonical(py_ast)
+        expected.append(py_ast_to_canonical(py_ast))
 
-        # B. Nyx Compiled Native Parser
-        escaped_src = src.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        runner_code = f"""{combined_base}
+        escaped_src = (
+            src.replace('\\', '\\\\')
+            .replace('"', '\\"')
+            .replace('\r', '\\r')
+            .replace('\n', '\\n')
+            .replace('\t', '\\t')
+        )
+        native_sections.append(f"""
+    var code_{index} = "{escaped_src}"
+    var lexer_{index} = Lexer(code_{index}, 0, 1, 1)
+    var tokens_{index} = lexer_{index}.tokenize()
+    var parser_{index} = Parser(tokens_{index}, 0, false, "", "")
+    var ast_{index} = parser_{index}.parse_program()
+    if parser_{index}.has_error {{
+        print("@@ERROR@@{index}:" + parser_{index}.error_msg)
+    }} else {{
+        print("@@CASE@@{index}")
+        print(ast_{index}.to_str())
+    }}
+""")
 
-fn main() {{
-    var code = "{escaped_src}"
-    var lex = Lexer(code, 0, 1, 1)
-    var tokens = lex.tokenize()
-    var p = Parser(tokens, 0)
-    var ast = p.parse_program()
-    print(ast.to_str())
-}}
+    runner_code = (
+        combined_base
+        + "\nfn main() {\n"
+        + "".join(native_sections)
+        + "}\n\nmain()\n"
+    )
+    tokens_ast = PyLexer(runner_code, "parser_parity_driver.nyx").tokenize()
+    ast = PyParser(tokens_ast, runner_code, "parser_parity_driver.nyx").parse()
+    cpp_code = UniversalCodeGen(ast).gen_cpp()
 
-main()
-"""
-        tokens_ast = PyLexer(runner_code, f"{name}_driver.nyx").tokenize()
-        ast = PyParser(tokens_ast, runner_code, f"{name}_driver.nyx").parse()
-        cpp_code = UniversalCodeGen(ast).gen_cpp()
+    all_passed = True
+    temp_dir = tempfile.mkdtemp(prefix="nyx_test_parser_")
+    exe_file = os.path.join(temp_dir, "nyx_parser.exe")
+    cpp_file = os.path.join(temp_dir, "nyx_parser.cpp")
+    native_results = {}
+    native_errors = {}
+    try:
+        with open(cpp_file, "w", encoding="utf-8") as f:
+            f.write(cpp_code)
 
-        temp_dir = tempfile.mkdtemp(prefix="nyx_test_parser_")
-        exe_file = os.path.join(temp_dir, "nyx_parser.exe")
-        cpp_file = os.path.join(temp_dir, "nyx_parser.cpp")
+        ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file)
+        if not ok:
+            print(f"Native parser driver compile failed:\n{msg}")
+            return False
 
-        try:
-            with open(cpp_file, "w", encoding="utf-8") as f:
-                f.write(cpp_code)
-
-            ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file)
-            if not ok:
-                print(f"FAILED (Compile error: {msg})")
-                all_passed = False
+        return_code, output = CppToolchain.run_executable(exe_file)
+        if return_code != 0:
+            print(f"Native parser driver exited with {return_code}:\n{output}")
+            return False
+        lines = output.splitlines()
+        line_index = 0
+        while line_index < len(lines):
+            line = lines[line_index]
+            if line.startswith("@@CASE@@"):
+                case_index = int(line[len("@@CASE@@"):])
+                native_results[case_index] = lines[line_index + 1] if line_index + 1 < len(lines) else ""
+                line_index += 2
                 continue
+            if line.startswith("@@ERROR@@"):
+                case_text, _, message = line[len("@@ERROR@@"):].partition(":")
+                native_errors[int(case_text)] = message
+            line_index += 1
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
-            code, output = CppToolchain.run_executable(exe_file)
-            nyx_canon = output.strip()
-
-            if py_canon == nyx_canon:
-                print("PASS (Exact Canonical AST Match)")
-            else:
-                print(f"FAILED (AST mismatch)")
-                print(f"  Py:  {py_canon}")
-                print(f"  Nyx: {nyx_canon}")
-                all_passed = False
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
+    for index, (name, _src) in enumerate(test_cases):
+        print(f"[*] Verifying AST Parity: {name} ...", end=" ")
+        if index in native_errors:
+            print(f"FAILED (native parse error: {native_errors[index]})")
+            all_passed = False
+        elif native_results.get(index) == expected[index]:
+            print("PASS (Exact Canonical AST Match)")
+        else:
+            print("FAILED (AST mismatch)")
+            print(f"  Py:  {expected[index]}")
+            print(f"  Nyx: {native_results.get(index, '<missing>')}")
+            all_passed = False
 
     print("=" * 70)
     print(f"Exhaustive Bootstrap Parser Parity Result: {'SUCCESS' if all_passed else 'FAILURE'}")

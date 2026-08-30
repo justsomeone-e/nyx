@@ -40,3 +40,18 @@ fn clear_bits32(address: uintptr, mask: int) {
     var cur = nyx_mmio_read32(address);
     nyx_mmio_write32(address, cur & (~mask));
 }
+
+fn update32(address: uintptr, clear_mask: int, set_mask: int) {
+    critical {
+        var current = nyx_mmio_read32(address)
+        nyx_mmio_write32(address, (current & (~clear_mask)) | set_mask)
+    }
+}
+
+fn read_bit32(address: uintptr, bit: int) -> bool {
+    return (nyx_mmio_read32(address) & (1 << bit)) != 0
+}
+
+fn write_field32(address: uintptr, mask: int, shift: int, value: int) {
+    update32(address, mask, (value << shift) & mask)
+}

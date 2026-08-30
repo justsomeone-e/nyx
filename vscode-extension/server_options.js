@@ -1,0 +1,59 @@
+'use strict';
+
+const fs = require('fs');
+const path = require('path');
+
+function resolveNyxCommand(
+    configuredPath,
+    platform = process.platform,
+    env = process.env,
+    existsSync = fs.existsSync
+) {
+    const command = String(configuredPath || '').trim();
+    if (!command || command !== 'nyx') return command;
+
+    const home = env.USERPROFILE || env.HOME;
+    if (!home) return command;
+    const executable = platform === 'win32' ? 'nyx.cmd' : 'nyx';
+    const pathApi = platform === 'win32' ? path.win32 : path.posix;
+    const canonical = pathApi.join(home, '.nyx', 'bin', executable);
+    return existsSync(canonical) ? canonical : command;
+}
+
+function createServerOptions(configuredPath, platform = process.platform, env = process.env) {
+    const command = resolveNyxCommand(configuredPath, platform, env);
+    if (!command) {
+        throw new Error('nyx.server.path must name an executable or command shim');
+    }
+
+    if (platform !== 'win32') {
+        return {
+            command,
+            args: ['lsp'],
+            options: { windowsHide: true }
+        };
+    }
+
+    const windowsCommand = command === 'nyx' ? 'nyx.cmd' : command;
+    if (!/\.(?:cmd|bat)$/i.test(windowsCommand)) {
+        return {
+            command: windowsCommand,
+            args: ['lsp'],
+            options: { windowsHide: true }
+        };
+    }
+    if (/[\0\r\n"%&|<>^()]/.test(windowsCommand)) {
+        throw new Error('nyx.server.path contains characters unsafe for a Windows command shim');
+    }
+
+    // .cmd/.bat files are scripts, not PE executables. Launch cmd.exe
+    // explicitly instead of child_process' shell mode; this avoids spawn
+    // EINVAL and keeps argument handling deterministic on current Node.js.
+    return {
+        command: env.ComSpec || 'cmd.exe',
+        args: ['/d', '/s', '/v:off', '/c', `"${windowsCommand}" lsp`],
+        options: { windowsHide: true, windowsVerbatimArguments: true }
+    };
+}
+
+module.exports = { createServerOptions, resolveNyxCommand };

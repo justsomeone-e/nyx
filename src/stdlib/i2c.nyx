@@ -1,21 +1,55 @@
-// nyx Native Hardware Library: native/i2c
-#target hecpp
+/// Nyx STM32 I2C master API with bounded hardware waits and explicit errors.
 
-fn i2c_open(bus: int, addr: int) -> int {
-    print("[I2C] Open Bus", bus, "Addr", addr)
-    return 1
+extern "C" fn nyx_hal_i2c_init(bus: int, frequency: int) -> bool
+extern "C" fn nyx_hal_i2c_probe(bus: int, address: int) -> bool
+extern "C" fn nyx_hal_i2c_write_byte(bus: int, address: int, reg: int, value: int) -> int
+extern "C" fn nyx_hal_i2c_read_byte(bus: int, address: int, reg: int) -> int
+extern "C" fn nyx_hal_i2c_write_buffer(bus: int, address: int, data: uintptr, length: int) -> int
+extern "C" fn nyx_hal_i2c_read_buffer(bus: int, address: int, data: uintptr, length: int) -> int
+
+fn i2c_open(bus: int, address: int, frequency: int = 100000) -> int {
+    if not nyx_hal_i2c_init(bus, frequency) { return -1 }
+    if not nyx_hal_i2c_probe(bus, address) { return -2 }
+    return (bus * 256) + address + 1
 }
 
-fn i2c_write_byte(handle: int, reg: int, val: int) -> int {
-    print("[I2C] Write handle", handle, "Reg", reg, "Val", val)
-    return 1
+fn i2c_probe(bus: int, address: int, frequency: int = 100000) -> bool {
+    if not nyx_hal_i2c_init(bus, frequency) { return false }
+    return nyx_hal_i2c_probe(bus, address)
+}
+
+fn i2c_write_byte(handle: int, reg: int, value: int) -> int {
+    if handle <= 0 { return -1 }
+    var encoded = handle - 1
+    var bus = encoded / 256
+    var address = encoded % 256
+    return nyx_hal_i2c_write_byte(bus, address, reg, value)
 }
 
 fn i2c_read_byte(handle: int, reg: int) -> int {
-    print("[I2C] Read handle", handle, "Reg", reg)
-    return 85
+    if handle <= 0 { return -1 }
+    var encoded = handle - 1
+    var bus = encoded / 256
+    var address = encoded % 256
+    return nyx_hal_i2c_read_byte(bus, address, reg)
+}
+
+fn i2c_write(handle: int, data: uintptr, length: int) -> int {
+    if handle <= 0 { return -1 }
+    var encoded = handle - 1
+    var bus = encoded / 256
+    var address = encoded % 256
+    return nyx_hal_i2c_write_buffer(bus, address, data, length)
+}
+
+fn i2c_read(handle: int, data: uintptr, length: int) -> int {
+    if handle <= 0 { return -1 }
+    var encoded = handle - 1
+    var bus = encoded / 256
+    var address = encoded % 256
+    return nyx_hal_i2c_read_buffer(bus, address, data, length)
 }
 
 fn i2c_close(handle: int) -> void {
-    print("[I2C] Close handle", handle)
+    // STM32 I2C buses are shared; closing one device does not disable the bus.
 }

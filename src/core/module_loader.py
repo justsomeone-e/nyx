@@ -14,11 +14,27 @@ from src.core.ast_nodes import (
     VarDeclNode, NativeIncludeNode, NativeLinkNode, NativeRawNode
 )
 from src.core.diagnostics import DiagnosticEmitter
+from src.core.board_model import BoardProfile
+from src.core.backend_capabilities import (
+    BOARD_SCOPED_STDLIB_MODULES,
+    get_stdlib_contract,
+    normalize_backend_name,
+    resolve_backend,
+    stdlib_module_from_import,
+)
 
 class ModuleLoader:
-    def __init__(self, base_dir: Optional[str] = None):
+    def __init__(
+        self,
+        base_dir: Optional[str] = None,
+        target: Optional[str] = None,
+        board: Optional[BoardProfile] = None,
+    ):
         self.base_dir = base_dir or os.getcwd()
         self.stdlib_dir = os.path.join(_root_dir, "src", "stdlib")
+        self.requested_target = target
+        self.target_name = ""
+        self.board = board
         self.loaded_modules: Dict[str, ProgramNode] = {}
         self.import_stack: List[str] = []
         self.symbol_origins: Dict[str, str] = {}
@@ -68,6 +84,17 @@ class ModuleLoader:
 
         tokens = Lexer(source, root_filepath).tokenize()
         root_ast = Parser(tokens, source, root_filepath).parse()
+
+        self.target_name = normalize_backend_name(self.requested_target or root_ast.target)
+        backend = resolve_backend(self.target_name)
+        if backend is None:
+            DiagnosticEmitter.emit_error(
+                root_filepath, source, 1, 1,
+                "E1401", f"Unknown Compilation Target: '{self.target_name}'",
+                length=max(1, len(self.target_name)),
+                help_msg="Run 'nyx targets' to inspect canonical target names and aliases."
+            )
+        root_ast.target = self.target_name
         
         root_stmts: List[ASTNode] = []
 
@@ -93,6 +120,45 @@ class ModuleLoader:
                 help_msg="Verify file location and spelling."
             )
             return
+
+        stdlib_module = stdlib_module_from_import(imp.path)
+        if stdlib_module is not None:
+            contract = get_stdlib_contract(stdlib_module)
+            if contract is None:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1402", f"Missing Standard Library Target Contract: '{stdlib_module}'",
+                    length=len(imp.path) + 2,
+                    help_msg="Add the module to the versioned backend capability registry."
+                )
+                return
+            if self.target_name not in contract.targets:
+                supported = ", ".join(sorted(contract.targets))
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1400", f"Standard Library Module Unsupported on Target: '{imp.path}'",
+                    length=len(imp.path) + 2,
+                    note=f"'{stdlib_module}' supports: {supported}.",
+                    help_msg=f"Choose a supported target or replace '{imp.path}' with a portable module."
+                )
+                return
+            if (
+                self.board is not None
+                and stdlib_module in BOARD_SCOPED_STDLIB_MODULES
+                and stdlib_module not in self.board.peripherals
+            ):
+                available = ", ".join(sorted(self.board.peripherals)) or "none"
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1403", f"Standard Library Module Unsupported on Board: '{imp.path}'",
+                    length=len(imp.path) + 2,
+                    note=f"'{self.board.name}' exposes: {available}.",
+                    help_msg=(
+                        f"Remove '{imp.path}', select a board that implements it, or provide "
+                        "a custom board.toml with a matching BSP capability."
+                    )
+                )
+                return
 
         # Circular import check
         if target_path in self.import_stack:
@@ -127,6 +193,8 @@ class ModuleLoader:
         # Collect exported declarations and native directives from this module
         for s in module_ast.statements:
             if isinstance(s, (NativeIncludeNode, NativeLinkNode, NativeRawNode)):
+                s._origin_module = target_path
+                s._origin_import = imp.path
                 self.collected_declarations.append(s)
                 continue
 

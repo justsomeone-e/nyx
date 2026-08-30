@@ -1,8 +1,44 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const { LanguageClient } = require('vscode-languageclient/node');
+const { createServerOptions } = require('./server_options');
+const { registerNyxCommands } = require('./nyx_commands');
+const languageSurface = require('./language-surface.json');
 
-function activate(context) {
+let languageClient;
+
+async function activate(context) {
+    const serverConfig = vscode.workspace.getConfiguration('nyx.server');
+    if (serverConfig.get('enabled', true)) {
+        const configuredPath = serverConfig.get('path', 'nyx');
+        const serverOptions = createServerOptions(configuredPath);
+        const clientOptions = {
+            documentSelector: [
+                { scheme: 'file', language: 'nyxlang' },
+                { scheme: 'untitled', language: 'nyxlang' }
+            ],
+            outputChannelName: 'Nyx Language Server'
+        };
+        languageClient = new LanguageClient(
+            'nyxLanguageServer',
+            'Nyx Language Server',
+            serverOptions,
+            clientOptions
+        );
+        try {
+            await languageClient.start();
+            context.subscriptions.push({
+                dispose: () => languageClient ? languageClient.stop() : undefined
+            });
+        } catch (error) {
+            languageClient = undefined;
+            console.warn(`Nyx language server could not start: ${error.message}`);
+        }
+    }
+
+    registerNyxCommands(vscode, context);
+
     // ---------------------------------------------------------
     // 1. TOP PRIORITY NATIVE SYSTEM HEADERS (ALWAYS AT TOP)
     // ---------------------------------------------------------
@@ -92,33 +128,39 @@ function activate(context) {
         }
     });
 
-    // 3. Scan local compiler headers (filtering out dot-heavy WinRT clutter)
-    const minGwDir = "C:\\Users\\USER\\AppData\\Local\\Microsoft\\WinGet\\Packages\\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\\llvm-mingw-20260616-ucrt-x86_64";
-    const stlDir = path.join(minGwDir, "include", "c++", "v1");
-    const sysIncDir = path.join(minGwDir, "include");
-
-    try {
-        if (fs.existsSync(stlDir)) {
-            const files = fs.readdirSync(stlDir);
-            for (const f of files) {
-                const key = f.toLowerCase();
-                if (!f.startsWith("__") && !f.endsWith(".imp") && !f.endsWith(".modulemap") && !headerMap.has(key)) {
-                    headerMap.set(key, { name: f, detail: `[C++ STL] <${f}>`, doc: `Standard C++ Library header \`<${f}>\``, sortText: `2000_${f}` });
+    // 3. Optionally scan the explicitly configured native toolchain. Never
+    // embed a developer-machine path in the extension package.
+    const configuredCompiler = process.env.NYX_CXX || '';
+    const includeRoots = [];
+    if (configuredCompiler && path.isAbsolute(configuredCompiler)) {
+        const toolchainRoot = path.resolve(path.dirname(configuredCompiler), '..');
+        includeRoots.push(
+            { directory: path.join(toolchainRoot, 'include', 'c++', 'v1'), category: 'C++ STL' },
+            { directory: path.join(toolchainRoot, 'include'), category: 'System Header' }
+        );
+    }
+    for (const root of includeRoots) {
+        try {
+            if (!fs.existsSync(root.directory)) continue;
+            for (const file of fs.readdirSync(root.directory)) {
+                const key = file.toLowerCase();
+                const isWinRtNoise = (file.match(/\./g) || []).length > 1 && file.startsWith('windows.');
+                const valid = root.category === 'C++ STL'
+                    ? !file.startsWith('__') && !file.endsWith('.imp') && !file.endsWith('.modulemap')
+                    : file.endsWith('.h') && !isWinRtNoise;
+                if (valid && !headerMap.has(key)) {
+                    headerMap.set(key, {
+                        name: file,
+                        detail: `[${root.category}] <${file}>`,
+                        doc: `${root.category} \`<${file}>\``,
+                        sortText: `${root.category === 'C++ STL' ? '2000' : '3000'}_${file}`
+                    });
                 }
             }
+        } catch (_error) {
+            // Header scanning is optional; canonical static completions remain available.
         }
-        if (fs.existsSync(sysIncDir)) {
-            const files = fs.readdirSync(sysIncDir);
-            for (const f of files) {
-                // Filter out winrt noisy dot headers like windows.devices.bluetooth.h so windows.h stays crystal clear
-                const isWinRtNoise = (f.match(/\./g) || []).length > 1 && f.startsWith("windows.");
-                const key = f.toLowerCase();
-                if (f.endsWith(".h") && !isWinRtNoise && !headerMap.has(key)) {
-                    headerMap.set(key, { name: f, detail: `[System Header] <${f}>`, doc: `System header \`<${f}>\``, sortText: `3000_${f}` });
-                }
-            }
-        }
-    } catch (e) {}
+    }
 
     // ---------------------------------------------------------
     // 3. STANDARD NYX MODULES & COMPILER TARGETS
@@ -132,9 +174,15 @@ function activate(context) {
         { name: 'std/os', desc: 'Operating system interop, platform info, env variables' },
         { name: 'std/net', desc: 'TCP/IP sockets and networking streams' },
         { name: 'std/gpio', desc: 'Microcontroller GPIO pin control' },
+        { name: 'std/board', desc: 'Selected Nucleo connector and custom-board pin aliases' },
         { name: 'std/serial', desc: 'UART serial communication port API' },
         { name: 'std/spi', desc: 'SPI bus hardware communication' },
         { name: 'std/i2c', desc: 'I2C two-wire hardware interface' },
+        { name: 'std/adc', desc: '12-bit analog input conversion' },
+        { name: 'std/pwm', desc: 'Timer-backed PWM output' },
+        { name: 'std/timer', desc: 'General-purpose hardware timers' },
+        { name: 'std/interrupt', desc: 'Cortex-M NVIC interrupt control' },
+        { name: 'std/mmio', desc: 'Volatile register access and masked updates' },
         { name: 'std/process', desc: 'Child process execution' },
         { name: 'std/str', desc: 'Advanced string manipulation and Unicode' },
         { name: 'std/platform', desc: 'Hardware architecture detection' },
@@ -148,7 +196,8 @@ function activate(context) {
         { name: 'hejs', desc: 'Node.js ES2022 JavaScript ESM Module' },
         { name: 'hers', desc: 'Rust 2021 Safe Systems Conformance Target' },
         { name: 'hepy', desc: 'Python 3 Rapid Scripting & Reference Semantics' },
-        { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' }
+        { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' },
+        { name: 'stm32f4', desc: 'Freestanding STM32F4 ELF / HEX / BIN firmware' }
     ];
 
     // ---------------------------------------------------------
@@ -252,12 +301,24 @@ function activate(context) {
                 addSnippet('guard', 'guard ${1:condition} else {\n\t${0:return;}\n}', 'Guard Statement', 'Early-exit safety guard block.');
                 addSnippet('pipe', '|> ${1:func_name}', 'Pipeline Operator', 'Pipes expression forward as the first argument.');
                 addSnippet('return', 'return ${1:result};', 'Return Statement', 'Returns from function.');
+                addSnippet('throw', 'throw ${1:error};', 'Throw Statement', 'Terminates the current path and transfers control to the nearest catch block.');
+                addSnippet('async fn', 'async fn ${1:name}(${2:params}) -> ${3:type} {\n\t${0:// body}\n}', 'Async Function', 'Declares a function that returns Task<T>.');
+                addSnippet('await', 'await ${1:task}', 'Await Expression', 'Suspends until a Task<T> resolves and produces T.');
                 addSnippet('match', 'match ${1:expr} {\n\t${2:pattern} => ${3:result},\n\t"_" => ${0:default}\n}', 'Pattern Matching', 'Pattern matching block.');
                 addSnippet('print', 'print(${1:expr});', 'Print to Console', 'Prints expressions to stdout.');
                 addSnippet('import', 'import "${1:std/io}";', 'Import Module', 'Imports standard library or local module.');
                 addSnippet('use', 'use "${1:std/io}";', 'Use Module', 'Imports standard library or local module.');
                 addSnippet('test', 'test "${1:test title}" {\n\tassert(${2:condition}, "${3:failure message}");\n}', 'Unit Test Block', 'Defines an automated in-file unit test.');
                 addSnippet('assert', 'assert(${1:condition}, "${2:message}");', 'Assertion', 'Asserts condition is true; halts on failure.');
+
+                if (currentTarget === 'stm32f4' || currentTarget === 'stm32' || currentTarget === 'embedded') {
+                    addSnippet('volatile var', 'volatile var ${1:ticks}: ${2:u32} = ${3:0};', 'Volatile Embedded Storage', 'Declares storage observed by hardware or an interrupt handler.');
+                    addSnippet('interrupt fn', 'interrupt fn ${1:TIM3_IRQHandler}() -> void {\n\t${2:timer_clear_update(3)};\n\t${0}\n}', 'Hardware Interrupt Handler', 'Declares a profile-validated Cortex-M interrupt handler.');
+                    addSnippet('critical', 'critical {\n\t${0:// atomic register or shared-state update}\n}', 'Interrupt-Masked Scope', 'Masks interrupts and restores the previous PRIMASK state on every exit path.');
+                    addSnippet('Buffer', 'var ${1:packet}: Buffer<${2:u8}, ${3:64}> = [${0}];', 'Fixed Embedded Buffer', 'Declares allocation-free fixed-capacity storage for UART, SPI, I²C, and DMA.');
+                    addSnippet('buffer_ptr', 'buffer_ptr(${1:buffer})', 'Buffer Data Pointer', 'Returns the stable data address of a fixed Buffer for typed HAL calls.', vscode.CompletionItemKind.Function);
+                    addSnippet('board_pin', 'board_pin("${1|LED,BUTTON,D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12,D13,D14,D15,A0,A1,A2,A3,A4,A5,I2C_SDA,I2C_SCL|}")', 'Board Connector Alias', 'Resolves a pin from the selected --board profile.', vscode.CompletionItemKind.Function);
+                }
 
                 // Target specifics
                 if (currentTarget === 'hereact' || currentTarget === 'react') {
@@ -275,6 +336,41 @@ function activate(context) {
                     addSnippet('delay_ms', 'delay_ms(${1:1000});', 'High-Res Sleep', 'Thread sleep with microsecond precision.', vscode.CompletionItemKind.Function);
                 }
 
+                // Keep offline/editor completion as broad as the stable
+                // compiler surface. Rich snippets above win when available;
+                // plain keyword/type/runtime entries fill every remaining gap.
+                const existingLabels = new Set(items.map(item => item.label));
+                function addSurfaceItem(label, kind, detail, documentation) {
+                    if (existingLabels.has(label)) return;
+                    const item = new vscode.CompletionItem(label, kind);
+                    item.detail = detail;
+                    item.documentation = new vscode.MarkdownString(documentation);
+                    items.push(item);
+                    existingLabels.add(label);
+                }
+                languageSurface.stableKeywords.forEach(keyword => {
+                    addSurfaceItem(
+                        keyword,
+                        vscode.CompletionItemKind.Keyword,
+                        'Nyx stable keyword',
+                        'Supported by the stable Nyx frontend language surface.'
+                    );
+                });
+                languageSurface.experimentalKeywords.forEach(keyword => {
+                    addSurfaceItem(
+                        keyword,
+                        vscode.CompletionItemKind.Keyword,
+                        'Nyx experimental keyword',
+                        'Frontend support exists, but cross-target semantics are not stable yet.'
+                    );
+                });
+                languageSurface.builtinNames.forEach(name => {
+                    addSurfaceItem(name, vscode.CompletionItemKind.Function, 'Nyx core runtime', 'Nyx core runtime function.');
+                });
+                languageSurface.typeNames.forEach(name => {
+                    addSurfaceItem(name, vscode.CompletionItemKind.TypeParameter, 'Nyx type', 'Nyx language type.');
+                });
+
                 return items;
             }
         },
@@ -284,7 +380,12 @@ function activate(context) {
     context.subscriptions.push(completionProvider);
 }
 
-function deactivate() {}
+async function deactivate() {
+    if (languageClient) {
+        await languageClient.stop();
+        languageClient = undefined;
+    }
+}
 
 module.exports = {
     activate,

@@ -67,7 +67,8 @@ struct Parser {
     tokens: Array<Token>,
     pos: int,
     has_error: bool,
-    error_msg: string
+    error_msg: string,
+    last_doc_comment: string
 }
 
 impl Parser {
@@ -112,18 +113,98 @@ impl Parser {
         return self.advance()
     }
 
+    fn is_name_token(self, tok: Token) -> bool {
+        if len(tok.value) == 0 { return false }
+        var first = tok.value[0]
+        if not ((first >= "a" and first <= "z") or (first >= "A" and first <= "Z") or first == "_") {
+            return false
+        }
+        for i in 1..len(tok.value)-1 {
+            var ch = tok.value[i]
+            if not ((ch >= "a" and ch <= "z") or (ch >= "A" and ch <= "Z") or
+                (ch >= "0" and ch <= "9") or ch == "_") {
+                return false
+            }
+        }
+        return true
+    }
+
+    fn expect_name(self) -> Token {
+        var tok = self.current()
+        if self.is_name_token(tok) { return self.advance() }
+        self.has_error = true
+        self.error_msg = "Expected a member name but found " + tok.type_name +
+            " at line " + to_string(tok.line) + ":" + to_string(tok.col)
+        return self.advance()
+    }
+
     fn parse_type(self) -> string {
         var is_ptr = false
         if self.match_type("MUL") { is_ptr = true }
-        var name = self.advance().value
+
+        if self.match_type("FN") {
+            self.expect("LPAREN")
+            var rendered = "fn("
+            var count = 0
+            while self.current().type_name != "RPAREN" and self.current().type_name != "EOF" {
+                if count > 0 { rendered = rendered + ", " }
+                rendered = rendered + self.parse_type()
+                count = count + 1
+                if not self.match_type("COMMA") { break }
+            }
+            self.expect("RPAREN")
+            var result_type = "void"
+            if self.match_type("ARROW") { result_type = self.parse_type() }
+            rendered = rendered + ") -> " + result_type
+            if self.match_type("QUESTION") { rendered = rendered + "?" }
+            return rendered
+        }
+
+        var name = self.expect("IDENT").value
         if self.match_type("LT") {
-            var gen = self.parse_type()
+            var rendered_args = ""
+            var count = 0
+            while self.current().type_name != "GT" and self.current().type_name != "EOF" {
+                if count > 0 { rendered_args = rendered_args + ", " }
+                if self.current().type_name == "NUMBER" {
+                    rendered_args = rendered_args + self.advance().value
+                } else {
+                    rendered_args = rendered_args + self.parse_type()
+                }
+                count = count + 1
+                if not self.match_type("COMMA") { break }
+            }
             self.expect("GT")
-            name = name + "<" + gen + ">"
+            name = name + "<" + rendered_args + ">"
         }
         if is_ptr { name = "*" + name }
         if self.match_type("QUESTION") { name = name + "?" }
         return name
+    }
+
+    fn parse_block(self) -> Array<ASTNode> {
+        var body: Array<ASTNode> = []
+        if self.match_type("LBRACE") {
+            var closed = false
+            while self.current().type_name != "EOF" {
+                if self.match_type("RBRACE") { closed = true; break }
+                while self.match_type("SEMICOLON") { }
+                if self.current().type_name == "RBRACE" { continue }
+                if self.current().type_name == "DOC_COMMENT" {
+                    self.last_doc_comment = self.advance().value
+                    continue
+                }
+                body.push(self.parse_statement())
+                self.last_doc_comment = ""
+            }
+            if not closed {
+                self.has_error = true
+                self.error_msg = "Unclosed block: expected '}'"
+            }
+        } elif self.match_type("COLON") {
+            body.push(self.parse_statement())
+        }
+        return body
     }
 
     fn parse_primary(self) -> ASTNode {
@@ -151,11 +232,22 @@ impl Parser {
 
         if tok.type_name == "IDENT" {
             var name = self.advance().value
+            if self.match_type("FAT_ARROW") {
+                var body = self.parse_expr(0)
+                return ASTNode("Lambda", "", "", "", "", false, false, false, false,
+                    [FunctionParam(name, "")], [], [body], tok.line, tok.col)
+            }
             return ASTNode("Identifier", name, "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
         }
 
-        if tok.type_name == "PRINT" or tok.type_name == "ADDR" or tok.type_name == "PEEK" or tok.type_name == "MEMDUMP" {
+        if tok.type_name == "PRINT" or tok.type_name == "INPUT" or tok.type_name == "ADDR" or
+            tok.type_name == "PEEK" or tok.type_name == "MEMDUMP" or tok.type_name == "CHANNEL" {
             var callee = self.advance().value
+            var generic_args: Array<string> = []
+            if self.match_type("LT") {
+                generic_args.push(self.parse_type())
+                self.expect("GT")
+            }
             self.expect("LPAREN")
             var args: Array<ASTNode> = []
             if not self.match_type("RPAREN") {
@@ -166,10 +258,19 @@ impl Parser {
                     break
                 }
             }
-            return ASTNode("FunctionCall", callee, "", "", "", false, false, false, false, [], [], args, tok.line, tok.col)
+            return ASTNode("FunctionCall", callee, "", "", "", false, false, false, false, [], generic_args, args, tok.line, tok.col)
         }
 
         if self.match_type("LPAREN") {
+            if self.match_type("RPAREN") {
+                if self.match_type("FAT_ARROW") {
+                    var body = self.parse_expr(0)
+                    return ASTNode("Lambda", "", "", "", "", false, false, false, false,
+                        [], [], [body], tok.line, tok.col)
+                }
+                return ASTNode("Null", "", "null", "", "null", false, false, false, false,
+                    [], [], [], tok.line, tok.col)
+            }
             var expr = self.parse_expr(0)
             self.expect("RPAREN")
             return expr
@@ -198,8 +299,13 @@ impl Parser {
         var node = self.parse_primary()
 
         while true {
-            if self.match_type("DOT") {
-                var member = self.expect("IDENT").value
+            if self.match_type("SAFE_NAV") {
+                var member_tok = self.expect_name()
+                node = ASTNode("MemberAccess", member_tok.value, "", "", "", false, false, true, false,
+                    [], [], [node], member_tok.line, member_tok.col)
+            } elif self.match_type("DOT") {
+                var member_tok = self.expect_name()
+                var member = member_tok.value
                 if self.match_type("LPAREN") {
                     var args: Array<ASTNode> = []
                     if not self.match_type("RPAREN") {
@@ -210,15 +316,16 @@ impl Parser {
                             break
                         }
                     }
-                    var call_node = ASTNode("MethodCall", member, "", "", "", false, false, false, false, [], [], args, node.line, node.col)
-                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node, call_node], node.line, node.col)
+                    var call_node = ASTNode("MethodCall", member, "", "", "", false, false, false, false, [], [], args, member_tok.line, member_tok.col)
+                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node, call_node], member_tok.line, member_tok.col)
                 } else {
-                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node], node.line, node.col)
+                    node = ASTNode("MemberAccess", member, "", "", "", false, false, false, false, [], [], [node], member_tok.line, member_tok.col)
                 }
-            } elif self.match_type("LBRACKET") {
+            } elif self.current().type_name == "LBRACKET" {
+                var bracket_tok = self.advance()
                 var idx = self.parse_expr(0)
                 self.expect("RBRACKET")
-                node = ASTNode("IndexAccess", "", "", "", "", false, false, false, false, [], [], [node, idx], node.line, node.col)
+                node = ASTNode("IndexAccess", "", "", "", "", false, false, false, false, [], [], [node, idx], bracket_tok.line, bracket_tok.col)
             } elif self.match_type("LPAREN") {
                 var args: Array<ASTNode> = []
                 if not self.match_type("RPAREN") {
@@ -239,21 +346,39 @@ impl Parser {
 
     fn parse_unary(self) -> ASTNode {
         var tok = self.current()
-        if tok.type_name == "MINUS" or tok.type_name == "NOT" {
+        if tok.type_name == "AWAIT" {
             self.advance()
             var expr = self.parse_unary()
+            return ASTNode("Await", "", "", "", "", false, false, false,
+                false, [], [], [expr], tok.line, tok.col)
+        }
+        if tok.type_name == "PLUS" or tok.type_name == "MINUS" or tok.type_name == "NOT" or
+            tok.type_name == "MUL" or tok.type_name == "BIT_NOT" {
+            self.advance()
+            var expr = self.parse_unary()
+            if tok.type_name == "MINUS" and expr.kind == "Number" and
+                expr.value == "9223372036854775808" {
+                return ASTNode("Number", "", "-9223372036854775808", "", "int",
+                    false, false, false, false, [], [], [], tok.line, tok.col)
+            }
             return ASTNode("UnaryOp", "", "", tok.value, "", false, false, false, false, [], [], [expr], tok.line, tok.col)
         }
         return self.parse_postfix()
     }
 
     fn get_prec(self, op: string) -> int {
-        if op == "OR" or op == "or" { return 10 }
-        if op == "AND" or op == "and" { return 20 }
-        if op == "EQ" or op == "NEQ" or op == "==" or op == "!=" { return 30 }
-        if op == "LT" or op == "GT" or op == "LTE" or op == "GTE" or op == "<" or op == ">" or op == "<=" or op == ">=" { return 40 }
-        if op == "PLUS" or op == "MINUS" or op == "+" or op == "-" { return 50 }
-        if op == "MUL" or op == "DIV" or op == "MOD" or op == "*" or op == "/" or op == "%" { return 60 }
+        if op == "PIPE" or op == "|>" { return 5 }
+        if op == "NULL_COALESCE" or op == "??" { return 10 }
+        if op == "OR" or op == "or" { return 20 }
+        if op == "AND" or op == "and" { return 30 }
+        if op == "BIT_OR" or op == "|" { return 40 }
+        if op == "BIT_XOR" or op == "^" { return 50 }
+        if op == "BIT_AND" or op == "&" { return 60 }
+        if op == "EQ" or op == "NEQ" or op == "==" or op == "!=" { return 70 }
+        if op == "LT" or op == "GT" or op == "LTE" or op == "GTE" or op == "<" or op == ">" or op == "<=" or op == ">=" { return 80 }
+        if op == "SHL" or op == "SHR" or op == "<<" or op == ">>" { return 90 }
+        if op == "PLUS" or op == "MINUS" or op == "+" or op == "-" { return 100 }
+        if op == "MUL" or op == "DIV" or op == "MOD" or op == "*" or op == "/" or op == "%" { return 110 }
         return 0
     }
 
@@ -267,8 +392,57 @@ impl Parser {
                 break
             }
             self.advance()
+
+            if tok.type_name == "PIPE" {
+                var callee_tok = self.current()
+                if self.is_name_token(callee_tok) {
+                    self.advance()
+                    var callee_name = callee_tok.value
+                    var receiver = ASTNode("Identifier", callee_name, "", "", "", false, false,
+                        false, false, [], [], [], callee_tok.line, callee_tok.col)
+                    var has_member = false
+                    var member_tok = callee_tok
+                    while self.match_type("DOT") {
+                        member_tok = self.expect_name()
+                        callee_name = member_tok.value
+                        has_member = true
+                        if self.current().type_name == "DOT" {
+                            receiver = ASTNode("MemberAccess", callee_name, "", "", "", false,
+                                false, false, false, [], [], [receiver], member_tok.line, member_tok.col)
+                        }
+                    }
+                    var args: Array<ASTNode> = [left]
+                    if self.match_type("LPAREN") {
+                        if not self.match_type("RPAREN") {
+                            while true {
+                                args.push(self.parse_expr(0))
+                                if self.match_type("COMMA") { continue }
+                                self.expect("RPAREN")
+                                break
+                            }
+                        }
+                    }
+                    if has_member {
+                        var method = ASTNode("MethodCall", callee_name, "", "", "", false,
+                            false, false, false, [], [], args, member_tok.line, member_tok.col)
+                        left = ASTNode("MemberAccess", callee_name, "", "", "", false, false,
+                            false, false, [], [], [receiver, method], member_tok.line, member_tok.col)
+                    } else {
+                        left = ASTNode("FunctionCall", callee_name, "", "", "", false, false,
+                            false, false, [], [], args, callee_tok.line, callee_tok.col)
+                    }
+                    continue
+                }
+            }
+
             var right = self.parse_expr(prec)
-            left = ASTNode("BinaryOp", "", "", tok.value, "", false, false, false, false, [], [], [left, right], tok.line, tok.col)
+            if tok.type_name == "NULL_COALESCE" {
+                left = ASTNode("NullCoalesce", "", "", "??", "", false, false, false,
+                    false, [], [], [left, right], tok.line, tok.col)
+            } else {
+                left = ASTNode("BinaryOp", "", "", tok.value, "", false, false, false,
+                    false, [], [], [left, right], tok.line, tok.col)
+            }
         }
         return left
     }
@@ -303,9 +477,57 @@ impl Parser {
             return ASTNode("Directive", "native_raw", tok.value, "", "", false, false, false, false, [], [], [], tok.line, tok.col)
         }
 
-        // Variable declaration
+        // Imports are retained in the self-host AST for the native module
+        // graph driver. HIR lowering skips them after resolution.
+        if tok.type_name == "IMPORT" or tok.type_name == "USE" {
+            self.advance()
+            var symbols: Array<string> = []
+            if self.match_type("LBRACE") {
+                while self.current().type_name != "RBRACE" and self.current().type_name != "EOF" {
+                    symbols.push(self.expect("IDENT").value)
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("RBRACE")
+                self.expect("FROM")
+            }
+            var path_tok = self.expect("STRING")
+            var alias = ""
+            if self.match_type("AS") { alias = self.expect("IDENT").value }
+            self.match_type("SEMICOLON")
+            return ASTNode("Import", alias, path_tok.value, "", "", false, false, false,
+                false, [], symbols, [], tok.line, tok.col)
+        }
+
+        // Explicit reassignment: set target = value
+        if tok.type_name == "SET" {
+            self.advance()
+            var target = self.parse_expr(0)
+            self.expect("ASSIGN")
+            var value = self.parse_expr(0)
+            self.match_type("SEMICOLON")
+            return ASTNode("Assign", "", "", "=", "", false, false, false,
+                false, [], [], [target, value], tok.line, tok.col)
+        }
+
+        // Volatile storage shared with hardware and interrupt handlers.
+        if tok.type_name == "VOLATILE" {
+            self.advance()
+            self.expect("VAR")
+            var name = self.expect("IDENT").value
+            var type_annot = ""
+            if self.match_type("COLON") {
+                type_annot = self.parse_type()
+            }
+            self.expect("ASSIGN")
+            var init_expr = self.parse_expr(0)
+            self.match_type("SEMICOLON")
+            return ASTNode("VolatileVarDecl", name, "", "", type_annot, false,
+                false, false, false, [], [], [init_expr], tok.line, tok.col)
+        }
+
+        // Variable declaration. let and const are immutable bindings.
         if tok.type_name == "VAR" or tok.type_name == "LET" or tok.type_name == "CONST" {
-            var is_const = (tok.type_name == "CONST")
+            var is_const = (tok.type_name == "LET" or tok.type_name == "CONST")
             self.advance()
             var name = self.expect("IDENT").value
             var type_annot = ""
@@ -325,10 +547,69 @@ impl Parser {
             return ASTNode("VarDecl", name, "", "", type_annot, is_const, false, false, false, [], [], [init_expr], tok.line, tok.col)
         }
 
-        // Function definition
-        if tok.type_name == "FN" {
+        // Type alias
+        if tok.type_name == "TYPE_ALIAS" {
             self.advance()
+            var alias_name = self.expect("IDENT").value
+            self.expect("ASSIGN")
+            var actual_type = self.parse_type()
+            self.match_type("SEMICOLON")
+            return ASTNode("TypeAlias", alias_name, "", "", actual_type, false, false,
+                false, false, [], [], [], tok.line, tok.col)
+        }
+
+        // Enum definition
+        if tok.type_name == "ENUM" {
+            self.advance()
+            var enum_name = self.expect("IDENT").value
+            var members: Array<ASTNode> = []
+            if self.match_type("LBRACE") {
+                var closed = false
+                while self.current().type_name != "EOF" {
+                    if self.match_type("RBRACE") { closed = true; break }
+                    while self.match_type("COMMA") { }
+                    if self.current().type_name == "RBRACE" { continue }
+                    var member_tok = self.expect("IDENT")
+                    var member_values: Array<ASTNode> = []
+                    if self.match_type("ASSIGN") { member_values.push(self.parse_expr(0)) }
+                    members.push(ASTNode("EnumMember", member_tok.value, "", "", "", false,
+                        false, false, false, [], [], member_values, member_tok.line, member_tok.col))
+                    self.match_type("COMMA")
+                }
+                if not closed {
+                    self.has_error = true
+                    self.error_msg = "Unclosed enum definition block: expected '}'"
+                }
+            }
+            return ASTNode("EnumDef", enum_name, "", "", "", false, false, false,
+                false, [], [], members, tok.line, tok.col)
+        }
+
+        // Function definition
+        if tok.type_name == "FN" or tok.type_name == "ASYNC" or tok.type_name == "INTERRUPT" {
+            var doc_comment = self.last_doc_comment
+            var is_async = false
+            var is_interrupt = false
+            if tok.type_name == "ASYNC" {
+                is_async = true
+                self.advance()
+                self.expect("FN")
+            } elif tok.type_name == "INTERRUPT" {
+                is_interrupt = true
+                self.advance()
+                self.expect("FN")
+            } else {
+                self.advance()
+            }
             var name = self.expect("IDENT").value
+            var generic_params: Array<string> = []
+            if self.match_type("LT") {
+                while self.current().type_name != "GT" and self.current().type_name != "EOF" {
+                    generic_params.push(self.expect("IDENT").value)
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("GT")
+            }
             self.expect("LPAREN")
             var params: Array<FunctionParam> = []
             if not self.match_type("RPAREN") {
@@ -345,66 +626,85 @@ impl Parser {
                 }
             }
             var ret_type = "void"
+            var has_explicit_return = false
             if self.match_type("ARROW") {
+                has_explicit_return = true
                 ret_type = self.parse_type()
             }
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-                if self.current().type_name == "EOF" {
-                    self.has_error = true
-                    self.error_msg = "Unclosed function body block: expected '}'"
-                }
-            }
-            return ASTNode("FunctionDef", name, "", "", ret_type, false, false, false, false, params, [], body, tok.line, tok.col)
+            var body = self.parse_block()
+            // is_safe is otherwise unused for functions; retain whether the
+            // source declared an arrow so HIR can distinguish implicit `any`
+            // from an explicit `-> void` without changing AST snapshots.
+            var function_kind = "FunctionDef"
+            if is_interrupt { function_kind = "InterruptFn" }
+            return ASTNode(function_kind, name, doc_comment, "", ret_type, false,
+                is_async, has_explicit_return, false, params, generic_params, body, tok.line, tok.col)
         }
 
         // Struct definition
         if tok.type_name == "STRUCT" {
             self.advance()
             var name = self.expect("IDENT").value
+            var generic_params: Array<string> = []
+            if self.match_type("LT") {
+                while self.current().type_name != "GT" and self.current().type_name != "EOF" {
+                    generic_params.push(self.expect("IDENT").value)
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("GT")
+            }
             var fields: Array<FunctionParam> = []
             if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    var fname = self.expect("IDENT").value
-                    self.expect("COLON")
-                    var ftype = self.parse_type()
+                var closed = false
+                while self.current().type_name != "EOF" {
+                    if self.match_type("RBRACE") {
+                        closed = true
+                        break
+                    }
+                    while self.match_type("COMMA") or self.match_type("SEMICOLON") { }
+                    if self.current().type_name == "RBRACE" { continue }
+                    var fname = self.expect_name().value
+                    var ftype = ""
+                    if self.match_type("COLON") { ftype = self.parse_type() }
                     fields.push(FunctionParam(fname, ftype))
-                    self.match_type("COMMA")
+                    while self.match_type("COMMA") or self.match_type("SEMICOLON") { }
                 }
-                if self.current().type_name == "EOF" {
+                if not closed {
                     self.has_error = true
                     self.error_msg = "Unclosed struct definition block: expected '}'"
                 }
+            } elif self.match_type("COLON") {
+                if self.current().type_name != "EOF" and self.current().type_name != "SEMICOLON" {
+                    var fname = self.expect_name().value
+                    var ftype = ""
+                    if self.match_type("COLON") { ftype = self.parse_type() }
+                    fields.push(FunctionParam(fname, ftype))
+                }
             }
-            return ASTNode("StructDef", name, "", "", "", false, false, false, false, fields, [], [], tok.line, tok.col)
+            return ASTNode("StructDef", name, self.last_doc_comment, "", "", false, false,
+                false, false, fields, generic_params, [], tok.line, tok.col)
         }
 
         // Impl block
         if tok.type_name == "IMPL" {
             self.advance()
-            var target = self.expect("IDENT").value
-            var methods: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    methods.push(self.parse_statement())
-                }
+            var first_name = self.expect("IDENT").value
+            var trait_name = ""
+            var target = first_name
+            if self.match_type("FOR") {
+                trait_name = first_name
+                target = self.expect("IDENT").value
             }
-            return ASTNode("ImplBlock", target, "", "", "", false, false, false, false, [], [], methods, tok.line, tok.col)
+            var methods = self.parse_block()
+            return ASTNode("ImplBlock", target, trait_name, "", "", false, false,
+                false, false, [], [], methods, tok.line, tok.col)
         }
 
         // Trait definition
         if tok.type_name == "TRAIT" {
             self.advance()
             var name = self.expect("IDENT").value
-            var methods: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    methods.push(self.parse_statement())
-                }
-            }
+            var methods = self.parse_block()
             return ASTNode("TraitDef", name, "", "", "", false, false, false, false, [], [], methods, tok.line, tok.col)
         }
 
@@ -416,11 +716,17 @@ impl Parser {
             var name = self.expect("IDENT").value
             self.expect("LPAREN")
             var params: Array<FunctionParam> = []
+            var is_varargs = false
             if not self.match_type("RPAREN") {
                 while true {
+                    if self.match_type("DOTDOT") {
+                        is_varargs = true
+                        self.expect("RPAREN")
+                        break
+                    }
                     var pname = self.expect("IDENT").value
-                    self.expect("COLON")
-                    var ptype = self.parse_type()
+                    var ptype = ""
+                    if self.match_type("COLON") { ptype = self.parse_type() }
                     params.push(FunctionParam(pname, ptype))
                     if self.match_type("COMMA") { continue }
                     self.expect("RPAREN")
@@ -432,18 +738,93 @@ impl Parser {
                 ret_type = self.parse_type()
             }
             self.match_type("SEMICOLON")
-            return ASTNode("ExternFn", name, abi, "", ret_type, false, false, false, false, params, [], [], tok.line, tok.col)
+            return ASTNode("ExternFn", name, abi, "", ret_type, false, false, false,
+                is_varargs, params, [], [], tok.line, tok.col)
+        }
+
+        // In-file test block
+        if tok.type_name == "TEST" {
+            self.advance()
+            var description = self.expect("STRING").value
+            var body = self.parse_block()
+            return ASTNode("TestBlock", "", description, "", "", false, false,
+                false, false, [], [], body, tok.line, tok.col)
+        }
+
+        // Assertion
+        if tok.type_name == "ASSERT" {
+            self.advance()
+            self.expect("LPAREN")
+            var condition = self.parse_expr(0)
+            var message = ""
+            if self.match_type("COMMA") { message = self.expect("STRING").value }
+            self.expect("RPAREN")
+            self.match_type("SEMICOLON")
+            return ASTNode("Assert", "", message, "", "", false, false,
+                false, false, [], [], [condition], tok.line, tok.col)
+        }
+
+        // Try-catch
+        if tok.type_name == "TRY" {
+            self.advance()
+            var try_body = self.parse_block()
+            self.expect("CATCH")
+            var error_name = "e"
+            if self.current().type_name == "IDENT" { error_name = self.advance().value }
+            var catch_body = self.parse_block()
+            var try_node = ASTNode("TryBlock", "", "", "", "", false, false,
+                false, false, [], [], try_body, tok.line, tok.col)
+            var catch_node = ASTNode("CatchBlock", error_name, "", "", "", false,
+                false, false, false, [], [], catch_body, tok.line, tok.col)
+            return ASTNode("TryCatch", error_name, "", "", "", false, false,
+                false, false, [], [], [try_node, catch_node], tok.line, tok.col)
+        }
+
+        if tok.type_name == "DEFER" {
+            self.advance()
+            var expr = self.parse_expr(0)
+            self.match_type("SEMICOLON")
+            return ASTNode("Defer", "", "", "", "", false, false, false,
+                false, [], [], [expr], tok.line, tok.col)
+        }
+
+        if tok.type_name == "GUARD" {
+            self.advance()
+            var condition = self.parse_expr(0)
+            self.expect("ELSE")
+            var else_body = self.parse_block()
+            var children: Array<ASTNode> = [condition]
+            for statement in else_body { children.push(statement) }
+            return ASTNode("Guard", "", "", "", "", false, false, false,
+                false, [], [], children, tok.line, tok.col)
+        }
+
+        // Standalone lexical block. A dedicated Block node will replace this
+        // compatibility representation when the HIR module loader owns scopes.
+        if tok.type_name == "LBRACE" {
+            var body = self.parse_block()
+            return ASTNode("UnsafeBlock", "", "", "", "", false, false,
+                false, false, [], [], body, tok.line, tok.col)
         }
 
         // Return
         if tok.type_name == "RETURN" {
             self.advance()
-            var expr = ASTNode("Null", "", "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
+            var children: Array<ASTNode> = []
             if self.current().type_name != "SEMICOLON" and self.current().type_name != "RBRACE" {
-                expr = self.parse_expr(0)
+                children.push(self.parse_expr(0))
             }
             self.match_type("SEMICOLON")
-            return ASTNode("Return", "", "", "", "", false, false, false, false, [], [], [expr], tok.line, tok.col)
+            return ASTNode("Return", "", "", "", "", false, false, false,
+                false, [], [], children, tok.line, tok.col)
+        }
+
+        if tok.type_name == "THROW" {
+            self.advance()
+            var value = self.parse_expr(0)
+            self.match_type("SEMICOLON")
+            return ASTNode("Throw", "", "", "", "", false, false, false,
+                false, [], [], [value], tok.line, tok.col)
         }
 
         // Break & Continue
@@ -462,24 +843,38 @@ impl Parser {
         if tok.type_name == "IF" {
             self.advance()
             var cond = self.parse_expr(0)
-            var then_body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    then_body.push(self.parse_statement())
-                }
-            }
+            var then_body = self.parse_block()
             var children: Array<ASTNode> = [cond]
             for s in then_body { children.push(s) }
 
-            if self.match_type("ELSE") {
-                var else_body: Array<ASTNode> = []
-                if self.match_type("LBRACE") {
-                    while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                        else_body.push(self.parse_statement())
-                    }
+            while true {
+                if self.current().type_name == "ELIF" {
+                    var elif_tok = self.advance()
+                    var elif_cond = self.parse_expr(0)
+                    var elif_body = self.parse_block()
+                    var elif_children: Array<ASTNode> = [elif_cond]
+                    for s in elif_body { elif_children.push(s) }
+                    children.push(ASTNode("ElifBlock", "", "", "", "", false, false,
+                        false, false, [], [], elif_children, elif_tok.line, elif_tok.col))
+                    continue
                 }
-                var else_node = ASTNode("ElseBlock", "", "", "", "", false, false, false, false, [], [], else_body, tok.line, tok.col)
-                children.push(else_node)
+                if self.match_type("ELSE") {
+                    if self.current().type_name == "IF" {
+                        var elif_tok = self.advance()
+                        var elif_cond = self.parse_expr(0)
+                        var elif_body = self.parse_block()
+                        var elif_children: Array<ASTNode> = [elif_cond]
+                        for s in elif_body { elif_children.push(s) }
+                        children.push(ASTNode("ElifBlock", "", "", "", "", false, false,
+                            false, false, [], [], elif_children, elif_tok.line, elif_tok.col))
+                        continue
+                    }
+                    var else_body = self.parse_block()
+                    var else_node = ASTNode("ElseBlock", "", "", "", "", false, false,
+                        false, false, [], [], else_body, tok.line, tok.col)
+                    children.push(else_node)
+                }
+                break
             }
             return ASTNode("If", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
         }
@@ -488,12 +883,7 @@ impl Parser {
         if tok.type_name == "WHILE" {
             self.advance()
             var cond = self.parse_expr(0)
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-            }
+            var body = self.parse_block()
             var children: Array<ASTNode> = [cond]
             for s in body { children.push(s) }
             return ASTNode("While", "", "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
@@ -509,12 +899,7 @@ impl Parser {
             if self.match_type("DOTDOT") {
                 range_end = self.parse_expr(0)
             }
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-            }
+            var body = self.parse_block()
             var children: Array<ASTNode> = [range_start, range_end]
             for s in body { children.push(s) }
             return ASTNode("For", var_name, "", "", "", false, false, false, false, [], [], children, tok.line, tok.col)
@@ -523,36 +908,34 @@ impl Parser {
         // Loop infinite loop
         if tok.type_name == "LOOP" {
             self.advance()
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-            }
-            return ASTNode("Loop", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
+            var body = self.parse_block()
+            var condition = ASTNode("Boolean", "", "true", "", "bool", false, false,
+                false, false, [], [], [], tok.line, tok.col)
+            var children: Array<ASTNode> = [condition]
+            for statement in body { children.push(statement) }
+            return ASTNode("While", "", "", "", "", false, false, false,
+                false, [], [], children, tok.line, tok.col)
         }
 
         // Unsafe block
         if tok.type_name == "UNSAFE" {
             self.advance()
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-            }
+            var body = self.parse_block()
             return ASTNode("UnsafeBlock", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
+        }
+
+        // Interrupt-masked scope for embedded targets.
+        if tok.type_name == "CRITICAL" {
+            self.advance()
+            var body = self.parse_block()
+            return ASTNode("CriticalBlock", "", "", "", "", false, false, false,
+                false, [], [], body, tok.line, tok.col)
         }
 
         // Spawn block
         if tok.type_name == "SPAWN" {
             self.advance()
-            var body: Array<ASTNode> = []
-            if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                    body.push(self.parse_statement())
-                }
-            }
+            var body = self.parse_block()
             return ASTNode("Spawn", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
         }
 
@@ -562,20 +945,28 @@ impl Parser {
             var target = self.parse_expr(0)
             var cases: Array<ASTNode> = []
             if self.match_type("LBRACE") {
-                while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
+                var closed = false
+                while self.current().type_name != "EOF" {
+                    if self.match_type("RBRACE") {
+                        closed = true
+                        break
+                    }
                     var pattern = self.parse_expr(0)
                     self.expect("FAT_ARROW")
                     var case_body: Array<ASTNode> = []
-                    if self.match_type("LBRACE") {
-                        while not self.match_type("RBRACE") and self.current().type_name != "EOF" {
-                            case_body.push(self.parse_statement())
-                        }
+                    if self.current().type_name == "LBRACE" or self.current().type_name == "COLON" {
+                        case_body = self.parse_block()
                     } else {
                         case_body.push(self.parse_statement())
                     }
                     var case_node = ASTNode("MatchCase", "", "", "", "", false, false, false, false, [], [], case_body, pattern.line, pattern.col)
                     cases.push(pattern)
                     cases.push(case_node)
+                    self.match_type("COMMA")
+                }
+                if not closed {
+                    self.has_error = true
+                    self.error_msg = "Unclosed match block: expected '}'"
                 }
             }
             var children: Array<ASTNode> = [target]
@@ -585,6 +976,12 @@ impl Parser {
 
         // General expression / assignment statement
         var expr = self.parse_expr(0)
+        if self.match_type("ARROW") {
+            var name = self.expect("IDENT").value
+            self.match_type("SEMICOLON")
+            return ASTNode("VarDecl", name, "", "", "", false, false, false,
+                false, [], [], [expr], tok.line, tok.col)
+        }
         if self.match_type("ASSIGN") {
             var val_expr = self.parse_expr(0)
             self.match_type("SEMICOLON")
@@ -599,7 +996,12 @@ impl Parser {
         while self.current().type_name != "EOF" {
             while self.match_type("SEMICOLON") { }
             if self.current().type_name == "EOF" { break }
+            if self.current().type_name == "DOC_COMMENT" {
+                self.last_doc_comment = self.advance().value
+                continue
+            }
             stmts.push(self.parse_statement())
+            self.last_doc_comment = ""
         }
         return ASTNode("Program", "main", "", "", "", false, false, false, false, [], [], stmts, 1, 1)
     }

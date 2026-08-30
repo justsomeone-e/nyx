@@ -113,9 +113,7 @@ def run_rust_e2e_tests():
     print("⚡ HOLYEASYLANG RUST (hers - 2021 Edition) END-TO-END CONFORMANCE")
     print("=" * 70)
     
-    rustc_path = r"C:\Program Files\Rust stable MSVC 1.98\bin\rustc.exe"
-    if not os.path.exists(rustc_path):
-        rustc_path = shutil.which("rustc")
+    rustc_path = shutil.which("rustc")
         
     if not rustc_path or not os.path.exists(rustc_path):
         print("\033[93m[!] WARNING: rustc compiler not found on system.\033[0m")

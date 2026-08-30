@@ -1,27 +1,178 @@
 {
   "name": "nyx-language-support",
-  "displayName": "nyx Language Support & IntelliSense",
-  "description": "Syntax highlighting, snippets, and rich IntelliSense for nyx (.nyx)",
-  "version": "2.0.0",
+  "displayName": "Nyx Language Toolchain",
+  "description": "Native compiler tooling, IntelliSense, and one-click multi-target workflows for Nyx.",
+  "version": "4.0.0-dev.1",
   "publisher": "nyx",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/justsomeone-e/nyx.git"
+  },
+  "homepage": "https://github.com/justsomeone-e/nyx#readme",
+  "bugs": {
+    "url": "https://github.com/justsomeone-e/nyx/issues"
+  },
+  "galleryBanner": {
+    "color": "#171A35",
+    "theme": "dark"
+  },
   "engines": {
-    "vscode": "^1.75.0"
+    "vscode": "^1.91.0"
   },
   "main": "./extension.js",
+  "icon": "images/nyx-icon.png",
+  "scripts": {
+    "test": "node test_contract.js",
+    "package": "vsce package"
+  },
   "activationEvents": [
-    "*"
+    "onLanguage:nyxlang",
+    "onCommand:nyx.runCurrentFile",
+    "onCommand:nyx.buildCurrentFile",
+    "onCommand:nyx.checkCurrentFile",
+    "onCommand:nyx.toolchainDoctor",
+    "onCommand:nyx.openRepository",
+    "onCommand:nyx.openDocumentation",
+    "onCommand:nyx.openReleases",
+    "onCommand:nyx.openRoadmap",
+    "onCommand:nyx.reportIssue"
   ],
   "categories": [
     "Programming Languages",
     "Snippets"
   ],
+  "keywords": [
+    "nyx",
+    "compiler",
+    "language",
+    "systems programming",
+    "webassembly",
+    "intellisense"
+  ],
   "contributes": {
+    "configuration": {
+      "title": "Nyx",
+      "properties": {
+        "nyx.server.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable diagnostics, hover, completion, and definition support from nyx lsp."
+        },
+        "nyx.server.path": {
+          "type": "string",
+          "default": "nyx",
+          "description": "Path to the Nyx CLI used for the language server and commands. The default prefers ~/.nyx/bin/nyx before PATH."
+        },
+        "nyx.run.target": {
+          "type": "string",
+          "enum": [
+            "source",
+            "hecpp",
+            "hejs",
+            "hepy"
+          ],
+          "enumDescriptions": [
+            "Use the #target directive in the active source file (hecpp when omitted).",
+            "Compile and run as a native C++20 executable.",
+            "Run through the Node.js ES2022 backend.",
+            "Run through the Python 3 backend."
+          ],
+          "default": "source",
+          "description": "Target override used by the VS Code Run and Build commands."
+        }
+      }
+    },
+    "commands": [
+      {
+        "command": "nyx.runCurrentFile",
+        "title": "Nyx: Run Current File",
+        "icon": "$(play)"
+      },
+      {
+        "command": "nyx.buildCurrentFile",
+        "title": "Nyx: Build Current File",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "nyx.checkCurrentFile",
+        "title": "Nyx: Check Current File",
+        "icon": "$(check)"
+      },
+      {
+        "command": "nyx.toolchainDoctor",
+        "title": "Nyx: Toolchain Doctor"
+      },
+      {
+        "command": "nyx.openRepository",
+        "title": "Nyx: Open GitHub Repository",
+        "icon": "$(github-inverted)"
+      },
+      {
+        "command": "nyx.openDocumentation",
+        "title": "Nyx: Open Documentation",
+        "icon": "$(book)"
+      },
+      {
+        "command": "nyx.openReleases",
+        "title": "Nyx: Open Releases",
+        "icon": "$(versions)"
+      },
+      {
+        "command": "nyx.openRoadmap",
+        "title": "Nyx: Open Compiler Roadmap",
+        "icon": "$(map)"
+      },
+      {
+        "command": "nyx.reportIssue",
+        "title": "Nyx: Report an Issue",
+        "icon": "$(bug)"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "nyx.runCurrentFile",
+          "when": "resourceLangId == nyxlang",
+          "group": "navigation@1"
+        },
+        {
+          "command": "nyx.buildCurrentFile",
+          "when": "resourceLangId == nyxlang",
+          "group": "navigation@2"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "nyx.runCurrentFile",
+          "when": "resourceLangId == nyxlang",
+          "group": "navigation@1"
+        },
+        {
+          "command": "nyx.checkCurrentFile",
+          "when": "resourceLangId == nyxlang",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "languages": [
       {
         "id": "nyxlang",
-        "aliases": ["nyx", "Nyx", "nyxlang", "he"],
-        "extensions": [".nyx", ".he"],
-        "configuration": "./language-configuration.json"
+        "aliases": [
+          "nyx",
+          "Nyx",
+          "nyxlang",
+          "he"
+        ],
+        "extensions": [
+          ".nyx",
+          ".he"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./images/nyx-file-icon.png",
+          "dark": "./images/nyx-file-icon.png"
+        }
       }
     ],
     "grammars": [
@@ -37,5 +188,11 @@
         "path": "./snippets/nyx.snippets.json"
       }
     ]
+  },
+  "dependencies": {
+    "vscode-languageclient": "10.1.1"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "3.9.2"
   }
 }

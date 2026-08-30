@@ -40,9 +40,9 @@ release(buffer)
             """#target hecpp
 import "native/gpio"
 
-set_mode(13, GPIO_OUTPUT)
-write(13, GPIO_HIGH)
-write(13, GPIO_LOW)
+mode(13, PIN_OUTPUT)
+write(13, PIN_HIGH)
+write(13, PIN_LOW)
 print("GPIO sequence complete")
 """,
             "GPIO sequence complete"

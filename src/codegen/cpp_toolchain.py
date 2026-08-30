@@ -3,11 +3,16 @@ import sys
 import subprocess
 import shutil
 import glob
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 class CppToolchain:
     _cached_compiler: Optional[str] = None
     _cached_ar: Optional[str] = None
+    NATIVE_COMPILER_REQUIREMENT = (
+        "hecpp native builds require a working C++20 compiler: Clang++, "
+        "GCC/G++, or MSVC cl. Install one and expose it on PATH, or set "
+        "NYX_CXX to the compiler executable. Run 'nyx doctor' to verify it."
+    )
 
     @staticmethod
     def test_compiler_capabilities(compiler_path: str) -> bool:
@@ -59,6 +64,16 @@ class CppToolchain:
         if cls._cached_compiler and os.path.exists(cls._cached_compiler):
             return cls._cached_compiler
         candidates = []
+
+        # Explicit configuration wins and is validated by the same compile/run
+        # capability probe as auto-discovered compilers.
+        configured = os.environ.get("NYX_CXX", "").strip()
+        if configured:
+            configured_path = shutil.which(configured)
+            if not configured_path:
+                configured_path = os.path.abspath(os.path.expanduser(configured))
+            if os.path.isfile(configured_path):
+                candidates.append(configured_path)
         
         # 1. PATH (prefer x86_64 or native)
         for c in ('x86_64-w64-mingw32-clang++', 'x86_64-w64-mingw32-g++', 'clang++', 'g++', 'cl', 'gcc'):
@@ -77,7 +92,6 @@ class CppToolchain:
 
         # 3. Standard Windows Locations
         fixed_paths = [
-            os.path.join(local_app_data, 'Microsoft', 'WinGet', 'Packages', 'MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe', 'llvm-mingw-20260616-ucrt-x86_64', 'bin', 'clang++.exe'),
             r'C:\msys64\ucrt64\bin\g++.exe',
             r'C:\msys64\mingw64\bin\g++.exe',
             r'C:\MinGW\bin\g++.exe',
@@ -120,7 +134,7 @@ class CppToolchain:
     def compile_cpp(cls, cpp_filepath: str, out_exe: Optional[str] = None, link_libraries: Optional[list] = None, output_type: str = "exe", include_dirs: Optional[list] = None, lib_dirs: Optional[list] = None) -> Tuple[bool, str]:
         compiler = cls.find_compiler()
         if not compiler:
-            return False, "No capable C++20 compiler for host architecture found."
+            return False, cls.NATIVE_COMPILER_REQUIREMENT
 
         compiler_name = os.path.basename(compiler).lower()
         link_libs = link_libraries or []
@@ -232,16 +246,22 @@ class CppToolchain:
                 return False, f"Failed to execute compiler '{compiler}': {e}"
 
     @classmethod
-    def run_executable(cls, exe_filepath: str) -> Tuple[int, str]:
+    def run_executable(
+        cls,
+        exe_filepath: str,
+        args: Optional[Sequence[str]] = None,
+        timeout: int = 10,
+    ) -> Tuple[int, str]:
         compiler = cls.find_compiler()
         env = os.environ.copy()
         if compiler:
             bin_dir = os.path.dirname(compiler)
             env['PATH'] = bin_dir + os.pathsep + env.get('PATH', '')
         try:
-            res = subprocess.run([exe_filepath], capture_output=True, text=True, encoding='utf-8', errors='replace', env=env, timeout=10)
+            command = [exe_filepath, *(str(arg) for arg in (args or ()))]
+            res = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', errors='replace', env=env, timeout=timeout)
             return res.returncode, res.stdout or res.stderr
         except subprocess.TimeoutExpired:
-            return -1, "Execution timed out (10s limit)"
+            return -1, f"Execution timed out ({timeout}s limit)"
         except Exception as e:
             return -1, f"Failed to run executable: {e}"

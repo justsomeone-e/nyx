@@ -1,7 +1,10 @@
+import json
 import os
+import subprocess
 import sys
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+CLI_PATH = os.path.join(BASE_DIR, "src", "cli.py")
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
@@ -12,6 +15,11 @@ if sys.stdout.encoding != 'utf-8':
         pass
 
 from src.toolchain.lsp_server import NyxuageServer
+from src.core.language_surface import (
+    EXPERIMENTAL_KEYWORDS,
+    RESERVED_KEYWORDS,
+    STABLE_KEYWORDS,
+)
 
 def run_lsp_suite():
     print("=" * 70)
@@ -24,9 +32,9 @@ def run_lsp_suite():
 
 struct Point { x: int, y: int }
 
-fn calculate_distance(p1: Point, p2: Point) -> int {
-    var dx = abs_val(p1.x - p2.x)
-    var dy = abs_val(p1.y - p2.y)
+fn calculate_distance(p1: Point, p2: Point) -> float {
+    var dx = absolute(p1.x - p2.x)
+    var dy = absolute(p1.y - p2.y)
     return dx + dy
 }
 
@@ -40,11 +48,21 @@ print(calculate_distance(pt, pt))
     print("[*] Testing LSP Autocompletion (Local & stdlib imported symbols)...")
     comp_items = server.handle_completion(test_uri, {"line": 10, "character": 5})
     labels = [item["label"] for item in comp_items]
-    assert "abs_val" in labels, "Imported stdlib function 'abs_val' must appear in completions"
-    assert "power" in labels, "Imported stdlib function 'power' must appear in completions"
+    assert "absolute" in labels, "Imported stdlib function 'absolute' must appear in completions"
+    assert "pow" in labels, "Imported stdlib function 'pow' must appear in completions"
     assert "Point" in labels, "Local struct 'Point' must appear in completions"
     assert "calculate_distance" in labels, "Local function 'calculate_distance' must appear in completions"
     assert "print" in labels and "match" in labels
+    assert set(STABLE_KEYWORDS).issubset(labels)
+    assert set(EXPERIMENTAL_KEYWORDS).issubset(labels)
+    assert set(RESERVED_KEYWORDS).isdisjoint(labels)
+    assert "val" not in labels
+
+    with open(os.path.join(BASE_DIR, "vscode-extension", "language-surface.json"), "r", encoding="utf-8") as handle:
+        editor_surface = json.load(handle)
+    assert tuple(editor_surface["stableKeywords"]) == STABLE_KEYWORDS
+    assert tuple(editor_surface["experimentalKeywords"]) == EXPERIMENTAL_KEYWORDS
+    assert tuple(editor_surface["reservedKeywords"]) == RESERVED_KEYWORDS
     print(f"  [PASS] Autocompletion returned {len(comp_items)} verified symbols")
 
     # 2. Test Hover Information
@@ -64,8 +82,31 @@ print(calculate_distance(pt, pt))
     assert def_res["range"]["start"]["line"] == 4, "Should point to line 5 (0-indexed 4)"
     print("  [PASS] Go-To-Definition resolved exact AST source location")
 
+    # 4. Verify the real CLI process speaks framed JSON-RPC without import errors.
+    print("[*] Testing CLI LSP JSON-RPC process contract...")
+    messages = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {}},
+        {"jsonrpc": "2.0", "id": 2, "method": "shutdown", "params": {}},
+        {"jsonrpc": "2.0", "method": "exit", "params": {}},
+    ]
+    wire_input = b""
+    for message in messages:
+        body = json.dumps(message).encode("utf-8")
+        wire_input += f"Content-Length: {len(body)}\r\n\r\n".encode("ascii") + body
+    process = subprocess.run(
+        [sys.executable, CLI_PATH, "lsp"],
+        cwd=BASE_DIR,
+        input=wire_input,
+        capture_output=True,
+    )
+    assert process.returncode == 0, process.stderr.decode("utf-8", errors="replace")
+    output = process.stdout
+    assert b'"id": 1' in output and b'"hoverProvider": true' in output
+    assert b'"id": 2' in output and b'"result": null' in output
+    print("  [PASS] nyx lsp initialize/shutdown framing verified")
+
     print("=" * 70)
-    print("[OK] LSP v2 Conformance: 3/3 Passed")
+    print("[OK] LSP v2 Conformance: 4/4 Passed")
     print("=" * 70)
     return True
 

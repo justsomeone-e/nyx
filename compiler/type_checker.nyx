@@ -24,16 +24,59 @@ struct Scope {
     depth: int
 }
 
+fn typechecker_int_literal_fits_i64(value: string) -> bool {
+    if value == "" { return false }
+    var start = 0
+    var negative = false
+    if value[0] == "-" {
+        negative = true
+        start = 1
+    }
+    if start >= len(value) { return false }
+    while start < len(value) - 1 and value[start] == "0" { start = start + 1 }
+    var digit_count = len(value) - start
+    if digit_count < 19 { return true }
+    if digit_count > 19 { return false }
+    var limit = "9223372036854775807"
+    if negative { limit = "9223372036854775808" }
+    for i in 0..18 {
+        var digit = value[start + i]
+        if digit < limit[i] { return true }
+        if digit > limit[i] { return false }
+    }
+    return true
+}
+
 struct TypeChecker {
     scopes: Array<Scope>,
     struct_fields: Array<StructFieldInfo>,
     functions: Array<FunctionSignature>,
     current_fn_return_type: string,
+    current_fn_is_async: bool,
     has_error: bool,
     error_msg: string
 }
 
 impl TypeChecker {
+    fn validate_integer_literals(self, node: ASTNode) -> void {
+        if node.kind == "Number" and not contains(node.value, ".") and
+            not typechecker_int_literal_fits_i64(node.value) {
+            self.has_error = true
+            self.error_msg = "E2012: integer literal outside signed 64-bit range: " + node.value
+        }
+        for i in 0..len(node.children)-1 {
+            self.validate_integer_literals(node.children[i])
+        }
+    }
+
+    fn require_bool_condition(self, node: ASTNode, context: string) -> void {
+        var actual = self.infer_type(node)
+        if actual != "bool" and actual != "any" {
+            self.has_error = true
+            self.error_msg = "E2013: " + context + " condition must be bool, found " + actual
+        }
+    }
+
     fn enter_scope(self) {
         var d = len(self.scopes)
         self.scopes.push(Scope([], d))
@@ -109,6 +152,23 @@ impl TypeChecker {
     fn is_compatible(self, expected: string, found: string) -> bool {
         if expected == "" or expected == "any" or found == "any" { return true }
         if expected == found { return true }
+        // Empty collection literals start as Array<any>; their element type is
+        // fixed by the declaration/call context. Match the reference frontend's
+        // generic container compatibility during bootstrap.
+        if len(expected) >= 6 and len(found) >= 6 and
+            expected[0] == "A" and expected[1] == "r" and expected[2] == "r" and
+            expected[3] == "a" and expected[4] == "y" and expected[5] == "<" and
+            found[0] == "A" and found[1] == "r" and found[2] == "r" and
+            found[3] == "a" and found[4] == "y" and found[5] == "<" {
+            return true
+        }
+        if len(expected) >= 7 and len(found) >= 7 and
+            expected[0] == "R" and expected[1] == "e" and expected[2] == "s" and
+            expected[3] == "u" and expected[4] == "l" and expected[5] == "t" and expected[6] == "<" and
+            found[0] == "R" and found[1] == "e" and found[2] == "s" and
+            found[3] == "u" and found[4] == "l" and found[5] == "t" and found[6] == "<" {
+            return true
+        }
         // float accepts int
         if expected == "float" and found == "int" { return true }
         // optional accepts null or base type
@@ -158,8 +218,31 @@ impl TypeChecker {
             return "int"
         }
 
+        if node.kind == "Await" {
+            if not self.current_fn_is_async {
+                self.has_error = true
+                self.error_msg = "'await' is only valid inside an async function"
+                return "any"
+            }
+            if len(node.children) == 0 { return "any" }
+            var awaited_type = self.infer_type(node.children[0])
+            if awaited_type == "any" { return "any" }
+            if len(awaited_type) > 6 and awaited_type[0] == "T" and
+                awaited_type[1] == "a" and awaited_type[2] == "s" and
+                awaited_type[3] == "k" and awaited_type[4] == "<" and
+                awaited_type[len(awaited_type)-1] == ">" {
+                var result_type = ""
+                for i in 5..len(awaited_type)-2 { result_type = result_type + awaited_type[i] }
+                return result_type
+            }
+            self.has_error = true
+            self.error_msg = "'await' operand is not a Task: " + awaited_type
+            return "any"
+        }
+
         if node.kind == "FunctionCall" {
             if node.name == "print" { return "void" }
+            if node.name == "args" { return "Array<string>" }
             if node.name == "to_string" or node.name == "to_str" { return "string" }
             if node.name == "to_int" { return "int" }
             if node.name == "addr" or node.name == "peek" { return "int" }
@@ -260,16 +343,24 @@ impl TypeChecker {
         if node.kind == "FunctionDef" {
             var param_types: Array<string> = []
             for i in 0..len(node.params)-1 {
-                param_types.push(node.params[i].type_annot)
+                var param_type = node.params[i].type_annot
+                if param_type == "" { param_type = "any" }
+                param_types.push(param_type)
             }
-            self.register_function(node.name, param_types, node.type_name)
+            var public_return_type = node.type_name
+            if node.is_async { public_return_type = "Task<" + node.type_name + ">" }
+            self.register_function(node.name, param_types, public_return_type)
 
             var prev_ret = self.current_fn_return_type
+            var prev_async = self.current_fn_is_async
             self.current_fn_return_type = node.type_name
+            self.current_fn_is_async = node.is_async
 
             self.enter_scope()
             for i in 0..len(node.params)-1 {
-                self.register_symbol(node.params[i].name, node.params[i].type_annot)
+                var param_type = node.params[i].type_annot
+                if param_type == "" { param_type = "any" }
+                self.register_symbol(node.params[i].name, param_type)
             }
 
             for i in 0..len(node.children)-1 {
@@ -278,6 +369,7 @@ impl TypeChecker {
             self.exit_scope()
 
             self.current_fn_return_type = prev_ret
+            self.current_fn_is_async = prev_async
             return
         }
 
@@ -295,7 +387,73 @@ impl TypeChecker {
             return
         }
 
-        if node.kind == "If" or node.kind == "While" {
+        if node.kind == "If" {
+            if len(node.children) > 0 { self.require_bool_condition(node.children[0], "if") }
+            self.enter_scope()
+            var idx = 1
+            while idx < len(node.children) and node.children[idx].kind != "ElifBlock" and node.children[idx].kind != "ElseBlock" {
+                self.check_statement(node.children[idx])
+                idx = idx + 1
+            }
+            self.exit_scope()
+
+            while idx < len(node.children) and node.children[idx].kind == "ElifBlock" {
+                var branch = node.children[idx]
+                if len(branch.children) > 0 { self.require_bool_condition(branch.children[0], "elif") }
+                self.enter_scope()
+                for i in 1..len(branch.children)-1 {
+                    self.check_statement(branch.children[i])
+                }
+                self.exit_scope()
+                idx = idx + 1
+            }
+
+            if idx < len(node.children) and node.children[idx].kind == "ElseBlock" {
+                self.enter_scope()
+                for i in 0..len(node.children[idx].children)-1 {
+                    self.check_statement(node.children[idx].children[i])
+                }
+                self.exit_scope()
+            }
+            return
+        }
+
+        if node.kind == "Throw" {
+            if len(node.children) > 0 { self.infer_type(node.children[0]) }
+            return
+        }
+
+        if node.kind == "TryCatch" {
+            if len(node.children) > 0 {
+                self.enter_scope()
+                for i in 0..len(node.children[0].children)-1 {
+                    self.check_statement(node.children[0].children[i])
+                }
+                self.exit_scope()
+            }
+            if len(node.children) > 1 {
+                self.enter_scope()
+                self.register_symbol(node.children[1].name, "string")
+                for i in 0..len(node.children[1].children)-1 {
+                    self.check_statement(node.children[1].children[i])
+                }
+                self.exit_scope()
+            }
+            return
+        }
+
+        if node.kind == "While" {
+            if len(node.children) > 0 { self.require_bool_condition(node.children[0], "while") }
+            self.enter_scope()
+            for i in 1..len(node.children)-1 {
+                self.check_statement(node.children[i])
+            }
+            self.exit_scope()
+            return
+        }
+
+        if node.kind == "Guard" {
+            if len(node.children) > 0 { self.require_bool_condition(node.children[0], "guard") }
             self.enter_scope()
             for i in 1..len(node.children)-1 {
                 self.check_statement(node.children[i])
@@ -319,6 +477,7 @@ impl TypeChecker {
     }
 
     fn check_program(self, ast: ASTNode) -> bool {
+        self.validate_integer_literals(ast)
         self.enter_scope()
         self.register_symbol("print", "void")
         self.register_symbol("to_string", "string")
@@ -326,6 +485,7 @@ impl TypeChecker {
         self.register_symbol("to_int", "int")
         self.register_symbol("addr", "int")
         self.register_symbol("peek", "int")
+        self.register_symbol("args", "Array<string>")
 
         for i in 0..len(ast.children)-1 {
             self.check_statement(ast.children[i])

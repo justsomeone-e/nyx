@@ -43,15 +43,19 @@
     },
     {
       "name": "keyword.declaration.nyx",
-      "match": "\\b(var|let|const|type|struct|impl|trait|enum|fn|extern|test)\\b"
+      "match": "\\b(var|let|set|const|volatile|type|struct|impl|trait|enum|fn|interrupt|extern|async|test)\\b"
     },
     {
       "name": "keyword.control.nyx",
-      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|defer|guard|try|catch|unsafe|import|use|from|export|assert|spawn|channel)\\b"
+      "match": "\\b(if|else|elif|for|in|while|loop|match|return|throw|continue|break|await|defer|guard|try|catch|unsafe|critical|import|use|from|as|assert|spawn)\\b"
+    },
+    {
+      "name": "storage.type.nyx",
+      "match": "\\b(int|i8|i16|i32|i64|u8|u16|u32|u64|float|f32|f64|bool|string|char|uintptr|void|any|Array|Buffer|Option|Result|Channel|Task)\\b"
     },
     {
       "name": "support.function.builtin.nyx",
-      "match": "\\b(print|println|len|length|addr|peek|poke|memdump|delay_ms|contains|to_string|to_int|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
+      "match": "\\b(print|println|input|len|length|addr|peek|poke|memdump|delay_ms|contains|is_number|to_string|to_int|channel|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
     },
     {
       "name": "constant.language.boolean.nyx",
@@ -93,7 +97,7 @@
     },
     {
       "name": "entity.name.function.nyx",
-      "match": "(?:fn)\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
+      "match": "(?:interrupt\\s+)?fn\\s+([a-zA-Z_][a-zA-Z0-9_]*)",
       "captures": {
         "1": { "name": "entity.name.function.nyx" }
       }

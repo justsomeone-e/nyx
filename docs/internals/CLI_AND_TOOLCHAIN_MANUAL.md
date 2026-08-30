@@ -2,21 +2,23 @@
 
 ## 1. Toolchain Overview
 
-Nyx provides a unified CLI driver (`he` / `he.bat`) covering the full developer lifecycle: project scaffolding, type-checking, native compilation, direct execution, in-file testing, formatting, and package management.
+Nyx provides a unified `nyx` CLI covering project scaffolding, type-checking,
+native compilation, direct execution, in-file testing, formatting, editor
+services, documentation, and manifest/lockfile management.
 
 ```text
-                                 he CLI
+                                nyx CLI
                                    │
        ┌───────────┬───────────────┼───────────────┬───────────┐
        ↓           ↓               ↓               ↓           ↓
-   [ he new ]  [ he check ]   [ he build ]    [ he run ]  [ he test ]
+  [ nyx new ] [ nyx check ] [ nyx build ]  [ nyx run ] [ nyx test ]
 ```
 
 ---
 
-## 2. Project Conventions & Manifest (`he.toml`)
+## 2. Project Conventions & Manifest (`nyx.toml`)
 
-Every Nyx project contains a `he.toml` manifest file at its root:
+Every Nyx project contains a `nyx.toml` manifest file at its root:
 
 ```toml
 [package]
@@ -24,7 +26,7 @@ name = "my_project"
 version = "0.1.0"
 edition = "2026"
 target = "hecpp"          # Default target backend: hecpp, hepy, hejs, hers
-entry = "src/main.he"     # Application entrypoint
+entry = "src/main.nyx"    # Application entrypoint
 
 [dependencies]
 # std = "4.0.0"
@@ -38,11 +40,11 @@ debug = false
 ### Standard Project Layout
 ```text
 my_project/
-├── he.toml               # Package manifest
-├── he.lock               # Resolved dependency lockfile
+├── nyx.toml              # Package manifest
+├── nyx.lock              # Deterministic dependency lockfile
 ├── .gitignore            # Standard git ignore rules
 ├── src/
-│   └── main.he           # Main entrypoint
+│   └── main.nyx          # Main entrypoint
 └── build/                # Output binaries and transpiled modules
     ├── hecpp/
     │   └── main.exe      # Native C++20 Executable
@@ -57,32 +59,38 @@ my_project/
 ## 3. Command Reference
 
 ### Project Scaffolding
-* `he new <project_name>`: Scaffolds a new project directory with `he.toml`, `src/main.he`, and `.gitignore`.
-* `he init [name]`: Initializes a `he.toml` manifest in the current directory.
+* `nyx new <project_name>`: Scaffolds a project with `nyx.toml`, `src/main.nyx`, and editor tasks.
+* `nyx init [name]`: Initializes `nyx.toml` and `nyx.lock`; refuses to overwrite unless `--force` is explicit.
 
 ### Build & Verification
-* `he check [file.he]`: Performs rapid syntax and semantic validation through `Lexer -> Parser -> TypeChecker` without code generation.
-* `he build [file.he] [--target <hecpp|hepy|hejs|hers>]`: Transpiles and compiles the project into the `build/<target>/` directory.
+* `nyx check [file.nyx]`: Performs syntax and semantic validation without code generation.
+* `nyx build [file.nyx] [--target <hecpp|hepy|hejs|hers>]`: Emits or compiles into `build/<target>/`.
   * If targeting `hecpp`, compiles directly to a native `.exe` binary.
   * If targeting `hejs`, emits an ES2022 Node.js module.
   * If targeting `hers`, emits clean, borrow-checked Rust 2021 code.
-* `he run [file.he] [--target <hecpp|hepy|hejs|hers>]`: Compiles and executes the project or file immediately with the selected backend.
-* `he clean`: Removes all `build/`, `target/`, and temporary compiler cache artifacts.
+* `nyx run [file.nyx] [--target <hecpp|hepy|hejs|hers>]`: Compiles and executes with the selected backend.
+* `nyx clean`: Removes local `build/`, `target/`, and `__pycache__/` artifacts.
 
 ### Testing & Quality Assurance
-* `he test`: Runs the automated test suite across all 4 backends (Negative, Fuzz, Differential, E2E, and 138-Regression Battery).
-* `he test <file.he>`: Runs native in-file unit test blocks (`test "name" { assert(...) }`).
-* `he fmt <file.he>`: Auto-formats and beautifies source code.
-* `he lint <file.he>`: Runs static analysis and unsafe memory boundary checks.
-* `he debug <file.he>`: Launches the step-by-step interactive debugger.
-* `he profile <file.he>`: Generates a routine execution and bottleneck profiling report.
-* `he doc <file.he>`: Generates HTML API documentation from `///` doc comments.
+* `nyx test`: Runs the unified compiler/backend regression framework.
+* `nyx test <file.nyx>`: Runs in-file test blocks through the reference target.
+* `nyx fmt <file.nyx>`: Applies string/comment-safe, idempotent source formatting.
+* `nyx lint <file.nyx>`: Reports static style and unsafe-boundary warnings.
+* `nyx debug <file.nyx>`: Opens a validated source-line inspector. It does not invent runtime values; runtime source maps remain future work.
+* `nyx profile <file.nyx> [--target t]`: Executes a real compile+run and reports measured whole-program wall time. Function-level instrumentation is not yet available.
+* `nyx doc <file.nyx>`: Generates escaped local HTML API documentation from `///` comments.
 
 ### Package Management
-* `he add <package_name>`: Adds a dependency into `he.toml` and locks in `he.lock`.
-* `he remove <package_name>`: Removes a dependency from `he.toml` and `he.lock`.
-* `he install`: Resolves and locks all dependencies from `he.toml`.
-* `he pkg`: Displays the current project manifest and dependency status.
+* `nyx add <package> [@version]`: Mutates `nyx.toml` and regenerates `nyx.lock`.
+* `nyx remove <package>`: Removes one dependency from both manifest and lockfile.
+* `nyx install`: Validates manifest dependencies and regenerates the lockfile.
+* `nyx pkg`: Displays the current project, dependencies, native settings, and build configuration.
+
+The RC1 package contract is manifest/lockfile management only. There is no
+remote package registry download yet; `nyx install` states this explicitly and
+never reports a fake network installation.
 
 ### Toolchain Diagnostics
-* `he version`: Displays Core compiler version and detected host toolchains (`clang++`, `node`, `rustc`, `python`).
+* `nyx version`: Displays compiler version and detected host toolchains.
+* `nyx doctor`: Reports actionable C++20, Node.js, Rust, and Python availability.
+* `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract.

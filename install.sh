@@ -1,34 +1,263 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 echo "==================================================================="
-echo "⚡ Installing Nyx Core Toolchain (v2.0.0 Beta 1)..."
+echo "Installing nyx native toolchain (v4 development channel)..."
 echo "==================================================================="
 
-INSTALL_DIR="$HOME/.nyx"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+INSTALL_DIR="${NYX_INSTALL_DIR:-$HOME/.nyx}"
 BIN_DIR="$INSTALL_DIR/bin"
-
-mkdir -p "$BIN_DIR"
-
-if ! command -v python3 &> /dev/null; then
-    echo "[!] Warning: Python 3.10+ is required to run Nyx."
-    echo "    Install via your package manager (e.g. sudo apt install python3)"
-else
-    echo "[✓] Found Python: $(command -v python3)"
+SRC_DIR="$INSTALL_DIR/src"
+COMPILER_DIR="$INSTALL_DIR/compiler"
+EXTENSION_DIR="$INSTALL_DIR/vscode-extension"
+NATIVE_EXE="$BIN_DIR/nyxc"
+REPOSITORY="justsomeone-e/nyx"
+TEMP_DIR=""
+EXPECTED_VERSION=""
+if [ -f "$SCRIPT_DIR/VERSION" ]; then
+    EXPECTED_VERSION="$(tr -d '\r\n' < "$SCRIPT_DIR/VERSION")"
 fi
 
-# Create executable wrappers for nyx and he
-for cmd in nyx he; do
-    WRAPPER="$BIN_DIR/$cmd"
-    cat << 'EOF' > "$WRAPPER"
-#!/usr/bin/env bash
-exec python3 "$HOME/.nyx/src/cli.py" "$@"
-EOF
-    chmod +x "$WRAPPER"
+cleanup() {
+    if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
+        temp_base="${TMPDIR:-/tmp}"
+        case "$TEMP_DIR" in
+            "$temp_base"/nyx-install.*) rm -rf -- "$TEMP_DIR" ;;
+            *) echo "[!] Refusing to remove unexpected temporary path: $TEMP_DIR" >&2 ;;
+        esac
+    fi
+}
+trap cleanup EXIT
+
+download_file() {
+    source_url="$1"
+    destination="$2"
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --retry 2 --connect-timeout 15 "$source_url" -o "$destination"
+        return
+    fi
+    if command -v wget >/dev/null 2>&1; then
+        wget -q --timeout=30 -O "$destination" "$source_url"
+        return
+    fi
+    return 127
+}
+
+find_python() {
+    if command -v python3 >/dev/null 2>&1; then
+        command -v python3
+    elif command -v python >/dev/null 2>&1; then
+        command -v python
+    fi
+}
+
+validate_native() {
+    candidate="$1"
+    [ -f "$candidate" ] && [ -x "$candidate" ] || return 1
+    version_output="$("$candidate" --version 2>&1)" || return 1
+    if [ -n "$EXPECTED_VERSION" ]; then
+        case "$version_output" in
+            "nyxc $EXPECTED_VERSION "*) return 0 ;;
+            *) return 1 ;;
+        esac
+    fi
+    case "$version_output" in
+        "nyxc "*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+platform_name=""
+case "$(uname -s)" in
+    Linux) platform_name="linux" ;;
+    Darwin) platform_name="macos" ;;
+    *) echo "[!] Unsupported native platform: $(uname -s)" >&2; exit 1 ;;
+esac
+
+architecture=""
+case "$(uname -m)" in
+    x86_64|amd64) architecture="x86_64" ;;
+    arm64|aarch64) architecture="arm64" ;;
+    *) echo "[!] Unsupported native architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+
+PYTHON_BIN="$(find_python || true)"
+SOURCE_ROOT=""
+if [ -d "$SCRIPT_DIR/src" ]; then
+    SOURCE_ROOT="$SCRIPT_DIR"
+fi
+
+mkdir -p "$BIN_DIR" "$SRC_DIR" "$COMPILER_DIR"
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/nyx-install.XXXXXX")"
+
+NATIVE_READY=0
+if [ -n "${NYX_NATIVE_COMPILER_PATH:-}" ]; then
+    if ! validate_native "$NYX_NATIVE_COMPILER_PATH"; then
+        echo "[!] NYX_NATIVE_COMPILER_PATH does not point to a working nyxc executable." >&2
+        exit 1
+    fi
+    cp "$NYX_NATIVE_COMPILER_PATH" "$NATIVE_EXE"
+    chmod +x "$NATIVE_EXE"
+    NATIVE_READY=1
+    echo "[OK] Installed native compiler from NYX_NATIVE_COMPILER_PATH."
+fi
+
+if [ "$NATIVE_READY" -eq 0 ] && [ -n "$SOURCE_ROOT" ]; then
+    for candidate in "$SOURCE_ROOT/build/self_host/nyxc" "$SOURCE_ROOT/bin/nyxc"; do
+        if validate_native "$candidate"; then
+            cp "$candidate" "$NATIVE_EXE"
+            chmod +x "$NATIVE_EXE"
+            NATIVE_READY=1
+            echo "[OK] Installed existing local native compiler."
+            break
+        fi
+    done
+fi
+
+if [ "$NATIVE_READY" -eq 0 ] && [ -z "$SOURCE_ROOT" ]; then
+    asset_name="nyxc-$platform_name-$architecture"
+    if [ -n "${NYX_RELEASE_TAG:-}" ]; then
+        release_base="https://github.com/$REPOSITORY/releases/download/$NYX_RELEASE_TAG"
+    else
+        release_base="https://github.com/$REPOSITORY/releases/latest/download"
+    fi
+    asset_path="$TEMP_DIR/$asset_name"
+    checksum_path="$TEMP_DIR/$asset_name.sha256"
+    echo "[*] Looking for native release asset $asset_name..."
+    if download_file "$release_base/$asset_name" "$asset_path" && \
+       download_file "$release_base/$asset_name.sha256" "$checksum_path"; then
+        checksum_ok=0
+        if command -v sha256sum >/dev/null 2>&1; then
+            (cd "$TEMP_DIR" && sha256sum -c "$asset_name.sha256" >/dev/null) && checksum_ok=1
+        elif command -v shasum >/dev/null 2>&1; then
+            (cd "$TEMP_DIR" && shasum -a 256 -c "$asset_name.sha256" >/dev/null) && checksum_ok=1
+        fi
+        if [ "$checksum_ok" -eq 1 ]; then
+            cp "$asset_path" "$NATIVE_EXE"
+            chmod +x "$NATIVE_EXE"
+            if validate_native "$NATIVE_EXE"; then
+                NATIVE_READY=1
+                echo "[OK] Installed SHA-256 verified native release compiler."
+            fi
+        else
+            echo "[!] Native release checksum verification failed; using source bootstrap if available." >&2
+        fi
+    fi
+fi
+
+if [ -z "$SOURCE_ROOT" ] && { [ "$NATIVE_READY" -eq 0 ] || [ -n "$PYTHON_BIN" ]; }; then
+    source_archive="$TEMP_DIR/nyx-source.tar.gz"
+    source_extract="$TEMP_DIR/source"
+    mkdir -p "$source_extract"
+    if [ -n "${NYX_RELEASE_TAG:-}" ]; then
+        source_url="https://github.com/$REPOSITORY/archive/refs/tags/$NYX_RELEASE_TAG.tar.gz"
+    else
+        source_url="https://github.com/$REPOSITORY/archive/refs/heads/main.tar.gz"
+    fi
+    echo "[*] Downloading nyx sources..."
+    if download_file "$source_url" "$source_archive" && tar -xzf "$source_archive" -C "$source_extract"; then
+        for candidate in "$source_extract"/*; do
+            if [ -d "$candidate/src" ]; then
+                SOURCE_ROOT="$candidate"
+                break
+            fi
+        done
+    else
+        echo "[!] Source download failed; continuing only if the native core is already installed." >&2
+    fi
+fi
+
+if [ -n "$SOURCE_ROOT" ]; then
+    if [ -f "$SOURCE_ROOT/VERSION" ]; then
+        EXPECTED_VERSION="$(tr -d '\r\n' < "$SOURCE_ROOT/VERSION")"
+    fi
+    echo "[*] Installing source and compiler support files..."
+    cp -R "$SOURCE_ROOT/src/." "$SRC_DIR/"
+    if [ -f "$SOURCE_ROOT/VERSION" ]; then
+        cp "$SOURCE_ROOT/VERSION" "$INSTALL_DIR/VERSION"
+    fi
+    if [ -d "$SOURCE_ROOT/compiler" ]; then
+        cp -R "$SOURCE_ROOT/compiler/." "$COMPILER_DIR/"
+    fi
+    if [ -d "$SOURCE_ROOT/vscode-extension" ]; then
+        mkdir -p "$EXTENSION_DIR"
+        for extension_file in \
+            package.json package-lock.json extension.js server_options.js nyx_commands.js \
+            language-configuration.json language-surface.json README.md CHANGELOG.md LICENSE
+        do
+            if [ -f "$SOURCE_ROOT/vscode-extension/$extension_file" ]; then
+                cp "$SOURCE_ROOT/vscode-extension/$extension_file" "$EXTENSION_DIR/$extension_file"
+            fi
+        done
+        for extension_directory in images snippets syntaxes; do
+            if [ -d "$SOURCE_ROOT/vscode-extension/$extension_directory" ]; then
+                mkdir -p "$EXTENSION_DIR/$extension_directory"
+                cp -R "$SOURCE_ROOT/vscode-extension/$extension_directory/." \
+                    "$EXTENSION_DIR/$extension_directory/"
+            fi
+        done
+    fi
+fi
+
+if [ "$NATIVE_READY" -eq 0 ] && validate_native "$NATIVE_EXE"; then
+    NATIVE_READY=1
+    echo "[OK] Reusing installed native compiler."
+fi
+
+if [ "$NATIVE_READY" -eq 0 ]; then
+    if [ -z "$PYTHON_BIN" ] || [ ! -f "$SRC_DIR/cli.py" ]; then
+        echo "[!] No prebuilt nyxc is available for this platform." >&2
+        echo "    Python 3.10+ and a C++20 compiler are required for source bootstrap." >&2
+        exit 1
+    fi
+    echo "[*] No matching prebuilt binary; bootstrapping native nyxc from source..."
+    (
+        cd "$INSTALL_DIR"
+        "$PYTHON_BIN" "$SRC_DIR/cli.py" self-host build -o "$NATIVE_EXE"
+    )
+    chmod +x "$NATIVE_EXE"
+    if ! validate_native "$NATIVE_EXE"; then
+        echo "[!] Bootstrapped native compiler failed validation." >&2
+        exit 1
+    fi
+    NATIVE_READY=1
+    echo "[OK] Native nyxc bootstrap completed."
+fi
+
+for command_name in nyx he; do
+    wrapper="$BIN_DIR/$command_name"
+    printf '%s\n' \
+        '#!/usr/bin/env bash' \
+        'set -euo pipefail' \
+        'wrapper_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"' \
+        'install_dir="$(dirname -- "$wrapper_dir")"' \
+        'native="$wrapper_dir/nyxc"' \
+        'python_cli="$install_dir/src/cli.py"' \
+        'case "${1:-}" in' \
+        '    check|compile|emit-cpp|version|--version|-v) exec "$native" "$@" ;;' \
+        'esac' \
+        'if command -v python3 >/dev/null 2>&1 && [ -f "$python_cli" ]; then' \
+        '    exec python3 "$python_cli" "$@"' \
+        'fi' \
+        'if command -v python >/dev/null 2>&1 && [ -f "$python_cli" ]; then' \
+        '    exec python "$python_cli" "$@"' \
+        'fi' \
+        'if [ "$#" -eq 0 ]; then exec "$native" --help; fi' \
+        'echo "This command still uses the optional Python orchestration layer. Install Python 3.10+, or use nyxc/check/compile/emit-cpp." >&2' \
+        'exit 2' > "$wrapper"
+    chmod +x "$wrapper"
 done
 
-echo "==================================================================="
-echo "[✓] Nyx binary wrappers created at: $BIN_DIR"
-echo "    Add to your PATH by adding the following line to ~/.bashrc or ~/.zshrc:"
-echo "    export PATH=\"\$PATH:$BIN_DIR\""
+if ! validate_native "$NATIVE_EXE"; then
+    echo "[!] Installed native nyxc failed final validation." >&2
+    exit 1
+fi
+
+echo "[OK] nyx installed successfully at: $INSTALL_DIR"
+echo "     Native core: nyxc --help (Python is not required)"
+echo "     Unified CLI: nyx --help (Python fallback for unported tools)"
+if [ "${NYX_SKIP_PATH_UPDATE:-0}" != "1" ]; then
+    echo "Add this directory to PATH: $BIN_DIR"
+fi
 echo "==================================================================="

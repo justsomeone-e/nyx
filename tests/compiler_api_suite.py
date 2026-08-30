@@ -1,0 +1,129 @@
+import contextlib
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+import io
+import json
+import os
+import sys
+
+
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT_DIR not in sys.path:
+    sys.path.insert(0, ROOT_DIR)
+
+from src import CompilerPlugin, NyxCompiler, check_source, compile_source
+from src.core.diagnostics import DiagnosticEmitter
+
+
+def run_compiler_api_suite() -> bool:
+    print("=" * 70)
+    print("NYX PUBLIC COMPILER API / EMBEDDING CONTRACT")
+    print("=" * 70)
+
+    source = "fn add(a: int, b: int) -> int { return a + b }\n"
+    expected = {
+        "hecpp": (".cpp", "int64_t add"),
+        "hejs": (".js", "function add"),
+        "hepy": (".py", "def add"),
+        "hers": (".rs", "pub fn add"),
+        "hereact": (".tsx", "export default function NyxApp"),
+        "hewasm": (".wat", "(module"),
+        "stm32": (".cpp", "int64_t add"),
+    }
+    for target, (extension, marker) in expected.items():
+        result = compile_source(source, target=target)
+        assert result.success, result.diagnostics
+        assert result.artifact is not None
+        assert result.artifact.extension == extension
+        assert marker in result.artifact.content
+        json.dumps(result.to_dict(), ensure_ascii=False)
+
+    directive_result = compile_source("#target node\n" + source)
+    assert directive_result.success and directive_result.target == "hejs"
+    override_result = compile_source("#target hecpp\n" + source, target="python")
+    assert override_result.success and override_result.target == "hepy"
+
+    invalid_source = 'var count: int = "wrong"\n'
+    captured = io.StringIO()
+    with contextlib.redirect_stdout(captured), contextlib.redirect_stderr(captured):
+        invalid = check_source(invalid_source, filename="invalid.nyx")
+    assert captured.getvalue() == ""
+    assert not invalid.success and invalid.ast is None
+    assert len(invalid.diagnostics) == 1
+    diagnostic = invalid.diagnostics[0]
+    assert diagnostic.code == "E2001"
+    assert diagnostic.path == "invalid.nyx"
+    assert diagnostic.line == 1 and diagnostic.column == 1
+    assert diagnostic.expected == "int" and diagnostic.found == "string"
+    assert "Type mismatch" in diagnostic.rendered
+
+    immutable = check_source(
+        "let fixed: int = 1\nset fixed = 2\n",
+        filename="immutable.nyx",
+    )
+    assert not immutable.success
+    assert any(
+        item.code == "HIR0007" and "constant 'fixed'" in item.message
+        for item in immutable.diagnostics
+    )
+
+    compiler = NyxCompiler(ROOT_DIR)
+
+    def reject_once(_: int) -> str:
+        result = compiler.check_source(invalid_source, filename="parallel_invalid.nyx")
+        assert not result.success
+        return result.diagnostics[0].code
+
+    original_exit_mode = DiagnosticEmitter.EXIT_ON_ERROR
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        codes = list(executor.map(reject_once, range(32)))
+    assert codes == ["E2001"] * 32
+    assert DiagnosticEmitter.EXIT_ON_ERROR == original_exit_mode
+
+    unsupported = compiler.check_source(
+        '#target hers\nimport "std/fs"\nfn main() {}\n',
+        filename="unsupported.nyx",
+    )
+    assert not unsupported.success
+    assert unsupported.diagnostics[0].code == "E1400"
+    assert "hecpp" in unsupported.diagnostics[0].note
+
+    class MarkerPlugin(CompilerPlugin):
+        name = "marker"
+
+        def __init__(self):
+            self.events = []
+
+        def after_parse(self, context, ast):
+            self.events.append(("parse", context.target))
+
+        def after_check(self, context, ast):
+            self.events.append(("check", context.target))
+
+        def transform_artifact(self, context, artifact):
+            self.events.append(("emit", context.target))
+            return replace(artifact, content=artifact.content + "\n// marker-plugin\n")
+
+    marker = MarkerPlugin()
+    plugin_result = compile_source(source, target="hejs", plugins=(marker,))
+    assert plugin_result.success and plugin_result.artifact is not None
+    assert plugin_result.artifact.content.endswith("// marker-plugin\n")
+    assert marker.events == [("parse", "hejs"), ("check", "hejs"), ("emit", "hejs")]
+
+    class FailingPlugin(CompilerPlugin):
+        name = "failing"
+
+        def after_check(self, context, ast):
+            raise RuntimeError("intentional plugin failure")
+
+    plugin_failure = check_source(source, plugins=(FailingPlugin(),))
+    assert not plugin_failure.success
+    assert plugin_failure.diagnostics[0].code == "E9001"
+    assert "intentional plugin failure" in plugin_failure.diagnostics[0].note
+
+    print("[PASS] Seven emitters, structured diagnostics, parallel isolation, and plugin hooks")
+    return True
+
+
+if __name__ == "__main__":
+    sys.exit(0 if run_compiler_api_suite() else 1)

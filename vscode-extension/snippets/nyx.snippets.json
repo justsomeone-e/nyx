@@ -2,7 +2,7 @@
   "Target Directive": {
     "prefix": "#target",
     "body": [
-      "#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}"
+      "#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm,stm32f4|}"
     ],
     "description": "Specify compilation backend target"
   },
@@ -102,6 +102,39 @@
       "const ${1:NAME} = ${2:value};"
     ],
     "description": "Immutable constant declaration"
+  },
+  "Volatile Embedded Variable": {
+    "prefix": "volatile var",
+    "body": [
+      "volatile var ${1:ticks}: ${2:u32} = ${3:0};"
+    ],
+    "description": "Storage shared with hardware or interrupt handlers"
+  },
+  "Embedded Interrupt Handler": {
+    "prefix": "interrupt fn",
+    "body": [
+      "interrupt fn ${1:TIM3_IRQHandler}() -> void {",
+      "\t${2:timer_clear_update(3)};",
+      "\t${0}",
+      "}"
+    ],
+    "description": "Profile-validated Cortex-M interrupt handler"
+  },
+  "Critical Section": {
+    "prefix": "critical",
+    "body": [
+      "critical {",
+      "\t${0:// shared state or register update}",
+      "}"
+    ],
+    "description": "Interrupt-masked scope that restores previous PRIMASK state"
+  },
+  "Fixed Embedded Buffer": {
+    "prefix": "Buffer",
+    "body": [
+      "var ${1:packet}: Buffer<${2:u8}, ${3:64}> = [${0}];"
+    ],
+    "description": "Allocation-free fixed-capacity storage for embedded bulk I/O"
   },
   "If Statement": {
     "prefix": "if",

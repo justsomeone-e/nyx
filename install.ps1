@@ -1,136 +1,368 @@
-# nyx Official Windows Installer
+# nyx native-first Windows installer
 $ErrorActionPreference = "Stop"
 
 Write-Host "===================================================================" -ForegroundColor Cyan
-Write-Host "Installing nyx Core Toolchain (v3.0.0 Beta 4)..." -ForegroundColor Cyan
+Write-Host "Installing nyx native toolchain (v4 development channel)..." -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Cyan
 
-$InstallDir = Join-Path $HOME ".nyx"
+$InstallDir = if ($env:NYX_INSTALL_DIR) {
+    [System.IO.Path]::GetFullPath($env:NYX_INSTALL_DIR)
+} else {
+    Join-Path $HOME ".nyx"
+}
 $BinDir = Join-Path $InstallDir "bin"
 $SrcDir = Join-Path $InstallDir "src"
-
-# 1. Create directory structure
-if (-not (Test-Path $BinDir)) {
-    New-Item -ItemType Directory -Path $BinDir -Force | Out-Null
+$CompilerDir = Join-Path $InstallDir "compiler"
+$ExtensionDir = Join-Path $InstallDir "vscode-extension"
+$NativeExe = Join-Path $BinDir "nyxc.exe"
+$Repository = "justsomeone-e/nyx"
+$ExpectedVersion = $null
+if ($PSScriptRoot -and (Test-Path -LiteralPath (Join-Path $PSScriptRoot "VERSION") -PathType Leaf)) {
+    $ExpectedVersion = (Get-Content -LiteralPath (Join-Path $PSScriptRoot "VERSION") -Raw).Trim()
 }
-if (-not (Test-Path $SrcDir)) {
-    New-Item -ItemType Directory -Path $SrcDir -Force | Out-Null
+
+function Find-NyxPython {
+    foreach ($name in @("python", "python3")) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command) {
+            try {
+                & $command.Source -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)" *> $null
+                if ($LASTEXITCODE -eq 0) { return $command.Source }
+            } catch {
+                continue
+            }
+        }
+    }
+    return $null
 }
 
-# 2. Populate source tree
+function Test-NyxNativeCompiler([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    try {
+        $versionOutput = (& $Path --version 2>&1 | Out-String).Trim()
+        if ($LASTEXITCODE -ne 0 -or -not $versionOutput.StartsWith("nyxc ")) { return $false }
+        if ($ExpectedVersion) {
+            return $versionOutput.StartsWith("nyxc $ExpectedVersion ")
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
+function Get-NyxRelease {
+    try {
+        $headers = @{
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+        }
+        if ($env:NYX_RELEASE_TAG) {
+            $tag = [uri]::EscapeDataString($env:NYX_RELEASE_TAG)
+            return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/tags/$tag" -Headers $headers
+        }
+        return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers
+    } catch {
+        Write-Host "[!] Release metadata unavailable; source bootstrap remains available." -ForegroundColor Yellow
+        return $null
+    }
+}
+
+New-Item -ItemType Directory -Path $BinDir, $SrcDir, $CompilerDir -Force | Out-Null
+
 $CurrentRoot = $PSScriptRoot
-if ($CurrentRoot -and (Test-Path (Join-Path $CurrentRoot "src"))) {
-    Write-Host "[*] Copying local files to $InstallDir..." -ForegroundColor Cyan
-    Copy-Item -Path (Join-Path $CurrentRoot "src\*") -Destination $SrcDir -Recurse -Force
-} else {
-    Write-Host "[*] Downloading latest release from GitHub..." -ForegroundColor Cyan
-    $ZipUrl = "https://github.com/justsomeone-e/nyx/archive/refs/heads/main.zip"
-    $TempZip = Join-Path $env:TEMP "nyx_install.zip"
-    $TempExtract = Join-Path $env:TEMP "nyx_extract"
-    
-    Invoke-WebRequest -Uri $ZipUrl -OutFile $TempZip -UseBasicParsing
-    Expand-Archive -Path $TempZip -DestinationPath $TempExtract -Force
-    
-    $ExtractedSrc = Join-Path $TempExtract "nyx-main\src"
-    if (Test-Path $ExtractedSrc) {
-        Copy-Item -Path (Join-Path $ExtractedSrc "*") -Destination $SrcDir -Recurse -Force
+$HasLocalSource = $CurrentRoot -and (Test-Path -LiteralPath (Join-Path $CurrentRoot "src") -PathType Container)
+$Release = if ($HasLocalSource) { $null } else { Get-NyxRelease }
+$SourceRoot = if ($HasLocalSource) { $CurrentRoot } else { $null }
+$TempRoot = $null
+
+try {
+    if (-not $SourceRoot) {
+        $TempRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("nyx_install_" + [guid]::NewGuid().ToString("N"))
+        $TempArchive = Join-Path $TempRoot "nyx-source.zip"
+        $TempExtract = Join-Path $TempRoot "source"
+        New-Item -ItemType Directory -Path $TempExtract -Force | Out-Null
+        $SourceUrl = if ($Release -and $Release.zipball_url) {
+            [string]$Release.zipball_url
+        } else {
+            "https://github.com/$Repository/archive/refs/heads/main.zip"
+        }
+        try {
+            Write-Host "[*] Downloading nyx sources..." -ForegroundColor Cyan
+            Invoke-WebRequest -Uri $SourceUrl -OutFile $TempArchive -UseBasicParsing
+            Expand-Archive -LiteralPath $TempArchive -DestinationPath $TempExtract -Force
+            $SourceRoot = Get-ChildItem -LiteralPath $TempExtract -Directory |
+                Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "src") -PathType Container } |
+                Select-Object -First 1 -ExpandProperty FullName
+        } catch {
+            Write-Host "[!] Source download failed; native core installation can still continue from a release binary." -ForegroundColor Yellow
+        }
     }
-    Remove-Item -Path $TempZip, $TempExtract -Recurse -Force -ErrorAction SilentlyContinue
+
+    if ($SourceRoot) {
+        $sourceVersionPath = Join-Path $SourceRoot "VERSION"
+        if (Test-Path -LiteralPath $sourceVersionPath -PathType Leaf) {
+            $ExpectedVersion = (Get-Content -LiteralPath $sourceVersionPath -Raw).Trim()
+        }
+        Write-Host "[*] Installing source and compiler support files..." -ForegroundColor Cyan
+        Copy-Item -Path (Join-Path $SourceRoot "src\*") -Destination $SrcDir -Recurse -Force
+        if (Test-Path -LiteralPath (Join-Path $SourceRoot "VERSION") -PathType Leaf) {
+            Copy-Item -LiteralPath (Join-Path $SourceRoot "VERSION") -Destination (Join-Path $InstallDir "VERSION") -Force
+        }
+        if (Test-Path -LiteralPath (Join-Path $SourceRoot "compiler") -PathType Container) {
+            Copy-Item -Path (Join-Path $SourceRoot "compiler\*") -Destination $CompilerDir -Recurse -Force
+        }
+        if (Test-Path -LiteralPath (Join-Path $SourceRoot "vscode-extension") -PathType Container) {
+            New-Item -ItemType Directory -Path $ExtensionDir -Force | Out-Null
+            $ExtensionSource = Join-Path $SourceRoot "vscode-extension"
+            foreach ($fileName in @(
+                "package.json", "package-lock.json", "extension.js", "server_options.js",
+                "nyx_commands.js", "language-configuration.json", "language-surface.json",
+                "README.md", "CHANGELOG.md", "LICENSE"
+            )) {
+                $sourceFile = Join-Path $ExtensionSource $fileName
+                if (Test-Path -LiteralPath $sourceFile -PathType Leaf) {
+                    Copy-Item -LiteralPath $sourceFile -Destination (Join-Path $ExtensionDir $fileName) -Force
+                }
+            }
+            foreach ($directoryName in @("images", "snippets", "syntaxes")) {
+                $sourceDirectory = Join-Path $ExtensionSource $directoryName
+                if (Test-Path -LiteralPath $sourceDirectory -PathType Container) {
+                    $destinationDirectory = Join-Path $ExtensionDir $directoryName
+                    New-Item -ItemType Directory -Path $destinationDirectory -Force | Out-Null
+                    Copy-Item -Path (Join-Path $sourceDirectory "*") -Destination $destinationDirectory -Recurse -Force
+                }
+            }
+        }
+    }
+
+    $NativeInstalled = $false
+    if ($env:NYX_NATIVE_COMPILER_PATH) {
+        $OverridePath = [System.IO.Path]::GetFullPath($env:NYX_NATIVE_COMPILER_PATH)
+        if (-not (Test-NyxNativeCompiler $OverridePath)) {
+            throw "NYX_NATIVE_COMPILER_PATH does not point to a working nyxc executable: $OverridePath"
+        }
+        Copy-Item -LiteralPath $OverridePath -Destination $NativeExe -Force
+        $NativeInstalled = $true
+        Write-Host "[OK] Installed native compiler from NYX_NATIVE_COMPILER_PATH." -ForegroundColor Green
+    }
+
+    if (-not $NativeInstalled -and $HasLocalSource) {
+        foreach ($candidate in @(
+            (Join-Path $CurrentRoot "build\self_host\nyxc.exe"),
+            (Join-Path $CurrentRoot "bin\nyxc.exe")
+        )) {
+            if (Test-NyxNativeCompiler $candidate) {
+                Copy-Item -LiteralPath $candidate -Destination $NativeExe -Force
+                $NativeInstalled = $true
+                Write-Host "[OK] Installed existing local native compiler." -ForegroundColor Green
+                break
+            }
+        }
+    }
+
+    if (-not $NativeInstalled -and $Release) {
+        $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+        $assetArchitecture = switch ($architecture) {
+            "x64" { "x86_64" }
+            "arm64" { "arm64" }
+            default { $null }
+        }
+        if ($assetArchitecture) {
+            $assetName = "nyxc-windows-$assetArchitecture.exe"
+            $asset = $Release.assets | Where-Object { $_.name -eq $assetName } | Select-Object -First 1
+            if ($asset) {
+                $TempNative = Join-Path $TempRoot $assetName
+                Write-Host "[*] Downloading native compiler $assetName..." -ForegroundColor Cyan
+                Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $TempNative -UseBasicParsing
+                if ($asset.digest -and ([string]$asset.digest).StartsWith("sha256:")) {
+                    $expected = ([string]$asset.digest).Substring(7).ToLowerInvariant()
+                    $actual = (Get-FileHash -LiteralPath $TempNative -Algorithm SHA256).Hash.ToLowerInvariant()
+                    if ($actual -ne $expected) { throw "Native compiler SHA-256 verification failed." }
+                }
+                Copy-Item -LiteralPath $TempNative -Destination $NativeExe -Force
+                $NativeInstalled = Test-NyxNativeCompiler $NativeExe
+                if ($NativeInstalled) {
+                    Write-Host "[OK] Installed verified native release compiler." -ForegroundColor Green
+                }
+            }
+        }
+    }
+
+    $PythonExe = Find-NyxPython
+    $SrcCli = Join-Path $SrcDir "cli.py"
+    if (-not $NativeInstalled -and (Test-NyxNativeCompiler $NativeExe)) {
+        $NativeInstalled = $true
+        Write-Host "[OK] Reusing installed native compiler." -ForegroundColor Green
+    }
+    if (-not $NativeInstalled) {
+        if (-not $PythonExe -or -not (Test-Path -LiteralPath $SrcCli -PathType Leaf)) {
+            throw "No prebuilt nyxc is available for this platform. Python 3.10+ and a C++20 compiler are required for the source-bootstrap fallback."
+        }
+        Write-Host "[*] No matching prebuilt binary; bootstrapping native nyxc from source..." -ForegroundColor Cyan
+        Push-Location $InstallDir
+        try {
+            & $PythonExe $SrcCli self-host build -o $NativeExe
+            if ($LASTEXITCODE -ne 0) { throw "Native compiler source bootstrap failed." }
+        } finally {
+            Pop-Location
+        }
+        $NativeInstalled = Test-NyxNativeCompiler $NativeExe
+        if (-not $NativeInstalled) { throw "Bootstrapped native compiler failed validation." }
+        Write-Host "[OK] Native nyxc bootstrap completed." -ForegroundColor Green
+    }
+
+    $NativeLiteral = $NativeExe.Replace("'", "''")
+    $CliLiteral = $SrcCli.Replace("'", "''")
+    $PythonLiteral = if ($PythonExe) { $PythonExe.Replace("'", "''") } else { "" }
+    $Ps1Content = @'
+$native = '__NYX_NATIVE__'
+$pythonCli = '__NYX_CLI__'
+$preferredPython = '__NYX_PYTHON__'
+$nativeCommands = @('check', 'compile', 'emit-cpp', 'version', '--version', '-v')
+if ($args.Count -gt 0 -and $nativeCommands -contains $args[0]) {
+    & $native @args
+    exit $LASTEXITCODE
 }
-
-# Ensure src/__init__.py exists
-$InitPy = Join-Path $SrcDir "__init__.py"
-if (-not (Test-Path $InitPy)) {
-    [System.IO.File]::WriteAllText($InitPy, "# nyx core`n", [System.Text.UTF8Encoding]::new($false))
+if ($preferredPython -and (Test-Path -LiteralPath $preferredPython -PathType Leaf) -and (Test-Path -LiteralPath $pythonCli -PathType Leaf)) {
+    & $preferredPython $pythonCli @args
+    exit $LASTEXITCODE
 }
-
-# 3. Check for Python
-$PythonExe = (Get-Command python -ErrorAction SilentlyContinue).Source
-if (-not $PythonExe) {
-    Write-Host "[!] Warning: Python 3.10+ is required to run nyx." -ForegroundColor Yellow
-    Write-Host "    Install via winget: winget install Python.Python.3.12" -ForegroundColor Yellow
-} else {
-    Write-Host "[OK] Found Python: $PythonExe" -ForegroundColor Green
+$python = Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1
+if ($python -and (Test-Path -LiteralPath $pythonCli -PathType Leaf)) {
+    & $python.Source $pythonCli @args
+    exit $LASTEXITCODE
 }
+if ($args.Count -eq 0) {
+    & $native --help
+    exit $LASTEXITCODE
+}
+Write-Error "This command still uses the optional Python orchestration layer. Install Python 3.10+, or use nyxc/check/compile/emit-cpp."
+exit 2
+'@
+    $Ps1Content = $Ps1Content.Replace("__NYX_NATIVE__", $NativeLiteral).Replace("__NYX_CLI__", $CliLiteral).Replace("__NYX_PYTHON__", $PythonLiteral)
+    Set-Content -LiteralPath (Join-Path $BinDir "nyx.ps1") -Value $Ps1Content -Encoding UTF8
+    Set-Content -LiteralPath (Join-Path $BinDir "he.ps1") -Value $Ps1Content -Encoding UTF8
 
-# 4. Create robust executable wrappers in bin directory
-$SrcCli = Join-Path $SrcDir "cli.py"
-
-# A. PowerShell Wrapper (.ps1)
-$Ps1Content = "& python `"$SrcCli`" @args"
-Set-Content -Path (Join-Path $BinDir "nyx.ps1") -Value $Ps1Content -Encoding UTF8
-Set-Content -Path (Join-Path $BinDir "he.ps1") -Value $Ps1Content -Encoding UTF8
-
-# B. Batch / CMD Wrapper (.bat & .cmd)
-$BatContent = "@echo off`r`npython `"$SrcCli`" %*"
-Set-Content -Path (Join-Path $BinDir "nyx.bat") -Value $BatContent -Encoding ASCII
-Set-Content -Path (Join-Path $BinDir "nyx.cmd") -Value $BatContent -Encoding ASCII
-Set-Content -Path (Join-Path $BinDir "he.bat") -Value $BatContent -Encoding ASCII
-Set-Content -Path (Join-Path $BinDir "he.cmd") -Value $BatContent -Encoding ASCII
-
-# C. Shell Wrapper (for Git Bash / WSL / MSYS2)
-$ShContent = "#!/usr/bin/env bash`nexec python3 `"$SrcCli`" `"`$@`""
-Set-Content -Path (Join-Path $BinDir "nyx") -Value $ShContent -Encoding ASCII
-Set-Content -Path (Join-Path $BinDir "he") -Value $ShContent -Encoding ASCII
-
-# Copy to common PATH locations for instant availability across existing shells
-$ExistingPathTargets = @(
-    (Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"),
-    (Join-Path $env:LOCALAPPDATA "Programs\Python\Python314\Scripts"),
-    (Join-Path $env:LOCALAPPDATA "Programs\Python\Python312\Scripts"),
-    (Join-Path $env:LOCALAPPDATA "Programs\Python\Python311\Scripts")
+    $BatchNative = $NativeExe.Replace("%", "%%")
+    $BatchCli = $SrcCli.Replace("%", "%%")
+    $BatchPython = if ($PythonExe) { $PythonExe.Replace("%", "%%") } else { "" }
+    $BatContent = @"
+@echo off
+setlocal
+set "NYX_NATIVE=$BatchNative"
+set "NYX_PYCLI=$BatchCli"
+set "NYX_PYTHON=$BatchPython"
+if "%~1"=="check" goto nyx_native
+if "%~1"=="compile" goto nyx_native
+if "%~1"=="emit-cpp" goto nyx_native
+if "%~1"=="version" goto nyx_native
+if "%~1"=="--version" goto nyx_native
+if "%~1"=="-v" goto nyx_native
+if exist "%NYX_PYTHON%" (
+    "%NYX_PYTHON%" "%NYX_PYCLI%" %*
+    exit /b %errorlevel%
 )
-foreach ($target in $ExistingPathTargets) {
-    if (Test-Path $target) {
-        Copy-Item -Path (Join-Path $BinDir "nyx.bat") -Destination (Join-Path $target "nyx.bat") -Force
-        Copy-Item -Path (Join-Path $BinDir "nyx.cmd") -Destination (Join-Path $target "nyx.cmd") -Force
-        Copy-Item -Path (Join-Path $BinDir "nyx.ps1") -Destination (Join-Path $target "nyx.ps1") -Force
-        Copy-Item -Path (Join-Path $BinDir "he.bat") -Destination (Join-Path $target "he.bat") -Force
-        Copy-Item -Path (Join-Path $BinDir "he.cmd") -Destination (Join-Path $target "he.cmd") -Force
-        Copy-Item -Path (Join-Path $BinDir "he.ps1") -Destination (Join-Path $target "he.ps1") -Force
+where python >nul 2>nul
+if not errorlevel 1 (
+    python "%NYX_PYCLI%" %*
+    exit /b %errorlevel%
+)
+where python3 >nul 2>nul
+if not errorlevel 1 (
+    python3 "%NYX_PYCLI%" %*
+    exit /b %errorlevel%
+)
+if "%~1"=="" (
+    "%NYX_NATIVE%" --help
+    exit /b %errorlevel%
+)
+echo This command still uses the optional Python orchestration layer. Install Python 3.10+, or use nyxc/check/compile/emit-cpp. 1>&2
+exit /b 2
+:nyx_native
+"%NYX_NATIVE%" %*
+exit /b %errorlevel%
+"@
+    foreach ($name in @("nyx.bat", "nyx.cmd", "he.bat", "he.cmd")) {
+        Set-Content -LiteralPath (Join-Path $BinDir $name) -Value $BatContent -Encoding ASCII
     }
-}
 
-# 5. Add BinDir & MinGW to User PATH & Current Session PATH
-$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not $UserPath) {
-    $UserPath = ""
-}
-if ($UserPath -notlike "*$BinDir*") {
-    $UserPath = if ($UserPath.Length -gt 0) { "$UserPath;$BinDir" } else { $BinDir }
-    Write-Host "[OK] Added $BinDir to User PATH." -ForegroundColor Green
-} else {
-    Write-Host "[OK] $BinDir already present in User PATH." -ForegroundColor Green
-}
+    $ShContent = @'
+#!/usr/bin/env bash
+set -euo pipefail
+wrapper_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+install_dir="$(dirname -- "$wrapper_dir")"
+native="$wrapper_dir/nyxc.exe"
+python_cli="$install_dir/src/cli.py"
+case "${1:-}" in
+    check|compile|emit-cpp|version|--version|-v) exec "$native" "$@" ;;
+esac
+if command -v python3 >/dev/null 2>&1 && [ -f "$python_cli" ]; then
+    exec python3 "$python_cli" "$@"
+fi
+if command -v python >/dev/null 2>&1 && [ -f "$python_cli" ]; then
+    exec python "$python_cli" "$@"
+fi
+if [ "$#" -eq 0 ]; then
+    exec "$native" --help
+fi
+echo "This command still uses the optional Python orchestration layer. Install Python 3.10+, or use nyxc/check/compile/emit-cpp." >&2
+exit 2
+'@
+    Set-Content -LiteralPath (Join-Path $BinDir "nyx") -Value $ShContent -Encoding ASCII
+    Set-Content -LiteralPath (Join-Path $BinDir "he") -Value $ShContent -Encoding ASCII
 
-# Check for MinGW toolchain
-$MinGWPath = "C:\Users\USER\AppData\Local\Microsoft\WinGet\Packages\MartinStorsjo.LLVM-MinGW.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\llvm-mingw-20260616-ucrt-x86_64\bin"
-if ((Test-Path $MinGWPath) -and ($UserPath -notlike "*$MinGWPath*")) {
-    $UserPath = "$UserPath;$MinGWPath"
-    Write-Host "[OK] Added MinGW Toolchain to User PATH: $MinGWPath" -ForegroundColor Green
-}
-
-[Environment]::SetEnvironmentVariable("Path", $UserPath, "User")
-
-if ($env:Path -notlike "*$BinDir*") {
-    $env:Path = "$BinDir;$env:Path"
-}
-if ((Test-Path $MinGWPath) -and ($env:Path -notlike "*$MinGWPath*")) {
-    $env:Path = "$MinGWPath;$env:Path"
-}
-
-# 6. Install / Sync VS Code Extension directly
-$VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
-$LocalExtDir = Join-Path $CurrentRoot "vscode-extension"
-if (Test-Path $LocalExtDir) {
-    if (-not (Test-Path $VsCodeExtDir)) {
-        New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
+    if ($env:NYX_SKIP_PATH_UPDATE -ne "1") {
+        $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+        if (-not $UserPath) { $UserPath = "" }
+        $PathEntries = @($UserPath -split ";" | Where-Object {
+            $_ -and -not $_.Equals($BinDir, [System.StringComparison]::OrdinalIgnoreCase)
+        })
+        $UpdatedPath = (@($BinDir) + $PathEntries) -join ";"
+        if ($UpdatedPath -ne $UserPath) {
+            [Environment]::SetEnvironmentVariable("Path", $UpdatedPath, "User")
+            Write-Host "[OK] Prioritized $BinDir in User PATH." -ForegroundColor Green
+        }
+        $ProcessPathEntries = @($env:Path -split ";" | Where-Object {
+            $_ -and -not $_.Equals($BinDir, [System.StringComparison]::OrdinalIgnoreCase)
+        })
+        $env:Path = (@($BinDir) + $ProcessPathEntries) -join ";"
+    } else {
+        Write-Host "[*] PATH update skipped (NYX_SKIP_PATH_UPDATE=1)." -ForegroundColor Yellow
     }
-    Copy-Item -Path (Join-Path $LocalExtDir "*") -Destination $VsCodeExtDir -Recurse -Force
-    Write-Host "[OK] Synced nyx VS Code Extension to $VsCodeExtDir" -ForegroundColor Green
+
+    $VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
+    if ($env:NYX_SKIP_EDITOR_INSTALL -ne "1" -and (Test-Path -LiteralPath $ExtensionDir -PathType Container)) {
+        $NpmCommand = Get-Command npm -ErrorAction SilentlyContinue
+        if ($NpmCommand) {
+            Push-Location $ExtensionDir
+            try {
+                & $NpmCommand.Source ci --omit=dev --ignore-scripts | Out-Null
+                if ($LASTEXITCODE -ne 0) { throw "npm ci failed for the VS Code language client." }
+            } finally {
+                Pop-Location
+            }
+            New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
+            Copy-Item -Path (Join-Path $ExtensionDir "*") -Destination $VsCodeExtDir -Recurse -Force
+            Write-Host "[OK] Synced nyx VS Code extension to $VsCodeExtDir" -ForegroundColor Green
+        } else {
+            Write-Host "[!] npm not found; VS Code extension installation skipped." -ForegroundColor Yellow
+        }
+    }
+
+    if (-not (Test-NyxNativeCompiler $NativeExe)) { throw "Installed native nyxc failed final validation." }
+    Write-Host "[OK] Native compiler validation passed." -ForegroundColor Green
+} finally {
+    if ($TempRoot -and (Test-Path -LiteralPath $TempRoot)) {
+        $ResolvedTemp = [System.IO.Path]::GetFullPath($TempRoot)
+        $TempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
+        if ($ResolvedTemp.StartsWith($TempBase, [System.StringComparison]::OrdinalIgnoreCase)) {
+            Remove-Item -LiteralPath $ResolvedTemp -Recurse -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 
 Write-Host "===================================================================" -ForegroundColor Cyan
-Write-Host "[OK] nyx installed successfully!" -ForegroundColor Green
-Write-Host "     Run 'nyx doctor' or 'nyx --help' to get started." -ForegroundColor Green
+Write-Host "[OK] nyx installed successfully at $InstallDir" -ForegroundColor Green
+Write-Host "     Native core: nyxc --help (Python is not required)" -ForegroundColor Green
+Write-Host "     Unified CLI: nyx --help (Python fallback for unported tools)" -ForegroundColor Green
 Write-Host "===================================================================" -ForegroundColor Cyan

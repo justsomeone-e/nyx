@@ -1,0 +1,11 @@
+.vscode/**
+.vscode-test/**
+.github/**
+test_contract.js
+*.tgz
+*.vsix
+**/*.map
+**/*.ts
+**/test/**
+**/tests/**
+**/docs/**

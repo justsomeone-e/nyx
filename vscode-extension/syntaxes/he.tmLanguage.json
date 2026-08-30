@@ -43,15 +43,15 @@
     },
     {
       "name": "keyword.declaration.nyx",
-      "match": "\\b(var|let|const|type|struct|impl|trait|enum|fn|extern|test)\\b"
+      "match": "\\b(var|let|set|const|type|struct|impl|trait|enum|fn|extern|async|test)\\b"
     },
     {
       "name": "keyword.control.nyx",
-      "match": "\\b(if|else|elif|for|in|while|loop|match|return|continue|break|defer|guard|try|catch|unsafe|import|use|from|export|assert|spawn|channel)\\b"
+      "match": "\\b(if|else|elif|for|in|while|loop|match|return|throw|continue|break|await|defer|guard|try|catch|unsafe|import|use|from|as|assert|spawn)\\b"
     },
     {
       "name": "support.function.builtin.nyx",
-      "match": "\\b(print|println|len|length|addr|peek|poke|memdump|delay_ms|contains|to_string|to_int|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
+      "match": "\\b(print|println|input|len|length|addr|peek|poke|memdump|delay_ms|contains|is_number|to_string|to_int|channel|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
     },
     {
       "name": "constant.language.boolean.nyx",

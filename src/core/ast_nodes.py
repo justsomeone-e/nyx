@@ -34,12 +34,13 @@ class TypeNode(ASTNode):
         return f"{base}?" if self.is_optional else base
 
 class VarDeclNode(ASTNode):
-    def __init__(self, name: str, type_annot: Optional[TypeNode], expr: ASTNode, is_const: bool = False, line: int = 1, col: int = 1):
+    def __init__(self, name: str, type_annot: Optional[TypeNode], expr: ASTNode, is_const: bool = False, line: int = 1, col: int = 1, is_volatile: bool = False):
         super().__init__(line, col)
         self.name = name
         self.type_annot = type_annot
         self.expr = expr
         self.is_const = is_const
+        self.is_volatile = is_volatile
 
 class AssignNode(ASTNode):
     def __init__(self, target: ASTNode, expr: ASTNode, line: int = 1, col: int = 1):
@@ -84,6 +85,11 @@ class UnaryOpNode(ASTNode):
         self.op = op
         self.expr = expr
 
+class AwaitNode(ASTNode):
+    def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+
 class FunctionParam:
     def __init__(self, name: str, type_annot: Optional[TypeNode] = None, default_val: Optional[ASTNode] = None):
         self.name = name
@@ -91,7 +97,7 @@ class FunctionParam:
         self.default_val = default_val
 
 class FunctionDefNode(ASTNode):
-    def __init__(self, name: str, params: List[FunctionParam], return_type: Optional[TypeNode], body: List[ASTNode], generic_params: Optional[List[str]] = None, is_async: bool = False, doc_comment: str = "", line: int = 1, col: int = 1):
+    def __init__(self, name: str, params: List[FunctionParam], return_type: Optional[TypeNode], body: List[ASTNode], generic_params: Optional[List[str]] = None, is_async: bool = False, doc_comment: str = "", line: int = 1, col: int = 1, is_interrupt: bool = False):
         super().__init__(line, col)
         self.name = name
         self.params = params
@@ -100,6 +106,7 @@ class FunctionDefNode(ASTNode):
         self.generic_params = generic_params or []
         self.is_async = is_async
         self.doc_comment = doc_comment
+        self.is_interrupt = is_interrupt
 
 class LambdaNode(ASTNode):
     def __init__(self, params: List[str], body: ASTNode, line: int = 1, col: int = 1):
@@ -141,6 +148,11 @@ class EnumDefNode(ASTNode):
         self.members = members
 
 class UnsafeBlockNode(ASTNode):
+    def __init__(self, body: List[ASTNode], line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.body = body
+
+class CriticalBlockNode(ASTNode):
     def __init__(self, body: List[ASTNode], line: int = 1, col: int = 1):
         super().__init__(line, col)
         self.body = body
@@ -224,6 +236,11 @@ class ForNode(ASTNode):
 
 class ReturnNode(ASTNode):
     def __init__(self, expr: Optional[ASTNode], line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+
+class ThrowNode(ASTNode):
+    def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
         super().__init__(line, col)
         self.expr = expr
 

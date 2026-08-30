@@ -1,20 +1,89 @@
-# 📖 Nyx Language Reference & Syntax Specification
+# Nyx v4 Language Reference
 
-Nyx is a statically-typed language engineered for multi-target execution with zero cognitive overhead.
+This document describes the source language being frozen for `v4.0.0-rc.1`.
+Nyx source files use the `.nyx` extension and are built with the `nyx` CLI.
+Backend availability is a capability decision, not a change to language syntax.
 
----
-
-## 1. Variables and Constants
+## 1. Bindings and assignment
 
 ```nyx
-var age: int = 24       // Mutable variable with explicit type
-var name = "Umut"       // Type inference (infers string)
-val pi: float = 3.1415  // Immutable constant
+var attempts: int = 0       // mutable binding
+let limit: int = 3          // immutable binding
+const APP_NAME = "Nyx"      // immutable binding
+
+set attempts = attempts + 1
 ```
 
----
+`let` and `const` prevent rebinding. They do not deep-freeze a struct, array, or
+other value reachable through the binding. `set target = value` is the explicit
+assignment form; `target = value` remains equivalent for source compatibility.
 
-## 2. Functions & Return Types
+```nyx
+struct Counter { value: int }
+
+let counter = Counter(0)
+set counter.value = 1       // valid: the binding still refers to the same Counter
+// set counter = Counter(2) // error: counter is an immutable binding
+```
+
+## 2. Core types
+
+The portable scalar types are `int`, `float`, `bool`, `string`, `char`,
+`uintptr`, and `void`. Generic library/compiler types include `Array<T>`,
+`Option<T>`, `Result<T, E>`, `Channel<T>`, and `Task<T>`. Freestanding targets
+also provide allocation-free `Buffer<T, N>` with a compile-time capacity.
+
+Fixed-width scalar spellings are `i8`, `i16`, `i32`, `i64`, `u8`, `u16`,
+`u32`, `u64`, `f32`, and `f64`. They select concrete storage widths on the
+native, Rust, and freestanding backends. A directly assigned integer literal
+must fit its declared width (`E2024`); implicit narrowing is not permitted.
+The hosted cross-backend arithmetic contract remains the canonical `int` and
+`float` contract below until width-specific overflow semantics are frozen for
+JavaScript and Python.
+
+`int` is a signed 64-bit two's-complement value. Addition, subtraction,
+multiplication, negation, bitwise operations, and left shift wrap modulo 2⁶⁴.
+Integer division truncates toward zero, remainder keeps the dividend's sign,
+and shift counts are reduced modulo 64. Division by zero raises an error.
+Integer literals must be between `-9223372036854775808` and
+`9223372036854775807`; an out-of-range literal is `E2012`. The minimum value is
+accepted in its directly negated decimal or hexadecimal spelling.
+
+`float` is IEEE-754 binary64. Division by zero produces the corresponding
+infinity or NaN; `%` uses a truncating remainder with the dividend's sign.
+Canonical text uses `nan`, `inf`, `-inf`, normalized exponents such as `1e-7`,
+and renders negative zero as `0`.
+
+An `int` widens to `float` by IEEE-754 binary64 conversion when required by an
+operator, parameter, field, or return type. The conversion can round integers
+whose magnitude exceeds 2⁵³; it never changes the original `int` binding's
+type. `float` does not narrow to `int` implicitly. Canonical booleans are
+rendered as lowercase `true` and `false`.
+
+The full numeric and scalar-text contract is declared by `hecpp`, `hejs`, and
+`hepy`. The beta `hewasm` ABI remains explicitly `wasm32` and does not claim
+signed-i64 conformance until its numeric ABI is revised.
+
+```nyx
+let answer: int = 42
+let ratio: float = 0.5
+let title: string = "Nyx"
+let maybe_name: string? = null
+let values: Array<int> = [1, 2, 3]
+```
+
+Strings are Unicode values. Literals support common escapes, embedded `\0`,
+four-hex-digit Unicode escapes such as `\u0301`, and interpolation:
+
+```nyx
+let city = "İstanbul"
+print($"hello, {city} 🌙")
+```
+
+Nyx does not normalize Unicode automatically; NFC and NFD spellings remain
+distinct byte sequences.
+
+## 3. Functions
 
 ```nyx
 fn add(a: int, b: int) -> int {
@@ -26,9 +95,78 @@ fn greet(name: string) {
 }
 ```
 
----
+Parameters and return values are typed. A missing return annotation means
+`void` unless the compiler can safely infer a value type in an inference-enabled
+context.
 
-## 3. Structs & Field Mutability
+## 4. Async tasks
+
+```nyx
+async fn compute() -> int {
+    return 42
+}
+
+async fn main() {
+    let task: Task<int> = compute()
+    let first: int = await task
+    let second: int = await task
+    print(first + second)
+}
+```
+
+An `async fn ... -> T` call returns `Task<T>`. `await` is valid only inside an
+async function and unwraps one `Task<T>` to `T`. A task is reusable: awaiting the
+same task more than once observes the same completion. Errors thrown by the task
+propagate at `await` and can be caught normally. The exact instant at which a
+task begins execution is intentionally not part of the language contract.
+
+The `Task<T>` ABI is currently implemented by `hecpp`, `hejs`, and `hepy`.
+Other targets reject it with a capability diagnostic instead of silently
+changing its behavior.
+
+## 5. Control flow
+
+```nyx
+if score >= 90 {
+    print("A")
+} else if score >= 80 {
+    print("B")
+} else {
+    print("C")
+}
+
+for i in 1..10 {
+    if i == 5 { continue }
+    print(i)
+}
+
+var remaining = 3
+while remaining > 0 {
+    set remaining = remaining - 1
+}
+
+loop {
+    break
+}
+```
+
+`a..b` is an inclusive range. `elif` and `else if` are equivalent spellings.
+`break` and `continue` are valid only inside loops. Conditions accept only
+`bool`; a dynamically typed `any` value is checked at runtime rather than
+using C++/JavaScript/Python truthiness.
+
+`guard` expresses an early-exit precondition, while `defer` runs an expression
+when the current scope exits:
+
+```nyx
+fn save(value: string?) {
+    guard value != null else { return }
+    defer print("save finished")
+    print(value)
+}
+```
+
+## 6. Structs, traits, and implementations
 
 ```nyx
 struct Point {
@@ -36,79 +174,192 @@ struct Point {
     y: int
 }
 
-var p = Point(10, 20)
-p.x = 15
-print("Coordinates:", p.x, p.y)
-```
-
----
-
-## 4. Control Flow
-
-### If / Else Conditionals
-```nyx
-if score >= 90 {
-    print("Grade: A")
-} else if score >= 80 {
-    print("Grade: B")
-} else {
-    print("Grade: C")
-}
-```
-
-### Loops
-```nyx
-// Range loop
-for i in 1..10 {
-    print(i)
+trait Show {
+    fn show(self) -> string
 }
 
-// While loop
-var count = 5
-while count > 0 {
-    count = count - 1
+impl Show for Point {
+    fn show(self) -> string {
+        return $"({self.x}, {self.y})"
+    }
 }
+
+let point = Point(10, 20)
+print(point.show())
 ```
 
----
+An inherent implementation omits the trait name: `impl Point { ... }`.
+Instance methods declare `self` explicitly as their first parameter; an
+inherent implementation may also contain an associated function without
+`self`. Trait methods are signatures, not default implementations, and
+therefore have no body. An `impl Trait for Type` must provide every required
+method with the same async marker, parameter types, and return type. The target
+must be a declared struct.
 
-## 5. Modules & Imports
+## 7. Errors and cleanup
 
 ```nyx
-import "./helper"                       // Local relative file helper.he
-import "std/math"                       // Standard library math module
-import { abs_val, power } from "std/math" // Selective symbol imports
+fn parse_port(value: int) -> int {
+    if value < 1 { throw "port must be positive" }
+    return value
+}
+
+try {
+    print(parse_port(0))
+} catch error {
+    print("caught:", error)
+}
 ```
 
----
+`throw` converts its value to the canonical Nyx string representation for the
+current exception boundary. `try`/`catch`/`throw` are available on `hecpp`,
+`hejs`, and `hepy`; unsupported targets fail during capability validation.
 
-## 6. Pattern Matching & Result Types
+For recoverable domain errors that are part of an API, prefer `Result<T, E>` and
+pattern matching:
 
 ```nyx
-var res: Result<int, string> = Ok(1337)
+let result: Result<int, string> = Ok(42)
 
-match res {
-    Ok(val) => print("Operation succeeded with value:", val),
-    Err(e) => print("Failed with error:", e),
-    _ => print("Default fallback")
+match result {
+    Ok(value) => print(value),
+    Err(error) => print(error),
+    _ => print("unreachable")
 }
 ```
 
----
-
-## 7. In-File Unit Tests
+## 8. Pipelines and null safety
 
 ```nyx
-fn multiply(a: int, b: int) -> int {
-    return a * b
+fn doubled(value: int) -> int { return value * 2 }
+
+let result = 21 |> doubled
+let display_name = user?.profile?.name ?? "anonymous"
+```
+
+`value |> function` passes `value` as the next call's input. `?.` propagates
+absence and `??` supplies a fallback.
+
+## 9. Modules
+
+```nyx
+import "./helper"
+import "std/math"
+import { sqrt, clamp } from "std/math"
+```
+
+Local modules use `.nyx` files. Standard-library availability is target-specific
+and can be inspected with `nyx targets --json`.
+
+## 10. Tests and unsafe boundaries
+
+```nyx
+test "addition" {
+    assert(add(2, 3) == 5, "addition must be exact")
 }
 
-test "multiplication verification" {
-    assert(multiply(4, 5) == 20, "4 * 5 must equal 20")
+unsafe {
+    let address = addr(answer)
+    print(peek(address))
 }
 ```
 
-Run in-file tests directly:
-```bash
-he test src/main.he
+Raw memory operations must remain inside an explicit `unsafe` boundary.
+
+## 11. Freestanding hardware without native source injection
+
+Normal Cortex-M work does not require `#native raw`. The embedded surface has
+fixed-width values, volatile storage, profile-checked interrupt declarations,
+interrupt-safe critical sections, connector aliases, MMIO, and peripheral
+modules:
+
+```nyx
+#target stm32f4
+
+import "std/board"
+import "std/gpio"
+import "std/adc"
+import "std/pwm"
+import "std/timer"
+import "std/spi"
+
+volatile var ticks: u32 = 0
+
+interrupt fn TIM3_IRQHandler() -> void {
+    timer_clear_update(3)
+    critical { set ticks = ticks + 1 }
+}
+
+fn main() -> void {
+    let led = board_pin("LED")
+    let analog = board_pin("A0")
+    mode(led, PIN_OUTPUT)
+    let sample = adc_read(analog)
+    pwm_open(board_pin("D3"), 2000)
+    pwm_percent(board_pin("D3"), 50)
+    timer_start(3, 1000, true)
+
+    var tx: Buffer<u8, 4> = [159, 0, 0, 0]
+    var rx: Buffer<u8, 4> = []
+    let spi = spi_open(1, 1000000)
+    spi_exchange(spi, buffer_ptr(tx), buffer_ptr(rx), len(tx))
+    loop { }
+}
 ```
+
+`volatile` prevents the compiler from treating a hardware/shared load as an
+ordinary cached value; it is not an atomicity primitive. `critical { ... }`
+masks interrupts and restores the previous PRIMASK state on every scope exit.
+`interrupt fn` accepts no parameters or generics, returns `void`, and its exact
+handler name must exist in the selected board profile.
+
+`Buffer<T, N>` is fixed stack/static storage: `N` must be a positive integer
+literal, a short initializer is zero-filled, and an oversized initializer is
+`E2026`. A literal out-of-range index is `E2027`; a dynamic out-of-range index
+traps instead of corrupting adjacent memory. `buffer_ptr(buffer)` and
+`len(buffer)` expose a pointer-length pair to allocation-free UART/SPI/I²C
+bulk APIs. Dynamic `Array<T>` storage is rejected on freestanding targets.
+
+The embedded standard library currently includes `std/board`, `std/gpio`,
+`std/serial`, `std/mmio`, `std/spi`, `std/i2c`, `std/adc`, `std/pwm`,
+`std/timer`, and `std/interrupt`. Hardware waits are bounded and report errors;
+desktop builds reject these physical modules instead of running fake stubs.
+Board capability checks also reject a module that the selected MCU cannot
+implement (`E1403`); for example, the built-in F410 profile exposes TIM5/TIM6
+but not the TIM2-backed Arduino PWM module.
+
+The built-in standalone BSP currently links real firmware for
+`nucleo-f401re`, `nucleo-f410rb`, `nucleo-f411re`, and `nucleo-f446re`.
+Additional Nucleo identities are registered but honestly require a matching
+STM32Cube/CMSIS or custom `board.toml` BSP. The compiler gate proves ELF/HEX/BIN
+and vector-table correctness; it does not claim electrical validation without
+a connected board.
+
+```text
+nyx boards
+nyx build firmware.nyx --board nucleo-f401re
+nyx flash build/nucleo-f401re/firmware.elf --board nucleo-f401re
+```
+
+`#native raw` remains an explicit escape hatch for a register or peripheral
+that has no typed Nyx contract yet, rather than the default embedded API.
+
+## 12. CLI
+
+```text
+nyx check main.nyx
+nyx run main.nyx --target hecpp
+nyx build main.nyx --target hejs
+nyx bundle main.nyx --output dist --react
+nyx test main.nyx
+nyx self-host verify
+nyx targets --json
+nyx boards --json
+nyx build firmware.nyx --board nucleo-f401re
+nyx flash build/nucleo-f401re/firmware.elf --board nucleo-f401re
+```
+
+The canonical stable hosted backends are `hecpp` (C++20/native), `hejs`
+(ES2022/Node.js), and `hepy` (Python 3). `hewasm`, `hers`, `hereact`, `heasm`,
+and embedded targets expose narrower, machine-readable capability sets and must
+reject unsupported semantics.
