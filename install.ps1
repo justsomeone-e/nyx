@@ -60,7 +60,7 @@ function Get-NyxRelease {
             $tag = [uri]::EscapeDataString($env:NYX_RELEASE_TAG)
             return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/tags/$tag" -Headers $headers
         }
-        return Invoke-RestMethod -Uri "https://api.github.com/repos/$Repository/releases/latest" -Headers $headers
+        return $null
     } catch {
         Write-Host "[!] Release metadata unavailable; source bootstrap remains available." -ForegroundColor Yellow
         return $null
@@ -71,7 +71,7 @@ New-Item -ItemType Directory -Path $BinDir, $SrcDir, $CompilerDir -Force | Out-N
 
 $CurrentRoot = $PSScriptRoot
 $HasLocalSource = $CurrentRoot -and (Test-Path -LiteralPath (Join-Path $CurrentRoot "src") -PathType Container)
-$Release = if ($HasLocalSource) { $null } else { Get-NyxRelease }
+$Release = if ($HasLocalSource -or -not $env:NYX_RELEASE_TAG) { $null } else { Get-NyxRelease }
 $SourceRoot = if ($HasLocalSource) { $CurrentRoot } else { $null }
 $TempRoot = $null
 

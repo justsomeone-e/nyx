@@ -115,12 +115,10 @@ if [ "$NATIVE_READY" -eq 0 ] && [ -n "$SOURCE_ROOT" ]; then
     done
 fi
 
-if [ "$NATIVE_READY" -eq 0 ] && [ -z "$SOURCE_ROOT" ]; then
+if [ "$NATIVE_READY" -eq 0 ] && [ -z "$SOURCE_ROOT" ] && [ -n "${NYX_RELEASE_TAG:-}" ]; then
     asset_name="nyxc-$platform_name-$architecture"
     if [ -n "${NYX_RELEASE_TAG:-}" ]; then
         release_base="https://github.com/$REPOSITORY/releases/download/$NYX_RELEASE_TAG"
-    else
-        release_base="https://github.com/$REPOSITORY/releases/latest/download"
     fi
     asset_path="$TEMP_DIR/$asset_name"
     checksum_path="$TEMP_DIR/$asset_name.sha256"
@@ -144,6 +142,10 @@ if [ "$NATIVE_READY" -eq 0 ] && [ -z "$SOURCE_ROOT" ]; then
             echo "[!] Native release checksum verification failed; using source bootstrap if available." >&2
         fi
     fi
+fi
+
+if [ "$NATIVE_READY" -eq 0 ] && [ -z "$SOURCE_ROOT" ] && [ -z "${NYX_RELEASE_TAG:-}" ]; then
+    echo "[*] No release tag selected; installing the current main development source."
 fi
 
 if [ -z "$SOURCE_ROOT" ] && { [ "$NATIVE_READY" -eq 0 ] || [ -n "$PYTHON_BIN" ]; }; then
@@ -225,7 +227,7 @@ if [ "$NATIVE_READY" -eq 0 ]; then
     echo "[OK] Native nyxc bootstrap completed."
 fi
 
-for command_name in nyx he; do
+for command_name in nyx; do
     wrapper="$BIN_DIR/$command_name"
     printf '%s\n' \
         '#!/usr/bin/env bash' \

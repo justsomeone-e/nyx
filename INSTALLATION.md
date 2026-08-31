@@ -23,13 +23,13 @@ To compile native executables (`cpp`), a modern C++20 compiler (`clang++` or `g+
 ### Windows (PowerShell)
 Run in an elevated or standard PowerShell terminal:
 ```powershell
-irm https://raw.githubusercontent.com/nyx/nyxlang/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
 ```
 This clones/downloads the toolchain to `~/.nyx` and appends `~/.nyx/bin` to your User `PATH`.
 
 ### Linux / macOS (Bash)
 ```bash
-curl -fsSL https://raw.githubusercontent.com/nyx/nyxlang/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
 ```
 
 ---
@@ -38,24 +38,23 @@ curl -fsSL https://raw.githubusercontent.com/nyx/nyxlang/main/install.sh | bash
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/nyx/nyxlang.git
-   cd nyxlang
+   git clone https://github.com/justsomeone-e/nyx.git
+   cd nyx
    ```
 
 2. Verify host diagnostics:
    * **Windows**:
      ```powershell
-     .\he.bat doctor
+     python src/cli.py doctor
      ```
    * **Linux / macOS**:
      ```bash
-     chmod +x bin/nyx
-     ./bin/nyx doctor
+     python3 src/cli.py doctor
      ```
 
 3. Add Nyx to your `PATH`:
-   * **Windows**: Add `C:\path\to\nyxlang` to your environment variables.
-   * **Linux / macOS**: Add `export PATH="$PATH:/path/to/nyxlang/bin"` in `~/.bashrc` or `~/.zshrc`.
+   * **Windows**: Add `%USERPROFILE%\.nyx\bin` to your User `PATH`.
+   * **Linux / macOS**: Add `export PATH="$PATH:$HOME/.nyx/bin"` in `~/.bashrc` or `~/.zshrc`.
 
 ---
 

@@ -214,6 +214,8 @@ def run_installer_suite() -> bool:
     assert "NYX_NATIVE_COMPILER_PATH" in unix_source
     assert "sha256sum" in unix_source and "shasum" in unix_source
     assert "Python 3.10+ is required to run Nyx" not in unix_source
+    assert "releases/latest" not in unix_source
+    assert 'for command_name in nyx he' not in unix_source
 
     with open(WINDOWS_INSTALLER, "r", encoding="utf-8") as handle:
         windows_source = handle.read()
