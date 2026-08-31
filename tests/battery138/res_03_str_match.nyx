@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 var role = "admin"
 match role { "admin" => print("FULL ACCESS"), "user" => print("READ ONLY"), "_" => print("DENY") }

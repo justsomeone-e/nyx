@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print("Num: " + to_string(123))

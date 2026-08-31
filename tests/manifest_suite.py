@@ -12,7 +12,7 @@ def test_manifest_parsing():
 name = "my_project"
 version = "1.2.3"
 edition = "2026"
-target = "hecpp"
+target = "cpp"
 entry = "src/main.nyx"
 description = "Test description"
 license = "MIT"

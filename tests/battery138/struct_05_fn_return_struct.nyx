@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 struct Box { val }
 fn make_box(v) { return Box(v) }
 var b = make_box(42)

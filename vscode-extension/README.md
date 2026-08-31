@@ -1,6 +1,6 @@
 # Nyx Language Toolchain
 
-The official VS Code companion for `.nyx` and legacy `.he` files.
+The official VS Code companion for `.nyx` files.
 
 [GitHub Repository](https://github.com/justsomeone-e/nyx) ·
 [Documentation](https://github.com/justsomeone-e/nyx#readme) ·
@@ -43,9 +43,9 @@ By default, the extension prefers the canonical Nyx installation at
 
 | Target | Host requirement |
 | --- | --- |
-| `hecpp` | Clang++, GCC/G++, or MSVC `cl` with C++20 support. |
-| `hejs` | Node.js. |
-| `hepy` | Python 3. |
+| `cpp` | Clang++, GCC/G++, or MSVC `cl` with C++20 support. |
+| `js` | Node.js. |
+| `python` | Python 3. |
 
 Expose the native compiler on `PATH` or set `NYX_CXX`, then run
 `Nyx: Toolchain Doctor` to verify the environment.

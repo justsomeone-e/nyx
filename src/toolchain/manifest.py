@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 from typing import Dict, List, Any, Optional
 
@@ -9,7 +9,7 @@ class NyxManifest:
             "name": "nyx_app",
             "version": "0.1.0",
             "edition": "2026",
-            "target": "hecpp",
+            "target": "cpp",
             "entry": "src/main.nyx",
             "author": "",
             "license": "MIT",
@@ -98,7 +98,7 @@ class NyxManifest:
         p_name = self.package.get("name", "nyx_app")
         p_ver = self.package.get("version", "0.1.0")
         p_ed = self.package.get("edition", "2026")
-        p_targ = self.package.get("target", "hecpp")
+        p_targ = self.package.get("target", "cpp")
         p_entry = self.package.get("entry", "src/main.nyx")
 
         lines = [
@@ -147,7 +147,7 @@ class NyxLock:
     @staticmethod
     def generate(manifest: NyxManifest, lock_file: str = "nyx.lock"):
         v = manifest.package.get("version", "0.1.0")
-        t = manifest.package.get("target", "hecpp")
+        t = manifest.package.get("target", "cpp")
         lines = [
             "# Auto-generated lockfile for nyx package manager",
             "# Manual modifications will be overwritten",

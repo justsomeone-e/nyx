@@ -12,6 +12,7 @@ if ROOT_DIR not in sys.path:
 
 from src import NyxCompiler
 from src.codegen.cpp_toolchain import CppToolchain
+from src.core.completion_catalog import completion_catalog
 from src.core.language_surface import (
     EXPERIMENTAL_KEYWORDS,
     RESERVED_KEYWORDS,
@@ -22,7 +23,7 @@ from src.core.tokens import TokenType
 
 
 def _run_artifact_process(target: str, content: str, directory: str) -> subprocess.CompletedProcess[str]:
-    if target == "hecpp":
+    if target == "cpp":
         source_path = os.path.join(directory, "surface.cpp")
         executable_path = os.path.join(directory, "surface.exe")
         with open(source_path, "w", encoding="utf-8") as handle:
@@ -31,7 +32,7 @@ def _run_artifact_process(target: str, content: str, directory: str) -> subproce
         assert compiled, message
         command = [executable_path]
     else:
-        command = [sys.executable, "-c", content] if target == "hepy" else ["node", "-e", content]
+        command = [sys.executable, "-c", content] if target == "python" else ["node", "-e", content]
     return subprocess.run(
         command,
         cwd=ROOT_DIR,
@@ -60,6 +61,7 @@ def run_language_surface_suite() -> bool:
         encoding="utf-8",
     ) as handle:
         editor_surface = json.load(handle)
+    assert editor_surface == completion_catalog()
     assert tuple(editor_surface["stableKeywords"]) == STABLE_KEYWORDS
     assert tuple(editor_surface["experimentalKeywords"]) == EXPERIMENTAL_KEYWORDS
     assert tuple(editor_surface["reservedKeywords"]) == RESERVED_KEYWORDS
@@ -71,7 +73,7 @@ def run_language_surface_suite() -> bool:
 
     legacy_function = compiler.check_source(
         "def legacy() { return }",
-        target="hecpp",
+        target="cpp",
         filename="legacy_def.nyx",
     )
     assert not legacy_function.success
@@ -94,7 +96,7 @@ fn main() {
 }
 """
     with tempfile.TemporaryDirectory(prefix="nyx_language_surface_") as directory:
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(source, target=target, filename="surface.nyx")
             assert result.success, result.diagnostics
             assert result.artifact is not None
@@ -116,7 +118,7 @@ impl Show for Point {
 
 fn main() { print("trait:", Point(10, 20).show()) }
 """
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(
                 trait_source,
                 target=target,
@@ -134,7 +136,7 @@ fn main() {
     catch error { print("caught:", error) }
 }
 """
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(
                 exception_source,
                 target=target,
@@ -145,7 +147,7 @@ fn main() {
             output = _run_artifact(target, result.artifact.content, directory)
             assert output.replace("\r\n", "\n").strip() == "caught: 42", (target, output)
 
-        for target in ("hers", "hereact", "hewasm", "stm32f4"):
+        for target in ("rust", "react", "wasm", "stm32f4"):
             result = compiler.compile_source(
                 exception_source,
                 target=target,
@@ -183,7 +185,7 @@ async fn main() {
     catch error { print("caught:", error) }
 }
 """
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(async_source, target=target, filename="async_tasks.nyx")
             assert result.success, result.diagnostics
             assert result.artifact is not None
@@ -192,7 +194,7 @@ async fn main() {
                 "async: 84\nmethod: 42\ncaught: async boom"
             ), (target, output)
 
-        for target in ("hers", "hereact", "hewasm", "stm32f4"):
+        for target in ("rust", "react", "wasm", "stm32f4"):
             result = compiler.compile_source(
                 async_source,
                 target=target,
@@ -207,7 +209,7 @@ fn main() {
     if dynamic(1) { print("truthiness leaked") }
 }
 """
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(
                 dynamic_condition_source,
                 target=target,
@@ -222,7 +224,7 @@ fn main() {
 
     immutable = compiler.check_source(
         "let fixed: int = 1\nset fixed = 2\n",
-        target="hecpp",
+        target="cpp",
         filename="immutable.nyx",
     )
     assert not immutable.success
@@ -234,14 +236,14 @@ fn main() {
     for keyword in RESERVED_KEYWORDS:
         reserved = compiler.check_source(
             f'{keyword} "not implemented"\n',
-            target="hecpp",
+            target="cpp",
             filename=f"reserved_{keyword}.nyx",
         )
         assert not reserved.success, f"reserved keyword unexpectedly compiled: {keyword}"
 
     sync_await = compiler.check_source(
         "async fn compute() -> int { return 1 } fn bad() -> int { return await compute() }",
-        target="hecpp",
+        target="cpp",
         filename="sync_await.nyx",
     )
     assert not sync_await.success
@@ -249,7 +251,7 @@ fn main() {
 
     non_task_await = compiler.check_source(
         "async fn bad() -> int { return await 1 }",
-        target="hecpp",
+        target="cpp",
         filename="non_task_await.nyx",
     )
     assert not non_task_await.success
@@ -261,7 +263,7 @@ fn main() {
     ):
         invalid_integer = compiler.check_source(
             source,
-            target="hecpp",
+            target="cpp",
             filename="invalid_integer_literal.nyx",
         )
         assert not invalid_integer.success
@@ -274,7 +276,7 @@ fn main() {
     ):
         invalid_condition = compiler.check_source(
             source,
-            target="hecpp",
+            target="cpp",
             filename="invalid_condition.nyx",
         )
         assert not invalid_condition.success
@@ -299,7 +301,7 @@ fn main() {
     for source, expected_code in invalid_traits:
         invalid_trait = compiler.check_source(
             source,
-            target="hecpp",
+            target="cpp",
             filename="invalid_trait.nyx",
         )
         assert not invalid_trait.success

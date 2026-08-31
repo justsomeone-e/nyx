@@ -318,6 +318,7 @@ def _pack_board(
     aliases: Iterable[str] = (),
     openocd_target: str = "",
 ) -> BoardProfile:
+    float_flags = ("-mfloat-abi=soft",) if cpu in ("cortex-m4", "cortex-m7", "cortex-m33") else ()
     return BoardProfile(
         name=name,
         display_name=name.upper(),
@@ -325,7 +326,7 @@ def _pack_board(
         compiler_target=compiler_target,
         cpu=cpu,
         clang_target=clang_target,
-        cflags=(f"-mcpu={cpu}", "-mthumb", "-ffreestanding", "-fno-exceptions", "-fno-rtti", "-Os", "-Wall"),
+        cflags=(f"-mcpu={cpu}", "-mthumb", *float_flags, "-ffreestanding", "-fno-exceptions", "-fno-rtti", "-Os", "-Wall"),
         support="cmsis-pack",
         openocd_target=openocd_target,
         aliases=tuple(aliases),

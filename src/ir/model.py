@@ -91,6 +91,25 @@ class IRNullCoalesce(IRExpr):
 
 
 @dataclass(frozen=True, slots=True)
+class IRConditional(IRExpr):
+    condition: IRExpr
+    then_expr: IRExpr
+    else_expr: IRExpr
+
+
+@dataclass(frozen=True, slots=True)
+class IRMatchExpressionCase:
+    pattern: Optional[IRExpr]
+    value: IRExpr
+
+
+@dataclass(frozen=True, slots=True)
+class IRMatchExpression(IRExpr):
+    subject: IRExpr
+    cases: Tuple[IRMatchExpressionCase, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class IRLambda(IRExpr):
     params: Tuple["IRParameter", ...]
     body: IRExpr

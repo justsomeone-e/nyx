@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <string>
 #native include <vector>
 
@@ -243,6 +243,24 @@ impl HIRNode {
             return "{\"left\":" + self.first[0].to_json() +
                 ",\"node\":\"IRNullCoalesce\",\"right\":" + self.second[0].to_json() +
                 ",\"span\":" + span_json + ",\"type\":" + type_json + "}"
+        }
+        if self.kind == "IRConditional" {
+            return "{\"condition\":" + self.first[0].to_json() +
+                ",\"else_expr\":" + self.third[0].to_json() +
+                ",\"node\":\"IRConditional\",\"span\":" + span_json +
+                ",\"then_expr\":" + self.second[0].to_json() +
+                ",\"type\":" + type_json + "}"
+        }
+        if self.kind == "IRMatchExpressionCase" {
+            return "{\"node\":\"IRMatchExpressionCase\",\"pattern\":" +
+                self.optional_node_json(self.first) +
+                ",\"value\":" + self.second[0].to_json() + "}"
+        }
+        if self.kind == "IRMatchExpression" {
+            return "{\"cases\":" + self.nodes_json(self.items) +
+                ",\"node\":\"IRMatchExpression\",\"span\":" + span_json +
+                ",\"subject\":" + self.first[0].to_json() +
+                ",\"type\":" + type_json + "}"
         }
         if self.kind == "IRLambda" {
             return "{\"body\":" + self.second[0].to_json() +

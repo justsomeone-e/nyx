@@ -76,7 +76,7 @@ def _combined_source() -> str:
         _read_component("hir_lowering.nyx"),
         _read_component("hir_codegen.nyx"),
     ]
-    return """#target hecpp
+    return """#target cpp
 #native include <string>
 #native include <vector>
 #native include <cctype>
@@ -115,7 +115,7 @@ def _driver_source(source: str) -> str:
         return
     }}
 
-    var lowerer = HIRLowerer("<bootstrap-input>", "hecpp", [], [], 0, "module", false, "")
+    var lowerer = HIRLowerer("<bootstrap-input>", "cpp", [], [], 0, "module", false, "")
     var hir_module = lowerer.lower_program(ast)
     if lowerer.has_error {{
         print("SELF_HOST_HIR_ERROR:", lowerer.error_msg)
@@ -176,7 +176,7 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
         return
     }
 
-    var lowerer = HIRLowerer(source_path, "hecpp", [], [], 0, "module", false, "")
+    var lowerer = HIRLowerer(source_path, "cpp", [], [], 0, "module", false, "")
     var hir_module = lowerer.lower_program(ast)
     if lowerer.has_error {
         nyxc_fail("HIR", lowerer.error_msg, 1)
@@ -188,8 +188,8 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
         return
     }
 
-    if hir_module.target != "hecpp" and hir_module.target != "cpp" and hir_module.target != "c++" {
-        nyxc_fail("TARGET", "Native nyxc currently emits hecpp only; requested " + hir_module.target, 2)
+    if hir_module.target != "cpp" and hir_module.target != "cpp" and hir_module.target != "c++" {
+        nyxc_fail("TARGET", "Native nyxc currently emits cpp only; requested " + hir_module.target, 2)
         return
     }
     var generator = HIRCodeGen(0, "", false, "", 0,

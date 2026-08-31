@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 var r = Ok(200)
 match r { Ok(v) => print("OK:", v), Err(e) => print("ERR"), "_" => print("OTHER") }

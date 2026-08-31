@@ -157,7 +157,7 @@ def run_bootstrap_lexer_test() -> bool:
         ("removed_aliases_are_identifiers", "def val"),
         (
             "native_directives_and_ffi",
-            '#target hecpp\n#native include <vector>\n#native link "user32.lib"\n#native use std::vector;\n#native raw int x = 42;\nextern "C" fn puts(s: string) -> int',
+            '#target cpp\n#native include <vector>\n#native link "user32.lib"\n#native use std::vector;\n#native raw int x = 42;\nextern "C" fn puts(s: string) -> int',
         ),
         (
             "native_raw_nested_block",

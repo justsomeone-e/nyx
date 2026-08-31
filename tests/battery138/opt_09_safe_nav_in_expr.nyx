@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 struct Box { val }
 var b: Box? = Box(50)
 print((b?.val ?? 0) + 10)

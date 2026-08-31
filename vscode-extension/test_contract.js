@@ -9,6 +9,8 @@ const events = [];
 let clientOptions;
 let serverOptions;
 let completionItemProvider;
+let completionSelector;
+let completionTriggers;
 const registeredCommands = new Map();
 const executedTasks = [];
 const openedExternalUrls = [];
@@ -57,7 +59,7 @@ const vscodeMock = {
                 isUntitled: false,
                 isDirty: true,
                 uri: { fsPath: 'C:\\project\\main.nyx', path: '/C:/project/main.nyx' },
-                getText: () => '#target hecpp\nprint("hello")',
+                getText: () => '#target cpp\nprint("hello")',
                 save: async () => true
             }
         },
@@ -80,8 +82,10 @@ const vscodeMock = {
         }
     },
     languages: {
-        registerCompletionItemProvider(_selector, provider) {
+        registerCompletionItemProvider(selector, provider, ...triggers) {
             events.push('completion-provider');
+            completionSelector = selector;
+            completionTriggers = triggers;
             completionItemProvider = provider;
             return { dispose() {} };
         }
@@ -240,6 +244,10 @@ async function main() {
         { scheme: 'untitled', language: 'nyxlang' }
     ]);
     assert.deepStrictEqual(events, ['start', 'completion-provider']);
+    assert.strictEqual(completionSelector, 'nyxlang');
+    for (const trigger of ['a', 'z', '_']) {
+        assert.ok(completionTriggers.includes(trigger), `missing completion trigger: ${trigger}`);
+    }
     assert.strictEqual(context.subscriptions.length, 12);
     assert.strictEqual(registeredCommands.size, 9);
 
@@ -271,12 +279,13 @@ async function main() {
     ]);
 
     const languageSurface = require(path.join(__dirname, 'language-surface.json'));
+    const completionSource = 'import "std/fs"\nfn local_helper(value: int) -> int {\n    let local_value = value\n}\na';
     const completionItems = completionItemProvider.provideCompletionItems(
         {
-            lineAt: () => ({ text: 'c' }),
-            getText: () => 'c'
+            lineAt: () => ({ text: 'a' }),
+            getText: () => completionSource
         },
-        { line: 0, character: 1 },
+        { line: 4, character: 1 },
         undefined,
         undefined
     );
@@ -289,6 +298,19 @@ async function main() {
     }
     assert.ok(labels.has('continue'));
     assert.ok(labels.has('async'));
+    for (const canonicalLabel of [
+        'append_string',
+        'fnv1a_64_hex',
+        'nucleo-f401re',
+        'cpp',
+        'args',
+        'Buffer',
+        'local_helper',
+        'local_value'
+    ]) {
+        assert.ok(labels.has(canonicalLabel), `missing canonical completion: ${canonicalLabel}`);
+    }
+    assert.ok(!labels.has('poke'), 'extension must not advertise a nonexistent core builtin');
     assert.ok(!labels.has('val'));
 
     await extension.deactivate();

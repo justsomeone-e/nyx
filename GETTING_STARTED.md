@@ -29,31 +29,31 @@ Detected Host Toolchains & Execution Engines:
 
 ## 2. Creating Your First Project
 
-Use the `he new` command to scaffold a standard project:
+Use the `nyx new` command to scaffold a standard project:
 
 ```bash
-he new my_first_app
+nyx new my_first_app
 cd my_first_app
 ```
 
 Your project directory will look like this:
 ```text
 my_first_app/
-├── he.toml               # Package configuration
-├── he.lock               # Dependency lockfile
+├── nyx.toml              # Package configuration
+├── nyx.lock              # Dependency lockfile
 ├── .gitignore            # Git ignore rules
 └── src/
-    └── main.he           # Application source code
+    └── main.nyx          # Application source code
 ```
 
 ---
 
 ## 3. Writing Code & In-File Tests
 
-Open `src/main.he` in your editor:
+Open `src/main.nyx` in your editor:
 
 ```nyx
-#target hecpp
+#target cpp
 
 struct User {
     name: string,
@@ -81,27 +81,27 @@ test "user creation verification" {
 
 ### Fast Type-Check (Zero Build Overhead)
 ```bash
-he check
+nyx check
 ```
 Output:
 ```text
-[*] Checking semantics & types for: src/main.he
+[*] Checking semantics & types for: src/main.nyx
 [✓] Check Passed: 0 syntax or semantic errors found.
 ```
 
 ### Running the Application
 ```bash
-he run
+nyx run
 ```
 Output:
 ```text
-[*] Running [hecpp]: src/main.he
+[*] Running [cpp]: src/main.nyx
 Created user: Umut Age: 25
 ```
 
 ### Executing In-File Unit Tests
 ```bash
-he test src/main.he
+nyx test src/main.nyx
 ```
 
 ---
@@ -111,7 +111,7 @@ he test src/main.he
 To compile an optimized, self-contained native executable:
 
 ```bash
-he build --target hecpp
+nyx build --target cpp
 ```
 
-Your executable will be available at `build/hecpp/main.exe` and can be distributed to other machines without requiring Python or Node.js.
+Your executable will be available at `build/cpp/main.exe` and can be distributed to other machines without requiring Python or Node.js.

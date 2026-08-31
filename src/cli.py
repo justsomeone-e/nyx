@@ -90,20 +90,20 @@ System & Diagnostics:
   nyx help                           Display this help message
 
 Target Backends (--target):
-  hecpp (C++20 Native) | hepy (Python) | hejs (Node.js) | hers (Rust 2021)
+  cpp (C++20 Native) | python (Python) | js (Node.js) | rust (Rust 2021)
 ===================================================================""")
 
 def parse_nyx_toml():
-    """Reads nyx.toml or he.toml in current directory if available."""
+    """Read nyx.toml in the current directory when available."""
     config = {
         "name": "nyx_app",
         "version": "0.1.0",
-        "target": "hecpp",
+        "target": "cpp",
         "board": "",
         "entry": "src/main.nyx",
         "output_type": "exe"
     }
-    manifest_path = "nyx.toml" if os.path.exists("nyx.toml") else ("he.toml" if os.path.exists("he.toml") else None)
+    manifest_path = "nyx.toml" if os.path.exists("nyx.toml") else None
     if manifest_path:
         try:
             from src.toolchain.manifest import NyxManifest
@@ -132,7 +132,7 @@ def parse_nyx_toml():
                         config["output_type"] = line.split("=")[1].strip().strip('"').strip("'")
     return config
 
-def get_target_from_args(default_target="hecpp", entry_file=None):
+def get_target_from_args(default_target="cpp", entry_file=None):
     # 1. Check CLI flag
     if "--target" in sys.argv:
         idx = sys.argv.index("--target")
@@ -157,21 +157,23 @@ def get_target_from_args(default_target="hecpp", entry_file=None):
     return normalize_backend_name(default_target)
 
 def get_entry_file(default_entry="src/main.nyx"):
-    args = [a for a in sys.argv[2:] if not a.startswith("--") and a not in ("cpp", "hecpp", "asm", "heasm", "wasm", "hewasm", "py", "hepy", "js", "hejs", "rs", "hers", "react")]
-    if args and (args[0].endswith(".nyx") or args[0].endswith(".he")):
+    target_names = set(BACKENDS)
+    for backend in BACKENDS.values():
+        target_names.update(backend.aliases)
+    args = [
+        argument for argument in sys.argv[2:]
+        if not argument.startswith("--") and argument.lower() not in target_names
+    ]
+    if args and args[0].lower().endswith(".nyx"):
         return args[0]
     if os.path.exists(default_entry):
         return default_entry
     if os.path.exists("src/lib.nyx"):
         return "src/lib.nyx"
-    if os.path.exists("src/main.he"):
-        return "src/main.he"
     if os.path.exists("src/main.nyx"):
         return "src/main.nyx"
     if os.path.exists("main.nyx"):
         return "main.nyx"
-    if os.path.exists("main.he"):
-        return "main.he"
     return None
 
 
@@ -296,7 +298,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
             print(f"\033[93m[!] Embedded Cross-Build Diagnostic:\033[0m\n{res.get('error')}\n")
             return 1
 
-    if target == "hecpp":
+    if target == "cpp":
         cpp_code = codegen.gen_cpp()
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
         with open(out_cpp, "w", encoding="utf-8") as f:
@@ -328,7 +330,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
                 print(f"\033[92m[OK] Compiled Native Executable:\033[0m {out_exe}")
                 print(
                     "\033[96m[>] Run in a persistent terminal:\033[0m "
-                    f'nyx run "{entry_file}" --target hecpp'
+                    f'nyx run "{entry_file}" --target cpp'
                 )
                 print("\033[90m    (A console EXE closes normally as soon as main finishes.)\033[0m")
                 return 0
@@ -337,7 +339,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
                 print(f"    ({msg})")
                 return 1
             
-    elif target in ("heasm", "asm"):
+    elif target == "asm":
         cpp_code = codegen.gen_cpp()
         temp_cpp = os.path.join(build_dir, f"{base_name}_temp.cpp")
         with open(temp_cpp, "w", encoding="utf-8") as f:
@@ -352,7 +354,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
                 print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
                 print(
                     "\033[96m[>] Run in a persistent terminal:\033[0m "
-                    f'nyx run "{entry_file}" --target heasm'
+                    f'nyx run "{entry_file}" --target asm'
                 )
             if os.path.exists(temp_cpp):
                 try: os.remove(temp_cpp)
@@ -362,7 +364,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
             print(f"\033[91m[!] Assembly generation failed:\033[0m {msg}")
             return 1
 
-    elif target == "hejs":
+    elif target == "js":
         js_code = codegen.gen_js()
         out_js = os.path.join(build_dir, f"{base_name}.js")
         with open(out_js, "w", encoding="utf-8") as f:
@@ -370,7 +372,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
         print(f"\033[92m[OK] Generated Node.js ES2022 Module:\033[0m {out_js}")
         return 0
 
-    elif target == "hers":
+    elif target == "rust":
         rs_code = codegen.gen_rust()
         out_rs = os.path.join(build_dir, f"{base_name}.rs")
         with open(out_rs, "w", encoding="utf-8") as f:
@@ -378,7 +380,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
         print(f"\033[92m[OK] Generated Rust 2021 Source:\033[0m {out_rs}")
         return 0
 
-    elif target == "hepy":
+    elif target == "python":
         py_code = codegen.gen_python()
         out_py = os.path.join(build_dir, f"{base_name}.py")
         with open(out_py, "w", encoding="utf-8") as f:
@@ -386,7 +388,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
         print(f"\033[92m[OK] Generated Python 3 Module:\033[0m {out_py}")
         return 0
 
-    elif target in ("hereact", "react"):
+    elif target == "react":
         react_code = codegen.gen_react()
         out_tsx = os.path.join(build_dir, f"{base_name}.tsx")
         with open(out_tsx, "w", encoding="utf-8") as f:
@@ -394,7 +396,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
         print(f"\033[92m[OK] Generated React 19 TSX Component:\033[0m {out_tsx}")
         return 0
 
-    elif target in ("hewasm", "wasm"):
+    elif target == "wasm":
         wasm_code = codegen.gen_wasm()
         out_wat = os.path.join(build_dir, f"{base_name}.wat")
         with open(out_wat, "w", encoding="utf-8") as f:
@@ -433,7 +435,7 @@ def cmd_run(entry_file, target) -> int:
     TypeChecker(ast, entry_file, code).check()
     codegen = UniversalCodeGen(ast)
 
-    if target in ("heasm", "asm"):
+    if target == "asm":
         cpp_code = codegen.gen_cpp()
         temp_cpp = os.path.join(build_dir, f"{base_name}_temp.cpp")
         with open(temp_cpp, "w", encoding="utf-8") as f:
@@ -457,7 +459,7 @@ def cmd_run(entry_file, target) -> int:
         else:
             print(f"\033[91m[!] Assembly Execution failed:\033[0m\n{msg}")
             return 1
-    elif target == "hepy":
+    elif target == "python":
         out_py = os.path.join(build_dir, f"{base_name}.py")
         py_code = codegen.gen_python()
         with open(out_py, "w", encoding="utf-8") as f:
@@ -467,7 +469,7 @@ def cmd_run(entry_file, target) -> int:
         result = subprocess.run([sys.executable, out_py])
         print("\033[90m--------------------------------------------------\033[0m")
         return result.returncode
-    elif target == "hejs":
+    elif target == "js":
         out_js = os.path.join(build_dir, f"{base_name}.js")
         js_code = codegen.gen_js()
         with open(out_js, "w", encoding="utf-8") as f:
@@ -481,7 +483,7 @@ def cmd_run(entry_file, target) -> int:
         result = subprocess.run([node_path, out_js])
         print("\033[90m--------------------------------------------------\033[0m")
         return result.returncode
-    elif target == "hecpp":
+    elif target == "cpp":
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
         out_exe = os.path.join(build_dir, f"{base_name}.exe")
         with open(out_cpp, "w", encoding="utf-8") as f:
@@ -499,7 +501,7 @@ def cmd_run(entry_file, target) -> int:
         else:
             print(f"\033[91m[!] C++ Compilation failed:\033[0m\n{msg}")
             return 1
-    elif target == "hers":
+    elif target == "rust":
         out_rs = os.path.join(build_dir, f"{base_name}.rs")
         with open(out_rs, "w", encoding="utf-8") as f:
             f.write(codegen.gen_rust())
@@ -517,7 +519,7 @@ def cmd_run(entry_file, target) -> int:
             return res.returncode or 1
         print("\033[91m[!] Rust compiler not found on system PATH.\033[0m")
         return 1
-    elif target in ("hereact", "react"):
+    elif target == "react":
         out_tsx = os.path.join(build_dir, f"{base_name}.tsx")
         react_code = codegen.gen_react()
         with open(out_tsx, "w", encoding="utf-8") as f:
@@ -528,7 +530,7 @@ def cmd_run(entry_file, target) -> int:
         print("\033[90m--------------------------------------------------\033[0m")
         print("\033[92m[OK] React component generated successfully.\033[0m")
         return 0
-    elif target in ("hewasm", "wasm"):
+    elif target == "wasm":
         out_wat = os.path.join(build_dir, f"{base_name}.wat")
         wasm_code = codegen.gen_wasm()
         with open(out_wat, "w", encoding="utf-8") as f:
@@ -556,7 +558,7 @@ def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool 
 
     from src.core.module_loader import ModuleLoader
     from src.codegen.bundle_emitter import BundleEmitter
-    loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)), target="hewasm")
+    loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)), target="wasm")
     ast = loader.load_program(entry_file, code)
     TypeChecker(ast, entry_file, code).check()
 
@@ -671,14 +673,14 @@ def cmd_new(project_name, is_lib=False):
 name = "{project_name}"
 version = "0.1.0"
 edition = "2026"
-target = "hecpp"
+target = "cpp"
 entry = "src/lib.nyx"
 
 [dependencies]
 # std = "2.0.0"
 
 [build]
-target = "hecpp"
+target = "cpp"
 output_type = "lib"
 entry = "src/lib.nyx"
 opt_level = 2
@@ -700,7 +702,7 @@ target/
             f.write(gitignore_content)
 
         lib_nyx_content = f"""// nyx native library: {project_name}
-#target hecpp
+#target cpp
 
 fn add(a: int, b: int) -> int {{
     return a + b
@@ -714,7 +716,7 @@ test "library add test" {{
             f.write(lib_nyx_content)
 
         example_nyx_content = f"""// Example usage of {project_name}
-#target hecpp
+#target cpp
 import "../src/lib.nyx"
 
 var res = add(5, 7)
@@ -751,14 +753,14 @@ nyx test
 name = "{project_name}"
 version = "0.1.0"
 edition = "2026"
-target = "hecpp"
+target = "cpp"
 entry = "src/main.nyx"
 
 [dependencies]
 # std = "2.0.0"
 
 [build]
-target = "hecpp"
+target = "cpp"
 output_type = "exe"
 opt_level = 2
 """
@@ -775,7 +777,7 @@ target/
     with open(os.path.join(project_name, ".gitignore"), "w", encoding="utf-8") as f:
         f.write(gitignore_content)
         
-    main_nyx_content = f"""#target hecpp
+    main_nyx_content = f"""#target cpp
 
 fn greet(name: string) -> string {{
     return "Hello, " + name + " from nyx!"
@@ -885,13 +887,13 @@ def cmd_doctor():
     print("Environment & Toolchain Diagnostics:")
     
     # 1. Python runtime
-    print(f"\n  [1] Core Python Runtime (hepy Reference):")
+    print(f"\n  [1] Core Python Runtime (python Reference):")
     print(f"      • Status:    \033[92m[OK] Available\033[0m")
     print(f"      • Path:      {sys.executable}")
     print(f"      • Version:   Python {sys.version.split()[0]}")
 
-    # 2. C++ Compiler (hecpp Native)
-    print(f"\n  [2] C++20 Compiler (hecpp Native Executables):")
+    # 2. C++ Compiler (cpp Native)
+    print(f"\n  [2] C++20 Compiler (cpp Native Executables):")
     clang = CppToolchain.find_compiler()
     if clang:
         print(f"      • Status:    \033[92m[OK] Available\033[0m")
@@ -899,14 +901,14 @@ def cmd_doctor():
         print(f"      • Capability: Native .exe compilation supported")
     else:
         print(f"      • Status:    \033[93m[!] NOT FOUND (Transpile Mode Only)\033[0m")
-        print("      • Requirement: hecpp needs Clang++, GCC/G++, or MSVC cl (C++20).")
+        print("      • Requirement: cpp needs Clang++, GCC/G++, or MSVC cl (C++20).")
         print("      • Configure:   Put the compiler on PATH or set NYX_CXX to its executable.")
         print(f"                     - Windows: winget install LLVM.LLVM")
         print(f"                     - Ubuntu/Debian: sudo apt install clang")
         print(f"                     - macOS: xcode-select --install (or brew install llvm)")
 
-    # 3. Node.js (hejs Target)
-    print(f"\n  [3] JavaScript Runtime (hejs Target):")
+    # 3. Node.js (js Target)
+    print(f"\n  [3] JavaScript Runtime (js Target):")
     node = shutil.which("node")
     if node:
         print(f"      • Status:    \033[92m[OK] Available\033[0m")
@@ -915,8 +917,8 @@ def cmd_doctor():
         print(f"      • Status:    \033[93m[!] NOT FOUND\033[0m")
         print(f"      • Note:      Install Node.js to execute ES2022 output: winget install OpenJS.NodeJS")
 
-    # 4. Rust Compiler (hers Target)
-    print(f"\n  [4] Rust Toolchain (hers Conformance Target):")
+    # 4. Rust Compiler (rust Target)
+    print(f"\n  [4] Rust Toolchain (rust Conformance Target):")
     rustc = shutil.which("rustc")
     if rustc:
         print(f"      • Status:    \033[92m[OK] Gate 8 Conformance (8/8 Architecture Verified)\033[0m")
@@ -1046,7 +1048,7 @@ def cmd_flash(firmware, board_name, *, probe="auto", serial_number="", dry_run=F
         print("\033[91m[!] Firmware path is required (.elf, .hex, .bin, or .nyx).\033[0m")
         return 1
 
-    if firmware.endswith((".nyx", ".he")):
+    if firmware.endswith(".nyx"):
         status = cmd_build(
             firmware,
             board.compiler_target,
@@ -1092,7 +1094,7 @@ def cmd_repl():
     print("    Type expressions or statements. Special commands: :help, :ast, :cpp, :js, :target, :exit\n")
     
     session_statements = []
-    target = "hepy"
+    target = "python"
 
     while True:
         try:
@@ -1110,7 +1112,7 @@ REPL Commands:
   :ast <expr>        Inspect AST of an expression
   :cpp <expr>        Inspect transpiled C++20 code
   :js <expr>         Inspect transpiled Node.js code
-  :target <t>        Switch evaluation target (hepy, hejs, hecpp)
+  :target <t>        Switch evaluation target (python, js, cpp)
   :clear             Reset REPL session memory
   :exit / :quit      Exit REPL
 """)
@@ -1121,11 +1123,11 @@ REPL Commands:
                 continue
             if line.startswith(":target"):
                 parts = line.split()
-                if len(parts) > 1 and parts[1] in ("hepy", "hejs", "hecpp"):
+                if len(parts) > 1 and parts[1] in ("python", "js", "cpp"):
                     target = parts[1]
                     print(f"\033[92m[OK] Switched evaluation target to: {target}\033[0m")
                 else:
-                    print("Usage: :target <hepy|hejs|hecpp>")
+                    print("Usage: :target <python|js|cpp>")
                 continue
             if line.startswith(":ast "):
                 code = line[5:]
@@ -1180,21 +1182,21 @@ REPL Commands:
 
             codegen = UniversalCodeGen(ast)
             
-            if target == "hepy":
+            if target == "python":
                 py_code = codegen.gen_python()
                 res = subprocess.run([sys.executable, "-c", py_code], capture_output=True, text=True)
                 if res.stdout:
                     sys.stdout.write(res.stdout)
                 if res.stderr:
                     sys.stderr.write(res.stderr)
-            elif target == "hejs":
+            elif target == "js":
                 js_code = codegen.gen_js()
                 res = subprocess.run(["node", "-e", js_code], capture_output=True, text=True)
                 if res.stdout:
                     sys.stdout.write(res.stdout)
                 if res.stderr:
                     sys.stderr.write(res.stderr)
-            elif target == "hecpp":
+            elif target == "cpp":
                 with tempfile.TemporaryDirectory() as td:
                     cpp_f = os.path.join(td, "repl.cpp")
                     exe_f = os.path.join(td, "repl.exe")
@@ -1254,7 +1256,7 @@ def cmd_tutorial():
         ("3. Guard Statements", "Eliminate nested 'if' ladders with clean 'guard':\n  guard x > 0 else {\n      return -1;\n  }\n"),
         ("4. Safe Optionals & Coalescing", "Null-safety is built-in with '?' and '??':\n  var name: string? = null;\n  var display = name ?? \"Guest\";\n"),
         ("5. Structs & Methods", "Data and behavior are cleanly separated with 'struct' and 'impl':\n  struct Point { x: int, y: int }\n  impl Point {\n      fn sum(self) -> int { return self.x + self.y; }\n  }\n"),
-        ("6. Multi-Target Polyglot Output", "One code compiles natively everywhere:\n  nyx run main.nyx --target hecpp  (Native C++20)\n  nyx run main.nyx --target hejs   (Node.js ES2022)\n  nyx run main.nyx --target hepy   (Python 3)\n  nyx bundle main.nyx              (WebAssembly & React)\n")
+        ("6. Multi-Target Polyglot Output", "One code compiles natively everywhere:\n  nyx run main.nyx --target cpp  (Native C++20)\n  nyx run main.nyx --target js   (Node.js ES2022)\n  nyx run main.nyx --target python   (Python 3)\n  nyx bundle main.nyx              (WebAssembly & React)\n")
     ]
     for title, content in lessons:
         print(f"\033[96m=== {title} ===\033[0m")
@@ -1320,7 +1322,7 @@ def main():
         sys.exit(cmd_check(entry, target=target, board_name=board_name, cube_root=cube_root))
     elif cmd == "build":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
-        target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
+        target = get_target_from_args(config.get("target", "cpp"), entry_file=entry)
         is_release = "--release" in sys.argv
         output_type = config.get("output_type", "exe")
         board_name = get_option_value("--board", default=config.get("board", ""))
@@ -1337,7 +1339,7 @@ def main():
         firmware = next(
             (
                 argument for argument in sys.argv[2:]
-                if argument.lower().endswith((".elf", ".hex", ".bin", ".nyx", ".he"))
+                if argument.lower().endswith((".elf", ".hex", ".bin", ".nyx"))
             ),
             None,
         )
@@ -1368,30 +1370,30 @@ def main():
         sys.exit(cmd_self_host(sys.argv[2:]))
     elif cmd == "run":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
-        target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
+        target = get_target_from_args(config.get("target", "cpp"), entry_file=entry)
         sys.exit(cmd_run(entry, target))
     elif cmd == "test":
-        if len(sys.argv) > 2 and (sys.argv[2].endswith(".nyx") or sys.argv[2].endswith(".he")):
+        if len(sys.argv) > 2 and sys.argv[2].endswith(".nyx"):
             target_file = sys.argv[2]
             if not os.path.exists(target_file):
                 print(f"\033[91m[!] Error: Test file '{target_file}' not found.\033[0m")
                 sys.exit(1)
             print(f"\033[96m[*] Running nyx In-File Unit Tests in '{target_file}'...\033[0m")
-            status = cmd_run(target_file, "hepy")
+            status = cmd_run(target_file, "python")
             if status != 0:
                 print("\033[91m[!] Test execution failed.\033[0m")
                 sys.exit(status)
             print("\033[92m[OK] Execution finished successfully.\033[0m")
         elif os.path.exists("src/lib.nyx"):
             print("\033[96m[*] Running nyx In-File Unit Tests in 'src/lib.nyx'...\033[0m")
-            status = cmd_run("src/lib.nyx", "hepy")
+            status = cmd_run("src/lib.nyx", "python")
             if status != 0:
                 print("\033[91m[!] Test execution failed.\033[0m")
                 sys.exit(status)
             print("\033[92m[OK] Execution finished successfully.\033[0m")
         elif os.path.exists("src/main.nyx"):
             print("\033[96m[*] Running nyx In-File Unit Tests in 'src/main.nyx'...\033[0m")
-            status = cmd_run("src/main.nyx", "hepy")
+            status = cmd_run("src/main.nyx", "python")
             if status != 0:
                 print("\033[91m[!] Test execution failed.\033[0m")
                 sys.exit(status)
@@ -1420,7 +1422,7 @@ def main():
     elif cmd == "profile":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         if not entry: print("Usage: nyx profile <file.nyx>"); sys.exit(1)
-        target = get_target_from_args(config.get("target", "hecpp"), entry_file=entry)
+        target = get_target_from_args(config.get("target", "cpp"), entry_file=entry)
         sys.exit(Profiler.profile_file(entry, lambda: cmd_run(entry, target)))
     elif cmd == "doc":
         if len(sys.argv) < 3: print("Usage: nyx doc <file.nyx>"); sys.exit(1)

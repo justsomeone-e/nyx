@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 fn add(a: int, b: int) -> int {
     return a + b
@@ -16,8 +16,8 @@ test "math addition" {
 
 test "string formatting" {
     var greeting = concat_str("Holy", "Easy")
-    assert(greeting == "Holy Easy", "string concatenation must match")
-    print("  [PASS] concat_str(\"Holy\", \"Easy\") == \"Holy Easy\"")
+    assert(greeting == "Nyx", "string concatenation must match")
+    print("  [PASS] concat_str(\"Holy\", \"Easy\") == \"Nyx\"")
 }
 
 test "array indexing" {

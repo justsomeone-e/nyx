@@ -32,23 +32,23 @@ def run_capability_suite() -> bool:
     print("NYX BACKEND / STDLIB CAPABILITY CONTRACT")
     print("=" * 70)
 
-    assert normalize_backend_name("python") == "hepy"
-    assert normalize_backend_name("node") == "hejs"
+    assert normalize_backend_name("python") == "python"
+    assert normalize_backend_name("node") == "js"
     assert normalize_backend_name("stm32") == "stm32f4"
-    assert normalize_backend_name("desktop") == "hecpp"
-    assert "fs" in stdlib_modules_for_target("hejs")
-    assert "fs" not in stdlib_modules_for_target("hers")
-    for target in ("hecpp", "hejs", "hepy"):
+    assert normalize_backend_name("desktop") == "cpp"
+    assert "fs" in stdlib_modules_for_target("js")
+    assert "fs" not in stdlib_modules_for_target("rust")
+    for target in ("cpp", "js", "python"):
         assert {"int64_wrap", "float64_ieee", "canonical_scalar_text"} <= BACKENDS[target].features
-    for target in ("hecpp", "hejs", "hepy", "hers", "hewasm"):
+    for target in ("cpp", "js", "python", "rust", "wasm"):
         assert "typed_hir_v1" in BACKENDS[target].features
-    for target in ("hecpp", "hejs", "hepy"):
+    for target in ("cpp", "js", "python"):
         assert {"channels", "spawn"} <= BACKENDS[target].features
-    assert {"channels", "spawn"}.isdisjoint(BACKENDS["hers"].features)
-    for target in ("heasm", "hereact", "stm32f4"):
+    assert {"channels", "spawn"}.isdisjoint(BACKENDS["rust"].features)
+    for target in ("asm", "react", "stm32f4"):
         assert "typed_hir_v1" not in BACKENDS[target].features
-    assert "int64_wrap" not in BACKENDS["hewasm"].features
-    assert "wasm32" in BACKENDS["hewasm"].features
+    assert "int64_wrap" not in BACKENDS["wasm"].features
+    assert "wasm32" in BACKENDS["wasm"].features
 
     cli_manifest = subprocess.run(
         [sys.executable, CLI_PATH, "targets", "--json"],
@@ -62,7 +62,7 @@ def run_capability_suite() -> bool:
     manifest = json.loads(cli_manifest.stdout)
     assert manifest["schema_version"] == CAPABILITY_SCHEMA_VERSION
     assert {backend["name"] for backend in manifest["backends"]} >= {
-        "hecpp", "hejs", "hepy", "hers", "hereact", "hewasm", "stm32f4"
+        "cpp", "js", "python", "rust", "react", "wasm", "stm32f4"
     }
 
     previous_exit_mode = DiagnosticEmitter.EXIT_ON_ERROR
@@ -70,9 +70,9 @@ def run_capability_suite() -> bool:
     try:
         with tempfile.TemporaryDirectory(prefix="nyx_capability_") as temp_dir:
             js_source = os.path.join(temp_dir, "js_ok.nyx")
-            _write(js_source, '#target hejs\nimport "std/fs"\nfn main() {}\n')
+            _write(js_source, '#target js\nimport "std/fs"\nfn main() {}\n')
             js_ast = ModuleLoader(base_dir=temp_dir).load_program(js_source)
-            assert js_ast.target == "hejs"
+            assert js_ast.target == "js"
 
             embedded_source = os.path.join(temp_dir, "embedded_ok.nyx")
             _write(embedded_source, '#target stm32\nimport "native/gpio"\nfn main() {}\n')
@@ -89,7 +89,7 @@ def run_capability_suite() -> bool:
                 '    print(contains_substring("nyx-platform", "platform"))\n'
                 '}\n',
             )
-            for target in ("hecpp", "hejs", "hepy"):
+            for target in ("cpp", "js", "python"):
                 portable_run = subprocess.run(
                     [sys.executable, CLI_PATH, "run", portable_str, "--target", target],
                     cwd=temp_dir,
@@ -103,7 +103,7 @@ def run_capability_suite() -> bool:
                 assert "abc\n[x]\ntrue" in normalized, f"std/str parity failed for {target}: {normalized}"
 
             rust_build = subprocess.run(
-                [sys.executable, CLI_PATH, "build", portable_str, "--target", "hers"],
+                [sys.executable, CLI_PATH, "build", portable_str, "--target", "rust"],
                 cwd=temp_dir,
                 capture_output=True,
                 text=True,
@@ -111,9 +111,9 @@ def run_capability_suite() -> bool:
                 errors="replace",
             )
             assert rust_build.returncode == 0, rust_build.stderr or rust_build.stdout
-            rust_source_path = os.path.join(temp_dir, "build", "hers", "portable_str.rs")
+            rust_source_path = os.path.join(temp_dir, "build", "rust", "portable_str.rs")
             rustc = shutil.which("rustc")
-            assert rustc, "rustc is required for the hers capability contract"
+            assert rustc, "rustc is required for the rust capability contract"
             rust_check = subprocess.run(
                 [rustc, "--edition=2021", "--emit=metadata", rust_source_path],
                 cwd=temp_dir,
@@ -124,7 +124,7 @@ def run_capability_suite() -> bool:
             )
             assert rust_check.returncode == 0, rust_check.stderr or rust_check.stdout
 
-            for target in ("hecpp", "hejs", "hepy"):
+            for target in ("cpp", "js", "python"):
                 parity_run = subprocess.run(
                     [sys.executable, CLI_PATH, "run", PARITY_SOURCE, "--target", target],
                     cwd=temp_dir,
@@ -139,10 +139,10 @@ def run_capability_suite() -> bool:
                 assert "[SUCCESS] All 6 Stdlib Modules" in parity_output
 
             rust_source = os.path.join(temp_dir, "rust_reject.nyx")
-            _write(rust_source, '#target hers\nimport "std/fs"\nfn main() {}\n')
+            _write(rust_source, '#target rust\nimport "std/fs"\nfn main() {}\n')
             try:
                 ModuleLoader(base_dir=temp_dir).load_program(rust_source)
-                raise AssertionError("hers accepted unsupported std/fs")
+                raise AssertionError("rust accepted unsupported std/fs")
             except DiagnosticError as error:
                 assert error.code == "E1400"
 

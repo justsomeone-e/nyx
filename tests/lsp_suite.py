@@ -23,7 +23,7 @@ from src.core.language_surface import (
 
 def run_lsp_suite():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG LSP v2 IDE SERVICE HARNESS")
+    print("⚡ NYX LSP v2 IDE SERVICE HARNESS")
     print("=" * 70)
 
     server = NyxuageServer()
@@ -33,8 +33,8 @@ def run_lsp_suite():
 struct Point { x: int, y: int }
 
 fn calculate_distance(p1: Point, p2: Point) -> float {
-    var dx = absolute(p1.x - p2.x)
-    var dy = absolute(p1.y - p2.y)
+    var dx = abs(p1.x - p2.x)
+    var dy = abs(p1.y - p2.y)
     return dx + dy
 }
 
@@ -48,11 +48,21 @@ print(calculate_distance(pt, pt))
     print("[*] Testing LSP Autocompletion (Local & stdlib imported symbols)...")
     comp_items = server.handle_completion(test_uri, {"line": 10, "character": 5})
     labels = [item["label"] for item in comp_items]
-    assert "absolute" in labels, "Imported stdlib function 'absolute' must appear in completions"
+    assert "abs" in labels, "Imported stdlib function 'abs' must appear in completions"
     assert "pow" in labels, "Imported stdlib function 'pow' must appear in completions"
     assert "Point" in labels, "Local struct 'Point' must appear in completions"
     assert "calculate_distance" in labels, "Local function 'calculate_distance' must appear in completions"
     assert "print" in labels and "match" in labels
+    for canonical_label in (
+        "append_string",
+        "fnv1a_64_hex",
+        "nucleo-f401re",
+        "cpp",
+        "Buffer",
+        "args",
+    ):
+        assert canonical_label in labels, f"Missing canonical completion: {canonical_label}"
+    assert len(comp_items) >= 200, "Canonical completion catalog unexpectedly shrank"
     assert set(STABLE_KEYWORDS).issubset(labels)
     assert set(EXPERIMENTAL_KEYWORDS).issubset(labels)
     assert set(RESERVED_KEYWORDS).isdisjoint(labels)
@@ -65,6 +75,18 @@ print(calculate_distance(pt, pt))
     assert tuple(editor_surface["reservedKeywords"]) == RESERVED_KEYWORDS
     print(f"  [PASS] Autocompletion returned {len(comp_items)} verified symbols")
 
+    incomplete_uri = "file:///C:/test_project/incomplete.nyx"
+    incomplete_source = "fn local_helper(value: int) -> int {\n    let local_value = value +\n"
+    server.documents[incomplete_uri] = incomplete_source
+    server.validate_document(incomplete_uri, incomplete_source)
+    incomplete_labels = {
+        item["label"]
+        for item in server.handle_completion(incomplete_uri, {"line": 1, "character": 28})
+    }
+    assert "local_helper" in incomplete_labels
+    assert "local_value" in incomplete_labels
+    print("  [PASS] Half-written source keeps local declarations available")
+
     # 2. Test Hover Information
     print("[*] Testing LSP Hover Tooltips...")
     hover_fn = server.handle_hover(test_uri, {"line": 4, "character": 5}) # 'calculate_distance'
@@ -72,7 +94,7 @@ print(calculate_distance(pt, pt))
     hover_struct = server.handle_hover(test_uri, {"line": 2, "character": 8}) # 'Point'
     assert hover_struct is not None and "struct Point" in hover_struct["contents"]["value"]
     hover_builtin = server.handle_hover(test_uri, {"line": 11, "character": 2}) # 'print'
-    assert hover_builtin is not None and "Core language output" in hover_builtin["contents"]["value"]
+    assert hover_builtin is not None and "Writes values" in hover_builtin["contents"]["value"]
     print("  [PASS] Hover cards correctly formatted Markdown signatures")
 
     # 3. Test Go To Definition

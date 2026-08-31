@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn do_nothing() {}
 do_nothing()
 print("Done")

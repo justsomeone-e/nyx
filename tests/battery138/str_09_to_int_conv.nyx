@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print(to_int("42") + 8)

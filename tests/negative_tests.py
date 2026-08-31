@@ -11,52 +11,52 @@ from src.core import Lexer, Parser, TypeChecker
 negative_cases = [
     (
         "neg_type_01_var_decl_mismatch",
-        '#target hecpp\nvar x: int = "hello"',
+        '#target cpp\nvar x: int = "hello"',
         "E2001"
     ),
     (
         "neg_type_02_assign_mismatch",
-        '#target hecpp\nvar x: int = 10\nx = "string"',
+        '#target cpp\nvar x: int = 10\nx = "string"',
         "E2002"
     ),
     (
         "neg_type_03_fn_arg_mismatch",
-        '#target hecpp\nfn add(a: int, b: int) -> int { return a + b }\nadd("hello", 5)',
+        '#target cpp\nfn add(a: int, b: int) -> int { return a + b }\nadd("hello", 5)',
         "E2003"
     ),
     (
         "neg_type_04_return_type_mismatch",
-        '#target hecpp\nfn foo(x: int) -> string { return x }\nfoo(10)',
+        '#target cpp\nfn foo(x: int) -> string { return x }\nfoo(10)',
         "E2004"
     ),
     (
         "neg_type_05_invalid_string_sub",
-        '#target hecpp\nvar res = "abc" - "x"',
+        '#target cpp\nvar res = "abc" - "x"',
         "E2005"
     ),
     (
         "neg_type_06_bool_mult",
-        '#target hecpp\nvar res = true * 5',
+        '#target cpp\nvar res = true * 5',
         "E2005"
     ),
     (
         "neg_type_07_struct_field_mismatch",
-        '#target hecpp\nstruct Hero { name: string, hp: int }\nvar h = Hero(123, "Knight")',
+        '#target cpp\nstruct Hero { name: string, hp: int }\nvar h = Hero(123, "Knight")',
         "E2006"
     ),
     (
         "neg_syntax_01_missing_expr",
-        '#target hecpp\nvar x: int =',
+        '#target cpp\nvar x: int =',
         "E1000"
     ),
     (
         "neg_syntax_02_unclosed_paren",
-        '#target hecpp\nprint(10 + 20',
+        '#target cpp\nprint(10 + 20',
         "E1001"
     ),
     (
         "neg_safety_01_unsafe_peek",
-        '#target hecpp\nvar a = 1234\npeek(a)',
+        '#target cpp\nvar a = 1234\npeek(a)',
         "E1050"
     )
 ]

@@ -105,7 +105,7 @@ This document details all semantic errors emitted by the Nyx `TypeChecker` (`src
 All diagnostics include source filename, 1-indexed line and column numbers, error code, visual source preview, and caret indicator:
 
 ```text
-Error[E1001]: Type Mismatch in 'main.he':3:18
+Error[E1001]: Type Mismatch in 'main.nyx':3:18
   3 | var count: int = "42"
     |                  ^^^^ Expected 'int', found 'string'
 ```

@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <string>
 #native include <vector>
 
@@ -207,8 +207,112 @@ impl Parser {
         return body
     }
 
+    fn parse_value_block(self, context: string) -> ASTNode {
+        if not self.match_type("LBRACE") {
+            self.has_error = true
+            self.error_msg = "Expected '{' for " + context
+            return ASTNode("Unknown", "", "", "", "", false, false, false,
+                false, [], [], [], self.current().line, self.current().col)
+        }
+        var value = self.parse_expr(0)
+        while self.match_type("SEMICOLON") { }
+        if not self.match_type("RBRACE") {
+            self.has_error = true
+            self.error_msg = context + " accepts exactly one value expression"
+        }
+        return value
+    }
+
+    fn parse_conditional_expression(self) -> ASTNode {
+        var tok = self.expect("IF")
+        var condition = self.parse_expr(0)
+        var then_expr = self.parse_value_block("if expression")
+        var children: Array<ASTNode> = [condition, then_expr]
+        while true {
+            if self.match_type("ELIF") {
+                var branch_condition = self.parse_expr(0)
+                var branch_expr = self.parse_value_block("elif expression")
+                children.push(ASTNode("ConditionalBranch", "", "", "", "", false,
+                    false, false, false, [], [], [branch_condition, branch_expr],
+                    branch_condition.line, branch_condition.col))
+                continue
+            }
+            if self.match_type("ELSE") {
+                if self.match_type("IF") {
+                    var branch_condition = self.parse_expr(0)
+                    var branch_expr = self.parse_value_block("else-if expression")
+                    children.push(ASTNode("ConditionalBranch", "", "", "", "", false,
+                        false, false, false, [], [], [branch_condition, branch_expr],
+                        branch_condition.line, branch_condition.col))
+                    continue
+                }
+                children.push(self.parse_value_block("else expression"))
+                return ASTNode("ConditionalExpr", "", "", "", "", false, false,
+                    false, false, [], [], children, tok.line, tok.col)
+            }
+            self.has_error = true
+            self.error_msg = "Value-producing if expression requires an else branch"
+            return ASTNode("ConditionalExpr", "", "", "", "", false, false,
+                false, false, [], [], children, tok.line, tok.col)
+        }
+        return ASTNode("ConditionalExpr", "", "", "", "", false, false,
+            false, false, [], [], children, tok.line, tok.col)
+    }
+
+    fn parse_match_expression(self) -> ASTNode {
+        var tok = self.expect("MATCH")
+        var subject = self.parse_expr(0)
+        if not self.match_type("LBRACE") {
+            self.has_error = true
+            self.error_msg = "Expected '{' after match expression subject"
+        }
+        var children: Array<ASTNode> = [subject]
+        var closed = false
+        while self.current().type_name != "EOF" {
+            if self.match_type("RBRACE") {
+                closed = true
+                break
+            }
+            var pattern = ASTNode("Unknown", "", "", "", "", false, false,
+                false, false, [], [], [], self.current().line, self.current().col)
+            if self.current().type_name == "IDENT" {
+                var identifier = self.advance()
+                pattern = ASTNode("Identifier", identifier.value, "", "", "", false, false,
+                    false, false, [], [], [], identifier.line, identifier.col)
+            } else {
+                pattern = self.parse_expr(0)
+            }
+            self.expect("FAT_ARROW")
+            var value = ASTNode("Unknown", "", "", "", "", false, false,
+                false, false, [], [], [], pattern.line, pattern.col)
+            if self.current().type_name == "LBRACE" {
+                value = self.parse_value_block("match expression arm")
+            } else {
+                value = self.parse_expr(0)
+            }
+            children.push(ASTNode("MatchExprCase", "", "", "", "", false,
+                false, false, false, [], [], [pattern, value], pattern.line, pattern.col))
+            if self.match_type("COMMA") { continue }
+            if self.current().type_name != "RBRACE" {
+                self.has_error = true
+                self.error_msg = "Match expression arms must be comma-separated"
+                break
+            }
+        }
+        if not closed and self.match_type("RBRACE") { closed = true }
+        if not closed {
+            self.has_error = true
+            self.error_msg = "Unclosed match expression: expected '}'"
+        }
+        return ASTNode("MatchExpr", "", "", "", "", false, false,
+            false, false, [], [], children, tok.line, tok.col)
+    }
+
     fn parse_primary(self) -> ASTNode {
         var tok = self.current()
+
+        if tok.type_name == "MATCH" { return self.parse_match_expression() }
+        if tok.type_name == "IF" { return self.parse_conditional_expression() }
 
         if tok.type_name == "NUMBER" {
             self.advance()
@@ -631,7 +735,15 @@ impl Parser {
                 has_explicit_return = true
                 ret_type = self.parse_type()
             }
-            var body = self.parse_block()
+            var body: Array<ASTNode> = []
+            if self.match_type("ASSIGN") {
+                var expression = self.parse_expr(0)
+                body.push(ASTNode("Return", "", "", "", "", false, false,
+                    false, false, [], [], [expression], expression.line, expression.col))
+                self.match_type("SEMICOLON")
+            } else {
+                body = self.parse_block()
+            }
             // is_safe is otherwise unused for functions; retain whether the
             // source declared an arrow so HIR can distinguish implicit `any`
             // from an explicit `-> void` without changing AST snapshots.

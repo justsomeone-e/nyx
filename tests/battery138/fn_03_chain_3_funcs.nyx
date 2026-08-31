@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn f1(x) { return f2(x) + 1 }
 fn f2(x) { return f3(x) * 2 }
 fn f3(x) { return x + 10 }

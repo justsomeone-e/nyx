@@ -1,21 +1,2516 @@
 {
   "stableKeywords": [
-    "var", "let", "set", "const", "fn", "struct", "trait", "impl",
-    "type", "enum", "extern", "volatile", "interrupt", "if", "elif", "else", "for", "in",
-    "loop", "while", "match", "try", "catch", "throw", "return", "break",
-    "continue", "await", "defer", "guard", "unsafe", "critical", "spawn", "async", "use", "import",
-    "from", "as", "test", "assert", "and", "or", "not", "true",
-    "false", "null"
+    "var",
+    "let",
+    "set",
+    "const",
+    "fn",
+    "struct",
+    "trait",
+    "impl",
+    "type",
+    "enum",
+    "extern",
+    "volatile",
+    "interrupt",
+    "if",
+    "elif",
+    "else",
+    "for",
+    "in",
+    "loop",
+    "while",
+    "match",
+    "try",
+    "catch",
+    "throw",
+    "return",
+    "break",
+    "continue",
+    "await",
+    "defer",
+    "guard",
+    "unsafe",
+    "critical",
+    "spawn",
+    "async",
+    "use",
+    "import",
+    "from",
+    "as",
+    "test",
+    "assert",
+    "and",
+    "or",
+    "not",
+    "true",
+    "false",
+    "null"
   ],
   "experimentalKeywords": [],
   "reservedKeywords": [],
   "builtinNames": [
-    "print", "input", "addr", "peek", "memdump", "channel", "Ok", "Err",
-    "len", "buffer_ptr", "to_string", "to_int", "contains", "is_number", "delay_ms"
+    "print",
+    "input",
+    "addr",
+    "peek",
+    "memdump",
+    "channel",
+    "Ok",
+    "Err",
+    "len",
+    "args",
+    "buffer_ptr",
+    "to_string",
+    "to_int",
+    "contains",
+    "is_number",
+    "delay_ms"
   ],
   "typeNames": [
-    "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
-    "float", "f32", "f64", "bool", "string", "char", "uintptr", "void", "any",
-    "Array", "Buffer", "Option", "Result", "Channel", "Task"
+    "int",
+    "i8",
+    "i16",
+    "i32",
+    "i64",
+    "u8",
+    "u16",
+    "u32",
+    "u64",
+    "float",
+    "f32",
+    "f64",
+    "bool",
+    "string",
+    "char",
+    "uintptr",
+    "void",
+    "any",
+    "Array",
+    "Buffer",
+    "Option",
+    "Result",
+    "Channel",
+    "Task"
+  ],
+  "builtinFunctions": [
+    {
+      "label": "print",
+      "detail": "fn print(...args) -> void",
+      "documentation": "Writes values to standard output."
+    },
+    {
+      "label": "input",
+      "detail": "fn input(prompt: string = \"\") -> string",
+      "documentation": "Reads one line from standard input."
+    },
+    {
+      "label": "addr",
+      "detail": "unsafe fn addr(value) -> uintptr",
+      "documentation": "Returns the address of a value inside an unsafe boundary."
+    },
+    {
+      "label": "peek",
+      "detail": "unsafe fn peek(address: uintptr) -> uintptr",
+      "documentation": "Reads a machine word from a raw address."
+    },
+    {
+      "label": "memdump",
+      "detail": "unsafe fn memdump(address: uintptr, count: int = 16) -> void",
+      "documentation": "Prints raw bytes for diagnostics."
+    },
+    {
+      "label": "channel",
+      "detail": "fn channel<T>() -> Channel<T>",
+      "documentation": "Creates a typed CSP channel."
+    },
+    {
+      "label": "Ok",
+      "detail": "fn Ok<T>(value: T) -> Result<T, any>",
+      "documentation": "Constructs a successful Result value."
+    },
+    {
+      "label": "Err",
+      "detail": "fn Err<E>(error: E) -> Result<any, E>",
+      "documentation": "Constructs an error Result value."
+    },
+    {
+      "label": "len",
+      "detail": "fn len<T>(value: T) -> int",
+      "documentation": "Returns a collection, buffer, or string length."
+    },
+    {
+      "label": "args",
+      "detail": "fn args() -> Array<string>",
+      "documentation": "Returns process command-line arguments on hosted targets."
+    },
+    {
+      "label": "buffer_ptr",
+      "detail": "fn buffer_ptr<T, N>(buffer: Buffer<T, N>) -> uintptr",
+      "documentation": "Returns fixed Buffer storage for typed embedded I/O."
+    },
+    {
+      "label": "to_string",
+      "detail": "fn to_string<T>(value: T) -> string",
+      "documentation": "Formats a value using canonical Nyx scalar text."
+    },
+    {
+      "label": "to_int",
+      "detail": "fn to_int(value: string) -> int",
+      "documentation": "Parses a signed Nyx integer."
+    },
+    {
+      "label": "contains",
+      "detail": "fn contains(value: string, part: string) -> bool",
+      "documentation": "Tests whether a string contains a substring."
+    },
+    {
+      "label": "is_number",
+      "detail": "fn is_number(value: string) -> bool",
+      "documentation": "Tests whether text has numeric syntax."
+    },
+    {
+      "label": "delay_ms",
+      "detail": "fn delay_ms(milliseconds: int) -> void",
+      "documentation": "Suspends or delays for the requested milliseconds."
+    }
+  ],
+  "stdlibModules": [
+    {
+      "name": "std/adc",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/adc.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/board",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/board.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/encoding",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/encoding.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/env",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/env.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/fs",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/gpio",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/hash",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/hash.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/i2c",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/interrupt",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/io",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/io.",
+      "targets": [
+        "asm",
+        "cpp",
+        "python"
+      ]
+    },
+    {
+      "name": "std/json",
+      "detail": "Nyx stdlib · deprecated",
+      "documentation": "Use std/json_lite.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/json_lite",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/json_lite.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/math",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/memory",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/memory.",
+      "targets": [
+        "asm",
+        "atmega328p",
+        "cpp",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/mmio",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/net",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/net.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/os",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/os.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/platform",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/process",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/process.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/pwm",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/pwm.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/serial",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/spi",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "name": "std/str",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "name": "std/thread",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "name": "std/time",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/time.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "name": "std/timer",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/timer.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    }
+  ],
+  "stdlibSymbols": [
+    {
+      "label": "ADC_MAX_12BIT",
+      "kind": "constant",
+      "detail": "const ADC_MAX_12BIT: int",
+      "module": "std/adc",
+      "documentation": "Declared by std/adc.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "adc_read",
+      "kind": "function",
+      "detail": "fn adc_read(pin: int) -> int",
+      "module": "std/adc",
+      "documentation": "Declared by std/adc.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "adc_read_mv",
+      "kind": "function",
+      "detail": "fn adc_read_mv(pin: int, reference_mv: int) -> int",
+      "module": "std/adc",
+      "documentation": "Declared by std/adc.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "board_pin",
+      "kind": "function",
+      "detail": "fn board_pin(name: string) -> int",
+      "module": "std/board",
+      "documentation": "Declared by std/board.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "base64_encode",
+      "kind": "function",
+      "detail": "fn base64_encode(data: string) -> string",
+      "module": "std/encoding",
+      "documentation": "Declared by std/encoding.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "base64_decode",
+      "kind": "function",
+      "detail": "fn base64_decode(data: string) -> string",
+      "module": "std/encoding",
+      "documentation": "Declared by std/encoding.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_env",
+      "kind": "function",
+      "detail": "fn get_env(key: string) -> string",
+      "module": "std/env",
+      "documentation": "Declared by std/env.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "has_env",
+      "kind": "function",
+      "detail": "fn has_env(key: string) -> bool",
+      "module": "std/env",
+      "documentation": "Declared by std/env.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "read_to_string",
+      "kind": "function",
+      "detail": "fn read_to_string(path: string) -> string",
+      "module": "std/fs",
+      "documentation": "Declared by std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "write_string",
+      "kind": "function",
+      "detail": "fn write_string(path: string, content: string) -> bool",
+      "module": "std/fs",
+      "documentation": "Declared by std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "append_string",
+      "kind": "function",
+      "detail": "fn append_string(path: string, content: string) -> bool",
+      "module": "std/fs",
+      "documentation": "Declared by std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "exists",
+      "kind": "function",
+      "detail": "fn exists(path: string) -> bool",
+      "module": "std/fs",
+      "documentation": "Declared by std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "remove_file",
+      "kind": "function",
+      "detail": "fn remove_file(path: string) -> bool",
+      "module": "std/fs",
+      "documentation": "Declared by std/fs.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "PIN_INPUT",
+      "kind": "constant",
+      "detail": "const PIN_INPUT: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "PIN_OUTPUT",
+      "kind": "constant",
+      "detail": "const PIN_OUTPUT: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "PIN_PULLUP",
+      "kind": "constant",
+      "detail": "const PIN_PULLUP: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "PIN_PULLDOWN",
+      "kind": "constant",
+      "detail": "const PIN_PULLDOWN: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "PIN_LOW",
+      "kind": "constant",
+      "detail": "const PIN_LOW: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "PIN_HIGH",
+      "kind": "constant",
+      "detail": "const PIN_HIGH: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_INPUT",
+      "kind": "constant",
+      "detail": "const GPIO_INPUT: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_OUTPUT",
+      "kind": "constant",
+      "detail": "const GPIO_OUTPUT: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_PULLUP",
+      "kind": "constant",
+      "detail": "const GPIO_PULLUP: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_PULLDOWN",
+      "kind": "constant",
+      "detail": "const GPIO_PULLDOWN: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_LOW",
+      "kind": "constant",
+      "detail": "const GPIO_LOW: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "GPIO_HIGH",
+      "kind": "constant",
+      "detail": "const GPIO_HIGH: any",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "mode",
+      "kind": "function",
+      "detail": "fn mode(pin: int, m: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "set_mode",
+      "kind": "function",
+      "detail": "fn set_mode(pin: int, m: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write",
+      "kind": "function",
+      "detail": "fn write(pin: int, value: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read",
+      "kind": "function",
+      "detail": "fn read(pin: int) -> int",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "toggle",
+      "kind": "function",
+      "detail": "fn toggle(pin: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "set_high",
+      "kind": "function",
+      "detail": "fn set_high(pin: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "set_low",
+      "kind": "function",
+      "detail": "fn set_low(pin: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "analog_write",
+      "kind": "function",
+      "detail": "fn analog_write(pin: int, val: int) -> void",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "analog_read",
+      "kind": "function",
+      "detail": "fn analog_read(pin: int) -> int",
+      "module": "std/gpio",
+      "documentation": "Declared by std/gpio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "fnv1a_64_hex",
+      "kind": "function",
+      "detail": "fn fnv1a_64_hex(data: string) -> string",
+      "module": "std/hash",
+      "documentation": "Declared by std/hash.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "i2c_open",
+      "kind": "function",
+      "detail": "fn i2c_open(bus: int, address: int, frequency: int) -> int",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_probe",
+      "kind": "function",
+      "detail": "fn i2c_probe(bus: int, address: int, frequency: int) -> bool",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_write_byte",
+      "kind": "function",
+      "detail": "fn i2c_write_byte(handle: int, reg: int, value: int) -> int",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_read_byte",
+      "kind": "function",
+      "detail": "fn i2c_read_byte(handle: int, reg: int) -> int",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_write",
+      "kind": "function",
+      "detail": "fn i2c_write(handle: int, data: uintptr, length: int) -> int",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_read",
+      "kind": "function",
+      "detail": "fn i2c_read(handle: int, data: uintptr, length: int) -> int",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "i2c_close",
+      "kind": "function",
+      "detail": "fn i2c_close(handle: int) -> void",
+      "module": "std/i2c",
+      "documentation": "Declared by std/i2c.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "irq_enable",
+      "kind": "function",
+      "detail": "fn irq_enable(irq: int) -> void",
+      "module": "std/interrupt",
+      "documentation": "Declared by std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "irq_disable",
+      "kind": "function",
+      "detail": "fn irq_disable(irq: int) -> void",
+      "module": "std/interrupt",
+      "documentation": "Declared by std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "irq_set_priority",
+      "kind": "function",
+      "detail": "fn irq_set_priority(irq: int, priority: int) -> void",
+      "module": "std/interrupt",
+      "documentation": "Declared by std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "irq_is_pending",
+      "kind": "function",
+      "detail": "fn irq_is_pending(irq: int) -> bool",
+      "module": "std/interrupt",
+      "documentation": "Declared by std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "irq_clear_pending",
+      "kind": "function",
+      "detail": "fn irq_clear_pending(irq: int) -> void",
+      "module": "std/interrupt",
+      "documentation": "Declared by std/interrupt.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "println_str",
+      "kind": "function",
+      "detail": "fn println_str(msg: string) -> void",
+      "module": "std/io",
+      "documentation": "Declared by std/io.",
+      "targets": [
+        "asm",
+        "cpp",
+        "python"
+      ]
+    },
+    {
+      "label": "println_int",
+      "kind": "function",
+      "detail": "fn println_int(val: int) -> void",
+      "module": "std/io",
+      "documentation": "Declared by std/io.",
+      "targets": [
+        "asm",
+        "cpp",
+        "python"
+      ]
+    },
+    {
+      "label": "println_bool",
+      "kind": "function",
+      "detail": "fn println_bool(val: bool) -> void",
+      "module": "std/io",
+      "documentation": "Declared by std/io.",
+      "targets": [
+        "asm",
+        "cpp",
+        "python"
+      ]
+    },
+    {
+      "label": "prompt_input",
+      "kind": "function",
+      "detail": "fn prompt_input(prompt: string) -> string",
+      "module": "std/io",
+      "documentation": "Declared by std/io.",
+      "targets": [
+        "asm",
+        "cpp",
+        "python"
+      ]
+    },
+    {
+      "label": "get_string",
+      "kind": "function",
+      "detail": "fn get_string(json_str: string, key: string) -> string",
+      "module": "std/json",
+      "documentation": "Declared by std/json.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_int",
+      "kind": "function",
+      "detail": "fn get_int(json_str: string, key: string) -> int",
+      "module": "std/json",
+      "documentation": "Declared by std/json.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_bool",
+      "kind": "function",
+      "detail": "fn get_bool(json_str: string, key: string) -> bool",
+      "module": "std/json",
+      "documentation": "Declared by std/json.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "has_key",
+      "kind": "function",
+      "detail": "fn has_key(json_str: string, key: string) -> bool",
+      "module": "std/json",
+      "documentation": "Declared by std/json.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "escape_string",
+      "kind": "function",
+      "detail": "fn escape_string(s: string) -> string",
+      "module": "std/json",
+      "documentation": "Declared by std/json.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_string",
+      "kind": "function",
+      "detail": "fn get_string(json_str: string, key: string) -> string",
+      "module": "std/json_lite",
+      "documentation": "Declared by std/json_lite.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_int",
+      "kind": "function",
+      "detail": "fn get_int(json_str: string, key: string) -> int",
+      "module": "std/json_lite",
+      "documentation": "Declared by std/json_lite.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "SQRT_TOLERANCE",
+      "kind": "constant",
+      "detail": "const SQRT_TOLERANCE: float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "SQRT_MAX_ITERATIONS",
+      "kind": "constant",
+      "detail": "const SQRT_MAX_ITERATIONS: int",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "POW_MAX_EXPONENT",
+      "kind": "constant",
+      "detail": "const POW_MAX_EXPONENT: int",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "PI",
+      "kind": "constant",
+      "detail": "const PI: float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "E",
+      "kind": "constant",
+      "detail": "const E: float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "sin",
+      "kind": "function",
+      "detail": "fn sin(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "cos",
+      "kind": "function",
+      "detail": "fn cos(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "tan",
+      "kind": "function",
+      "detail": "fn tan(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "abs",
+      "kind": "function",
+      "detail": "fn abs(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "abs_val",
+      "kind": "function",
+      "detail": "fn abs_val(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "max",
+      "kind": "function",
+      "detail": "fn max(a: float, b: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "min",
+      "kind": "function",
+      "detail": "fn min(a: float, b: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "clamp",
+      "kind": "function",
+      "detail": "fn clamp(val: float, min_val: float, max_val: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "pow",
+      "kind": "function",
+      "detail": "fn pow(base: float, exp: int) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "power",
+      "kind": "function",
+      "detail": "fn power(base: float, exp: int) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "sqrt",
+      "kind": "function",
+      "detail": "fn sqrt(x: float) -> float",
+      "module": "std/math",
+      "documentation": "Declared by std/math.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "allocate",
+      "kind": "function",
+      "detail": "fn allocate(size: int) -> *void",
+      "module": "std/memory",
+      "documentation": "Declared by std/memory.",
+      "targets": [
+        "asm",
+        "atmega328p",
+        "cpp",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "release",
+      "kind": "function",
+      "detail": "fn release(ptr: *void) -> void",
+      "module": "std/memory",
+      "documentation": "Declared by std/memory.",
+      "targets": [
+        "asm",
+        "atmega328p",
+        "cpp",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "fill_zero",
+      "kind": "function",
+      "detail": "fn fill_zero(ptr: *void, size: int) -> void",
+      "module": "std/memory",
+      "documentation": "Declared by std/memory.",
+      "targets": [
+        "asm",
+        "atmega328p",
+        "cpp",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read8",
+      "kind": "function",
+      "detail": "fn read8(address: uintptr) -> int",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write8",
+      "kind": "function",
+      "detail": "fn write8(address: uintptr, val: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read16",
+      "kind": "function",
+      "detail": "fn read16(address: uintptr) -> int",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write16",
+      "kind": "function",
+      "detail": "fn write16(address: uintptr, val: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read32",
+      "kind": "function",
+      "detail": "fn read32(address: uintptr) -> int",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write32",
+      "kind": "function",
+      "detail": "fn write32(address: uintptr, val: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "set_bits32",
+      "kind": "function",
+      "detail": "fn set_bits32(address: uintptr, mask: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "clear_bits32",
+      "kind": "function",
+      "detail": "fn clear_bits32(address: uintptr, mask: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "update32",
+      "kind": "function",
+      "detail": "fn update32(address: uintptr, clear_mask: int, set_mask: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read_bit32",
+      "kind": "function",
+      "detail": "fn read_bit32(address: uintptr, bit: int) -> bool",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write_field32",
+      "kind": "function",
+      "detail": "fn write_field32(address: uintptr, mask: int, shift: int, value: int) -> void",
+      "module": "std/mmio",
+      "documentation": "Declared by std/mmio.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "tcp_connect",
+      "kind": "function",
+      "detail": "fn tcp_connect(host: string, port: int) -> int",
+      "module": "std/net",
+      "documentation": "Declared by std/net.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "tcp_send",
+      "kind": "function",
+      "detail": "fn tcp_send(sock: int, data: string) -> bool",
+      "module": "std/net",
+      "documentation": "Declared by std/net.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "tcp_recv",
+      "kind": "function",
+      "detail": "fn tcp_recv(sock: int, max_bytes: int) -> string",
+      "module": "std/net",
+      "documentation": "Declared by std/net.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "tcp_close",
+      "kind": "function",
+      "detail": "fn tcp_close(sock: int) -> void",
+      "module": "std/net",
+      "documentation": "Declared by std/net.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "run_cmd",
+      "kind": "function",
+      "detail": "fn run_cmd(cmd: string) -> int",
+      "module": "std/os",
+      "documentation": "Declared by std/os.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "get_env",
+      "kind": "function",
+      "detail": "fn get_env(name: string) -> string",
+      "module": "std/os",
+      "documentation": "Declared by std/os.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "os_name",
+      "kind": "function",
+      "detail": "fn os_name() -> string",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "arch",
+      "kind": "function",
+      "detail": "fn arch() -> string",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "is_windows",
+      "kind": "function",
+      "detail": "fn is_windows() -> bool",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "is_linux",
+      "kind": "function",
+      "detail": "fn is_linux() -> bool",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "path_separator",
+      "kind": "function",
+      "detail": "fn path_separator() -> string",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "line_ending",
+      "kind": "function",
+      "detail": "fn line_ending() -> string",
+      "module": "std/platform",
+      "documentation": "Declared by std/platform.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "exec_cmd",
+      "kind": "function",
+      "detail": "fn exec_cmd(command: string) -> int",
+      "module": "std/process",
+      "documentation": "Declared by std/process.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "exit_process",
+      "kind": "function",
+      "detail": "fn exit_process(code: int) -> void",
+      "module": "std/process",
+      "documentation": "Declared by std/process.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "pwm_open",
+      "kind": "function",
+      "detail": "fn pwm_open(pin: int, frequency: int) -> bool",
+      "module": "std/pwm",
+      "documentation": "Declared by std/pwm.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "pwm_write",
+      "kind": "function",
+      "detail": "fn pwm_write(pin: int, duty_per_mille: int) -> bool",
+      "module": "std/pwm",
+      "documentation": "Declared by std/pwm.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "pwm_percent",
+      "kind": "function",
+      "detail": "fn pwm_percent(pin: int, percent: int) -> bool",
+      "module": "std/pwm",
+      "documentation": "Declared by std/pwm.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "init",
+      "kind": "function",
+      "detail": "fn init(baudrate: int) -> bool",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "print_str",
+      "kind": "function",
+      "detail": "fn print_str(msg: string) -> int",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "println",
+      "kind": "function",
+      "detail": "fn println(msg: string) -> int",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write_byte",
+      "kind": "function",
+      "detail": "fn write_byte(b: int) -> bool",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "write_bytes",
+      "kind": "function",
+      "detail": "fn write_bytes(data: uintptr, length: int) -> int",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read_bytes",
+      "kind": "function",
+      "detail": "fn read_bytes(data: uintptr, capacity: int) -> int",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "read_byte",
+      "kind": "function",
+      "detail": "fn read_byte() -> int",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "available",
+      "kind": "function",
+      "detail": "fn available() -> bool",
+      "module": "std/serial",
+      "documentation": "Declared by std/serial.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "SPI_MODE_0",
+      "kind": "constant",
+      "detail": "const SPI_MODE_0: int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "SPI_MODE_1",
+      "kind": "constant",
+      "detail": "const SPI_MODE_1: int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "SPI_MODE_2",
+      "kind": "constant",
+      "detail": "const SPI_MODE_2: int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "SPI_MODE_3",
+      "kind": "constant",
+      "detail": "const SPI_MODE_3: int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_open",
+      "kind": "function",
+      "detail": "fn spi_open(bus: int, frequency: int, mode: int) -> int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_transfer",
+      "kind": "function",
+      "detail": "fn spi_transfer(handle: int, value: int) -> int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_repeat",
+      "kind": "function",
+      "detail": "fn spi_repeat(handle: int, value: int, count: int) -> int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_write",
+      "kind": "function",
+      "detail": "fn spi_write(handle: int, data: uintptr, length: int) -> int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_exchange",
+      "kind": "function",
+      "detail": "fn spi_exchange(handle: int, transmit: uintptr, receive: uintptr, length: int) -> int",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "spi_close",
+      "kind": "function",
+      "detail": "fn spi_close(handle: int) -> void",
+      "module": "std/spi",
+      "documentation": "Declared by std/spi.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "is_empty_str",
+      "kind": "function",
+      "detail": "fn is_empty_str(s: string) -> bool",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "concat_three",
+      "kind": "function",
+      "detail": "fn concat_three(a: string, b: string, c: string) -> string",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "wrap_with",
+      "kind": "function",
+      "detail": "fn wrap_with(s: string, open_tag: string, close_tag: string) -> string",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "contains_substring",
+      "kind": "function",
+      "detail": "fn contains_substring(s: string, sub: string) -> bool",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "mutex_create",
+      "kind": "function",
+      "detail": "fn mutex_create() -> int",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "mutex_lock",
+      "kind": "function",
+      "detail": "fn mutex_lock(id: int) -> void",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "mutex_unlock",
+      "kind": "function",
+      "detail": "fn mutex_unlock(id: int) -> void",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "channel_create",
+      "kind": "function",
+      "detail": "fn channel_create() -> int",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "channel_send",
+      "kind": "function",
+      "detail": "fn channel_send(id: int, msg: string) -> void",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "channel_recv",
+      "kind": "function",
+      "detail": "fn channel_recv(id: int) -> string",
+      "module": "std/thread",
+      "documentation": "Declared by std/thread.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "now_ms",
+      "kind": "function",
+      "detail": "fn now_ms() -> int",
+      "module": "std/time",
+      "documentation": "Declared by std/time.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "now_us",
+      "kind": "function",
+      "detail": "fn now_us() -> int",
+      "module": "std/time",
+      "documentation": "Declared by std/time.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "sleep_ms",
+      "kind": "function",
+      "detail": "fn sleep_ms(ms: int) -> void",
+      "module": "std/time",
+      "documentation": "Declared by std/time.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "timer_start",
+      "kind": "function",
+      "detail": "fn timer_start(timer: int, frequency: int, with_interrupt: bool) -> bool",
+      "module": "std/timer",
+      "documentation": "Declared by std/timer.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "timer_stop",
+      "kind": "function",
+      "detail": "fn timer_stop(timer: int) -> void",
+      "module": "std/timer",
+      "documentation": "Declared by std/timer.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "timer_clear_update",
+      "kind": "function",
+      "detail": "fn timer_clear_update(timer: int) -> void",
+      "module": "std/timer",
+      "documentation": "Declared by std/timer.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    },
+    {
+      "label": "timer_counter",
+      "kind": "function",
+      "detail": "fn timer_counter(timer: int) -> int",
+      "module": "std/timer",
+      "documentation": "Declared by std/timer.",
+      "targets": [
+        "atmega328p",
+        "embedded",
+        "rp2040",
+        "stm32f1",
+        "stm32f4"
+      ]
+    }
+  ],
+  "targets": [
+    {
+      "name": "asm",
+      "detail": "x86_64 Assembly",
+      "documentation": "assembly · beta"
+    },
+    {
+      "name": "atmega328p",
+      "detail": "ATmega328P AVR",
+      "documentation": "elf/hex/bin · experimental"
+    },
+    {
+      "name": "cpp",
+      "detail": "C++20 Native",
+      "documentation": "executable/library · stable"
+    },
+    {
+      "name": "embedded",
+      "detail": "Generic Freestanding",
+      "documentation": "elf/hex/bin · experimental"
+    },
+    {
+      "name": "js",
+      "detail": "Node.js ES2022",
+      "documentation": "javascript · stable"
+    },
+    {
+      "name": "python",
+      "detail": "Python 3",
+      "documentation": "python · stable"
+    },
+    {
+      "name": "react",
+      "detail": "React 19 TSX",
+      "documentation": "tsx · beta"
+    },
+    {
+      "name": "rp2040",
+      "detail": "RP2040 Cortex-M0+",
+      "documentation": "elf/hex/bin · experimental"
+    },
+    {
+      "name": "rust",
+      "detail": "Rust 2021",
+      "documentation": "rust · beta"
+    },
+    {
+      "name": "stm32f1",
+      "detail": "STM32F1 Cortex-M3",
+      "documentation": "elf/hex/bin · experimental"
+    },
+    {
+      "name": "stm32f4",
+      "detail": "STM32F4 Cortex-M4",
+      "documentation": "elf/hex/bin · experimental"
+    },
+    {
+      "name": "wasm",
+      "detail": "WebAssembly",
+      "documentation": "wat/wasm · beta"
+    }
+  ],
+  "boards": [
+    {
+      "name": "nucleo-f030r8",
+      "detail": "NUCLEO-F030R8",
+      "documentation": "STM32F030R8T6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f070rb",
+      "detail": "NUCLEO-F070RB",
+      "documentation": "STM32F070RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f072rb",
+      "detail": "NUCLEO-F072RB",
+      "documentation": "STM32F072RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f091rc",
+      "detail": "NUCLEO-F091RC",
+      "documentation": "STM32F091RCT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f103rb",
+      "detail": "NUCLEO-F103RB",
+      "documentation": "STM32F103RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f302r8",
+      "detail": "NUCLEO-F302R8",
+      "documentation": "STM32F302R8T6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f303re",
+      "detail": "NUCLEO-F303RE",
+      "documentation": "STM32F303RET6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f334r8",
+      "detail": "NUCLEO-F334R8",
+      "documentation": "STM32F334R8T6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-f401re",
+      "detail": "NUCLEO-F401RE",
+      "documentation": "STM32F401RET6 · standalone"
+    },
+    {
+      "name": "nucleo-f410rb",
+      "detail": "NUCLEO-F410RB",
+      "documentation": "STM32F410RBT6 · standalone"
+    },
+    {
+      "name": "nucleo-f411re",
+      "detail": "NUCLEO-F411RE",
+      "documentation": "STM32F411RET6 · standalone"
+    },
+    {
+      "name": "nucleo-f446re",
+      "detail": "NUCLEO-F446RE",
+      "documentation": "STM32F446RET6 · standalone"
+    },
+    {
+      "name": "nucleo-g071rb",
+      "detail": "NUCLEO-G071RB",
+      "documentation": "STM32G071RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-g431rb",
+      "detail": "NUCLEO-G431RB",
+      "documentation": "STM32G431RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-g474re",
+      "detail": "NUCLEO-G474RE",
+      "documentation": "STM32G474RET6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-h743zi2",
+      "detail": "NUCLEO-H743ZI2",
+      "documentation": "STM32H743ZIT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l010rb",
+      "detail": "NUCLEO-L010RB",
+      "documentation": "STM32L010RBT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l053r8",
+      "detail": "NUCLEO-L053R8",
+      "documentation": "STM32L053R8T6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l073rz",
+      "detail": "NUCLEO-L073RZ",
+      "documentation": "STM32L073RZT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l152re",
+      "detail": "NUCLEO-L152RE",
+      "documentation": "STM32L152RET6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l452re",
+      "detail": "NUCLEO-L452RE",
+      "documentation": "STM32L452RET6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-l476rg",
+      "detail": "NUCLEO-L476RG",
+      "documentation": "STM32L476RGT6 · cmsis-pack"
+    },
+    {
+      "name": "nucleo-u575zi-q",
+      "detail": "NUCLEO-U575ZI-Q",
+      "documentation": "STM32U575ZIT6Q · cmsis-pack"
+    },
+    {
+      "name": "nucleo-wb55rg",
+      "detail": "NUCLEO-WB55RG",
+      "documentation": "STM32WB55RG · cmsis-pack"
+    },
+    {
+      "name": "nucleo-wl55jc",
+      "detail": "NUCLEO-WL55JC",
+      "documentation": "STM32WL55JC · cmsis-pack"
+    }
   ]
 }

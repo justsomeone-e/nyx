@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var total = 0
 for i in 1..5 { total = total + i }
 print("Sum 1..5:", total)

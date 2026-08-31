@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 fn test_string_coercion() {
     var a: int = 5

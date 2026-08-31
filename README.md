@@ -55,7 +55,7 @@ A source file is lexed, parsed, type-checked, lowered, verified, optimized, and 
   <img src="assets/pipeline_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx compiler architecture pipeline"/>
 </div>
 
-The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `hepy` target, but it is not required by the distributed native `nyxc` path.
+The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `python` target, but it is not required by the distributed native `nyxc` path.
 
 > **Release status:** this branch reports `4.0.0-dev.1` and is the `v4.0.0-rc.1` candidate. Stable `v4.0.0` is intentionally gated behind cross-platform RC evidence and a soak period.
 
@@ -77,13 +77,13 @@ Nyx exposes eight target families without pretending they all have the same matu
 ┌─────────────┬──────────────────────────────┬──────────────┬───────────────┐
 │ Target      │ Artifact                     │ Maturity     │ HIR authority │
 ├─────────────┼──────────────────────────────┼──────────────┼───────────────┤
-│ hecpp       │ C++20 / native executable    │ stable       │ yes           │
-│ hejs        │ ES2022 / Node.js module      │ stable       │ yes           │
-│ hepy        │ Python 3 program             │ stable       │ yes           │
-│ hewasm      │ WAT + WASM ABI v1            │ beta         │ yes           │
-│ hers        │ Rust 2021 source/object      │ beta         │ yes           │
-│ hereact     │ React 19 TSX tooling         │ beta         │ tooling       │
-│ heasm       │ x86_64 assembly via C++      │ beta         │ migration     │
+│ cpp       │ C++20 / native executable    │ stable       │ yes           │
+│ js        │ ES2022 / Node.js module      │ stable       │ yes           │
+│ python        │ Python 3 program             │ stable       │ yes           │
+│ wasm      │ WAT + WASM ABI v1            │ beta         │ yes           │
+│ rust        │ Rust 2021 source/object      │ beta         │ yes           │
+│ react     │ React 19 TSX tooling         │ beta         │ tooling       │
+│ asm       │ x86_64 assembly via C++      │ beta         │ migration     │
 │ embedded    │ ELF / HEX / BIN firmware     │ experimental │ migration     │
 └─────────────┴──────────────────────────────┴──────────────┴───────────────┘
 ```
@@ -117,11 +117,22 @@ fn main() -> void {
 }
 ```
 
-The built-in register-level BSP currently produces ELF/HEX/BIN for the
-NUCLEO-F401RE, F410RB, F411RE, and F446RE. Twenty-one additional Nucleo profiles
-are recognized but remain explicitly CMSIS/custom-BSP gated; the CLI never
-pretends those boards are build-ready. `nyx flash --dry-run` exposes the exact
-STM32CubeProgrammer/OpenOCD command before a physical device is touched.
+The built-in register-level BSP produces ELF/HEX/BIN for NUCLEO-F401RE,
+F410RB, F411RE, and F446RE. Another 21 Nucleo profiles become build-ready from
+official STM32Cube CMSIS packages. Nyx can install only the required CMSIS and
+Nucleo assets, then resolve device macros, startup assembly, IRQs, system C, and
+the board linker script automatically:
+
+```powershell
+nyx boards --install F1
+nyx boards --probe --cube-root .toolchains/stm32cube
+nyx build firmware.nyx --board nucleo-f103rb --cube-root .toolchains/stm32cube
+```
+
+The verified local matrix emits ARM ELF/HEX/BIN for all 25 registered profiles;
+physical pin-level behavior remains a separate hardware-in-the-loop gate.
+`nyx flash --dry-run` exposes the exact STM32CubeProgrammer/OpenOCD command
+before a physical device is touched.
 
 ### ◇ Deterministic typed-HIR pipeline
 
@@ -202,7 +213,7 @@ The diagnostic system is designed for both human-readable compiler output and to
 
 ### ◈ Native C++20 Backend
 
-The `hecpp` backend emits C++20 suitable for compilation through Clang or GCC.
+The `cpp` backend emits C++20 suitable for compilation through Clang or GCC.
 
 ```text
 Nyx Source
@@ -237,8 +248,8 @@ Nyx includes an LSP JSON-RPC server and a local VS Code package with diagnostics
 | Portable float | IEEE-754 binary64 with canonical `nan`, `inf`, exponent, and negative-zero text |
 | Strings | Unicode, embedded NUL, `\uXXXX`, interpolation; no implicit NFC/NFD normalization |
 | Semantic boundary | Canonical typed HIR v1 + verifier + deterministic passes |
-| Stable semantic set | `hecpp`, `hejs`, `hepy` exact hosted parity |
-| Web ABI | `hewasm` beta `wasm32` + Bundle ABI v1 |
+| Stable semantic set | `cpp`, `js`, `python` exact hosted parity |
+| Web ABI | `wasm` beta `wasm32` + Bundle ABI v1 |
 | Native linker path | Clang++, GCC/G++, or MSVC `cl` with C++20 support |
 | Tooling | Native `nyxc`, `nyx` CLI, LSP JSON-RPC, local VS Code VSIX |
 
@@ -276,7 +287,7 @@ The production architecture lives at the HIR boundary. Direct AST emitters are m
 
 ## `05` — Installation
 
-Nyx ships native-first installers for Windows, Linux, and macOS. Release archives contain the standalone `nyxc` compiler; Python is only needed for stage-0 recreation, optional orchestration commands, or the `hepy` target.
+Nyx ships native-first installers for Windows, Linux, and macOS. Release archives contain the standalone `nyxc` compiler; Python is only needed for stage-0 recreation, optional orchestration commands, or the `python` target.
 
 ### Windows
 
@@ -312,11 +323,11 @@ curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh |
 
 | Target | Host requirement |
 | :-- | :-- |
-| `hecpp` / native `nyxc compile` | C++20-capable Clang++, GCC/G++, or MSVC `cl` |
-| `hejs` | Node.js with ES2022 support |
-| `hepy` | Python 3 |
-| `hers` | Rust toolchain / `rustc` |
-| `hewasm` bundle | Built-in WAT/WASM emitter; Node.js is used by live wrapper tests |
+| `cpp` / native `nyxc compile` | C++20-capable Clang++, GCC/G++, or MSVC `cl` |
+| `js` | Node.js with ES2022 support |
+| `python` | Python 3 |
+| `rust` | Rust toolchain / `rustc` |
+| `wasm` bundle | Built-in WAT/WASM emitter; Node.js is used by live wrapper tests |
 
 The C++ compiler must be on `PATH`, or its absolute executable path can be supplied with `NYX_CXX`.
 
@@ -370,11 +381,11 @@ nyx check src/main.nyx
 
 ### Run Native C++20
 
-The default execution backend is `hecpp`:
+The default execution backend is `cpp`:
 
 ```bash
-nyx run src/main.nyx --target hecpp
-nyx build src/main.nyx --target hecpp --release
+nyx run src/main.nyx --target cpp
+nyx build src/main.nyx --target cpp --release
 ```
 
 > **Why does a generated `.exe` close immediately?** When launched from Explorer, Windows owns the temporary console and closes it as soon as the process returns or crashes. Run it from a terminal, or use **Nyx: Run Current File** in VS Code; the integrated terminal remains open and preserves stdout, stderr, and the exit code.
@@ -394,16 +405,16 @@ Generate and execute optimized Intel-syntax x86_64 assembly (`.s`):
 
 ```bash
 # Via CLI flag
-nyx run --target heasm
+nyx run --target asm
 
-# Or build standalone .s file in build/heasm/<name>.s
-nyx build --target heasm
+# Or build standalone .s file in build/asm/<name>.s
+nyx build --target asm
 ```
 
 You can also specify the target directly in source code:
 
 ```nyx
-#target heasm
+#target asm
 
 fn main() {
     print("Direct x86_64 Assembly Output")
@@ -413,19 +424,19 @@ fn main() {
 ### Run Node.js
 
 ```bash
-nyx run src/main.nyx --target hejs
+nyx run src/main.nyx --target js
 ```
 
 ### Run Python Reference
 
 ```bash
-nyx run src/main.nyx --target hepy
+nyx run src/main.nyx --target python
 ```
 
 ### Build Rust
 
 ```bash
-nyx build src/main.nyx --target hers
+nyx build src/main.nyx --target rust
 ```
 
 ### Verify local tooling behavior
@@ -433,7 +444,7 @@ nyx build src/main.nyx --target hers
 ```bash
 nyx fmt src/main.nyx
 nyx lint src/main.nyx
-nyx profile src/main.nyx --target hepy
+nyx profile src/main.nyx --target python
 nyx doc src/main.nyx
 nyx add telemetry @2.3.4
 nyx pkg
@@ -462,7 +473,7 @@ nyxc compile src/main.nyx -o build/main
 Nyx keeps familiar control flow, but adds explicit cleanup, early-exit, matching, pipelines, traits, strict booleans, and reusable tasks without requiring a wall of ceremony:
 
 ```nyx
-#target hecpp
+#target cpp
 
 struct Build {
     name: string,
@@ -551,7 +562,7 @@ Nyx no longer depends on one Python compiler implementation for production compi
 | Typed-HIR lowerer | Nyx | Canonical semantic output |
 | HIR-to-C++ emitter | Nyx | Native bootstrap/backend path |
 | Stage-0 frontend | Python | Rebuild from zero and independent parity oracle |
-| `hepy` backend | Python target code | Stable language target, not compiler dependency |
+| `python` backend | Python target code | Stable language target, not compiler dependency |
 
 The release gate checks accepted/rejected corpus parity, byte-identical HIR, stage1→stage2→stage3 reproducibility, native fixture compilation, and the absence of machine-specific paths in generated output.
 
@@ -588,13 +599,13 @@ The RC1 candidate is not qualified by a single happy-path build. The unified fra
 
 | Target | Language semantics | HIR | RC1 role |
 | :-- | :--: | :--: | :-- |
-| **`hecpp`** | frozen v4 | authoritative | stable native candidate |
-| **`hejs`** | frozen v4 | authoritative | stable hosted candidate |
-| **`hepy`** | frozen v4 | authoritative | stable parity/reference candidate |
-| **`hewasm`** | explicit `wasm32` subset | authoritative | beta ABI |
-| **`hers`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
-| **`hereact`** | wrapper/tooling contract | N/A | beta tooling |
-| **`heasm`** | native subset | via C++ | beta |
+| **`cpp`** | frozen v4 | authoritative | stable native candidate |
+| **`js`** | frozen v4 | authoritative | stable hosted candidate |
+| **`python`** | frozen v4 | authoritative | stable parity/reference candidate |
+| **`wasm`** | explicit `wasm32` subset | authoritative | beta ABI |
+| **`rust`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
+| **`react`** | wrapper/tooling contract | N/A | beta tooling |
+| **`asm`** | native subset | via C++ | beta |
 | **embedded** | target-specific subset | migration pending | experimental |
 
 The figures above are local RC-candidate evidence. Promotion to `v4.0.0-rc.1` still requires retained clean-run evidence from Windows, Linux x64, macOS x64, and macOS arm64. Stable `v4.0.0` additionally requires an uneventful RC soak and published compatibility/rollback policies.

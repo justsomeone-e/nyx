@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print((1 + 2) * 3)

@@ -25,7 +25,7 @@ Every Nyx project contains a `nyx.toml` manifest file at its root:
 name = "my_project"
 version = "0.1.0"
 edition = "2026"
-target = "hecpp"          # Default target backend: hecpp, hepy, hejs, hers
+target = "cpp"          # Default target backend: cpp, python, js, rust
 entry = "src/main.nyx"    # Application entrypoint
 
 [dependencies]
@@ -46,11 +46,11 @@ my_project/
 ├── src/
 │   └── main.nyx          # Main entrypoint
 └── build/                # Output binaries and transpiled modules
-    ├── hecpp/
+    ├── cpp/
     │   └── main.exe      # Native C++20 Executable
-    ├── hejs/
+    ├── js/
     │   └── main.js       # Node.js / Browser ESM Module
-    └── hers/
+    └── rust/
         └── main.rs       # Rust 2021 Source
 ```
 
@@ -64,11 +64,11 @@ my_project/
 
 ### Build & Verification
 * `nyx check [file.nyx]`: Performs syntax and semantic validation without code generation.
-* `nyx build [file.nyx] [--target <hecpp|hepy|hejs|hers>]`: Emits or compiles into `build/<target>/`.
-  * If targeting `hecpp`, compiles directly to a native `.exe` binary.
-  * If targeting `hejs`, emits an ES2022 Node.js module.
-  * If targeting `hers`, emits clean, borrow-checked Rust 2021 code.
-* `nyx run [file.nyx] [--target <hecpp|hepy|hejs|hers>]`: Compiles and executes with the selected backend.
+* `nyx build [file.nyx] [--target <cpp|python|js|rust>]`: Emits or compiles into `build/<target>/`.
+  * If targeting `cpp`, compiles directly to a native `.exe` binary.
+  * If targeting `js`, emits an ES2022 Node.js module.
+  * If targeting `rust`, emits clean, borrow-checked Rust 2021 code.
+* `nyx run [file.nyx] [--target <cpp|python|js|rust>]`: Compiles and executes with the selected backend.
 * `nyx clean`: Removes local `build/`, `target/`, and `__pycache__/` artifacts.
 
 ### Testing & Quality Assurance
@@ -94,3 +94,15 @@ never reports a fake network installation.
 * `nyx version`: Displays compiler version and detected host toolchains.
 * `nyx doctor`: Reports actionable C++20, Node.js, Rust, and Python availability.
 * `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract.
+
+### STM32Cube/CMSIS provider
+
+* `nyx boards --install F1`: sparsely installs official CMSIS and Nucleo assets.
+* `nyx boards --probe --cube-root .toolchains/stm32cube`: reports provider evidence.
+* `nyx build app.nyx --board nucleo-f103rb --cube-root .toolchains/stm32cube`:
+  compiles Nyx C++, CMSIS C, and startup assembly separately, then links ELF,
+  HEX, and BIN artifacts with the selected ST linker script.
+
+The provider never treats a missing package as success. GNU-ld/LLD dialect
+normalization is applied to a generated build copy; installed vendor files are
+left unchanged.

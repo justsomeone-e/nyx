@@ -41,7 +41,7 @@ from src.ir import (
 )
 
 
-GOLDEN_FINGERPRINT = "8d70f1cd724a747e01e1a61d918cb155a053a0981a5d21e60d7ae955af5648d5"
+GOLDEN_FINGERPRINT = "bde68976f695bb510d36c0d805a98b91111e1b6df0a09b1e4225f6c6ded11705"
 
 
 def _frontend(source: str, filename: str = "<ir-test>") -> IRModule:
@@ -127,6 +127,14 @@ def _run_nyx_authored_hir_parity() -> int:
         (
             "function_and_locals",
             "fn add(a: int, b: int) -> int { var c = a + b; return c }\n",
+        ),
+        (
+            "expression_body_and_conditional",
+            'fn classify(x: int) -> string = if x < 0 { "negative" } elif x == 0 { "zero" } else { "positive" }\n',
+        ),
+        (
+            "value_match_expression",
+            'fn status(code: int) -> string = match code { 200 => "ok", 404 => "missing", _ => "other" }\n',
         ),
         (
             "unicode_nul_and_numbers",
@@ -230,7 +238,7 @@ def _run_nyx_authored_hir_parity() -> int:
                 f"    if parser_{index}.has_error {{",
                 f"        print(\"@@HIR_ERROR@@parse:\" + parser_{index}.error_msg)",
                 "    } else {",
-                f"        var lowerer_{index} = HIRLowerer({json.dumps(source_name)}, \"hecpp\", [], [], 0, \"module\", false, \"\")",
+                f"        var lowerer_{index} = HIRLowerer({json.dumps(source_name)}, \"cpp\", [], [], 0, \"module\", false, \"\")",
                 f"        var hir_{index} = lowerer_{index}.lower_program(ast_{index})",
                 f"        if lowerer_{index}.has_error {{ print(\"@@HIR_ERROR@@lower:\" + lowerer_{index}.error_msg) }}",
                 f"        else {{ print(hir_{index}.to_json()) }}",
@@ -240,7 +248,7 @@ def _run_nyx_authored_hir_parity() -> int:
     driver_sections.extend(("}", "main()"))
     driver = "\n" + "\n".join(driver_sections) + "\n"
     source = (
-        "#target hecpp\n"
+        "#target cpp\n"
         "#native include <string>\n"
         "#native include <vector>\n"
         + "\n\n".join((
@@ -253,7 +261,7 @@ def _run_nyx_authored_hir_parity() -> int:
     )
     result = NyxCompiler(ROOT_DIR).compile_source(
         source,
-        target="hecpp",
+        target="cpp",
         filename="<nyx-authored-hir-parity>",
     )
     assert result.success, result.diagnostics
@@ -294,14 +302,14 @@ def _run_negative_verifier_checks() -> None:
 
     unresolved = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (IRAssign(span, IRReference(span, INT, "x", "missing::x"), IRLiteral(span, INT, 1)),),
     )
     assert "HIR0005" in {issue.code for issue in collect_hir_issues(unresolved)}
 
     duplicate = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (
             IRVarDecl(span, "a", "local::same", INT, IRLiteral(span, INT, 1)),
             IRVarDecl(span, "b", "local::same", INT, IRLiteral(span, INT, 2)),
@@ -311,14 +319,14 @@ def _run_negative_verifier_checks() -> None:
 
     mismatch = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (IRVarDecl(span, "count", "local::count", INT, IRLiteral(span, STRING, "wrong")),),
     )
     assert "HIR0006" in {issue.code for issue in collect_hir_issues(mismatch)}
 
     oversized_integer = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (IRVarDecl(span, "huge", "local::huge", INT, IRLiteral(span, INT, 1 << 63)),),
     )
     assert any(
@@ -326,12 +334,12 @@ def _run_negative_verifier_checks() -> None:
         for issue in collect_hir_issues(oversized_integer)
     )
 
-    bad_control_flow = IRModule("<invalid-hir>", "hecpp", (IRBreak(span),))
+    bad_control_flow = IRModule("<invalid-hir>", "cpp", (IRBreak(span),))
     assert "HIR0007" in {issue.code for issue in collect_hir_issues(bad_control_flow)}
 
     integer_condition = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (IRIf(span, IRLiteral(span, INT, 1), (), (), None),),
     )
     assert any(
@@ -341,7 +349,7 @@ def _run_negative_verifier_checks() -> None:
 
     missing_return = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (IRFunction(span, "answer", "function::answer", (), INT, ()),),
     )
     issues = collect_hir_issues(missing_return)
@@ -349,7 +357,7 @@ def _run_negative_verifier_checks() -> None:
 
     invalid_await = IRModule(
         "<invalid-hir>",
-        "hecpp",
+        "cpp",
         (
             IRFunction(
                 span,
@@ -487,7 +495,7 @@ def _run_plugin_hir_contract() -> None:
     plugin = RewriteAnswer()
     result = compile_source(
         "fn answer() -> int { return 41 }\n",
-        target="hewasm",
+        target="wasm",
         filename="answer.nyx",
         plugins=(plugin,),
     )
@@ -505,21 +513,21 @@ def _run_plugin_hir_contract() -> None:
     python_plugin = RewriteAnswer()
     python_result = compile_source(
         "fn answer() -> int { return 41 }\n",
-        target="hepy",
+        target="python",
         filename="answer.nyx",
         plugins=(python_plugin,),
     )
     assert python_result.success, python_result.diagnostics
     assert python_result.artifact is not None
     namespace = {"__name__": "nyx_hir_plugin_test"}
-    exec(compile(python_result.artifact.content, "<hepy-plugin>", "exec"), namespace)
+    exec(compile(python_result.artifact.content, "<python-plugin>", "exec"), namespace)
     assert namespace["answer"]() == 42
     assert [event[0] for event in python_plugin.events] == ["lower", "transform", "optimize"]
 
     javascript_plugin = RewriteAnswer()
     javascript_result = compile_source(
         "fn answer() -> int { return 41 }\n",
-        target="hejs",
+        target="js",
         filename="answer.nyx",
         plugins=(javascript_plugin,),
     )
@@ -531,7 +539,7 @@ def _run_plugin_hir_contract() -> None:
     cpp_plugin = RewriteAnswer()
     cpp_result = compile_source(
         "fn answer() -> int { return 41 }\n",
-        target="hecpp",
+        target="cpp",
         filename="answer.nyx",
         plugins=(cpp_plugin,),
     )
@@ -548,7 +556,7 @@ def _run_plugin_hir_contract() -> None:
 
     invalid = compile_source(
         "fn answer() -> int { return 41 }\n",
-        target="hewasm",
+        target="wasm",
         plugins=(InvalidTransform(),),
     )
     assert not invalid.success and invalid.diagnostics[0].code == "E9001"
@@ -557,12 +565,12 @@ def _run_plugin_hir_contract() -> None:
 
 def _run_stdlib_hir_contract() -> int:
     compiler = NyxCompiler(ROOT_DIR)
-    modules = BACKENDS["hecpp"].to_dict()["stdlib_modules"]
+    modules = BACKENDS["cpp"].to_dict()["stdlib_modules"]
     for module_name in modules:
         result = compiler.check_source(
             f'import "std/{module_name}"\n',
             filename=f"<stdlib:{module_name}>",
-            target="hecpp",
+            target="cpp",
         )
         assert result.success, (module_name, result.diagnostics)
         assert result.hir is not None
@@ -570,7 +578,7 @@ def _run_stdlib_hir_contract() -> int:
     unknown = compiler.check_source(
         "fn invalid_intrinsic() -> int { return _nyx_missing_intrinsic() }\n",
         filename="<unknown-intrinsic>",
-        target="hecpp",
+        target="cpp",
     )
     assert not unknown.success and unknown.diagnostics[0].code == "HIRL0001"
     return len(modules)

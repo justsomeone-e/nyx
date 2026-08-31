@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 if true {}
 print("Empty Block OK")

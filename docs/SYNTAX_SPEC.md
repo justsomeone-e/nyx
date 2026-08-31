@@ -1,6 +1,6 @@
 # Nyx v4 Syntax and Semantic Contract
 
-Status: `v4.0.0-rc.1` freeze candidate.
+Status: `v4.0.0-dev.1` (`Maya`) development contract.
 
 This file defines the compatibility boundary for Nyx source. The readable
 examples live in [`../LANGUAGE_REFERENCE.md`](../LANGUAGE_REFERENCE.md). The
@@ -35,7 +35,8 @@ item             = function | interrupt_function | struct | trait | implementati
                  | test_block ;
 
 function         = [ "async" ] "fn" identifier [ generic_parameters ]
-                   "(" [ parameters ] ")" [ "->" type ] block ;
+                   "(" [ parameters ] ")" [ "->" type ]
+                   ( block | "=" expression [ ";" ] ) ;
 interrupt_function = "interrupt" "fn" identifier "(" ")"
                      [ "->" "void" ] block ;
 trait_method     = [ "async" ] "fn" identifier [ generic_parameters ]
@@ -69,7 +70,15 @@ loop_statement   = "loop" block ;
 try_statement    = "try" block "catch" identifier block ;
 throw_statement  = "throw" expression ;
 
-expression       = pipeline ;
+expression       = pipeline | if_expression | match_expression ;
+if_expression    = "if" expression value_block
+                   { ( "elif" expression | "else" "if" expression ) value_block }
+                   "else" value_block ;
+match_expression = "match" expression "{"
+                   { literal "=>" value_expression "," }
+                   "_" "=>" value_expression [ "," ] "}" ;
+value_expression = expression | value_block ;
+value_block      = "{" expression [ ";" ] "}" ;
 pipeline         = null_coalesce { "|>" call_target } ;
 null_coalesce    = logical_or { "??" logical_or } ;
 unary            = ( "!" | "not" | "-" | "+" | "~" | "await" ) unary
@@ -122,14 +131,24 @@ logical AND/OR, null coalescing, then pipeline.
 - Constant folding uses these same rules, including i64 wrap, masked shifts,
   truncating division, and mixed-number widening. Optimization cannot change a
   program's numeric result.
-- `hecpp`, `hejs`, and `hepy` advertise `int64_wrap`, `float64_ieee`, and
-  `canonical_scalar_text`. `hewasm` remains a beta `wasm32` numeric contract.
+- `cpp`, `js`, and `python` advertise `int64_wrap`, `float64_ieee`, and
+  `canonical_scalar_text`. `wasm` remains a beta `wasm32` numeric contract.
 - Conditions require `bool`; implicit truthiness is not part of v4. A value
   whose type remains `any` is checked at the condition boundary and raises a
   runtime type error unless its actual value is exactly Boolean.
 - `a..b` is inclusive at both ends.
 - `break` and `continue` require an enclosing loop.
 - `return` requires an enclosing function and must match its declared result.
+- `fn name(...) -> T = expression` is exactly one implicit return; it does not
+  change return typing or evaluation order.
+- An `if` used as an expression requires `else`, every arm produces one value,
+  and arm types must agree (with the normal `int` to `float` widening rule).
+- A value-producing `match` supports literal arms and must end with exactly one
+  `_` fallback. Its arm values have the same type-unification rule as an
+  if-expression. Its subject is evaluated exactly once before pattern
+  comparisons, including calls and other side-effecting expressions.
+- Statement `match` remains the pattern-binding form for `Ok(value)`,
+  `Err(error)`, and other action-oriented arms.
 - `guard condition else { ... }` executes its else body when the condition is
   false; that body is expected to leave the guarded path.
 - `defer expression` executes once when its lexical scope exits, including an
@@ -146,7 +165,7 @@ logical AND/OR, null coalescing, then pipeline.
   scheduling.
 - Cancellation and structured-concurrency ownership are not part of RC1.
 
-`hecpp`, `hejs`, and `hepy` implement this contract respectively with a shared
+`cpp`, `js`, and `python` implement this contract respectively with a shared
 future, a Promise, and a reusable wrapper around one `asyncio.Task`.
 
 ## 6. Exception contract

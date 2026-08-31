@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn add(a, b) {
     return a + b
 }

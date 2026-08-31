@@ -40,7 +40,7 @@ def run_bootstrap_typechecker_test() -> bool:
     tc_lines = [l for l in tc_content.split("\n") if not (l.startswith("#target") or l.startswith("#native"))]
     tc_body = "\n".join(tc_lines)
 
-    combined_base = f"""#target hecpp
+    combined_base = f"""#target cpp
 #native include <string>
 #native include <vector>
 
@@ -54,6 +54,11 @@ def run_bootstrap_typechecker_test() -> bool:
     valid_cases = [
         ("valid_types_and_arithmetic", "var x: int = 10 + 20; var f: float = 10; var s: string = \"hello\";"),
         ("valid_function_return", "fn calc(a: int, b: int) -> int { return a + b; }"),
+        ("valid_expression_body", "fn calc(a: int, b: int) -> int = a + b;"),
+        ("valid_conditional_expression", "fn classify(x: int) -> string = if x < 0 { \"negative\" } elif x == 0 { \"zero\" } else { \"positive\" };"),
+        ("valid_conditional_numeric_widening", "fn choose(flag: bool) -> float = if flag { 1 } else { 2.5 };"),
+        ("valid_match_expression", "fn status(code: int) -> string = match code { 200 => \"ok\", 404 => \"missing\", _ => \"other\" };"),
+        ("valid_match_expression_call_subject", "fn source() -> int = 1; fn good() -> int = match source() { 1 => 10, _ => 0 };"),
         ("valid_optional_types", "var opt1: string? = null; var opt2: string? = \"active\";"),
         ("valid_struct_field_access", "struct Point { x: int, y: int }\nvar p: Point = Point(10, 20); var px: int = p.x;"),
         ("valid_async_await", "async fn compute() -> int { return 42; } async fn run() -> int { let task: Task<int> = compute(); return await task; }"),
@@ -139,7 +144,12 @@ main()
         ("hex_i64_literal_overflow", "let bad: int = 0x8000000000000000;"),
         ("if_int_truthiness", "if 1 { print(\"bad\"); }"),
         ("while_string_truthiness", "while \"yes\" { break; }"),
-        ("guard_int_truthiness", "fn bad() { guard 1 else { return; } }")
+        ("guard_int_truthiness", "fn bad() { guard 1 else { return; } }"),
+        ("conditional_expression_int_truthiness", "fn bad() -> int = if 1 { 1 } else { 0 };"),
+        ("conditional_expression_type_mismatch", "fn bad(flag: bool) -> int = if flag { 1 } else { \"no\" };"),
+        ("match_expression_missing_fallback", "fn bad(x: int) -> int = match x { 1 => 10 };"),
+        ("match_expression_nonfinal_fallback", "fn bad(x: int) -> int = match x { _ => 0, 1 => 10 };"),
+        ("match_expression_type_mismatch", "fn bad(x: int) -> int = match x { 1 => 10, _ => \"no\" };")
     ]
 
     for name, src in invalid_cases:

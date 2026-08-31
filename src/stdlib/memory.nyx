@@ -1,5 +1,5 @@
 // nyx Standard Library: std/memory (Native Memory Allocation & Pointers)
-#target hecpp
+#target cpp
 #native include <stdlib.h>
 #native include <string.h>
 

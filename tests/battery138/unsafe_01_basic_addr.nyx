@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 unsafe { var x = 42; var p = addr(x); print(peek(p)) }

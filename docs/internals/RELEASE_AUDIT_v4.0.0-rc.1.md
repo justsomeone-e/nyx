@@ -22,10 +22,10 @@ matrix and two clean-checkout release audits.
 | Regression battery | REVIEWED | Prior retained evidence: 138/138; current unified harness is not green |
 | Native self-host | PASS | Nyx-authored frontend, native stage 2, and byte-identical stage-3 C++ |
 | Typed HIR | PASS | 162 programs, 21 stdlib modules, 182-case Nyx/Python HIR byte parity |
-| `hecpp` HIR runtime | PASS | 162 emitted and 138 native runtime cases |
-| `hejs` HIR runtime | PASS | 162 executed, 138 runtime cases, 10 deterministic fixtures |
-| `hepy` HIR runtime | PASS | 162 compiled, 138 runtime cases, 10 deterministic fixtures |
-| `hers` HIR emission | PASS | 159 supported corpus programs passed Rust 2021 metadata/borrow checking; exception, spawn, and channel fixtures rejected with E3001; 8/8 focused Rust cases |
+| `cpp` HIR runtime | PASS | 162 emitted and 138 native runtime cases |
+| `js` HIR runtime | PASS | 162 executed, 138 runtime cases, 10 deterministic fixtures |
+| `python` HIR runtime | PASS | 162 compiled, 138 runtime cases, 10 deterministic fixtures |
+| `rust` HIR emission | PASS | 159 supported corpus programs passed Rust 2021 metadata/borrow checking; exception, spawn, and channel fixtures rejected with E3001; 8/8 focused Rust cases |
 | Language freeze | PASS | 46 keywords, editor parity, embedded controls, traits, Task, exception, i64, and strict-bool contracts |
 | Numeric semantics | PASS | Signed i64, IEEE binary64, and canonical scalar text on three stable backends |
 | Bundle ABI v1 | PASS | Typed lowering, UTF-8, isolated instances, and 100,000-allocation stress |
@@ -76,6 +76,9 @@ tagged workflow itself completes.
 
 ## Remaining RC1 blockers
 
+- [ ] Complete the canonical `cpp/js/python/rust/wasm/react/asm` target-ID
+      migration, remove the pre-Nyx compatibility surface, and pass the unified
+      regression suite with no stale-brand tokens.
 - [ ] Freeze one reviewed commit and run the clean Windows/Linux/macOS matrix.
 - [ ] Complete the release audit twice from clean checkouts of that commit.
 - [ ] Change the single version source and all generated package surfaces to
@@ -83,8 +86,9 @@ tagged workflow itself completes.
 - [ ] Produce and retain checksums, SPDX SBOM, and provenance from the tagged
       hosted workflow.
 - [ ] Approve the RC1 tag and publish the candidate artifacts.
-- [ ] Normalize official CubeIDE linker scripts for LLVM LLD; L4/G0/G4
-      currently report a `RAM` linker-region incompatibility.
+- [x] Normalize official CubeIDE linker scripts for LLVM LLD and validate the
+      official STM32Cube/CMSIS provider matrix across all 21 registered pack
+      boards (25/25 total Nucleo profiles emit ELF/HEX/BIN).
 
 ## Stable blockers after RC1
 

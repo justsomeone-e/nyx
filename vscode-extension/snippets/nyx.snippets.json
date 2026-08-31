@@ -2,7 +2,7 @@
   "Target Directive": {
     "prefix": "#target",
     "body": [
-      "#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm,stm32f4|}"
+      "#target ${1|cpp,asm,react,js,rust,python,wasm,stm32f4|}"
     ],
     "description": "Specify compilation backend target"
   },
@@ -63,11 +63,18 @@
     "prefix": "fn",
     "body": [
       "fn ${1:name}(${2:params}) -> ${3:type} {",
-      "\t${0:// body}",
-      "\treturn ${4:result};",
+      "\t${4:// body}",
+      "\treturn ${0:result};",
       "}"
     ],
     "description": "Strongly typed function definition"
+  },
+  "Expression-Bodied Function": {
+    "prefix": "fn=",
+    "body": [
+      "fn ${1:name}(${2:params}) -> ${3:type} = ${0:expression}"
+    ],
+    "description": "Function whose expression is returned implicitly"
   },
   "Struct Definition": {
     "prefix": "struct",
@@ -145,6 +152,13 @@
     ],
     "description": "Conditional if branch"
   },
+  "If Expression": {
+    "prefix": "if=",
+    "body": [
+      "if ${1:condition} { ${2:value} } else { ${0:fallback} }"
+    ],
+    "description": "Exhaustive conditional value expression"
+  },
   "For Range Loop": {
     "prefix": "for",
     "body": [
@@ -163,15 +177,25 @@
     ],
     "description": "Conditional while loop"
   },
-  "Pattern Matching": {
+  "Pattern Matching Statement": {
     "prefix": "match",
     "body": [
       "match ${1:expr} {",
-      "\t${2:pattern} => ${3:result},",
-      "\t\"_\" => ${0:default}",
+      "\t${2:pattern} => ${3:action},",
+      "\t_ => ${0:fallback}",
       "}"
     ],
-    "description": "Match expression with exhaustive pattern matching"
+    "description": "Pattern-matching statement with binding arms"
+  },
+  "Value Match Expression": {
+    "prefix": "match=",
+    "body": [
+      "match ${1:value} {",
+      "\t${2:literal} => ${3:result},",
+      "\t_ => ${0:fallback}",
+      "}"
+    ],
+    "description": "Exhaustive literal match that produces a value"
   },
   "Print to Console": {
     "prefix": "print",

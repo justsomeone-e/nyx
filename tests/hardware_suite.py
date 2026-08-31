@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+from concurrent.futures import ThreadPoolExecutor
 
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,11 +41,16 @@ from src.core.type_checker import TypeChecker
 CLI_PATH = os.path.join(ROOT_DIR, "src", "cli.py")
 FIXTURE = os.path.join(ROOT_DIR, "tests", "fixtures", "embedded_peripherals.nyx")
 F410_FIXTURE = os.path.join(ROOT_DIR, "tests", "fixtures", "embedded_f410_peripherals.nyx")
+FIXTURE_CMSIS = os.path.join(ROOT_DIR, "tests", "fixtures", "embedded_cmsis_smoke.nyx")
 STANDALONE_F4 = (
     "nucleo-f401re",
     "nucleo-f410rb",
     "nucleo-f411re",
     "nucleo-f446re",
+)
+CMSIS_BOARDS = tuple(
+    name for name, profile in sorted(BOARD_REGISTRY.items())
+    if profile.support == "cmsis-pack"
 )
 PHYSICAL_MODULES = (
     "board", "gpio", "serial", "mmio", "spi", "i2c", "adc", "pwm", "timer", "interrupt",
@@ -99,7 +105,7 @@ def _elf32_symbol_and_vector(path: str, symbol_name: str, irq_number: int):
 
 
 def _check_desktop_rejection():
-    source = '#target hecpp\nimport "std/spi"\nfn main() {}\n'
+    source = '#target cpp\nimport "std/spi"\nfn main() {}\n'
     with DiagnosticEmitter.scoped(exit_on_error=False, emit_output=False):
         try:
             ModuleLoader(base_dir=ROOT_DIR).load_program("<memory>", source)
@@ -216,9 +222,9 @@ def _check_cube_provider_and_mixed_build(temp_dir: str):
         ),
         os.path.join(linker_dir, "STM32F103RBTX_FLASH.ld"): (
             "ENTRY(Reset_Handler)\n"
+            "_estack = ORIGIN(RAM) + LENGTH(RAM);\n"
             "MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 128K\n"
             "RAM (rwx) : ORIGIN = 0x20000000, LENGTH = 20K }\n"
-            "_estack = ORIGIN(RAM) + LENGTH(RAM);\n"
             "SECTIONS {\n"
             ".isr_vector : { KEEP(*(.isr_vector)) } > FLASH\n"
             ".text : { *(.text*) *(.rodata*) } > FLASH\n"
@@ -249,6 +255,7 @@ def _check_cube_provider_and_mixed_build(temp_dir: str):
     result = builder.build_firmware(source, "cube_probe")
     assert result["success"], result.get("error")
     assert os.path.isfile(result["elf"])
+    assert result["commands"][-1]
     assert any(command[0] == builder.find_cross_tools()["cc"] for command in result["commands"][:-1])
     assert any("startup_stm32f103xb.s" in argument for command in result["commands"] for argument in command)
 
@@ -335,6 +342,61 @@ def _build_firmware_matrix(temp_dir: str):
     return built_elfs
 
 
+def _build_installed_cube_matrix(temp_dir: str):
+    cube_root = os.environ.get(
+        "NYX_STM32CUBE_ROOT",
+        os.path.join(ROOT_DIR, ".toolchains", "stm32cube"),
+    )
+    if not os.path.isdir(cube_root):
+        print("[SKIP] full STM32Cube matrix; no local package repository")
+        return 0
+    available = []
+    for board_name in CMSIS_BOARDS:
+        try:
+            profile = resolve_board(board_name, cube_root=cube_root)
+        except BoardProfileError:
+            continue
+        if profile and profile.is_build_ready:
+            available.append(board_name)
+    if not available:
+        print("[SKIP] full STM32Cube matrix; no build-ready package profiles")
+        return 0
+
+    def build_one(board_name: str):
+        result = subprocess.run(
+            [
+                sys.executable, CLI_PATH, "build", FIXTURE_CMSIS,
+                "--board", board_name, "--cube-root", cube_root,
+            ],
+            cwd=temp_dir,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        return board_name, result
+
+    with ThreadPoolExecutor(max_workers=min(4, len(available))) as executor:
+        results = list(executor.map(build_one, available))
+    for board_name, result in results:
+        output = result.stdout + result.stderr
+        assert result.returncode == 0, f"{board_name} STM32Cube build failed:\n{output}"
+        artifact_dir = os.path.join(temp_dir, "build", board_name)
+        artifacts = [
+            os.path.join(artifact_dir, f"embedded_cmsis_smoke.{extension}")
+            for extension in ("elf", "hex", "bin")
+        ]
+        assert all(os.path.isfile(path) and os.path.getsize(path) > 0 for path in artifacts)
+        data, _, sections, _ = _elf32_sections(artifacts[0])
+        assert struct.unpack_from("<H", data, 18)[0] == 40, "expected ARM ELF machine"
+        vector = sections[".isr_vector"]["data"]
+        initial_sp, reset_handler = struct.unpack_from("<II", vector, 0)
+        assert initial_sp != 0 and initial_sp % 4 == 0
+        assert reset_handler & 1 == 1, "CMSIS reset vector must carry the Thumb bit"
+    print(f"[PASS] official STM32Cube matrix: {len(available)}/{len(CMSIS_BOARDS)} CMSIS boards")
+    return len(available)
+
+
 def run_hardware_suite() -> bool:
     print("=" * 70)
     print("NYX EMBEDDED LANGUAGE, NUCLEO BSP & FIRMWARE CONTRACTS")
@@ -351,7 +413,7 @@ def run_hardware_suite() -> bool:
 
         for module in PHYSICAL_MODULES:
             contract = get_stdlib_contract(module)
-            assert contract and "stm32f4" in contract.targets and "hecpp" not in contract.targets
+            assert contract and "stm32f4" in contract.targets and "cpp" not in contract.targets
         _check_desktop_rejection()
         _check_board_rejection()
         _check_buffer_contract()
@@ -380,6 +442,7 @@ def run_hardware_suite() -> bool:
             print("[PASS] STM32Cube provider resolves CMSIS C/ASM/linker assets and mixed compile graph")
             _check_flasher_contract(temp_dir)
             built_elfs = _build_firmware_matrix(temp_dir)
+            _build_installed_cube_matrix(temp_dir)
             if built_elfs:
                 symbol, vector = _elf32_symbol_and_vector(
                     built_elfs["nucleo-f401re"], "TIM3_IRQHandler", 29,

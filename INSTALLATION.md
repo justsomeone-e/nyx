@@ -7,7 +7,7 @@ This guide walks you through installing and configuring Nyx across Windows, Linu
 ## 1. Prerequisites
 
 Nyx core requires **Python 3.10+**. 
-To compile native executables (`hecpp`), a modern C++20 compiler (`clang++` or `g++`) is recommended.
+To compile native executables (`cpp`), a modern C++20 compiler (`clang++` or `g++`) is recommended.
 
 | Platform | Recommended Toolchain | Quick Install Command |
 | :--- | :--- | :--- |
@@ -49,8 +49,8 @@ curl -fsSL https://raw.githubusercontent.com/nyx/nyxlang/main/install.sh | bash
      ```
    * **Linux / macOS**:
      ```bash
-     chmod +x bin/he
-     ./bin/he doctor
+     chmod +x bin/nyx
+     ./bin/nyx doctor
      ```
 
 3. Add Nyx to your `PATH`:
@@ -63,6 +63,6 @@ curl -fsSL https://raw.githubusercontent.com/nyx/nyxlang/main/install.sh | bash
 
 Run:
 ```bash
-he doctor
+nyx doctor
 ```
 Output should indicate detected compilers and runtimes with green checkmarks `[✓]`.

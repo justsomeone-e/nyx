@@ -14,6 +14,7 @@ from .model import (
     IRBreak,
     IRCall,
     IRContinue,
+    IRConditional,
     IRDefer,
     IREnum,
     IREnumMember,
@@ -30,6 +31,8 @@ from .model import (
     IRLiteral,
     IRMatch,
     IRMatchCase,
+    IRMatchExpression,
+    IRMatchExpressionCase,
     IRMemberAccess,
     IRModule,
     IRNativeDirective,
@@ -228,6 +231,25 @@ class HIRTransformer:
             return replace(node, elements=tuple(self.transform_expr(element) for element in node.elements))
         if isinstance(node, IRNullCoalesce):
             return replace(node, left=self.transform_expr(node.left), right=self.transform_expr(node.right))
+        if isinstance(node, IRConditional):
+            return replace(
+                node,
+                condition=self.transform_expr(node.condition),
+                then_expr=self.transform_expr(node.then_expr),
+                else_expr=self.transform_expr(node.else_expr),
+            )
+        if isinstance(node, IRMatchExpression):
+            return replace(
+                node,
+                subject=self.transform_expr(node.subject),
+                cases=tuple(
+                    IRMatchExpressionCase(
+                        self.transform_expr(case.pattern) if case.pattern is not None else None,
+                        self.transform_expr(case.value),
+                    )
+                    for case in node.cases
+                ),
+            )
         if isinstance(node, IRLambda):
             return replace(
                 node,
@@ -267,6 +289,10 @@ class ConstantFoldPass(HIRTransformer):
         if isinstance(folded, IRNullCoalesce) and isinstance(folded.left, IRLiteral):
             selected = folded.right if folded.left.value is None else folded.left
             return replace(selected, span=folded.span, type=folded.type)
+        if isinstance(folded, IRConditional) and isinstance(folded.condition, IRLiteral):
+            if isinstance(folded.condition.value, bool):
+                selected = folded.then_expr if folded.condition.value else folded.else_expr
+                return replace(selected, span=folded.span, type=folded.type)
         return folded
 
     def _fold_short_circuit(self, node: IRBinary) -> Optional[IRLiteral]:

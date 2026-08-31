@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn greet(name) {
     print("Hello " + name)
 }

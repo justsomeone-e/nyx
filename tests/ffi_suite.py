@@ -26,7 +26,7 @@ def run_ffi_suite() -> bool:
     tests = [
         (
             "ffi_01_c_stdio_puts",
-            """#target hecpp
+            """#target cpp
 #native include <stdio.h>
 extern "C" fn puts(s: string) -> int
 
@@ -36,7 +36,7 @@ puts("nyx Native FFI: stdio.h puts call works")
         ),
         (
             "ffi_02_c_stdlib_abs_and_memory",
-            """#target hecpp
+            """#target cpp
 #native include <stdlib.h>
 extern "C" fn abs(n: int) -> int
 extern "C" fn malloc(size: int) -> *void
@@ -54,7 +54,7 @@ unsafe {
         ),
         (
             "ffi_03_c_math_sqrt_and_pow",
-            """#target hecpp
+            """#target cpp
 #native include <math.h>
 extern "C" fn sqrt(x: float) -> float
 extern "C" fn pow(base: float, exp: float) -> float
@@ -67,7 +67,7 @@ print("Math:", s, p)
         ),
         (
             "ffi_04_c_string_strlen",
-            """#target hecpp
+            """#target cpp
 #native include <string.h>
 extern "C" fn strlen(s: string) -> int
 

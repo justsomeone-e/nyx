@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var name = "Umut"
 print(name)
 print("Hello " + name)

@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <string>
 #native include <vector>
 
@@ -299,6 +299,100 @@ impl TypeChecker {
             return "any"
         }
 
+        if node.kind == "ConditionalExpr" {
+            if len(node.children) < 3 {
+                self.has_error = true
+                self.error_msg = "Conditional expression requires if and else values"
+                return "any"
+            }
+            self.require_bool_condition(node.children[0], "if expression")
+            var result_type = self.infer_type(node.children[1])
+            var branch_index = 2
+            while branch_index < len(node.children) - 1 {
+                var branch = node.children[branch_index]
+                if branch.kind == "ConditionalBranch" and len(branch.children) >= 2 {
+                    self.require_bool_condition(branch.children[0], "elif expression")
+                    var branch_type = self.infer_type(branch.children[1])
+                    if result_type != branch_type {
+                        if (result_type == "int" or result_type == "float") and
+                            (branch_type == "int" or branch_type == "float") {
+                            result_type = "float"
+                        } else {
+                            self.has_error = true
+                            self.error_msg = "Conditional expression branch type mismatch: " +
+                                result_type + " vs " + branch_type
+                        }
+                    }
+                }
+                branch_index = branch_index + 1
+            }
+            var else_type = self.infer_type(node.children[len(node.children)-1])
+            if result_type != else_type {
+                if (result_type == "int" or result_type == "float") and
+                    (else_type == "int" or else_type == "float") {
+                    result_type = "float"
+                } else {
+                    self.has_error = true
+                    self.error_msg = "Conditional expression branch type mismatch: " +
+                        result_type + " vs " + else_type
+                }
+            }
+            return result_type
+        }
+
+        if node.kind == "MatchExpr" {
+            if len(node.children) < 2 {
+                self.has_error = true
+                self.error_msg = "E2014: match expression requires a final '_' fallback"
+                return "any"
+            }
+            var subject_type = self.infer_type(node.children[0])
+            var result_type = "any"
+            var wildcard_count = 0
+            var wildcard_index = -1
+            var case_index = 1
+            while case_index < len(node.children) {
+                var match_case = node.children[case_index]
+                if match_case.kind == "MatchExprCase" and len(match_case.children) >= 2 {
+                    var pattern = match_case.children[0]
+                    var is_wildcard = pattern.kind == "Identifier" and pattern.name == "_"
+                    if is_wildcard {
+                        wildcard_count = wildcard_count + 1
+                        wildcard_index = case_index
+                    } elif pattern.kind == "Identifier" {
+                        self.has_error = true
+                        self.error_msg = "E2015: match expression supports literal patterns and '_' fallback"
+                    } else {
+                        var pattern_type = self.infer_type(pattern)
+                        if not self.is_compatible(subject_type, pattern_type) and
+                            not self.is_compatible(pattern_type, subject_type) {
+                            self.has_error = true
+                            self.error_msg = "Match expression pattern type mismatch: " +
+                                subject_type + " vs " + pattern_type
+                        }
+                    }
+                    var arm_type = self.infer_type(match_case.children[1])
+                    if result_type == "any" { result_type = arm_type }
+                    elif result_type != arm_type {
+                        if (result_type == "int" or result_type == "float") and
+                            (arm_type == "int" or arm_type == "float") {
+                            result_type = "float"
+                        } else {
+                            self.has_error = true
+                            self.error_msg = "Match expression arm type mismatch: " +
+                                result_type + " vs " + arm_type
+                        }
+                    }
+                }
+                case_index = case_index + 1
+            }
+            if wildcard_count != 1 or wildcard_index != len(node.children) - 1 {
+                self.has_error = true
+                self.error_msg = "E2014: match expression must end with exactly one '_' fallback"
+            }
+            return result_type
+        }
+
         return "any"
     }
 
@@ -415,6 +509,11 @@ impl TypeChecker {
                 }
                 self.exit_scope()
             }
+            return
+        }
+
+        if node.kind == "ConditionalExpr" or node.kind == "MatchExpr" {
+            self.infer_type(node)
             return
         }
 

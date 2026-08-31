@@ -47,7 +47,7 @@ class ModuleLoader:
         # 1. Standard / Native Library: std/math, native/gpio, std/os
         if any(import_path.startswith(p) for p in ("std/", "std::", "native/", "native::")):
             submodule = import_path.replace("std::", "").replace("std/", "").replace("native::", "").replace("native/", "")
-            for ext in (".nyx", ".he", ""):
+            for ext in (".nyx", ""):
                 base = submodule if submodule.endswith(ext) else submodule + ext
                 cand = os.path.join(self.stdlib_dir, base)
                 if cand not in searched: searched.append(cand)
@@ -58,12 +58,12 @@ class ModuleLoader:
         # 2. Local relative import: ./utils, ../math, helper.nyx
         curr_dir = os.path.dirname(os.path.abspath(current_file)) if current_file and current_file != "<memory>" else self.base_dir
         cand1 = os.path.normpath(os.path.join(curr_dir, import_path))
-        for ext in (".nyx", ".he", ""):
+        for ext in (".nyx", ""):
             cand_f = cand1 if cand1.endswith(ext) else cand1 + ext
             if cand_f not in searched: searched.append(cand_f)
             if os.path.exists(cand_f):
                 return cand_f, searched
-        for idx in ("index.nyx", "index.he"):
+        for idx in ("index.nyx",):
             cand_idx = os.path.join(cand1, idx)
             if cand_idx not in searched: searched.append(cand_idx)
             if os.path.exists(cand_idx):

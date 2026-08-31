@@ -58,7 +58,7 @@
       <text x="110" y="0" fill="#94a3b8">:</text>
       <text x="120" y="0" fill="#a78bfa">~/projects/app</text>
       <text x="250" y="0" fill="#94a3b8">$</text>
-      <text x="265" y="0" fill="#f8fafc">nyx run main.nyx --target heasm</text>
+      <text x="265" y="0" fill="#f8fafc">nyx run main.nyx --target asm</text>
     </g>
 
     <!-- Compiler Step 1 -->
@@ -76,13 +76,13 @@
     <!-- Compiler Step 3 -->
     <g transform="translate(0, 92)" class="l4">
       <text x="0" y="0" fill="#00f0ff">[*] Generated Assembly:</text>
-      <text x="200" y="0" fill="#a5f3fc">build\heasm\main.s (Intel Syntax, Zero-Cost ABI)</text>
+      <text x="200" y="0" fill="#a5f3fc">build\asm\main.s (Intel Syntax, Zero-Cost ABI)</text>
     </g>
 
     <!-- Compiler Step 4 -->
     <g transform="translate(0, 122)" class="l5">
       <text x="0" y="0" fill="#4ade80">[OK] Compiled Native Binary:</text>
-      <text x="230" y="0" fill="#86efac">build\heasm\main.exe (LLVM Optimized)</text>
+      <text x="230" y="0" fill="#86efac">build\asm\main.exe (LLVM Optimized)</text>
     </g>
 
     <!-- Execution Output -->

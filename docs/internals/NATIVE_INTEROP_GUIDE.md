@@ -10,7 +10,7 @@
 The `#native` block embeds platform-specific code directly into the transpiled output:
 
 ```nyx
-#target hecpp
+#target cpp
 
 #native cpp {
     #include <cmath>
@@ -27,16 +27,16 @@ fn calculate_wave(deg: float) -> float {
 
 ## 2. Target-Specific Interoperability
 
-### 2.1 C++20 (`hecpp` — Gate 8 / Stable)
-When targeting `hecpp`, native blocks have direct access to:
+### 2.1 C++20 (`cpp` — Gate 8 / Stable)
+When targeting `cpp`, native blocks have direct access to:
 * The C++ Standard Library (`<vector>`, `<string>`, `<chrono>`, `<cmath>`, `<thread>`).
 * Win32 / POSIX system APIs.
 * External C libraries (`extern "C"`).
 
-### 2.2 JavaScript / Node.js (`hejs` — Gate 8 / Stable)
-When targeting `hejs`, native blocks can access the Node.js or Browser runtime:
+### 2.2 JavaScript / Node.js (`js` — Gate 8 / Stable)
+When targeting `js`, native blocks can access the Node.js or Browser runtime:
 ```nyx
-#target hejs
+#target js
 
 #native js {
     import fs from 'fs';
@@ -46,10 +46,10 @@ When targeting `hejs`, native blocks can access the Node.js or Browser runtime:
 }
 ```
 
-### 2.3 Rust 2021 (`hers` — Gate 6 / Active Conformance)
-When targeting `hers`, native blocks integrate with `std` and external crates:
+### 2.3 Rust 2021 (`rust` — Gate 6 / Active Conformance)
+When targeting `rust`, native blocks integrate with `std` and external crates:
 ```nyx
-#target hers
+#target rust
 
 #native rust {
     use std::time::Instant;

@@ -7,7 +7,7 @@ from src.core.parser import Parser
 from src.codegen.codegen import UniversalCodeGen
 
 def test_react_generation():
-    src = """#target hereact
+    src = """#target react
 
 var counter = 0
 var status = "Online"
@@ -35,7 +35,7 @@ print("Initial load complete")
     assert "Run increment()" in tsx
     assert "Run reset()" in tsx
     assert "Live Output Stream" in tsx
-    print("[PASS] hereact generator produces full reactive React 19 TSX components!")
+    print("[PASS] react generator produces full reactive React 19 TSX components!")
 
 if __name__ == "__main__":
     test_react_generation()

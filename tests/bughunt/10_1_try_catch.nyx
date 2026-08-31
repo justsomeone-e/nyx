@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 try {
     print("hello")
 } catch error {

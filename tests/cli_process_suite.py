@@ -36,7 +36,7 @@ def run_cli_process_suite() -> bool:
                 "}\n"
             )
 
-        run_result = _run_cli("run", source_path, "--target", "hepy")
+        run_result = _run_cli("run", source_path, "--target", "python")
         assert run_result.returncode != 0, "nyx run swallowed the child runtime failure"
 
         test_result = _run_cli("test", source_path)

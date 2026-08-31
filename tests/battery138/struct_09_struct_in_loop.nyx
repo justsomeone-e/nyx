@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 struct Counter { count }
 var list = [Counter(10), Counter(20)]
 for c in list { print(c.count) }

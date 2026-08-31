@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn test_early() {
     return 42
     print("SHOULD NOT RUN")

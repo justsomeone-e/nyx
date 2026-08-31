@@ -10,7 +10,7 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 * Nyx-authored lexer, parser, type checker, typed-HIR lowerer, and HIR C++
   emitter now form a reproducible native stage1 -> stage2 bootstrap.
-* `hecpp`, `hejs`, `hepy`, `hers`, and `hewasm` consume canonical verified HIR;
+* `cpp`, `js`, `python`, `rust`, and `wasm` consume canonical verified HIR;
   non-HIR targets retain beta or experimental status.
 * The Rust 2021 emitter now preserves Nyx value semantics, strict Boolean
   boundaries, Option/Result lowering, lexical `defer`, and wrapping i64 code
@@ -33,6 +33,10 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
   replace routine `#native raw` use for shared state and interrupt handlers.
 * Embedded-only `Buffer<T, N>` adds allocation-free fixed storage, checked
   capacities/indexes, and pointer-length bulk-I/O interop without native code.
+* Maya adds expression-bodied functions plus value-producing `if` and
+  exhaustive literal `match` expressions. The Python and Nyx-authored
+  frontends produce byte-identical HIR, and declared backends share the same
+  branch typing and lazy evaluation rules.
 
 ### Embedded systems
 
@@ -42,8 +46,13 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
   volatile MMIO APIs with bounded error paths and buffer-based bulk transfers.
 * F410 now uses its real TIM5/TIM6 and IRQ map and rejects unavailable
   TIM2-backed PWM; F401/F411/F446 retain their board-specific timer maps.
-* Standalone ELF/HEX/BIN builds for NUCLEO-F401RE, F410RB, F411RE, and F446RE;
-  other registered profiles remain explicitly CMSIS/custom-BSP gated.
+* Standalone ELF/HEX/BIN builds for NUCLEO-F401RE, F410RB, F411RE, and F446RE.
+* Official STM32Cube sparse installer/provider resolves CMSIS device selectors,
+  startup assembly, system C, IRQ maps, and Nucleo linker scripts for 21 more
+  profiles. Mixed C/C++/ASM compilation and GNU-ld/LLD normalization are covered
+  by a 25-board ARM ELF/HEX/BIN integration matrix.
+* A minimal weak CMSIS freestanding CRT supplies constructor arrays and memory
+  primitives without overriding a user-configured libc/compiler runtime.
 * Removed desktop HAL simulations that previously printed success without
   touching hardware.
 
@@ -68,10 +77,10 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ### 🚀 Major Additions
 * **Multi-Backend Architecture**:
-  * `hecpp`: ISO C++20 backend frozen at Gate 8 (Production Native `.exe` via LLVM Clang / MinGW-w64).
-  * `hepy`: Canonical reference evaluation engine.
-  * `hejs`: Node.js ES2022 backend frozen at Gate 8.
-  * `hers`: Rust 2021 active conformance backend (Gate 6).
+  * `cpp`: ISO C++20 backend frozen at Gate 8 (Production Native `.exe` via LLVM Clang / MinGW-w64).
+  * `python`: Canonical reference evaluation engine.
+  * `js`: Node.js ES2022 backend frozen at Gate 8.
+  * `rust`: Rust 2021 active conformance backend (Gate 6).
 * **Module & Import Altyapısı (`src/core/module_loader.py`)**:
   * Local relative imports (`import "./utils"`).
   * Standard library module imports (`import "std/math"`).
@@ -81,13 +90,13 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 * **Diagnostics v2 Standard**:
   * Rustc-style visual errors with dynamic span carets (`^^^^`), error catalog codes (`E1000` to `E2006`), `searched paths:`, `note:`, and actionable `help:`.
 * **Standard Library Expansion (`src/stdlib/`)**:
-  * `std/math.he` (`abs_val`, `max_val`, `min_val`, `power`, `clamp`, `gcd`, `sign`).
-  * `std/str.he` (`is_empty_str`, `concat_three`, `wrap_with`, `contains_substring`).
-  * `std/io.he` (`println_str`, `println_int`, `println_bool`, `prompt_input`).
-  * `std/fs.he` (`join_paths`, `file_extension`, `is_source_file`).
+  * `std/math.nyx` (`abs_val`, `max_val`, `min_val`, `power`, `clamp`, `gcd`, `sign`).
+  * `std/str.nyx` (`is_empty_str`, `concat_three`, `wrap_with`, `contains_substring`).
+  * `std/io.nyx` (`println_str`, `println_int`, `println_bool`, `prompt_input`).
+  * `std/fs.nyx` (`join_paths`, `file_extension`, `is_source_file`).
 * **Toolchain & Release Engineering**:
-  * `he new`, `he init`, `he check`, `he build`, `he run`, `he test`, `he clean`, `he doctor`, `he lsp`.
-  * `he.toml` project manifest and deterministic `he.lock` SHA256 locking.
+  * `nyx new`, `nyx init`, `nyx check`, `nyx build`, `nyx run`, `nyx test`, `nyx clean`, `nyx doctor`, `nyx lsp`.
+  * `nyx.toml` project manifest and deterministic `nyx.lock` SHA256 locking.
   * Language Server Protocol v2 with autocomplete, hover signatures, and go-to-definition.
 * **Test Verification**:
   * 138/138 Regression Battery (100%).

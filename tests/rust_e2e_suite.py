@@ -14,7 +14,7 @@ from src.codegen import UniversalCodeGen
 RUST_CONFORMANCE_CASES = [
     (
         "rs_01_arithmetic_precedence",
-        """#target hers
+        """#target rust
 var a = 10 + 5 * 2
 var b = (10 + 5) * 2
 print("a:", a, "b:", b)
@@ -23,7 +23,7 @@ print("a:", a, "b:", b)
     ),
     (
         "rs_02_recursive_factorial",
-        """#target hers
+        """#target rust
 fn factorial(n: int) -> int {
     if n <= 1 {
         return 1
@@ -36,7 +36,7 @@ print("fact(6):", factorial(6))
     ),
     (
         "rs_03_loops_and_accumulation",
-        """#target hers
+        """#target rust
 var sum = 0
 for i in 1..10 {
     if i == 5 {
@@ -50,7 +50,7 @@ print("Sum excluding 5:", sum)
     ),
     (
         "rs_04_struct_instantiation",
-        """#target hers
+        """#target rust
 struct Target {
     name: string,
     freq: int,
@@ -64,7 +64,7 @@ print("Target:", t.name, t.freq, t.signal)
     ),
     (
         "rs_05_string_unicode_and_concat",
-        """#target hers
+        """#target rust
 var title = "Nyx"
 var lang = "Lang 🚀"
 print("Full:", title, lang)
@@ -73,7 +73,7 @@ print("Full:", title, lang)
     ),
     (
         "rs_06_result_pattern_matching",
-        """#target hers
+        """#target rust
 var res = Ok(1337)
 match res {
     Ok(val) => print("Success Val:", val),
@@ -84,7 +84,7 @@ match res {
     ),
     (
         "rs_07_array_iteration",
-        """#target hers
+        """#target rust
 var items = [10, 20, 30]
 var total = 0
 for item in items {
@@ -96,7 +96,7 @@ print("Array Sum:", total)
     ),
     (
         "rs_08_unsafe_memory_read",
-        """#target hers
+        """#target rust
 var val = 42
 unsafe {
     var ptr = addr(val)
@@ -110,7 +110,7 @@ unsafe {
 
 def run_rust_e2e_tests():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG RUST (hers - 2021 Edition) END-TO-END CONFORMANCE")
+    print("⚡ NYX RUST (rust - 2021 Edition) END-TO-END CONFORMANCE")
     print("=" * 70)
     
     rustc_path = shutil.which("rustc")

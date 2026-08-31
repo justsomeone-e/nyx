@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <string>
 #native include <vector>
 #native include <cctype>

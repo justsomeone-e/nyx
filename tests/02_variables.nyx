@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var $gold = 5000
 let $silver = 8700
 const $name = "MFD"

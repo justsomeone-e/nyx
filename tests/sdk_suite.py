@@ -50,7 +50,7 @@ def run_sdk_suite() -> bool:
         # 2. Test nyx build (library mode)
         print(f"[*] Testing sdk_02_build_library_project...")
         res = subprocess.run([sys.executable, cli_py, "build"], cwd=lib_dir, capture_output=True, text=True, encoding="utf-8")
-        lib_file = os.path.join(lib_dir, "build", "hecpp", "liblib.a")
+        lib_file = os.path.join(lib_dir, "build", "cpp", "liblib.a")
         if res.returncode == 0 and os.path.exists(lib_file):
             print(f"  [PASS] sdk_02_build_library_project -> Built {os.path.basename(lib_file)}")
             passed += 1

@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn mutate_local(x) { x = 999 }
 var n = 10
 mutate_local(n)

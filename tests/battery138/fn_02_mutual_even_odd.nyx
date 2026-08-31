@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn is_even(n) { if n == 0 { return true } return is_odd(n - 1) }
 fn is_odd(n) { if n == 0 { return false } return is_even(n - 1) }
 print(is_even(4))

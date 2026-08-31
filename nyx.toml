@@ -9,5 +9,5 @@ std = "4.0.0"
 radar = "2.1.0"
 
 [targets]
-native = "hecpp"
-web = "hereact"
+native = "cpp"
+web = "react"

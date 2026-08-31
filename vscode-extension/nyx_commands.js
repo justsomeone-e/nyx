@@ -3,7 +3,7 @@
 const { resolveNyxCommand } = require('./server_options');
 
 const NATIVE_REQUIREMENT =
-    'Nyx hecpp builds require Clang++, GCC/G++, or MSVC cl with C++20 support. ' +
+    'Nyx cpp builds require Clang++, GCC/G++, or MSVC cl with C++20 support. ' +
     'Put the compiler on PATH or set NYX_CXX; run “Nyx: Toolchain Doctor” to verify it.';
 
 const PROJECT_LINKS = Object.freeze({
@@ -24,7 +24,7 @@ const LINK_COMMANDS = Object.freeze([
 
 function sourceTarget(document) {
     const match = document.getText().match(/^\s*#target\s+([A-Za-z0-9_]+)/m);
-    return match ? match[1].toLowerCase() : 'hecpp';
+    return match ? match[1].toLowerCase() : 'cpp';
 }
 
 async function requireNyxDocument(vscode) {
@@ -83,8 +83,8 @@ async function executeTask(vscode, action, document, target) {
 async function maybeExplainNativeRequirement(vscode, context, action, document, configuredTarget) {
     if (action !== 'run' && action !== 'build') return true;
     const target = configuredTarget === 'source' ? sourceTarget(document) : configuredTarget;
-    if (target !== 'hecpp' && target !== 'cpp' && target !== 'native') return true;
-    const key = 'nyx.hecppRequirementAcknowledged';
+    if (target !== 'cpp' && target !== 'cpp' && target !== 'native') return true;
+    const key = 'nyx.cppRequirementAcknowledged';
     if (context.globalState.get(key, false)) return true;
 
     const choice = await vscode.window.showInformationMessage(

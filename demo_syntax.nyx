@@ -1,8 +1,8 @@
 // ==========================================
-// 🚀 Nyx (heLang) Gösteri Programı
+// 🚀 Nyx Gösteri Programı
 // ==========================================
 
-#target hecpp
+#target cpp
 
 var target_name = "24K SAF ALTIN"
 var base_freq = 5000

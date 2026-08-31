@@ -241,7 +241,6 @@ exit 2
 '@
     $Ps1Content = $Ps1Content.Replace("__NYX_NATIVE__", $NativeLiteral).Replace("__NYX_CLI__", $CliLiteral).Replace("__NYX_PYTHON__", $PythonLiteral)
     Set-Content -LiteralPath (Join-Path $BinDir "nyx.ps1") -Value $Ps1Content -Encoding UTF8
-    Set-Content -LiteralPath (Join-Path $BinDir "he.ps1") -Value $Ps1Content -Encoding UTF8
 
     $BatchNative = $NativeExe.Replace("%", "%%")
     $BatchCli = $SrcCli.Replace("%", "%%")
@@ -282,7 +281,7 @@ exit /b 2
 "%NYX_NATIVE%" %*
 exit /b %errorlevel%
 "@
-    foreach ($name in @("nyx.bat", "nyx.cmd", "he.bat", "he.cmd")) {
+    foreach ($name in @("nyx.bat", "nyx.cmd")) {
         Set-Content -LiteralPath (Join-Path $BinDir $name) -Value $BatContent -Encoding ASCII
     }
 
@@ -309,7 +308,6 @@ echo "This command still uses the optional Python orchestration layer. Install P
 exit 2
 '@
     Set-Content -LiteralPath (Join-Path $BinDir "nyx") -Value $ShContent -Encoding ASCII
-    Set-Content -LiteralPath (Join-Path $BinDir "he") -Value $ShContent -Encoding ASCII
 
     if ($env:NYX_SKIP_PATH_UPDATE -ne "1") {
         $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")

@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var a = [10, 20]
 var b = [a, [30, 40]]
 print(b[0][0])

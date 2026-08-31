@@ -63,7 +63,7 @@ fn main() {
     ast = PyParser(tokens, "codegen_suite.nyx").parse()
     cpp_code = UniversalCodeGen(ast).generate()
 
-    out_cpp = os.path.join(_root_dir, "build", "hecpp", "codegen_test.cpp")
+    out_cpp = os.path.join(_root_dir, "build", "cpp", "codegen_test.cpp")
     os.makedirs(os.path.dirname(out_cpp), exist_ok=True)
     with open(out_cpp, "w", encoding="utf-8") as f:
         f.write(cpp_code)

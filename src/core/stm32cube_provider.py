@@ -166,7 +166,7 @@ def find_cube_package(family: str, cube_root: Optional[str] = None) -> Optional[
     return str(sorted(set(matches), key=_natural_key)[-1])
 
 
-def _select_device_macro(main_header: Path, mcu: str) -> str:
+def _select_device_macro(main_header: Path, mcu: str, startup_dir: Optional[Path] = None) -> str:
     match = _MCU_RE.match(mcu.strip().upper())
     if not match:
         raise STM32CubeProviderError(f"Cannot derive CMSIS device selector from MCU '{mcu}'")
@@ -177,8 +177,19 @@ def _select_device_macro(main_header: Path, mcu: str) -> str:
     available = sorted({token for token in _DEVICE_MACRO_RE.findall(text) if token.upper().startswith(model)})
     by_lower = {token.lower(): token for token in available}
     for candidate in expected:
-        if candidate.lower() in by_lower:
-            return by_lower[candidate.lower()]
+        selected = by_lower.get(candidate.lower())
+        if not selected:
+            continue
+        if startup_dir:
+            has_startup = any(
+                path.is_file()
+                and path.suffix in (".s", ".S")
+                and path.stem.lower().removeprefix("startup_").startswith(selected.lower())
+                for path in startup_dir.iterdir()
+            )
+            if not has_startup:
+                continue
+        return selected
     if len(available) == 1:
         return available[0]
     found = ", ".join(available) if available else "none"
@@ -326,7 +337,8 @@ def materialize_cube_board(profile: BoardProfile, cube_root: Optional[str] = Non
         if not path.exists():
             raise STM32CubeProviderError(f"{label} not found in {package_root}: {path}")
 
-    device_macro = _select_device_macro(main_header, profile.mcu)
+    startup_dir = device_root / "Source" / "Templates" / "gcc"
+    device_macro = _select_device_macro(main_header, profile.mcu, startup_dir)
     startup = _select_startup(device_root, device_macro, profile.cpu)
     device_header = _select_device_header(device_include, device_macro)
     linker = _select_linker_script(package_root, profile)

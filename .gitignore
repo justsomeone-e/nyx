@@ -21,12 +21,8 @@ dist/
 *.vsix
 
 # Nyx generated/cache files
-.holy/
-.hecache/
-*.hec
-*.hecache
+.nyx-cache/
 /main.nyx
-/main.he
 
 # Python
 __pycache__/

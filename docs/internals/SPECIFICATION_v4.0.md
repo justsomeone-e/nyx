@@ -5,7 +5,7 @@
 Nyx is a statically analyzed, multi-target programming language designed with an emphasis on deterministic type inference, zero-cost abstractions, robust error diagnostics, and seamless native transpilation.
 
 ```text
-               Nyx Source (*.he)
+              Nyx Source (*.nyx)
                             │
                      [ 1. Lexer ] ─── Tokens
                             │
@@ -16,7 +16,7 @@ Nyx is a statically analyzed, multi-target programming language designed with an
                  ┌──────────┴──────────┐
                  │                     │
           [ C++20 Codegen ]    [ Python Codegen ]
-           (hecpp -> .cpp)      (hepy -> .py)
+           (cpp -> .cpp)      (python -> .py)
                  │                     │
            Clang / GCC            Python Runner
                  │                     │
@@ -28,7 +28,7 @@ Nyx is a statically analyzed, multi-target programming language designed with an
 ## 2. Core Grammar & Syntax
 
 ### 2.1 Variables & Declarations
-```he
+```nyx
 var x: int = 10         // Explicit type annotation
 var y = 20.5            // Inferred float
 let $silver = 8700      // Scoped immutable variable with optional $ sigil
@@ -36,14 +36,16 @@ const PI = 3.14159      // Constant declaration
 ```
 
 ### 2.2 Functions & Return Types
-```he
+```nyx
 fn add(a: int, b: int) -> int {
     return a + b
 }
+
+fn square(value: int) -> int = value * value
 ```
 
 ### 2.3 Structs & Data Modeling
-```he
+```nyx
 struct Target {
     name: string,
     freq: int,
@@ -54,13 +56,13 @@ var t = Target("Altin", 5000, 95.0)
 ```
 
 ### 2.4 Optionals & Safe Navigation
-```he
+```nyx
 var user: User? = null
 var city = user?.address?.city ?? "Default City"
 ```
 
 ### 2.5 Result & Pattern Matching
-```he
+```nyx
 var res = Ok(1337)
 match res {
     Ok(val) => print("Success:", val),
@@ -69,9 +71,21 @@ match res {
 }
 ```
 
+Value-producing conditionals and literal matches are expressions:
+
+```nyx
+fn sign(value: int) -> int = if value < 0 { -1 } else if value == 0 { 0 } else { 1 }
+
+fn status(code: int) -> string = match code {
+    200 => "ok",
+    404 => "missing",
+    _ => "other"
+}
+```
+
 ### 2.6 Unsafe Memory Primitives
 Raw memory operations (`addr`, `peek`, `memdump`) are strictly constrained inside `unsafe { ... }` blocks:
-```he
+```nyx
 var val = 42
 unsafe {
     var ptr = addr(val)
@@ -88,6 +102,9 @@ All compile-time syntax and semantic errors produce rustc-style source-located d
 
 * `E1000`: Unexpected Token in Expression
 * `E1001`: Unclosed Parenthesis / Bracket
+* `E1012`: Missing `else` in a value-producing `if`
+* `E1013`: Invalid value block (more than one expression)
+* `E1014`: Invalid value-producing `match` arm syntax
 * `E1050`: Unsafe Memory Operation in Safe Context
 * `E2001`: Variable Declaration Type Mismatch
 * `E2002`: Variable Assignment Type Mismatch
@@ -95,6 +112,8 @@ All compile-time syntax and semantic errors produce rustc-style source-located d
 * `E2004`: Function Return Type Mismatch
 * `E2005`: Incompatible Operator Operands
 * `E2006`: Struct Constructor Field Type Mismatch
+* `E2014`: Non-exhaustive value-producing `match`
+* `E2015`: Unsupported binding pattern in a value-producing `match`
 
 ---
 

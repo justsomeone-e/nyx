@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 struct Hero { name: string, hp: int }
 var h = Hero("Knight", 100)
 print(h.name, h.hp)

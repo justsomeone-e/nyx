@@ -19,9 +19,9 @@ from src.core.ast_nodes import (
     ProgramNode, VarDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
     NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, FunctionCallNode,
     FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
-    ForNode, MatchNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
+    ForNode, MatchNode, MatchExprNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
     NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
-    MemberAccessNode, IndexAccessNode, NullCoalesceNode, LambdaNode, ArrayNode,
+    MemberAccessNode, IndexAccessNode, NullCoalesceNode, ConditionalExprNode, LambdaNode, ArrayNode,
     TypeAliasNode, EnumDefNode, TestBlockNode, AssertNode, TryCatchNode,
     DeferNode, GuardNode, ImportNode
 )
@@ -58,6 +58,22 @@ def py_ast_to_canonical(node) -> str:
         return f"(Await body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, NullCoalesceNode):
         return f"(NullCoalesce op='??' body=[{py_ast_to_canonical(node.left)} {py_ast_to_canonical(node.right)}])"
+    if isinstance(node, ConditionalExprNode):
+        branches = "".join(
+            f" (ConditionalBranch body=[{py_ast_to_canonical(condition)} {py_ast_to_canonical(value)}])"
+            for condition, value in node.elif_branches
+        )
+        return (
+            f"(ConditionalExpr body=[{py_ast_to_canonical(node.condition)} "
+            f"{py_ast_to_canonical(node.then_expr)}{branches} "
+            f"{py_ast_to_canonical(node.else_expr)}])"
+        )
+    if isinstance(node, MatchExprNode):
+        cases = "".join(
+            f" (MatchExprCase body=[{py_ast_to_canonical(pattern)} {py_ast_to_canonical(value)}])"
+            for pattern, value in node.cases
+        )
+        return f"(MatchExpr body=[{py_ast_to_canonical(node.expr)}{cases}])"
     if isinstance(node, LambdaNode):
         params_s = ", ".join(f"{name}: " for name in node.params)
         params_attr = f" params=[{params_s}]" if params_s else ""
@@ -210,7 +226,7 @@ def run_bootstrap_parser_test() -> bool:
     lexer_impl_end = lexer_content.index("fn main()") if "fn main()" in lexer_content else len(lexer_content)
     lexer_code = lexer_content[lexer_support_start:lexer_impl_end].strip()
 
-    combined_base = f"""#target hecpp
+    combined_base = f"""#target cpp
 #native include <string>
 #native include <vector>
 
@@ -222,6 +238,11 @@ def run_bootstrap_parser_test() -> bool:
     test_cases = [
         ("simple_var_and_math", "var x: int = 10 + 20 * 30;"),
         ("function_definition", "fn add(a: int, b: int) -> int { return a + b; }"),
+        ("expression_body_function", "fn add(a: int, b: int) -> int = a + b;"),
+        ("conditional_expression", "fn classify(x: int) -> string = if x < 0 { \"negative\" } elif x == 0 { \"zero\" } else { \"positive\" };"),
+        ("conditional_expression_else_if", "fn choose(x: int) -> int = if x < 0 { -1 } else if x == 0 { 0 } else { 1 };"),
+        ("match_expression", 'fn status(code: int) -> string = match code { 200 => "ok", 404 => "missing", _ => "other" };'),
+        ("match_expression_braced_arms", "fn sign(x: int) -> int = match x { -1 => { -1 }, 0 => { 0 }, _ => { 1 } };"),
         ("struct_definition", "struct Point { x: int, y: int }"),
         ("impl_and_methods", "impl Point { fn dist(self) -> int { return self.x + self.y; } }"),
         ("if_else_branches", "if a > 10 { print(\"Large\"); } else { print(\"Small\"); }"),

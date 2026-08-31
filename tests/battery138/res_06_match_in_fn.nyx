@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 fn check_status(s) { match s { "ok" => return 1, "_" => return 0 } }
 print(check_status("ok"))

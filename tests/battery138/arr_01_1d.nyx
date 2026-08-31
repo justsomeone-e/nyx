@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 var a = [10, 20, 30]
 print(a[1])

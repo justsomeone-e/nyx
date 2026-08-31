@@ -15,7 +15,7 @@ import html
 from typing import List, Dict, Any
 
 # =========================================================
-# 1. CODE FORMATTER (he fmt)
+# 1. CODE FORMATTER (nyx fmt)
 # =========================================================
 class Formatter:
     @staticmethod
@@ -341,8 +341,6 @@ class PackageManager:
     def _manifest_path():
         if os.path.exists("nyx.toml"):
             return "nyx.toml"
-        if os.path.exists("he.toml"):
-            return "he.toml"
         return None
 
     @staticmethod
@@ -416,7 +414,7 @@ class PackageManager:
             p_name = m.package.get("name", "nyx_app")
             p_ver = m.package.get("version", "0.1.0")
             p_ed = m.package.get("edition", "2026")
-            p_tgt = m.package.get("target", "hecpp")
+            p_tgt = m.package.get("target", "cpp")
             print(f"\033[96mProject:\033[0m {p_name} v{p_ver} (Edition: {p_ed}, Target: {p_tgt})")
             print(f"\033[96mDependencies ({len(m.dependencies)}):\033[0m")
             for k, v in m.dependencies.items():

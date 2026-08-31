@@ -241,11 +241,11 @@ jobs:
             * **Frozen language contract**: 43 canonical keywords, `fn`-only
               declarations, verified trait implementations, strict Boolean
               conditions, `Task<T>`, exceptions, and immutable bindings.
-            * **Exact hosted semantics**: `hecpp`, `hejs`, and `hepy` share the
+            * **Exact hosted semantics**: `cpp`, `js`, and `python` share the
               signed-i64, IEEE-binary64, Unicode, control-flow, and canonical
               scalar-text contracts through verified HIR.
-            * **Capability-gated targets**: `hewasm`, `hers`, `hereact`,
-              `heasm`, and embedded targets remain beta/experimental and reject
+            * **Capability-gated targets**: `wasm`, `rust`, `react`,
+              `asm`, and embedded targets remain beta/experimental and reject
               unsupported semantics explicitly.
             * **Bundle ABI v1 and tooling**: WASM/JS/TypeScript/React artifacts,
               compiler/plugin APIs, LSP support, deterministic lockfiles, and
@@ -261,7 +261,7 @@ jobs:
             The attached `nyx-language-support-*.vsix` installs the official
             VS Code integration locally without Marketplace access. It adds
             one-click Run/Build/Check commands whose output remains in the
-            integrated terminal. Native `hecpp` builds require Clang++,
+            integrated terminal. Native `cpp` builds require Clang++,
             GCC/G++, or MSVC cl with C++20 support (`nyx doctor`).
 
             Verify provenance with:

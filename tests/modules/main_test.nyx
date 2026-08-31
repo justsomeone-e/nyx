@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 import "./utils"
 import "std/math"
 

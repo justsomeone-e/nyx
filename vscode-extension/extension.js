@@ -165,46 +165,24 @@ async function activate(context) {
     // ---------------------------------------------------------
     // 3. STANDARD NYX MODULES & COMPILER TARGETS
     // ---------------------------------------------------------
-    const stdModules = [
-        { name: 'std/io', desc: 'Console I/O streams and formatting' },
-        { name: 'std/fs', desc: 'File system operations (read, write, exists, remove)' },
-        { name: 'std/math', desc: 'Mathematical functions (pow, sqrt, sin, cos, PI)' },
-        { name: 'std/time', desc: 'High-resolution timers and delay_ms()' },
-        { name: 'std/memory', desc: 'Low-level pointers, addr(), peek(), poke(), memdump()' },
-        { name: 'std/os', desc: 'Operating system interop, platform info, env variables' },
-        { name: 'std/net', desc: 'TCP/IP sockets and networking streams' },
-        { name: 'std/gpio', desc: 'Microcontroller GPIO pin control' },
-        { name: 'std/board', desc: 'Selected Nucleo connector and custom-board pin aliases' },
-        { name: 'std/serial', desc: 'UART serial communication port API' },
-        { name: 'std/spi', desc: 'SPI bus hardware communication' },
-        { name: 'std/i2c', desc: 'I2C two-wire hardware interface' },
-        { name: 'std/adc', desc: '12-bit analog input conversion' },
-        { name: 'std/pwm', desc: 'Timer-backed PWM output' },
-        { name: 'std/timer', desc: 'General-purpose hardware timers' },
-        { name: 'std/interrupt', desc: 'Cortex-M NVIC interrupt control' },
-        { name: 'std/mmio', desc: 'Volatile register access and masked updates' },
-        { name: 'std/process', desc: 'Child process execution' },
-        { name: 'std/str', desc: 'Advanced string manipulation and Unicode' },
-        { name: 'std/platform', desc: 'Hardware architecture detection' },
-        { name: 'std/env', desc: 'Environment configuration access' }
-    ];
-
-    const targetsList = [
-        { name: 'hecpp', desc: 'C++20 High Performance Native Binary (Clang/GCC)' },
-        { name: 'heasm', desc: 'x86_64 Intel Assembly Source (.s) with LLVM Optimizations' },
-        { name: 'hereact', desc: 'React 19 Reactive UI Components & Hooks (.tsx)' },
-        { name: 'hejs', desc: 'Node.js ES2022 JavaScript ESM Module' },
-        { name: 'hers', desc: 'Rust 2021 Safe Systems Conformance Target' },
-        { name: 'hepy', desc: 'Python 3 Rapid Scripting & Reference Semantics' },
-        { name: 'hewasm', desc: 'WebAssembly (WASM/WAT) Binary Stack Engine' },
-        { name: 'stm32f4', desc: 'Freestanding STM32F4 ELF / HEX / BIN firmware' }
-    ];
+    const completionModules = languageSurface.stdlibModules.map(module => ({
+        name: module.name,
+        desc: module.documentation,
+        detail: module.detail
+    }));
+    const completionTargets = languageSurface.targets.map(target => ({
+        name: target.name,
+        desc: `${target.detail} · ${target.documentation}`
+    }));
+    const completionTriggers = Array.from(new Set(
+        '# <"/.:_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    ));
 
     // ---------------------------------------------------------
     // 4. COMPLETION PROVIDER
     // ---------------------------------------------------------
     const completionProvider = vscode.languages.registerCompletionItemProvider(
-        ['nyxlang', 'nyx', 'he', 'holyeasylang'],
+        'nyxlang',
         {
             provideCompletionItems(document, position, token, completionContext) {
                 const items = [];
@@ -212,7 +190,7 @@ async function activate(context) {
                 const linePrefix = lineText.substring(0, position.character);
                 const fullText = document.getText();
 
-                let currentTarget = 'hecpp';
+                let currentTarget = 'cpp';
                 const targetMatch = fullText.match(/^\s*#target\s+([a-zA-Z0-9_]+)/m);
                 if (targetMatch) {
                     currentTarget = targetMatch[1].toLowerCase();
@@ -257,7 +235,7 @@ async function activate(context) {
 
                 // 3. #target (space)
                 if (/#target\s*$/i.test(linePrefix)) {
-                    targetsList.forEach(t => {
+                    completionTargets.forEach(t => {
                         const item = new vscode.CompletionItem(t.name, vscode.CompletionItemKind.EnumMember);
                         item.insertText = t.name;
                         item.detail = `Target: ${t.desc}`;
@@ -268,10 +246,10 @@ async function activate(context) {
 
                 // 4. import / use (space)
                 if (/(?:import|use)\s+["']?$/i.test(linePrefix) || /(?:import|use)\s+["']std\/$/i.test(linePrefix)) {
-                    stdModules.forEach(m => {
+                    completionModules.forEach(m => {
                         const item = new vscode.CompletionItem(m.name, vscode.CompletionItemKind.Module);
                         item.insertText = `"${m.name}";`;
-                        item.detail = `nyx stdlib: ${m.name}`;
+                        item.detail = m.detail;
                         item.documentation = new vscode.MarkdownString(`**${m.name}**\n\n${m.desc}`);
                         items.push(item);
                     });
@@ -279,7 +257,7 @@ async function activate(context) {
                 }
 
                 // Top level directives
-                addSnippet('#target', '#target ${1|hecpp,heasm,hereact,hejs,hers,hepy,hewasm|}', 'Target Directive', 'Sets compilation backend target.');
+                addSnippet('#target', `#target \${1|${completionTargets.map(target => target.name).join(',')}|}`, 'Target Directive', 'Sets compilation backend target.');
                 addSnippet('#native include', '#native include <${1:windows.h}>', 'Native Include', 'Includes C/C++ header.');
                 addSnippet('#native link', '#native link "${1|ws2_32,user32,gdi32,pthread,dl,m|}"', 'Native Link', 'Links system library.');
                 addSnippet('#native raw', '#native raw {\n\t${0:// raw C++20 code}\n}', 'Native Raw Block', 'Injects raw C++ code.');
@@ -321,17 +299,16 @@ async function activate(context) {
                 }
 
                 // Target specifics
-                if (currentTarget === 'hereact' || currentTarget === 'react') {
+                if (currentTarget === 'react') {
                     addSnippet('useState', 'var [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});', 'React useState Hook', 'Reactive state variable with updater.', vscode.CompletionItemKind.Function);
                     addSnippet('useEffect', 'useEffect(() => {\n\t${0:// side effect}\n}, [${1:deps}]);', 'React useEffect Hook', 'Component lifecycle side-effect hook.', vscode.CompletionItemKind.Function);
                     addSnippet('useRef', 'var ${1:ref} = useRef(${2:null});', 'React useRef Hook', 'Persistent mutable reference.', vscode.CompletionItemKind.Function);
                 }
 
-                if (currentTarget === 'hecpp' || currentTarget === 'heasm' || hasNative) {
+                if (currentTarget === 'cpp' || currentTarget === 'asm' || hasNative) {
                     addSnippet('unsafe', 'unsafe {\n\tvar ptr = addr(${1:variable});\n\tvar val = peek(ptr);\n\t${0}\n}', 'Unsafe Memory Block', 'Permits direct pointer arithmetic and dereferencing.');
                     addSnippet('addr', 'addr(${1:variable})', 'Get Pointer Address', 'Returns 64-bit physical memory address of variable.', vscode.CompletionItemKind.Function);
                     addSnippet('peek', 'peek(${1:ptr})', 'Read Memory Address', 'Dereferences 64-bit value at raw address.', vscode.CompletionItemKind.Function);
-                    addSnippet('poke', 'poke(${1:ptr}, ${2:value})', 'Write Memory Address', 'Writes 64-bit value directly to memory address.', vscode.CompletionItemKind.Function);
                     addSnippet('memdump', 'memdump(${1:ptr}, ${2:num_bytes});', 'Hex Memory Dump', 'Dumps raw memory bytes formatted in hexadecimal.', vscode.CompletionItemKind.Function);
                     addSnippet('delay_ms', 'delay_ms(${1:1000});', 'High-Res Sleep', 'Thread sleep with microsecond precision.', vscode.CompletionItemKind.Function);
                 }
@@ -341,12 +318,13 @@ async function activate(context) {
                 // plain keyword/type/runtime entries fill every remaining gap.
                 const existingLabels = new Set(items.map(item => item.label));
                 function addSurfaceItem(label, kind, detail, documentation) {
-                    if (existingLabels.has(label)) return;
+                    if (existingLabels.has(label)) return null;
                     const item = new vscode.CompletionItem(label, kind);
                     item.detail = detail;
                     item.documentation = new vscode.MarkdownString(documentation);
                     items.push(item);
                     existingLabels.add(label);
+                    return item;
                 }
                 languageSurface.stableKeywords.forEach(keyword => {
                     addSurfaceItem(
@@ -364,17 +342,81 @@ async function activate(context) {
                         'Frontend support exists, but cross-target semantics are not stable yet.'
                     );
                 });
-                languageSurface.builtinNames.forEach(name => {
-                    addSurfaceItem(name, vscode.CompletionItemKind.Function, 'Nyx core runtime', 'Nyx core runtime function.');
+                languageSurface.builtinFunctions.forEach(entry => {
+                    addSurfaceItem(
+                        entry.label,
+                        vscode.CompletionItemKind.Function,
+                        entry.detail,
+                        entry.documentation
+                    );
                 });
                 languageSurface.typeNames.forEach(name => {
                     addSurfaceItem(name, vscode.CompletionItemKind.TypeParameter, 'Nyx type', 'Nyx language type.');
                 });
 
+                const importedModules = new Set(
+                    Array.from(fullText.matchAll(/\b(?:import|use)\s+["']([^"']+)["']/g), match => match[1])
+                );
+                const symbolKinds = {
+                    function: vscode.CompletionItemKind.Function,
+                    struct: vscode.CompletionItemKind.Struct,
+                    enum: vscode.CompletionItemKind.Enum,
+                    type: vscode.CompletionItemKind.TypeParameter,
+                    constant: vscode.CompletionItemKind.Constant
+                };
+                languageSurface.stdlibSymbols.forEach(symbol => {
+                    const imported = importedModules.has(symbol.module);
+                    const item = addSurfaceItem(
+                        symbol.label,
+                        symbolKinds[symbol.kind] || vscode.CompletionItemKind.Value,
+                        `${symbol.detail} · ${symbol.module}`,
+                        imported
+                            ? symbol.documentation
+                            : `${symbol.documentation}\n\nImport with \`import "${symbol.module}"\`.`
+                    );
+                    if (item) item.sortText = `${imported ? '0200' : '2200'}_${symbol.label}`;
+                });
+                languageSurface.targets.forEach(target => {
+                    addSurfaceItem(
+                        target.name,
+                        vscode.CompletionItemKind.EnumMember,
+                        `Nyx target · ${target.detail}`,
+                        target.documentation
+                    );
+                });
+                languageSurface.boards.forEach(board => {
+                    addSurfaceItem(
+                        board.name,
+                        vscode.CompletionItemKind.EnumMember,
+                        `Nyx board · ${board.detail}`,
+                        board.documentation
+                    );
+                });
+
+                const localPatterns = [
+                    [/\b(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?:->\s*([^\s{=]+))?/g, vscode.CompletionItemKind.Function, match => `fn ${match[1]}(${match[2]})${match[3] ? ` -> ${match[3]}` : ''}`],
+                    [/\bstruct\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Struct, match => `struct ${match[1]}`],
+                    [/\btrait\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Interface, match => `trait ${match[1]}`],
+                    [/\benum\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Enum, match => `enum ${match[1]}`],
+                    [/\btype\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.TypeParameter, match => `type ${match[1]}`],
+                    [/\b(?:volatile\s+)?(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Variable, match => `local ${match[1]}`]
+                ];
+                localPatterns.forEach(([pattern, kind, detail]) => {
+                    for (const match of fullText.matchAll(pattern)) {
+                        const item = addSurfaceItem(
+                            match[1],
+                            kind,
+                            detail(match),
+                            'Declared in the current document.'
+                        );
+                        if (item) item.sortText = `0100_${match[1]}`;
+                    }
+                });
+
                 return items;
             }
         },
-        '#', ' ', '<', '"', '/', ':', '.', 'i', 'u', 's', 'c', 'v', 'f', 'w'
+        ...completionTriggers
     );
 
     context.subscriptions.push(completionProvider);

@@ -78,7 +78,7 @@ float-string: 2 0.000001 1e-7 0"""
 
 
 def _run(target: str, source: str, directory: str) -> str:
-    if target == "hecpp":
+    if target == "cpp":
         cpp_path = os.path.join(directory, "numeric.cpp")
         executable = os.path.join(directory, "numeric.exe" if os.name == "nt" else "numeric")
         with open(cpp_path, "w", encoding="utf-8", newline="\n") as handle:
@@ -90,7 +90,7 @@ def _run(target: str, source: str, directory: str) -> str:
         return output
 
     command = [sys.executable, "-c", source]
-    if target == "hejs":
+    if target == "js":
         node = shutil.which("node")
         assert node is not None, "Node.js is required for numeric parity"
         command = [node, "-e", source]
@@ -115,14 +115,14 @@ def run_numeric_semantics_suite() -> bool:
     compiler = NyxCompiler(ROOT_DIR)
     outputs = {}
     with tempfile.TemporaryDirectory(prefix="nyx_numeric_semantics_") as directory:
-        for target in ("hecpp", "hejs", "hepy"):
+        for target in ("cpp", "js", "python"):
             result = compiler.compile_source(SOURCE, target=target, filename="numeric_semantics.nyx")
             assert result.success, result.diagnostics
             assert result.artifact is not None
             output = _run(target, result.artifact.content, directory)
             outputs[target] = output.replace("\r\n", "\n").strip()
 
-    assert outputs == {target: EXPECTED for target in ("hecpp", "hejs", "hepy")}, outputs
+    assert outputs == {target: EXPECTED for target in ("cpp", "js", "python")}, outputs
     for literal in (
         "9223372036854775808",
         "-9223372036854775809",
@@ -130,7 +130,7 @@ def run_numeric_semantics_suite() -> bool:
     ):
         rejected = compiler.check_source(
             f"fn main() {{ let invalid: int = {literal} }}",
-            target="hecpp",
+            target="cpp",
             filename="invalid_integer_literal.nyx",
         )
         assert not rejected.success, literal

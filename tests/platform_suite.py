@@ -1,4 +1,4 @@
-﻿import os
+import os
 import sys
 import tempfile
 import shutil
@@ -25,7 +25,7 @@ def run_platform_suite() -> bool:
     tests = [
         (
             "plat_01_platform_info",
-            """#target hecpp
+            """#target cpp
 import "std/platform"
 
 print("OS:", os_name())
@@ -36,7 +36,7 @@ print("Is Windows:", is_windows())
         ),
         (
             "plat_02_env_vars",
-            """#target hecpp
+            """#target cpp
 import "std/env"
 
 var has_p = has_env("PATH")
@@ -46,7 +46,7 @@ print("Has PATH env:", has_p)
         ),
         (
             "plat_03_process_exec",
-            """#target hecpp
+            """#target cpp
 import "std/process"
 
 var status = exec_cmd("echo nyx_process_ok")

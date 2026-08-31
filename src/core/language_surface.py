@@ -43,13 +43,14 @@ LEGACY_KEYWORD_ALIASES = {}
 # are callable runtime names rather than statement/declaration keywords.
 BUILTIN_NAMES = (
     "print", "input", "addr", "peek", "memdump", "channel", "Ok", "Err",
-    "len", "to_string", "to_int", "contains", "is_number", "delay_ms",
+    "len", "args", "buffer_ptr", "to_string", "to_int", "contains",
+    "is_number", "delay_ms",
 )
 
 TYPE_NAMES = (
     "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
     "float", "f32", "f64", "bool", "string", "char", "uintptr", "void", "any",
-    "Array", "Option", "Result", "Channel", "Task",
+    "Array", "Buffer", "Option", "Result", "Channel", "Task",
 )
 
 KEYWORD_TOKEN_TYPES = {

@@ -55,7 +55,7 @@
     },
     {
       "name": "support.function.builtin.nyx",
-      "match": "\\b(print|println|input|len|length|addr|peek|poke|memdump|delay_ms|contains|is_number|to_string|to_int|channel|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
+      "match": "\\b(print|println|input|len|length|addr|peek|memdump|delay_ms|contains|is_number|to_string|to_int|channel|Ok|Err|useState|useEffect|useRef|useMemo|useCallback)\\b"
     },
     {
       "name": "constant.language.boolean.nyx",

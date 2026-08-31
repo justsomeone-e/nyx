@@ -15,7 +15,7 @@ from src.codegen.cpp_toolchain import CppToolchain
 E2E_CONFORMANCE_CASES = [
     (
         "e2e_01_arithmetic_precedence",
-        """#target hecpp
+        """#target cpp
 var a = 10 + 5 * 2
 var b = (10 + 5) * 2
 print("a:", a, "b:", b)
@@ -24,7 +24,7 @@ print("a:", a, "b:", b)
     ),
     (
         "e2e_02_recursive_factorial",
-        """#target hecpp
+        """#target cpp
 fn factorial(n: int) -> int {
     if n <= 1 {
         return 1
@@ -38,7 +38,7 @@ print("fact(6):", factorial(6))
     ),
     (
         "e2e_03_mutual_recursion",
-        """#target hecpp
+        """#target cpp
 fn is_even(n: int) -> bool {
     if n == 0 { return true }
     return is_odd(n - 1)
@@ -55,7 +55,7 @@ print("even(10):", is_even(10), "odd(7):", is_odd(7))
     ),
     (
         "e2e_04_struct_methods_and_instantiation",
-        """#target hecpp
+        """#target cpp
 struct Target {
     name: string,
     freq: int,
@@ -69,7 +69,7 @@ print("Target:", t.name, t.freq, t.signal)
     ),
     (
         "e2e_05_loops_and_accumulation",
-        """#target hecpp
+        """#target cpp
 var sum = 0
 for i in 1..10 {
     if i == 5 {
@@ -83,7 +83,7 @@ print("Sum excluding 5:", sum)
     ),
     (
         "e2e_06_string_unicode_and_concat",
-        """#target hecpp
+        """#target cpp
 var title = "Nyx"
 var lang = "Lang 🚀"
 var full = title + " " + lang
@@ -93,7 +93,7 @@ print("Full:", full)
     ),
     (
         "e2e_07_result_pattern_matching",
-        """#target hecpp
+        """#target cpp
 var res = Ok(1337)
 match res {
     Ok(val) => print("Success Val:", val),
@@ -104,7 +104,7 @@ match res {
     ),
     (
         "e2e_08_unsafe_memory_read",
-        """#target hecpp
+        """#target cpp
 var val = 42
 unsafe {
     var ptr = addr(val)
@@ -118,7 +118,7 @@ unsafe {
 
 def run_cpp_e2e_tests():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG C++20 END-TO-END CONFORMANCE HARNESS")
+    print("⚡ NYX C++20 END-TO-END CONFORMANCE HARNESS")
     print("=" * 70)
     
     compiler_path = CppToolchain.find_compiler()

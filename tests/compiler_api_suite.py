@@ -22,12 +22,12 @@ def run_compiler_api_suite() -> bool:
 
     source = "fn add(a: int, b: int) -> int { return a + b }\n"
     expected = {
-        "hecpp": (".cpp", "int64_t add"),
-        "hejs": (".js", "function add"),
-        "hepy": (".py", "def add"),
-        "hers": (".rs", "pub fn add"),
-        "hereact": (".tsx", "export default function NyxApp"),
-        "hewasm": (".wat", "(module"),
+        "cpp": (".cpp", "int64_t add"),
+        "js": (".js", "function add"),
+        "python": (".py", "def add"),
+        "rust": (".rs", "pub fn add"),
+        "react": (".tsx", "export default function NyxApp"),
+        "wasm": (".wat", "(module"),
         "stm32": (".cpp", "int64_t add"),
     }
     for target, (extension, marker) in expected.items():
@@ -39,9 +39,9 @@ def run_compiler_api_suite() -> bool:
         json.dumps(result.to_dict(), ensure_ascii=False)
 
     directive_result = compile_source("#target node\n" + source)
-    assert directive_result.success and directive_result.target == "hejs"
-    override_result = compile_source("#target hecpp\n" + source, target="python")
-    assert override_result.success and override_result.target == "hepy"
+    assert directive_result.success and directive_result.target == "js"
+    override_result = compile_source("#target cpp\n" + source, target="python")
+    assert override_result.success and override_result.target == "python"
 
     invalid_source = 'var count: int = "wrong"\n'
     captured = io.StringIO()
@@ -81,12 +81,12 @@ def run_compiler_api_suite() -> bool:
     assert DiagnosticEmitter.EXIT_ON_ERROR == original_exit_mode
 
     unsupported = compiler.check_source(
-        '#target hers\nimport "std/fs"\nfn main() {}\n',
+        '#target rust\nimport "std/fs"\nfn main() {}\n',
         filename="unsupported.nyx",
     )
     assert not unsupported.success
     assert unsupported.diagnostics[0].code == "E1400"
-    assert "hecpp" in unsupported.diagnostics[0].note
+    assert "cpp" in unsupported.diagnostics[0].note
 
     class MarkerPlugin(CompilerPlugin):
         name = "marker"
@@ -105,10 +105,10 @@ def run_compiler_api_suite() -> bool:
             return replace(artifact, content=artifact.content + "\n// marker-plugin\n")
 
     marker = MarkerPlugin()
-    plugin_result = compile_source(source, target="hejs", plugins=(marker,))
+    plugin_result = compile_source(source, target="js", plugins=(marker,))
     assert plugin_result.success and plugin_result.artifact is not None
     assert plugin_result.artifact.content.endswith("// marker-plugin\n")
-    assert marker.events == [("parse", "hejs"), ("check", "hejs"), ("emit", "hejs")]
+    assert marker.events == [("parse", "js"), ("check", "js"), ("emit", "js")]
 
     class FailingPlugin(CompilerPlugin):
         name = "failing"

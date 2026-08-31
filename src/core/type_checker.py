@@ -2,11 +2,11 @@ from typing import Dict, List, Optional, Any, Set
 import sys
 from .ast_nodes import (
     ASTNode, ProgramNode, NumberNode, StringNode, BooleanNode, NullNode,
-    IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, NullCoalesceNode, MemberAccessNode,
+    IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, NullCoalesceNode, ConditionalExprNode, MemberAccessNode,
     IndexAccessNode, ArrayNode, LambdaNode, FunctionCallNode, VarDeclNode,
     AssignNode, TypeAliasNode, StructDefNode, TraitDefNode, ImplBlockNode,
     EnumDefNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, TestBlockNode, AssertNode,
-    FunctionDefNode, MatchNode, TryCatchNode, IfNode, WhileNode, ForNode,
+    FunctionDefNode, MatchNode, MatchExprNode, TryCatchNode, IfNode, WhileNode, ForNode,
     ReturnNode, ThrowNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
     NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode,
     DeferNode, GuardNode
@@ -666,6 +666,9 @@ class TypeChecker:
             self.visit(node.left)
             self.visit(node.right)
 
+        elif isinstance(node, (ConditionalExprNode, MatchExprNode)):
+            self.infer_type(node)
+
     def infer_type(self, node: Optional[ASTNode]) -> str:
         if not node:
             return 'void'
@@ -755,6 +758,87 @@ class TypeChecker:
                     help_msg="Await an async function call or another Task value.",
                 )
             inferred = operand_type[5:-1]
+            node.inferred_type = inferred
+            return inferred
+        if isinstance(node, ConditionalExprNode):
+            self._require_bool_condition(node.condition, "if expression")
+            branch_types = [self.infer_type(node.then_expr)]
+            for condition, branch in node.elif_branches:
+                self._require_bool_condition(condition, "elif expression")
+                branch_types.append(self.infer_type(branch))
+            branch_types.append(self.infer_type(node.else_expr))
+            concrete = [value for value in branch_types if value != 'any']
+            if not concrete:
+                inferred = 'any'
+            elif all(value == concrete[0] for value in concrete):
+                inferred = concrete[0]
+            elif all(value in ('int', 'float') for value in concrete):
+                inferred = 'float'
+            else:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2001", "Conditional expression branches produce incompatible types",
+                    expected=concrete[0],
+                    found=", ".join(branch_types),
+                    help_msg="Make every if/elif/else branch produce the same type.",
+                )
+                inferred = 'any'
+            node.inferred_type = inferred
+            return inferred
+        if isinstance(node, MatchExprNode):
+            subject_type = self.infer_type(node.expr)
+            branch_types = []
+            wildcard_indexes = []
+            for index, (pattern, value) in enumerate(node.cases):
+                is_wildcard = isinstance(pattern, IdentifierNode) and pattern.name == "_"
+                if is_wildcard:
+                    wildcard_indexes.append(index)
+                elif isinstance(pattern, IdentifierNode):
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, pattern.line, pattern.col,
+                        "E2015", "Match expression identifiers are not binding patterns yet",
+                        expected="literal pattern or _ fallback",
+                        found=pattern.name,
+                        help_msg="Use a literal arm now; Result/enum destructuring is a separate Maya feature.",
+                    )
+                else:
+                    pattern_type = self.infer_type(pattern)
+                    if not (
+                        self.is_compatible(subject_type, pattern_type)
+                        or self.is_compatible(pattern_type, subject_type)
+                    ):
+                        DiagnosticEmitter.emit_error(
+                            self.filepath, self.source, pattern.line, pattern.col,
+                            "E2001", "Match expression pattern type is incompatible with its subject",
+                            expected=subject_type,
+                            found=pattern_type,
+                            help_msg="Use patterns with the same type as the matched value.",
+                        )
+                branch_types.append(self.infer_type(value))
+            if wildcard_indexes != [len(node.cases) - 1]:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2014", "Match expression must end with an exhaustive '_' fallback",
+                    expected="_ => fallback as the final arm",
+                    found="missing or non-final wildcard",
+                    help_msg="A value-producing match must produce a value on every path.",
+                )
+            concrete = [value for value in branch_types if value != 'any']
+            if not concrete:
+                inferred = 'any'
+            elif all(value == concrete[0] for value in concrete):
+                inferred = concrete[0]
+            elif all(value in ('int', 'float') for value in concrete):
+                inferred = 'float'
+            else:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2001", "Match expression arms produce incompatible types",
+                    expected=concrete[0],
+                    found=", ".join(branch_types),
+                    help_msg="Make every match arm produce the same type.",
+                )
+                inferred = 'any'
             node.inferred_type = inferred
             return inferred
         if isinstance(node, FunctionCallNode):

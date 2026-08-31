@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var x = 10
 var y = x
 var z = x + y

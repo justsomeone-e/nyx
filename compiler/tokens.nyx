@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 enum TokenType {
     VAR,

@@ -84,5 +84,5 @@ fn main() {
         return;
     }
 
-    print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL / NFC-NFD Vectors Verified (hecpp == hejs == hepy)!");
+    print("[SUCCESS] All 6 Stdlib Modules & UTF-8 / NUL / NFC-NFD Vectors Verified (cpp == js == python)!");
 }

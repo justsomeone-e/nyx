@@ -33,6 +33,11 @@ class EmbeddedBuilder:
 
         # Fallback to host LLVM Clang / LLD if GNU ARM is not explicitly installed
         if not cxx:
+            for clang_driver in ("clang++", "x86_64-w64-mingw32-clang++"):
+                cxx = shutil.which(clang_driver)
+                if cxx:
+                    break
+        if not cxx:
             host_cxx = CppToolchain.find_compiler()
             if host_cxx and ("clang" in host_cxx.lower()):
                 cxx = host_cxx
@@ -52,14 +57,22 @@ class EmbeddedBuilder:
 
         if cxx and not c_compiler:
             cxx_name = os.path.basename(cxx)
-            if "g++" in cxx_name:
-                candidate_c = os.path.join(os.path.dirname(cxx), cxx_name.replace("g++", "gcc"))
-                if os.path.isfile(candidate_c):
-                    c_compiler = candidate_c
-            elif "clang++" in cxx_name:
+            if "clang++" in cxx_name:
                 candidate_c = os.path.join(os.path.dirname(cxx), cxx_name.replace("clang++", "clang"))
                 if os.path.isfile(candidate_c):
                     c_compiler = candidate_c
+            elif "g++" in cxx_name:
+                candidate_c = os.path.join(os.path.dirname(cxx), cxx_name.replace("g++", "gcc"))
+                if os.path.isfile(candidate_c):
+                    c_compiler = candidate_c
+        if cxx:
+            bin_dir = os.path.dirname(cxx)
+            if not objcopy:
+                candidate_objcopy = os.path.join(bin_dir, "llvm-objcopy.exe" if os.name == "nt" else "llvm-objcopy")
+                objcopy = candidate_objcopy if os.path.isfile(candidate_objcopy) else shutil.which("llvm-objcopy")
+            if not size_tool:
+                candidate_size = os.path.join(bin_dir, "llvm-size.exe" if os.name == "nt" else "llvm-size")
+                size_tool = candidate_size if os.path.isfile(candidate_size) else shutil.which("llvm-size")
 
         return {
             "cc": c_compiler,
@@ -134,6 +147,67 @@ SECTIONS
         with open(path, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(content)
         return path
+
+    @staticmethod
+    def _lld_compatible_linker_script(linker: str, build_dir: str, startup: str = "") -> str:
+        """Normalize documented GNU-ld constructs that LLD does not accept."""
+        with open(linker, "r", encoding="utf-8", errors="replace") as handle:
+            source = handle.read()
+        transformed = source
+        memory_match = re.search(r"\bMEMORY\b\s*\{", source)
+        if memory_match:
+            opening = source.find("{", memory_match.start())
+            depth = 0
+            closing = -1
+            for index in range(opening, len(source)):
+                character = source[index]
+                if character == "{":
+                    depth += 1
+                elif character == "}":
+                    depth -= 1
+                    if depth == 0:
+                        closing = index + 1
+                        break
+            if closing >= 0:
+                prefix = source[:memory_match.start()]
+                moved = []
+                kept = []
+                for line in prefix.splitlines(keepends=True):
+                    if "=" in line and ";" in line and ("ORIGIN(" in line or "LENGTH(" in line):
+                        moved.append(line)
+                    else:
+                        kept.append(line)
+                if moved:
+                    transformed = "".join(kept) + source[memory_match.start():closing]
+                    if transformed and not transformed.endswith("\n"):
+                        transformed += "\n"
+                    transformed += "".join(moved) + source[closing:]
+        # GNU ld 2.39 added output-section `(READONLY)` syntax that current
+        # LLD parses as an unresolved symbol. Section placement already makes
+        # these regions read-only, so removing the marker preserves semantics.
+        transformed = re.sub(
+            r"(?m)^(\s*\.[A-Za-z0-9_.-]+)\s+\(READONLY\)\s*:",
+            r"\1 :",
+            transformed,
+        )
+        if startup and os.path.isfile(startup):
+            with open(startup, "r", encoding="utf-8", errors="replace") as handle:
+                startup_source = handle.read()
+            aliases = []
+            for suffix in sorted(set(re.findall(r"\b_si([A-Za-z0-9_]+)\b", startup_source))):
+                load_symbol = f"_si{suffix}"
+                start_symbol = f"_s{suffix}"
+                if load_symbol not in transformed and start_symbol in transformed:
+                    aliases.append(f"PROVIDE({load_symbol} = {start_symbol});\n")
+            if aliases:
+                transformed += "\n/* Nyx LLD compatibility aliases for NOLOAD startup regions. */\n"
+                transformed += "".join(aliases)
+        if transformed == source:
+            return linker
+        destination = os.path.join(build_dir, f"{os.path.basename(linker)}.lld.ld")
+        with open(destination, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(transformed)
+        return destination
 
     @staticmethod
     def _interrupt_handlers(cpp_source_path: str) -> Tuple[str, ...]:
@@ -233,16 +307,38 @@ void (* const g_pfnVectors[])(void) = {{
             return self.board.clang_target
         return self._clang_target_for_cpu(self.spec.cpu)
 
-    def _profile_include_dirs(self, header: str, startup: str) -> Tuple[str, ...]:
-        include_dirs = {
+    def _profile_include_dirs(self, header: str, startup: str, compat_dir: str = "") -> Tuple[str, ...]:
+        include_dirs = [
+            compat_dir,
             self.bsp_dir,
             os.path.dirname(header),
             os.path.dirname(startup),
-        }
+        ]
         if self.board:
-            include_dirs.update(self.board.include_dirs)
-            include_dirs.update(os.path.dirname(path) for path in self.board.source_files)
-        return tuple(sorted(path for path in include_dirs if path))
+            include_dirs.extend(self.board.include_dirs)
+            include_dirs.extend(os.path.dirname(path) for path in self.board.source_files)
+        return tuple(dict.fromkeys(path for path in include_dirs if path))
+
+    @staticmethod
+    def _write_cmsis_compat_headers(build_dir: str) -> str:
+        compat_dir = os.path.join(build_dir, "cmsis_compat")
+        os.makedirs(compat_dir, exist_ok=True)
+        math_header = os.path.join(compat_dir, "math.h")
+        with open(math_header, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(
+                "#pragma once\n"
+                "#if defined(__has_include_next)\n"
+                "#  if __has_include_next(<math.h>)\n"
+                "#    include_next <math.h>\n"
+                "#    define NYX_HAS_TARGET_MATH_H 1\n"
+                "#  endif\n"
+                "#endif\n"
+                "#if !defined(NYX_HAS_TARGET_MATH_H)\n"
+                "typedef float float_t;\n"
+                "typedef double double_t;\n"
+                "#endif\n"
+            )
+        return compat_dir
 
     def _profile_defines(self, vector_source: str) -> Tuple[str, ...]:
         defines: List[str] = list(self.board.defines) if self.board else []
@@ -332,7 +428,10 @@ void (* const g_pfnVectors[])(void) = {{
         vector_source = self._write_vector_source(build_dir, handlers) if handlers else ""
         if vector_source:
             paths["vectors"] = vector_source
-        include_dirs = self._profile_include_dirs(header, startup)
+        compat_dir = ""
+        if self.board and self.board.startup_owns_vectors:
+            compat_dir = self._write_cmsis_compat_headers(build_dir)
+        include_dirs = self._profile_include_dirs(header, startup, compat_dir)
         defines = self._profile_defines(vector_source)
 
         source_entries: List[Tuple[str, bool]] = [(os.path.abspath(cpp_source_path), True)]
@@ -364,6 +463,9 @@ void (* const g_pfnVectors[])(void) = {{
             objects.append(destination)
 
         is_clang = "clang" in os.path.basename(cxx).lower()
+        if is_clang:
+            linker = self._lld_compatible_linker_script(linker, build_dir, startup)
+        paths["linker_script"] = linker
         link_command = [cxx]
         if is_clang:
             link_command.extend((f"--target={self._clang_target()}", "-fuse-ld=lld"))

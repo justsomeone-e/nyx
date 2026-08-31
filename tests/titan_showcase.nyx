@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 /// Titan Showcase Demo Script
 var age: int = 13

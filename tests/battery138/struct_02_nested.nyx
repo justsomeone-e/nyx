@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 struct Address { city }
 struct User { name, addr }
 var u = User("Umut", Address("Istanbul"))

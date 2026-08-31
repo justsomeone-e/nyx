@@ -180,6 +180,12 @@ class MatchNode(ASTNode):
         self.expr = expr
         self.cases = cases
 
+class MatchExprNode(ASTNode):
+    def __init__(self, expr: ASTNode, cases: List[Any], line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+        self.cases = cases
+
 class TryCatchNode(ASTNode):
     def __init__(self, try_body: List[ASTNode], err_name: str, catch_body: List[ASTNode], line: int = 1, col: int = 1):
         super().__init__(line, col)
@@ -199,6 +205,14 @@ class NullCoalesceNode(ASTNode):
         super().__init__(line, col)
         self.left = left
         self.right = right
+
+class ConditionalExprNode(ASTNode):
+    def __init__(self, condition: ASTNode, then_expr: ASTNode, elif_branches: List[Any], else_expr: ASTNode, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.condition = condition
+        self.then_expr = then_expr
+        self.elif_branches = elif_branches
+        self.else_expr = else_expr
 
 class ArrayNode(ASTNode):
     def __init__(self, elements: List[ASTNode], line: int = 1, col: int = 1):

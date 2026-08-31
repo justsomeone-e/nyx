@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var a = "Foo"
 var b = "Bar"
 print(a + b)

@@ -18,7 +18,7 @@ from tests.battery138.run_battery import test_cases
 
 
 _NATIVE_EXPECTED_OVERRIDES = {
-    # Native hecpp exposes actual address dereference semantics.  The legacy
+    # Native cpp exposes actual address dereference semantics.  The legacy
     # Python battery oracle intentionally returned its fixed emulation value.
     "unsafe_01_basic_addr": "42",
 }

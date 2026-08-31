@@ -30,49 +30,49 @@ class Compiler:
         type_checker.check()
 
         # Target selection
-        target = self.target_override or ast.target or "hecpp"
+        target = self.target_override or ast.target or "cpp"
         codegen = UniversalCodeGen(ast)
 
         base_name = os.path.splitext(self.filepath)[0]
 
-        if target == "hecpp":
+        if target == "cpp":
             cpp_out = codegen.gen_cpp()
             out_file = base_name + ".cpp"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(cpp_out)
-            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hecpp]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: cpp]")
             print(f"[+] Output generated: {out_file}")
 
-        elif target == "hereact":
+        elif target == "react":
             tsx_out = codegen.gen_react()
             out_file = base_name + ".tsx"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(tsx_out)
-            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hereact]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: react]")
             print(f"[+] Output generated: {out_file}")
 
-        elif target == "hewasm":
+        elif target == "wasm":
             wat_out = codegen.gen_wasm()
             out_file = base_name + ".wat"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(wat_out)
-            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hewasm]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: wasm]")
             print(f"[+] Output generated: {out_file}")
 
-        elif target == "hepy":
+        elif target == "python":
             py_out = codegen.gen_python()
             out_file = base_name + ".py"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(py_out)
-            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hepy]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: python]")
             print(f"[+] Output generated: {out_file}")
 
-        elif target == "hejs":
+        elif target == "js":
             js_out = codegen.gen_js()
             out_file = base_name + ".js"
             with open(out_file, 'w', encoding='utf-8') as f:
                 f.write(js_out)
-            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: hejs]")
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: js]")
             print(f"[+] Output generated: {out_file}")
 
         if run_immediately:

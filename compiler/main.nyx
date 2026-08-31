@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <iostream>
 #native include <string>
 #native include <vector>
@@ -20,7 +20,7 @@ fn print_help() {
     print("  nyxc <file.nyx> [options]")
     print("")
     print("Options:")
-    print("  --target <hecpp|heasm|hejs|hers|hepy>  Set output backend")
+    print("  --target <cpp|asm|js|rust|python>  Set output backend")
     print("  -o <output_binary>                     Set output executable name")
     print("  --emit-cpp                             Only emit C++20 source")
     print("  --emit-asm                             Only emit x86_64 Intel ASM")

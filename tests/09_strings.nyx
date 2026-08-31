@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var email = "admin@nyx.org"
 print("Has @:", contains(email, "@"))
 print("Age Str:", "Age: " + to_string(25))

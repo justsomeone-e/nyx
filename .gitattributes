@@ -3,9 +3,8 @@
 # language, so .nyx keeps C++ highlighting while remaining out of the C++
 # language percentage.  The real implementation languages stay detectable.
 
-# Nyx source and compatibility-era source extension
+# Nyx source extension
 *.nyx linguist-language=C++ -linguist-detectable
-*.he linguist-language=C++ -linguist-detectable
 
 # Compiler, tooling, and backend sources
 *.py linguist-language=Python -linguist-vendored

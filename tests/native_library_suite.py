@@ -11,6 +11,7 @@ from src.core.module_loader import ModuleLoader
 from src.core.type_checker import TypeChecker
 from src.codegen.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
+from src.api import NyxCompiler
 
 def run_native_library_suite() -> bool:
     print("=" * 70)
@@ -25,7 +26,7 @@ def run_native_library_suite() -> bool:
     tests = [
         (
             "lib_01_std_memory_abstraction",
-            """#target hecpp
+            """#target cpp
 import "std/memory"
 
 var buffer = allocate(256)
@@ -36,20 +37,8 @@ release(buffer)
             "Buffer allocated successfully: true"
         ),
         (
-            "lib_02_native_gpio_abstraction",
-            """#target hecpp
-import "native/gpio"
-
-mode(13, PIN_OUTPUT)
-write(13, PIN_HIGH)
-write(13, PIN_LOW)
-print("GPIO sequence complete")
-""",
-            "GPIO sequence complete"
-        ),
-        (
             "lib_03_std_time_sleep",
-            """#target hecpp
+            """#target cpp
 import "std/time"
 
 sleep_ms(5)
@@ -60,7 +49,19 @@ print("Time sleep completed")
     ]
 
     passed = 0
-    total = len(tests)
+    total = len(tests) + 1
+
+    print("[*] Testing lib_02_native_gpio_host_rejection...")
+    gpio_result = NyxCompiler(_root_dir).check_source(
+        'import "native/gpio"\nmode(13, PIN_OUTPUT)\n',
+        target="cpp",
+        filename="lib_02_native_gpio_host_rejection.nyx",
+    )
+    if not gpio_result.success and any(item.code == "E1400" for item in gpio_result.diagnostics):
+        print("  [PASS] physical GPIO is rejected on the hosted C++ target")
+        passed += 1
+    else:
+        print("  [FAIL] hosted C++ accepted physical GPIO without a board target")
 
     for name, source, expected in tests:
         print(f"[*] Testing {name}...")

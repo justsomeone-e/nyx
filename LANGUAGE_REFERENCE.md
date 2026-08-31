@@ -1,6 +1,7 @@
 # Nyx v4 Language Reference
 
-This document describes the source language being frozen for `v4.0.0-rc.1`.
+This document describes the `v4.0.0-dev.1` (`Maya`) source language on the
+path to RC1.
 Nyx source files use the `.nyx` extension and are built with the `nyx` CLI.
 Backend availability is a capability decision, not a change to language syntax.
 
@@ -60,8 +61,8 @@ whose magnitude exceeds 2⁵³; it never changes the original `int` binding's
 type. `float` does not narrow to `int` implicitly. Canonical booleans are
 rendered as lowercase `true` and `false`.
 
-The full numeric and scalar-text contract is declared by `hecpp`, `hejs`, and
-`hepy`. The beta `hewasm` ABI remains explicitly `wasm32` and does not claim
+The full numeric and scalar-text contract is declared by `cpp`, `js`, and
+`python`. The beta `wasm` ABI remains explicitly `wasm32` and does not claim
 signed-i64 conformance until its numeric ABI is revised.
 
 ```nyx
@@ -93,11 +94,23 @@ fn add(a: int, b: int) -> int {
 fn greet(name: string) {
     print("Hello, " + name)
 }
+
+fn square(value: int) -> int = value * value
+
+fn classify(value: int) -> string = if value < 0 {
+    "negative"
+} elif value == 0 {
+    "zero"
+} else {
+    "positive"
+}
 ```
 
 Parameters and return values are typed. A missing return annotation means
 `void` unless the compiler can safely infer a value type in an inference-enabled
-context.
+context. `= expression` is an expression-bodied function and behaves as one
+implicit `return`. A value-producing `if` requires an `else`; each arm contains
+one expression and every arm must have a compatible result type.
 
 ## 4. Async tasks
 
@@ -120,7 +133,7 @@ same task more than once observes the same completion. Errors thrown by the task
 propagate at `await` and can be caught normally. The exact instant at which a
 task begins execution is intentionally not part of the language contract.
 
-The `Task<T>` ABI is currently implemented by `hecpp`, `hejs`, and `hepy`.
+The `Task<T>` ABI is currently implemented by `cpp`, `js`, and `python`.
 Other targets reject it with a capability diagnostic instead of silently
 changing its behavior.
 
@@ -154,6 +167,24 @@ loop {
 `break` and `continue` are valid only inside loops. Conditions accept only
 `bool`; a dynamically typed `any` value is checked at runtime rather than
 using C++/JavaScript/Python truthiness.
+
+`match` can also produce a value without a `return` in every arm:
+
+```nyx
+fn http_label(code: int) -> string = match code {
+    200 => "ok",
+    404 => "missing",
+    _ => "other"
+}
+```
+
+The final `_` fallback is mandatory and arm values must share a compatible
+type. Maya's first value-match form accepts literals. The subject is evaluated
+exactly once, including calls and other side-effecting expressions:
+
+```nyx
+let label = match read_status() { 200 => "ok", _ => "other" }
+```
 
 `guard` expresses an early-exit precondition, while `defer` runs an expression
 when the current scope exits:
@@ -212,8 +243,8 @@ try {
 ```
 
 `throw` converts its value to the canonical Nyx string representation for the
-current exception boundary. `try`/`catch`/`throw` are available on `hecpp`,
-`hejs`, and `hepy`; unsupported targets fail during capability validation.
+current exception boundary. `try`/`catch`/`throw` are available on `cpp`,
+`js`, and `python`; unsupported targets fail during capability validation.
 
 For recoverable domain errors that are part of an API, prefer `Result<T, E>` and
 pattern matching:
@@ -348,8 +379,8 @@ that has no typed Nyx contract yet, rather than the default embedded API.
 
 ```text
 nyx check main.nyx
-nyx run main.nyx --target hecpp
-nyx build main.nyx --target hejs
+nyx run main.nyx --target cpp
+nyx build main.nyx --target js
 nyx bundle main.nyx --output dist --react
 nyx test main.nyx
 nyx self-host verify
@@ -359,7 +390,7 @@ nyx build firmware.nyx --board nucleo-f401re
 nyx flash build/nucleo-f401re/firmware.elf --board nucleo-f401re
 ```
 
-The canonical stable hosted backends are `hecpp` (C++20/native), `hejs`
-(ES2022/Node.js), and `hepy` (Python 3). `hewasm`, `hers`, `hereact`, `heasm`,
+The canonical stable hosted backends are `cpp` (C++20/native), `js`
+(ES2022/Node.js), and `python` (Python 3). `wasm`, `rust`, `react`, `asm`,
 and embedded targets expose narrower, machine-readable capability sets and must
 reject unsupported semantics.

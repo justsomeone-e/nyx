@@ -16,6 +16,7 @@ from .model import (
     IRBreak,
     IRCall,
     IRContinue,
+    IRConditional,
     IRDefer,
     IREnum,
     IRExpr,
@@ -30,6 +31,7 @@ from .model import (
     IRLambda,
     IRLiteral,
     IRMatch,
+    IRMatchExpression,
     IRMemberAccess,
     IRModule,
     IRNativeDirective,
@@ -474,6 +476,16 @@ class IRVerifier:
         elif isinstance(expr, IRNullCoalesce):
             self._collect_expr(expr.left)
             self._collect_expr(expr.right)
+        elif isinstance(expr, IRConditional):
+            self._collect_expr(expr.condition)
+            self._collect_expr(expr.then_expr)
+            self._collect_expr(expr.else_expr)
+        elif isinstance(expr, IRMatchExpression):
+            self._collect_expr(expr.subject)
+            for case in expr.cases:
+                if case.pattern is not None:
+                    self._collect_expr(case.pattern)
+                self._collect_expr(case.value)
         elif isinstance(expr, (IRLiteral, IRReference)):
             return
         else:
@@ -840,6 +852,39 @@ class IRVerifier:
             expected = expr.right.type if expr.left.type.name == "null" else expr.left.type.with_optional(False)
             self._expect_compatible(expected, expr.right.type, expr.right.span, "Null-coalescing fallback")
             self._expect_compatible(expected, expr.type, expr.span, "Null-coalescing result")
+        elif isinstance(expr, IRConditional):
+            self._visit_condition(expr.condition, active, "Conditional expression")
+            self._visit_expr(expr.then_expr, active)
+            self._visit_expr(expr.else_expr, active)
+            self._expect_compatible(expr.type, expr.then_expr.type, expr.then_expr.span, "Conditional then branch")
+            self._expect_compatible(expr.type, expr.else_expr.type, expr.else_expr.span, "Conditional else branch")
+        elif isinstance(expr, IRMatchExpression):
+            self._visit_expr(expr.subject, active)
+            wildcard_indexes = []
+            for index, case in enumerate(expr.cases):
+                if case.pattern is None:
+                    wildcard_indexes.append(index)
+                else:
+                    self._visit_expr(case.pattern, active)
+                    self._expect_compatible(
+                        expr.subject.type,
+                        case.pattern.type,
+                        case.pattern.span,
+                        "Match expression pattern",
+                    )
+                self._visit_expr(case.value, active)
+                self._expect_compatible(
+                    expr.type,
+                    case.value.type,
+                    case.value.span,
+                    "Match expression arm",
+                )
+            if wildcard_indexes != [len(expr.cases) - 1]:
+                self._issue(
+                    "HIR0019",
+                    "Match expression must end with exactly one wildcard arm",
+                    expr.span,
+                )
         elif isinstance(expr, IRLambda):
             if not expr.type.is_function:
                 self._issue("HIR0003", f"Lambda has non-function type '{expr.type}'", expr.span)

@@ -76,36 +76,36 @@ EMBEDDED_FEATURES = frozenset({
 
 
 BACKENDS: Dict[str, BackendSpec] = {
-    "hecpp": BackendSpec(
-        "hecpp", "C++20 Native", "native", "executable/library", "stable",
-        ("cpp", "c++", "native", "desktop"),
+    "cpp": BackendSpec(
+        "cpp", "C++20 Native", "native", "executable/library", "stable",
+        ("c++", "native", "desktop"),
         NATIVE_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
     ),
-    "heasm": BackendSpec(
-        "heasm", "x86_64 Assembly", "native", "assembly", "beta",
-        ("asm", "assembly"), NATIVE_FEATURES,
+    "asm": BackendSpec(
+        "asm", "x86_64 Assembly", "native", "assembly", "beta",
+        ("assembly",), NATIVE_FEATURES,
     ),
-    "hejs": BackendSpec(
-        "hejs", "Node.js ES2022", "hosted", "javascript", "stable",
-        ("js", "node", "nodejs"),
+    "js": BackendSpec(
+        "js", "Node.js ES2022", "hosted", "javascript", "stable",
+        ("node", "nodejs"),
         DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
     ),
-    "hepy": BackendSpec(
-        "hepy", "Python 3", "hosted", "python", "stable",
-        ("py", "python", "python3"),
+    "python": BackendSpec(
+        "python", "Python 3", "hosted", "python", "stable",
+        ("py", "python3"),
         DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
     ),
-    "hers": BackendSpec(
-        "hers", "Rust 2021", "native", "rust", "beta",
-        ("rs", "rust"), CORE_FEATURES | HIR_V1_FEATURES | frozenset({"unsafe_memory"}),
+    "rust": BackendSpec(
+        "rust", "Rust 2021", "native", "rust", "beta",
+        ("rs",), CORE_FEATURES | HIR_V1_FEATURES | frozenset({"unsafe_memory"}),
     ),
-    "hereact": BackendSpec(
-        "hereact", "React 19 TSX", "web", "tsx", "beta",
-        ("react", "tsx"), frozenset({"components", "react19", "tsx", "unicode"}),
+    "react": BackendSpec(
+        "react", "React 19 TSX", "web", "tsx", "beta",
+        ("tsx",), frozenset({"components", "react19", "tsx", "unicode"}),
     ),
-    "hewasm": BackendSpec(
-        "hewasm", "WebAssembly", "web", "wat/wasm", "beta",
-        ("wasm", "wat", "webassembly"), HIR_V1_FEATURES | frozenset({
+    "wasm": BackendSpec(
+        "wasm", "WebAssembly", "web", "wat/wasm", "beta",
+        ("wat", "webassembly"), HIR_V1_FEATURES | frozenset({
             "control_flow", "functions", "numeric", "string_abi", "unicode", "wasm32",
         }),
     ),
@@ -138,9 +138,9 @@ for _name, _backend in BACKENDS.items():
         _ALIASES[_alias] = _name
 
 
-CPP_HOSTS = frozenset({"hecpp", "heasm"})
-PARITY_HOSTS = frozenset({"hecpp", "heasm", "hejs", "hepy"})
-DYNAMIC_HOSTS = frozenset({"hecpp", "heasm", "hejs", "hepy", "hers"})
+CPP_HOSTS = frozenset({"cpp", "asm"})
+PARITY_HOSTS = frozenset({"cpp", "asm", "js", "python"})
+DYNAMIC_HOSTS = frozenset({"cpp", "asm", "js", "python", "rust"})
 EMBEDDED_TARGETS = frozenset({"stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"})
 MEMORY_TARGETS = CPP_HOSTS | EMBEDDED_TARGETS
 PHYSICAL_HARDWARE_TARGETS = EMBEDDED_TARGETS
@@ -158,7 +158,7 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     "math": StdlibContract("math", PARITY_HOSTS),
     "time": StdlibContract("time", PARITY_HOSTS),
     "str": StdlibContract("str", DYNAMIC_HOSTS),
-    "io": StdlibContract("io", frozenset({"hecpp", "heasm", "hepy"})),
+    "io": StdlibContract("io", frozenset({"cpp", "asm", "python"})),
     "env": StdlibContract("env", CPP_HOSTS),
     "net": StdlibContract("net", CPP_HOSTS),
     "os": StdlibContract("os", CPP_HOSTS),
@@ -179,7 +179,7 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
 }
 
 
-def normalize_backend_name(name: Optional[str], default: str = "hecpp") -> str:
+def normalize_backend_name(name: Optional[str], default: str = "cpp") -> str:
     clean = (name or default).strip().lower()
     return _ALIASES.get(clean, clean)
 

@@ -9,7 +9,7 @@ producing placeholder behavior.
 from __future__ import annotations
 
 import struct
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, is_dataclass
 from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from src.ir.model import (
@@ -18,12 +18,14 @@ from src.ir.model import (
     IRBreak,
     IRCall,
     IRContinue,
+    IRConditional,
     IRExpr,
     IRExprStatement,
     IRFor,
     IRFunction,
     IRIf,
     IRLiteral,
+    IRMatchExpression,
     IRModule,
     IRReference,
     IRReturn,
@@ -141,6 +143,9 @@ class ModuleIR:
                 current_indent += 2
             elif op == "if":
                 lines.append(f"{prefix}if")
+                current_indent += 2
+            elif op == "if_result":
+                lines.append(f"{prefix}if (result {arg})")
                 current_indent += 2
             elif op == "else":
                 lines.append(f"{prefix}else")
@@ -283,6 +288,12 @@ class ModuleIR:
             elif op in ("block", "loop", "if"):
                 output.extend(({"block": 0x02, "loop": 0x03, "if": 0x04}[op], 0x40))
                 controls.append(str(arg) if arg is not None else None)
+            elif op == "if_result":
+                result_type = str(arg)
+                if result_type not in WASM_TYPE_CODES:
+                    raise BundleCompileError(f"Invalid WASM conditional result type '{result_type}'")
+                output.extend((0x04, WASM_TYPE_CODES[result_type]))
+                controls.append(None)
             elif op == "else":
                 output.append(0x05)
             elif op == "end":
@@ -326,6 +337,7 @@ class BundleLowerer:
         self.data_by_value: Dict[bytes, int] = {}
         self.next_data_offset = self.DATA_START
         self.label_counter = 0
+        self.match_locals: Dict[int, str] = {}
 
     def lower(self) -> ModuleIR:
         try:
@@ -382,6 +394,7 @@ class BundleLowerer:
         locals_out: Dict[str, str],
     ) -> None:
         for statement in statements:
+            self._collect_expression_locals(statement, locals_out)
             if isinstance(statement, IRVarDecl):
                 value_type = _nyx_type(statement.type)
                 if value_type not in (I32, F64):
@@ -397,6 +410,25 @@ class BundleLowerer:
                 self._collect_locals(statement.else_branch or [], symbols, locals_out)
             elif isinstance(statement, IRWhile):
                 self._collect_locals(statement.body, symbols, locals_out)
+
+    def _collect_expression_locals(self, value: object, locals_out: Dict[str, str]) -> None:
+        if isinstance(value, IRMatchExpression):
+            subject_type = _nyx_type(value.subject.type)
+            if subject_type not in (I32, F64):
+                raise BundleCompileError(
+                    f"Match expression subject type '{value.subject.type}' is not supported in WASM bundle functions"
+                )
+            temporary = self.match_locals.get(id(value))
+            if temporary is None:
+                temporary = f"__nyx_match_{len(self.match_locals) + 1}"
+                self.match_locals[id(value)] = temporary
+            locals_out.setdefault(temporary, subject_type)
+        if is_dataclass(value):
+            for descriptor in fields(value):
+                self._collect_expression_locals(getattr(value, descriptor.name), locals_out)
+        elif isinstance(value, (tuple, list)):
+            for item in value:
+                self._collect_expression_locals(item, locals_out)
 
     def _emit_statement(self, node: IRStatement, output: List[Instruction], context: "_LowerContext") -> None:
         if isinstance(node, IRReturn):
@@ -558,6 +590,45 @@ class BundleLowerer:
             right = self._emit_expr_as(node.right, operand_type, symbols)
             opcode = _binary_opcode(node.op, operand_type)
             return left + right + [Instruction(opcode)]
+        if isinstance(node, IRConditional):
+            result_type = self._expr_type(node, symbols)
+            if result_type not in (I32, F64):
+                raise BundleCompileError(
+                    f"Conditional expression type '{node.type}' is not supported in WASM bundle functions"
+                )
+            output = self._emit_expr_as(node.condition, I32, symbols)
+            output.append(Instruction("if_result", result_type))
+            output.extend(self._emit_expr_as(node.then_expr, result_type, symbols))
+            output.append(Instruction("else"))
+            output.extend(self._emit_expr_as(node.else_expr, result_type, symbols))
+            output.append(Instruction("end"))
+            return output
+        if isinstance(node, IRMatchExpression):
+            result_type = self._expr_type(node, symbols)
+            subject_type = self._expr_type(node.subject, symbols)
+            if result_type not in (I32, F64) or subject_type not in (I32, F64):
+                raise BundleCompileError(
+                    f"Match expression types '{node.subject.type}' -> '{node.type}' are not supported in WASM bundle functions"
+                )
+            temporary = self.match_locals.get(id(node))
+            if temporary is None:
+                raise BundleCompileError("Internal WASM error: match expression local was not collected")
+            output = self._emit_expr_as(node.subject, subject_type, symbols)
+            output.append(Instruction("local.set", temporary))
+            conditional_count = 0
+            for case in node.cases:
+                if case.pattern is None:
+                    output.extend(self._emit_expr_as(case.value, result_type, symbols))
+                    break
+                output.extend((Instruction("local.get", temporary),))
+                output.extend(self._emit_expr_as(case.pattern, subject_type, symbols))
+                output.append(Instruction(_binary_opcode("==", subject_type)))
+                output.append(Instruction("if_result", result_type))
+                output.extend(self._emit_expr_as(case.value, result_type, symbols))
+                output.append(Instruction("else"))
+                conditional_count += 1
+            output.extend(Instruction("end") for _ in range(conditional_count))
+            return output
         if isinstance(node, IRCall):
             return self._emit_call(node, symbols)
         raise BundleCompileError(f"Unsupported expression '{type(node).__name__}' in WASM bundle")

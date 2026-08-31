@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 #native include <string>
 #native include <vector>
 
@@ -282,6 +282,31 @@ impl HIRCodeGen {
             }
             return "_nyx_coalesce(" + self.gen_expr(node.first[0]) +
                 ", [&]() { return " + self.gen_expr(node.second[0]) + "; })"
+        }
+        if node.kind == "IRConditional" {
+            return "(" + self.gen_condition(node.first[0]) + " ? " +
+                self.gen_expr(node.second[0]) + " : " + self.gen_expr(node.third[0]) + ")"
+        }
+        if node.kind == "IRMatchExpression" {
+            if len(node.items) == 0 {
+                self.fail("Match expression has no arms")
+                return "/* NYX_EMPTY_MATCH */"
+            }
+            var value_name = self.temporary("match_expr")
+            var fallback = node.items[len(node.items)-1]
+            var rendered = self.gen_expr_as(fallback.second[0], node.type_info)
+            var case_index = len(node.items) - 2
+            while case_index >= 0 {
+                var match_case = node.items[case_index]
+                if len(match_case.first) > 0 and len(match_case.second) > 0 {
+                    rendered = "(" + value_name + " == " + self.gen_expr(match_case.first[0]) +
+                        " ? " + self.gen_expr_as(match_case.second[0], node.type_info) +
+                        " : " + rendered + ")"
+                }
+                case_index = case_index - 1
+            }
+            return "([&](const auto& " + value_name + ") -> " + self.map_type(node.type_info) +
+                " { return " + rendered + "; })(" + self.gen_expr(node.first[0]) + ")"
         }
         if node.kind == "IRLambda" {
             var params = ""

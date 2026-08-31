@@ -115,13 +115,13 @@ The same clean Nyx source code compiles without changes across any target:
 
 ```bash
 # 1. Native C++20 Executable
-nyx run main.nyx --target hecpp
+nyx run main.nyx --target cpp
 
 # 2. Node.js ES2022 Module
-nyx run main.nyx --target hejs
+nyx run main.nyx --target js
 
 # 3. Python 3 Reference Module
-nyx run main.nyx --target hepy
+nyx run main.nyx --target python
 
 # 4. WebAssembly & React 19 Bundle
 nyx bundle main.nyx -o dist/

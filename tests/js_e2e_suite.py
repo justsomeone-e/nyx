@@ -14,7 +14,7 @@ from src.codegen import UniversalCodeGen
 JS_CONFORMANCE_CASES = [
     (
         "js_01_arithmetic_precedence",
-        """#target hejs
+        """#target js
 var a = 10 + 5 * 2
 var b = (10 + 5) * 2
 print("a:", a, "b:", b)
@@ -23,7 +23,7 @@ print("a:", a, "b:", b)
     ),
     (
         "js_02_recursive_factorial",
-        """#target hejs
+        """#target js
 fn factorial(n: int) -> int {
     if n <= 1 {
         return 1
@@ -36,7 +36,7 @@ print("fact(6):", factorial(6))
     ),
     (
         "js_03_mutual_recursion",
-        """#target hejs
+        """#target js
 fn is_even(n: int) -> bool {
     if n == 0 { return true }
     return is_odd(n - 1)
@@ -52,7 +52,7 @@ print("even(10):", is_even(10), "odd(7):", is_odd(7))
     ),
     (
         "js_04_struct_instantiation",
-        """#target hejs
+        """#target js
 struct Target {
     name: string,
     freq: int,
@@ -66,7 +66,7 @@ print("Target:", t.name, t.freq, t.signal)
     ),
     (
         "js_05_loops_and_accumulation",
-        """#target hejs
+        """#target js
 var sum = 0
 for i in 1..10 {
     if i == 5 {
@@ -80,7 +80,7 @@ print("Sum excluding 5:", sum)
     ),
     (
         "js_06_string_unicode_and_concat",
-        """#target hejs
+        """#target js
 var title = "Nyx"
 var lang = "Lang 🚀"
 var full = title + " " + lang
@@ -90,7 +90,7 @@ print("Full:", full)
     ),
     (
         "js_07_result_pattern_matching",
-        """#target hejs
+        """#target js
 var res = Ok(1337)
 match res {
     Ok(val) => print("Success Val:", val),
@@ -101,7 +101,7 @@ match res {
     ),
     (
         "js_08_array_iteration",
-        """#target hejs
+        """#target js
 var items = [10, 20, 30]
 var total = 0
 for item in items {
@@ -115,7 +115,7 @@ print("Array Sum:", total)
 
 def run_js_e2e_tests():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG JS (Node.js ES2022) END-TO-END CONFORMANCE HARNESS")
+    print("⚡ NYX JS (Node.js ES2022) END-TO-END CONFORMANCE HARNESS")
     print("=" * 70)
     
     passed = 0

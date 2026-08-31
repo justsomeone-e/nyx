@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print(((10 > 5) == (2 < 4)))

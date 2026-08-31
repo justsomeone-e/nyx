@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var x = 1
 var y = 2
 x = y

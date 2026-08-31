@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var numbers = [10, 20, 30]
 numbers[0] = 99
 print(numbers[0])

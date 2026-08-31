@@ -17,6 +17,7 @@ from .model import (
     IRBreak,
     IRCall,
     IRContinue,
+    IRConditional,
     IRDefer,
     IREnum,
     IREnumMember,
@@ -33,6 +34,8 @@ from .model import (
     IRLiteral,
     IRMatch,
     IRMatchCase,
+    IRMatchExpression,
+    IRMatchExpressionCase,
     IRMemberAccess,
     IRModule,
     IRNativeDirective,
@@ -465,6 +468,46 @@ class HIRLowerer:
             right = self._lower_expr(node.right)
             value_type = left.type.with_optional(False) if left.type.name != "null" else right.type
             return IRNullCoalesce(span, value_type, left, right)
+        if isinstance(node, ast.MatchExprNode):
+            if not node.cases:
+                raise IRLoweringError("Match expression has no arms", span)
+            if not (
+                isinstance(node.cases[-1][0], ast.IdentifierNode)
+                and node.cases[-1][0].name == "_"
+            ):
+                raise IRLoweringError("Match expression is not exhaustive", span)
+            subject = self._lower_expr(node.expr)
+            cases = []
+            for pattern, value_node in node.cases:
+                wildcard = isinstance(pattern, ast.IdentifierNode) and pattern.name == "_"
+                cases.append(
+                    IRMatchExpressionCase(
+                        None if wildcard else self._lower_expr(pattern),
+                        self._lower_expr(value_node),
+                    )
+                )
+            fallback_type = self._common_type(tuple(case.value.type for case in cases))
+            value_type = from_inferred_name(
+                getattr(node, "inferred_type", None), fallback_type,
+            )
+            return IRMatchExpression(span, value_type, subject, tuple(cases))
+        if isinstance(node, ast.ConditionalExprNode):
+            condition = self._lower_expr(node.condition)
+            then_expr = self._lower_expr(node.then_expr)
+            else_expr = self._lower_expr(node.else_expr)
+            for branch_condition, branch_expr in reversed(node.elif_branches):
+                lowered_condition = self._lower_expr(branch_condition)
+                lowered_branch = self._lower_expr(branch_expr)
+                branch_type = self._common_type((lowered_branch.type, else_expr.type))
+                else_expr = IRConditional(
+                    self._span(branch_condition), branch_type,
+                    lowered_condition, lowered_branch, else_expr,
+                )
+            value_type = from_inferred_name(
+                getattr(node, "inferred_type", None),
+                self._common_type((then_expr.type, else_expr.type)),
+            )
+            return IRConditional(span, value_type, condition, then_expr, else_expr)
         if isinstance(node, ast.LambdaNode):
             self.counter += 1
             lambda_identity = f"{self.current_owner}::lambda::{self.counter}"
@@ -541,6 +584,7 @@ class HIRLowerer:
             ast.AwaitNode,
             ast.FunctionCallNode, ast.MemberAccessNode, ast.IndexAccessNode,
             ast.ArrayNode, ast.NullCoalesceNode, ast.LambdaNode,
+            ast.ConditionalExprNode, ast.MatchExprNode,
         ))
 
     def _require_symbol(self, name: str, node: ast.ASTNode) -> _Symbol:

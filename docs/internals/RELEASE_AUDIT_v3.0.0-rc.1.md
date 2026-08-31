@@ -17,7 +17,7 @@ Decision: **NOT READY TO TAG**. The next eligible release remains
 | Backend capability contract | PASS | Target aliases, rejection paths, and three-host parity |
 | Installer/scaffold portability | PASS | Isolated install and generated project contain no fixed user path |
 | Diff whitespace validation | PASS | `git diff --check` reports no whitespace errors |
-| HIR-authoritative stable trio | PASS | `hecpp`, `hejs`, and `hepy` emit exclusively from verified HIR; 162-source and 138-runtime suites pass |
+| HIR-authoritative stable trio | PASS | `cpp`, `js`, and `python` emit exclusively from verified HIR; 162-source and 138-runtime suites pass |
 | Native self-host bootstrap | PASS | Stage 1 builds standalone stage 2; stage 2 emits byte-identical stage-3 C++ and compiles/runs a fixture |
 
 The unified suite passed before the final portability cleanup. The installer,

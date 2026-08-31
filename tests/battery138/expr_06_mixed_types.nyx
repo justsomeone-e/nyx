@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var a = 10
 var b = 2.5
 print(a + b)

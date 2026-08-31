@@ -1,6 +1,7 @@
 import sys
 import json
 import os
+import re
 from typing import Dict, List, Optional, Any
 from urllib.parse import unquote, urlparse
 
@@ -10,9 +11,17 @@ if _root_dir not in sys.path:
 
 from src.api import NyxCompiler
 from src.core.backend_capabilities import BACKENDS
-from src.core.ast_nodes import FunctionDefNode, StructDefNode, TraitDefNode, VarDeclNode, ProgramNode
+from src.core.ast_nodes import (
+    EnumDefNode,
+    FunctionDefNode,
+    ProgramNode,
+    StructDefNode,
+    TraitDefNode,
+    TypeAliasNode,
+    VarDeclNode,
+)
+from src.core.completion_catalog import completion_catalog
 from src.core.language_surface import (
-    BUILTIN_NAMES,
     EXPERIMENTAL_KEYWORDS,
     STABLE_KEYWORDS,
     TYPE_NAMES,
@@ -22,36 +31,14 @@ from src.core.language_surface import (
 KEYWORDS = list(STABLE_KEYWORDS)
 TYPES = list(TYPE_NAMES)
 
-_BUILTIN_SIGNATURES = {
-    "print": "fn print(...args) -> void",
-    "input": "fn input(prompt: string = \"\") -> string",
-    "addr": "unsafe fn addr(value) -> uintptr",
-    "peek": "unsafe fn peek(address: uintptr) -> int",
-    "memdump": "unsafe fn memdump(address: uintptr, count: int = 16) -> void",
-    "channel": "fn channel<T>() -> Channel<T>",
-    "Ok": "fn Ok<T>(value: T) -> Result<T, string>",
-    "Err": "fn Err<E>(error: E) -> Result<int, E>",
-    "len": "fn len<T>(value: T) -> int",
-    "to_string": "fn to_string<T>(value: T) -> string",
-    "to_int": "fn to_int(value: string) -> int",
-    "contains": "fn contains(value: string, part: string) -> bool",
-    "is_number": "fn is_number(value: string) -> bool",
-    "delay_ms": "fn delay_ms(milliseconds: int) -> void",
-}
-_BUILTIN_DOCS = {
-    "print": "Core language output function",
-    "input": "Reads a line from standard input",
-    "addr": "Returns the address of a value inside an unsafe boundary",
-    "peek": "Reads an integer from a raw address inside an unsafe boundary",
-    "memdump": "Prints bytes from a raw address inside an unsafe boundary",
-}
+COMPLETION_CATALOG = completion_catalog()
 BUILTINS = [
     {
-        "label": name,
-        "detail": _BUILTIN_SIGNATURES[name],
-        "doc": _BUILTIN_DOCS.get(name, "Nyx core runtime function"),
+        "label": entry["label"],
+        "detail": entry["detail"],
+        "doc": entry["documentation"],
     }
-    for name in BUILTIN_NAMES
+    for entry in COMPLETION_CATALOG["builtinFunctions"]
 ]
 
 class LanguageServer:
@@ -255,7 +242,86 @@ class LanguageServer:
                         "documentation": f"Declared in {getattr(s, '_origin_module', 'local file')}"
                     })
 
-        return items
+        # 5. Canonical standard-library catalog. Imported symbols are already
+        # present in the AST; the full catalog keeps completion useful while a
+        # document is incomplete and tells the user which module is required.
+        for module in COMPLETION_CATALOG["stdlibModules"]:
+            items.append({
+                "label": module["name"],
+                "kind": 9,
+                "detail": module["detail"],
+                "documentation": module["documentation"],
+            })
+        for symbol in COMPLETION_CATALOG["stdlibSymbols"]:
+            kind = {
+                "function": 3,
+                "struct": 22,
+                "enum": 13,
+                "type": 7,
+                "constant": 21,
+            }.get(symbol["kind"], 1)
+            items.append({
+                "label": symbol["label"],
+                "kind": kind,
+                "detail": f"{symbol['detail']} · {symbol['module']}",
+                "documentation": symbol["documentation"],
+                "data": {"module": symbol["module"]},
+            })
+
+        # 6. Target and physical-board IDs are real registry values, not a
+        # manually maintained editor list.
+        for target in COMPLETION_CATALOG["targets"]:
+            items.append({
+                "label": target["name"],
+                "kind": 20,
+                "detail": target["detail"],
+                "documentation": target["documentation"],
+            })
+        for board in COMPLETION_CATALOG["boards"]:
+            items.append({
+                "label": board["name"],
+                "kind": 20,
+                "detail": board["detail"],
+                "documentation": board["documentation"],
+            })
+
+        # 7. Text fallback: keep local declarations visible while the parser
+        # is temporarily unable to build an AST for half-written code.
+        text = self.documents.get(uri, "")
+        source_patterns = (
+            (r"\b(?:async\s+)?fn\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]*)\)\s*(?:->\s*([^\s{=]+))?", 3, "fn {0}({1}){2}"),
+            (r"\bstruct\s+([A-Za-z_][A-Za-z0-9_]*)", 22, "struct {0}"),
+            (r"\btrait\s+([A-Za-z_][A-Za-z0-9_]*)", 8, "trait {0}"),
+            (r"\benum\s+([A-Za-z_][A-Za-z0-9_]*)", 13, "enum {0}"),
+            (r"\btype\s+([A-Za-z_][A-Za-z0-9_]*)", 7, "type {0}"),
+            (r"\b(?:volatile\s+)?(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)", 6, "local {0}"),
+        )
+        for pattern, kind, template in source_patterns:
+            for match in re.finditer(pattern, text):
+                groups = match.groups()
+                if kind == 3:
+                    suffix = f" -> {groups[2]}" if groups[2] else ""
+                    detail = template.format(groups[0], groups[1], suffix)
+                else:
+                    detail = template.format(groups[0])
+                items.append({
+                    "label": groups[0],
+                    "kind": kind,
+                    "detail": detail,
+                    "documentation": "Declared in the current document.",
+                })
+
+        # Clients otherwise receive duplicates for an imported stdlib symbol
+        # and its catalog fallback. Preserve the richer first occurrence.
+        deduplicated = []
+        seen = set()
+        for item in items:
+            label = item["label"]
+            if label in seen:
+                continue
+            seen.add(label)
+            deduplicated.append(item)
+        return deduplicated
 
     def handle_definition(self, uri: str, pos: dict) -> Optional[dict]:
         text = self.documents.get(uri, "")

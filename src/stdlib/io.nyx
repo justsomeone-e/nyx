@@ -1,5 +1,5 @@
 // Nyx Standard Library: std/io
-#target hecpp
+#target cpp
 
 fn println_str(msg: string) {
     print(msg)

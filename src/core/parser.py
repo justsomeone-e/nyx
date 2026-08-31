@@ -19,7 +19,7 @@ class Parser:
         self.source = source
         self.filepath = filepath
         self.pos = 0
-        self.target = "hecpp"
+        self.target = "cpp"
         self.last_doc_comment = ""
 
     def current(self) -> Token:
@@ -527,7 +527,11 @@ class Parser:
         if self.match(TokenType.ARROW):
             ret_type = self.parse_type()
 
-        body = self.parse_block()
+        if self.match(TokenType.ASSIGN):
+            expression = self.parse_expression()
+            body = [ReturnNode(expression, expression.line, expression.col)]
+        else:
+            body = self.parse_block()
         doc_comment = self.last_doc_comment
         return FunctionDefNode(
             name=name,
@@ -755,6 +759,10 @@ class Parser:
 
     def parse_primary(self) -> ASTNode:
         tok = self.current()
+        if tok.type == TokenType.MATCH:
+            return self.parse_match_expression()
+        if tok.type == TokenType.IF:
+            return self.parse_conditional_expression()
         if tok.type == TokenType.NUMBER: return NumberNode(self.advance().value, tok.line, tok.col)
         if tok.type == TokenType.STRING: return StringNode(self.advance().value, tok.line, tok.col)
         if tok.type == TokenType.BOOLEAN: return BooleanNode(self.advance().value, tok.line, tok.col)
@@ -809,6 +817,93 @@ class Parser:
             expected="expression, literal, or identifier",
             found=f"{tok.type} ('{tok.value}')"
         )
+
+    def parse_conditional_expression(self) -> ConditionalExprNode:
+        tok = self.expect(TokenType.IF)
+        condition = self.parse_expression()
+        then_expr = self.parse_value_block("if expression")
+        elif_branches = []
+        while True:
+            if self.match(TokenType.ELIF):
+                branch_condition = self.parse_expression()
+                branch_expr = self.parse_value_block("elif expression")
+                elif_branches.append((branch_condition, branch_expr))
+                continue
+            if self.match(TokenType.ELSE):
+                if self.match(TokenType.IF):
+                    branch_condition = self.parse_expression()
+                    branch_expr = self.parse_value_block("else-if expression")
+                    elif_branches.append((branch_condition, branch_expr))
+                    continue
+                else_expr = self.parse_value_block("else expression")
+                return ConditionalExprNode(
+                    condition, then_expr, elif_branches, else_expr, tok.line, tok.col
+                )
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, self.current().line, self.current().col,
+                "E1012", "Value-producing if expression requires an else branch",
+                expected="else { expression }",
+                found=f"{self.current().type} ('{self.current().value}')",
+                help_msg="Every conditional-expression path must produce a value.",
+            )
+
+    def parse_match_expression(self) -> MatchExprNode:
+        tok = self.expect(TokenType.MATCH)
+        subject = self.parse_expression()
+        self.expect(
+            TokenType.LBRACE,
+            "E1014",
+            "Use 'match value { pattern => expression, _ => fallback }'.",
+        )
+        cases = []
+        while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
+            if self.current().type == TokenType.IDENT:
+                identifier = self.advance()
+                pattern = IdentifierNode(identifier.value, identifier.line, identifier.col)
+            else:
+                pattern = self.parse_expression()
+            self.expect(
+                TokenType.FAT_ARROW,
+                "E1014",
+                "Separate each match pattern from its value with '=>'.",
+            )
+            if self.current().type == TokenType.LBRACE:
+                value = self.parse_value_block("match expression arm")
+            else:
+                value = self.parse_expression()
+            cases.append((pattern, value))
+            if self.match(TokenType.COMMA):
+                continue
+            if self.current().type != TokenType.RBRACE:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, self.current().line, self.current().col,
+                    "E1014", "Match expression arms must be comma-separated",
+                    expected=", or }",
+                    found=f"{self.current().type} ('{self.current().value}')",
+                    help_msg="Add a comma after the arm value.",
+                )
+        self.expect(
+            TokenType.RBRACE,
+            "E1014",
+            "Close the match expression with '}'.",
+        )
+        return MatchExprNode(subject, cases, tok.line, tok.col)
+
+    def parse_value_block(self, context: str) -> ASTNode:
+        self.expect(
+            TokenType.LBRACE,
+            "E1013",
+            f"Use '{context} {{ expression }}' with exactly one value expression.",
+        )
+        expression = self.parse_expression()
+        while self.match(TokenType.SEMICOLON):
+            pass
+        self.expect(
+            TokenType.RBRACE,
+            "E1013",
+            f"{context} accepts exactly one expression; use a normal if statement for statements.",
+        )
+        return expression
 
 # =========================================================
 # 3. SEMANTIC ANALYZER & TYPE CHECKER

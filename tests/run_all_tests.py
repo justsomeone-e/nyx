@@ -31,14 +31,14 @@ def run_lexer_tests():
 
 def run_parser_tests():
     print("[*] Running Parser Unit Tests...")
-    src = """#target hecpp
+    src = """#target cpp
 struct Point { x: int, y: int }
 fn add_point(p1: Point, p2: Point) -> Point {
     return Point(p1.x + p2.x, p1.y + p2.y)
 }
 """
     ast = Parser(Lexer(src).tokenize(), src).parse()
-    assert ast.target == 'hecpp'
+    assert ast.target == 'cpp'
     assert len(ast.statements) == 2
 
     metadata_src = """/// Return the input value.
@@ -71,7 +71,7 @@ var d = [1, 2, 3]
 
 def run_codegen_tests():
     print("[*] Running C++20 / Python Codegen Tests...")
-    src = """#target hecpp
+    src = """#target cpp
 struct User { name: string, age: int }
 fn is_adult(u: User) -> bool { return u.age >= 18 }
 """
@@ -136,6 +136,7 @@ from tests.hir_python_suite import run_hir_python_suite
 from tests.hir_rust_suite import run_hir_rust_suite
 from tests.language_surface_suite import run_language_surface_suite
 from tests.numeric_semantics_suite import run_numeric_semantics_suite
+from tests.maya_surface_suite import run_maya_surface_suite
 from tests.release_packaging_suite import run_release_packaging_suite
 from tests.version_contract_suite import run_version_contract_suite
 from tests.toolchain_cli_suite import run_toolchain_cli_suite
@@ -186,6 +187,9 @@ def main():
 
     print()
     numeric_semantics_ok = run_numeric_semantics_suite()
+
+    print()
+    maya_surface_ok = run_maya_surface_suite()
 
     print()
     release_packaging_ok = run_release_packaging_suite()
@@ -262,7 +266,7 @@ def main():
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
+    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
                   natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
     print("=" * 70)

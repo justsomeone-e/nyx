@@ -37,7 +37,7 @@ def run_parser_validation_corpus() -> bool:
     lexer_impl_end = lexer_content.index("fn main()") if "fn main()" in lexer_content else len(lexer_content)
     lexer_code = lexer_content[lexer_support_start:lexer_impl_end].strip()
 
-    combined_base = f"""#target hecpp
+    combined_base = f"""#target cpp
 #native include <string>
 #native include <vector>
 

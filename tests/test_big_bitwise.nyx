@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 fn test_big_bitwise() {
     var a: int = 9007199254740993 // 2^53 + 1

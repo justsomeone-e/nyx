@@ -32,10 +32,10 @@ Performs fast static semantic and type-checking across project source files with
 ### 4. `nyx build [file.nyx] [--target <backend>] [--board <profile>] [--release]`
 Transpiles and builds the program into the `build/<target>/` directory.
 Supported targets:
-* `--target hecpp` (Default: C++20 / Native Executable)
-* `--target hejs` (Node.js ES2022 Module)
-* `--target hepy` (Python 3)
-* `--target hers` (Rust 2021 Source)
+* `--target cpp` (Default: C++20 / Native Executable)
+* `--target js` (Node.js ES2022 Module)
+* `--target python` (Python 3)
+* `--target rust` (Rust 2021 Source)
 
 For a freestanding board, `--board` selects MCU flags, linker memory, BSP,
 connector aliases, interrupt vectors, and programmer metadata. Native console
@@ -97,6 +97,19 @@ Lists recognized Nucleo/embedded profiles and distinguishes built-in standalone
 BSPs from profiles that still require STM32Cube/CMSIS configuration.
 
 `nyx boards --init [board.toml]` writes a non-overwriting custom-board template.
+
+`nyx boards --install <F0|F1|F3|L0|L1|L4|G0|G4|H7|U5|WB|WL>` performs a sparse
+clone from the official STMicroelectronics repository. It installs CMSIS Core,
+the family device package, and Nucleo project/linker assets under
+`.toolchains/stm32cube`; `--install-root` selects a different location and
+`--dry-run` prints the exact Git commands without writing files.
+
+`nyx boards --probe [--cube-root <path>]` reports which package-backed profiles
+are build-ready. Pass the same `--cube-root` to `check`, `build`, or `flash`.
+
+Custom profile schema v2 accepts `include_dirs`, `source_files`, `defines`,
+`ldflags`, and `startup_owns_vectors`, so vendor C, C++, and assembly sources are
+compiled with their correct language drivers before the final firmware link.
 
 ### 21. `nyx flash <firmware.elf|.hex|.bin> --board <profile>`
 Programs an explicitly selected firmware image through STM32CubeProgrammer or

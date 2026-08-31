@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print(("A" + "B") + ("C" + "D"))

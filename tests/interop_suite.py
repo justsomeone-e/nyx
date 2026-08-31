@@ -32,7 +32,7 @@ def run_interop_suite() -> bool:
     tests = [
         (
             "interop_01_native_use",
-            """#target hecpp
+            """#target cpp
 #native include <vector>
 #native use std::vector;
 
@@ -46,7 +46,7 @@ main()
         ),
         (
             "interop_02_function_pointer_callback_ffi",
-            '''#target hecpp
+            '''#target cpp
 #native raw extern "C" int64_t execute_callback(int64_t a, int64_t b, int64_t(*cb)(int64_t, int64_t)) { return cb(a, b); }
 
 extern "C" fn execute_callback(a: int, b: int, cb: fn(int, int) -> int) -> int
@@ -72,7 +72,7 @@ main()
         ),
         (
             "interop_03_raii_struct_destructor",
-            """#target hecpp
+            """#target cpp
 
 struct AutoResource {
     id: int
@@ -101,7 +101,7 @@ main()
         ),
         (
             "interop_04_result_error_bridge",
-            """#target hecpp
+            """#target cpp
 
 fn might_fail(should_fail: bool) -> Result<int, string> {
     if should_fail {
@@ -128,7 +128,7 @@ main()
         ),
         (
             "interop_05_generic_result_context",
-            """#target hecpp
+            """#target cpp
 
 fn metric(should_fail: bool) -> Result<float, string> {
     if should_fail {

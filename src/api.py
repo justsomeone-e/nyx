@@ -42,7 +42,7 @@ from src.plugins import CompilerPlugin, PluginContext, PluginExecutionError
 
 
 _ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
-_HIR_AUTHORITATIVE_TARGETS = frozenset(("hecpp", "hejs", "hepy", "hers", "hewasm"))
+_HIR_AUTHORITATIVE_TARGETS = frozenset(("cpp", "js", "python", "rust", "wasm"))
 
 
 class BackendCapabilityError(RuntimeError):
@@ -95,18 +95,18 @@ def _validate_backend_features(hir: IRModule) -> None:
     if _contains_hir_node(hir, (IRThrow, IRTryCatch)) and "exceptions" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx exception semantics "
-            "(try/catch/throw); use hecpp, hejs, or hepy"
+            "(try/catch/throw); use cpp, js, or python"
         )
     uses_tasks = _contains_hir_node(hir, (IRAwait,)) or _contains_async_function(hir)
     if uses_tasks and "async_tasks" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx Task<T> semantics "
-            "(async/await); use hecpp, hejs, or hepy"
+            "(async/await); use cpp, js, or python"
         )
     if _contains_hir_node(hir, (IRSpawn,)) and "spawn" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx spawn semantics; "
-            "use hecpp, hejs, or hepy"
+            "use cpp, js, or python"
         )
     if (
         _contains_hir_call_symbol(hir, frozenset(("builtin::channel",)))
@@ -114,7 +114,7 @@ def _validate_backend_features(hir: IRModule) -> None:
     ):
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx channel semantics; "
-            "use hecpp, hejs, or hepy"
+            "use cpp, js, or python"
         )
 @dataclass(frozen=True)
 class CompilerDiagnostic:
@@ -461,19 +461,19 @@ class NyxCompiler:
         _validate_backend_features(hir)
         codegen = UniversalCodeGen(ast)
 
-        if target == "hecpp":
+        if target == "cpp":
             return SourceArtifact(target, "cpp20", ".cpp", "text/x-c++src", emit_cpp(hir))
-        if target in ("heasm", "stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"):
+        if target in ("asm", "stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"):
             return SourceArtifact(target, "cpp20", ".cpp", "text/x-c++src", codegen.gen_cpp())
-        if target == "hejs":
+        if target == "js":
             return SourceArtifact(target, "javascript", ".js", "text/javascript", emit_javascript(hir))
-        if target == "hepy":
+        if target == "python":
             return SourceArtifact(target, "python", ".py", "text/x-python", emit_python(hir))
-        if target == "hers":
+        if target == "rust":
             return SourceArtifact(target, "rust", ".rs", "text/x-rustsrc", emit_rust(hir))
-        if target == "hereact":
+        if target == "react":
             return SourceArtifact(target, "react-tsx", ".tsx", "text/tsx", codegen.gen_react())
-        if target == "hewasm":
+        if target == "wasm":
             from src.codegen.wasm_ir import BundleLowerer
 
             source_basename = os.path.splitext(os.path.basename(hir.source_name))[0]

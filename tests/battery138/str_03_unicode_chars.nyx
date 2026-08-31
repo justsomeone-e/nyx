@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 print("İstanbul / Türkiye - 24K Altın")

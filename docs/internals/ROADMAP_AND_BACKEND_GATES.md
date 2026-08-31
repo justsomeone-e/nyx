@@ -10,7 +10,7 @@ capabilities exposed by the compiler remain machine-readable through
 - Do not publish `v4.0.0` stable before an observed RC soak period.
 - Python remains a stage-0 bootstrap and optional orchestration tool, not a
   dependency of the distributed native compiler.
-- `hecpp`, `hejs`, and `hepy` are the stable semantic parity set. A backend with
+- `cpp`, `js`, and `python` are the stable semantic parity set. A backend with
   a narrower contract must reject unsupported behavior explicitly.
 
 ## Compiler architecture
@@ -25,7 +25,7 @@ Nyx source
 ```
 
 Backends must consume verified HIR. Direct AST emitters are migration-only and
-cannot receive a new `stable` designation. `hers` now consumes HIR directly;
+cannot receive a new `stable` designation. `rust` now consumes HIR directly;
 its beta label remains because Task/exception/concurrency support, retained
 runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 
@@ -33,14 +33,14 @@ runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 
 | Target | Artifact | Registry maturity | HIR authority | RC1 action |
 |---|---|---:|---:|---|
-| `hecpp` | C++20 / native binary | stable | Yes | Keep native runtime and self-host parity green |
-| `hejs` | ES2022 / Node.js | stable | Yes | Keep exact hosted semantics green |
-| `hepy` | Python 3 | stable | Yes | Keep exact hosted semantics green |
-| `hewasm` | WAT / WASM ABI v1 | beta | Yes | Keep explicit `wasm32` numeric contract |
-| `hers` | Rust 2021 | beta | Yes | Keep beta until runtime parity and cross-platform Gate 8 evidence |
-| `hereact` | React 19 TSX | beta | No | Treat as web tooling, not semantic oracle |
-| `heasm` | x86_64 assembly via C++ | beta | No | Keep beta |
-| embedded targets | ELF / HEX / BIN | experimental | No | Four standalone F4 BSPs; migrate volatile/IRQ/critical to HIR |
+| `cpp` | C++20 / native binary | stable | Yes | Keep native runtime and self-host parity green |
+| `js` | ES2022 / Node.js | stable | Yes | Keep exact hosted semantics green |
+| `python` | Python 3 | stable | Yes | Keep exact hosted semantics green |
+| `wasm` | WAT / WASM ABI v1 | beta | Yes | Keep explicit `wasm32` numeric contract |
+| `rust` | Rust 2021 | beta | Yes | Keep beta until runtime parity and cross-platform Gate 8 evidence |
+| `react` | React 19 TSX | beta | No | Treat as web tooling, not semantic oracle |
+| `asm` | x86_64 assembly via C++ | beta | No | Keep beta |
+| embedded targets | ELF / HEX / BIN | experimental | No | 4 standalone F4 + 21 official STM32Cube/CMSIS profiles build; physical HIL and HIR migration remain |
 
 ## Eight backend gates
 
@@ -67,7 +67,7 @@ Completed:
    version queries to `nyxc` without Python.
 
 Python remains intentionally available for three roles: recreating stage 1
-from zero, optional legacy/orchestration commands, and the `hepy` target runtime.
+from zero, optional legacy/orchestration commands, and the `python` target runtime.
 It is no longer the production compiler architecture.
 
 ## v4 language freeze
@@ -99,6 +99,8 @@ Release names do not create artificial releases; unused RC names are skipped.
 
 | Release | Codename |
 |---|---|
+| `v4.0.0-dev.*` | Maya |
+| `v4.0.0-beta.*` | Nocturne |
 | `v4.0.0-rc.1` | Samsara |
 | `v4.0.0-rc.2` | Bodhi |
 | `v4.0.0-rc.3` | Moksha |
@@ -110,14 +112,14 @@ Release names do not create artificial releases; unused RC names are skipped.
 
 ## New target order after RC1
 
-1. `hec`: portable C17 source backend and a smaller bootstrap surface.
-2. `hellvm`: direct LLVM IR native backend; no C++ source hop.
-3. `hego`: Go service/concurrency backend with explicit channel mapping.
-4. `hejvm`: JVM backend with Java 21 class-file compatibility as its baseline.
-5. `hedotnet`: .NET 10 managed backend.
-6. `helua`: Lua 5.4 embedding and game-scripting backend.
+1. `c`: portable C17 source backend and a smaller bootstrap surface.
+2. `llvm`: direct LLVM IR native backend; no C++ source hop.
+3. `go`: Go service/concurrency backend with explicit channel mapping.
+4. `jvm`: JVM backend with Java 21 class-file compatibility as its baseline.
+5. `dotnet`: .NET 10 managed backend.
+6. `lua`: Lua 5.4 embedding and game-scripting backend.
 
-Every new target starts experimental and must pass all eight gates. `hezig` is
+Every new target starts experimental and must pass all eight gates. `zig` is
 deferred until its language/toolchain contract is stable enough to freeze a
 backend against it.
 

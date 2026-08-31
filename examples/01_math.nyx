@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 
 x = 5
 y = 4

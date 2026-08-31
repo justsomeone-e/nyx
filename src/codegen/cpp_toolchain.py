@@ -9,7 +9,7 @@ class CppToolchain:
     _cached_compiler: Optional[str] = None
     _cached_ar: Optional[str] = None
     NATIVE_COMPILER_REQUIREMENT = (
-        "hecpp native builds require a working C++20 compiler: Clang++, "
+        "cpp native builds require a working C++20 compiler: Clang++, "
         "GCC/G++, or MSVC cl. Install one and expose it on PATH, or set "
         "NYX_CXX to the compiler executable. Run 'nyx doctor' to verify it."
     )

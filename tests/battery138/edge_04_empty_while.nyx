@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 var c = 0
 while c < 0 {}
 print("While OK")

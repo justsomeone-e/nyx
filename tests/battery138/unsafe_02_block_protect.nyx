@@ -1,2 +1,2 @@
-#target hecpp
+#target cpp
 unsafe { var num = 100; print("Unsafe OK") }

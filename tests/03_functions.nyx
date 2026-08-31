@@ -1,4 +1,4 @@
-#target hecpp
+#target cpp
 fn multiply(a, b) { return a * b }
 fn factorial(n) { if n <= 1 { return 1 } return n * factorial(n - 1) }
 print("Fact(5):", factorial(5))

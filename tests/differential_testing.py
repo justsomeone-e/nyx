@@ -102,7 +102,7 @@ match res {
 
 def run_differential_tests():
     print("=" * 70)
-    print("⚡ HOLYEASYLANG DIFFERENTIAL TESTING (hepy == hejs Runtime Parity & hers Object Verification)")
+    print("⚡ NYX DIFFERENTIAL TESTING (python == js Runtime Parity & rust Object Verification)")
     print("=" * 70)
     
     passed = 0
@@ -167,8 +167,8 @@ def run_differential_tests():
             passed += 1
         else:
             print(f"  [FAIL] {name} -> Parity Mismatch:")
-            print(f"         [hepy]: '{out_py}'")
-            print(f"         [hejs]: '{out_js}'")
+            print(f"         [python]: '{out_py}'")
+            print(f"         [js]: '{out_js}'")
             
     print("=" * 70)
     print(f"[OK] Quad-Backend Differential Testing: {passed}/{total} Passed (100% Parity)")

@@ -68,12 +68,12 @@
           "type": "string",
           "enum": [
             "source",
-            "hecpp",
-            "hejs",
-            "hepy"
+            "cpp",
+            "js",
+            "python"
           ],
           "enumDescriptions": [
-            "Use the #target directive in the active source file (hecpp when omitted).",
+            "Use the #target directive in the active source file (cpp when omitted).",
             "Compile and run as a native C++20 executable.",
             "Run through the Node.js ES2022 backend.",
             "Run through the Python 3 backend."
@@ -161,12 +161,10 @@
         "aliases": [
           "nyx",
           "Nyx",
-          "nyxlang",
-          "he"
+          "nyxlang"
         ],
         "extensions": [
-          ".nyx",
-          ".he"
+          ".nyx"
         ],
         "configuration": "./language-configuration.json",
         "icon": {

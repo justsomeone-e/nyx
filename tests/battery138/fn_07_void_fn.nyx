@@ -1,3 +1,3 @@
-#target hecpp
+#target cpp
 fn log_it(msg) { print("LOG:", msg) }
 log_it("Active")
