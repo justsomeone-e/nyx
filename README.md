@@ -1,3 +1,14 @@
+> [!IMPORTANT]
+> ## v4.0.0-dev.1 — Maya is FROZEN
+>
+> This is a completed, frozen reference release—not paused development. The
+> v4 scope was frozen after the language surface, canonical typed HIR, backend
+> contracts, self-hosting path, installer flow, and regression gates reached
+> the boundaries defined for this release. Keeping those contracts unchanged
+> prevents v4 from becoming a moving target; new syntax, backends, and breaking
+> API changes belong to a future major version. Detailed status, design,
+> installation, and verification information is provided below.
+
 <div align="center">
 
   <a href="https://github.com/justsomeone-e/nyx">
@@ -15,12 +26,12 @@
 
   <p align="center">
     <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/nyx/actions"><img src="https://img.shields.io/badge/NEXT-v4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Next release"></a>
+    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-dev.1"><img src="https://img.shields.io/badge/STATUS-FROZEN-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Frozen release"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
-  <p><strong>v4 release line: NIRVANA · RC1 codename: SAMSARA</strong></p>
+  <p><strong>v4 release line: NIRVANA · Maya: FROZEN</strong></p>
 
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
@@ -57,7 +68,9 @@ A source file is lexed, parsed, type-checked, lowered, verified, optimized, and 
 
 The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `python` target, but it is not required by the distributed native `nyxc` path.
 
-> **Release status:** this branch reports `4.0.0-dev.1` and is the `v4.0.0-rc.1` candidate. Stable `v4.0.0` is intentionally gated behind cross-platform RC evidence and a soak period.
+> **Release status:** `4.0.0-dev.1` / Maya is frozen as a reference release.
+> It is not an RC or a promise of a later v4 promotion; future breaking
+> language work belongs to a later major version.
 
 ---
 
@@ -453,7 +466,7 @@ nyx pkg
 `fmt` is string/comment-safe and idempotent. `profile` reports measured
 whole-program compile+run wall time rather than synthetic per-function data.
 `debug` is currently a validated source-line inspector and does not fabricate
-runtime values. The RC1 package contract mutates `nyx.toml`/`nyx.lock`; remote
+runtime values. The package contract mutates `nyx.toml`/`nyx.lock`; remote
 registry download is not implemented and `nyx install` states that limit.
 
 ### Verify or invoke the native self-host compiler
@@ -572,7 +585,10 @@ The release gate checks accepted/rejected corpus parity, byte-identical HIR, sta
 
 ## `10` — Verification & Conformance
 
-The RC1 candidate is not qualified by a single happy-path build. The unified framework covers syntax, semantics, HIR, native execution, hosted parity, Bundle ABI, self-hosting, LSP/editor contracts, installers, packaging, fuzzing, and negative diagnostics.
+The frozen Maya snapshot is not qualified by a single happy-path build. The
+unified framework covers syntax, semantics, HIR, native execution, hosted
+parity, Bundle ABI, self-hosting, LSP/editor contracts, installers, packaging,
+fuzzing, and negative diagnostics.
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -597,18 +613,19 @@ The RC1 candidate is not qualified by a single happy-path build. The unified fra
 
 ### Backend maturity matrix
 
-| Target | Language semantics | HIR | RC1 role |
+| Target | Language semantics | HIR | Maya role |
 | :-- | :--: | :--: | :-- |
-| **`cpp`** | frozen v4 | authoritative | stable native candidate |
-| **`js`** | frozen v4 | authoritative | stable hosted candidate |
-| **`python`** | frozen v4 | authoritative | stable parity/reference candidate |
+| **`cpp`** | frozen v4 | authoritative | frozen native contract |
+| **`js`** | frozen v4 | authoritative | frozen hosted contract |
+| **`python`** | frozen v4 | authoritative | frozen parity/reference contract |
 | **`wasm`** | explicit `wasm32` subset | authoritative | beta ABI |
 | **`rust`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
 | **`react`** | wrapper/tooling contract | N/A | beta tooling |
 | **`asm`** | native subset | via C++ | beta |
 | **embedded** | target-specific subset | migration pending | experimental |
 
-The figures above are local RC-candidate evidence. Promotion to `v4.0.0-rc.1` still requires retained clean-run evidence from Windows, Linux x64, macOS x64, and macOS arm64. Stable `v4.0.0` additionally requires an uneventful RC soak and published compatibility/rollback policies.
+The figures above are local evidence for the frozen Maya snapshot. They are not
+a claim that this development release is an RC or stable promotion.
 
 ### Release integrity
 
@@ -652,9 +669,9 @@ See [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) for the diagnostic catalog.
 | [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md) | Grammar, type, Task, exception, and HIR contract |
 | [`CLI_REFERENCE.md`](CLI_REFERENCE.md) | CLI command reference |
 | [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) | Structured diagnostic catalog |
-| [`docs/internals/ROADMAP_AND_BACKEND_GATES.md`](docs/internals/ROADMAP_AND_BACKEND_GATES.md) | RC1 decision, backend gates, self-host and post-RC target order |
-| [`docs/TODO.md`](docs/TODO.md) | Live RC1/stable checklist |
-| [`CHANGELOG.md`](CHANGELOG.md) | Release history and current candidate changes |
+| [`docs/internals/ROADMAP_AND_BACKEND_GATES.md`](docs/internals/ROADMAP_AND_BACKEND_GATES.md) | v4 decision record, backend gates, and future target order |
+| [`docs/TODO.md`](docs/TODO.md) | Historical and maintenance checklist |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history and frozen snapshot changes |
 
 ---
 
