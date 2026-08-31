@@ -122,13 +122,13 @@ Nyx exposes seven target families without pretending they all have the same matu
 ┌─────────────┬──────────────────────────────┬──────────────┬───────────────┐
 │ Target      │ Artifact                     │ Maturity     │ HIR authority │
 ├─────────────┼──────────────────────────────┼──────────────┼───────────────┤
-│ cpp       │ C++20 / native executable    │ stable       │ yes           │
-│ js        │ ES2022 / Node.js module      │ stable       │ yes           │
-│ python        │ Python 3 program             │ stable       │ yes           │
-│ wasm      │ WAT + WASM ABI v1            │ beta         │ yes           │
+│ cpp         │ C++20 / native executable    │ stable       │ yes           │
+│ js          │ ES2022 / Node.js module      │ stable       │ yes           │
+│ python      │ Python 3 program             │ stable       │ yes           │
+│ wasm        │ WAT + WASM ABI v1            │ beta         │ yes           │
 │ rust        │ Rust 2021 source/object      │ beta         │ yes           │
-│ react     │ React 19 TSX tooling         │ beta         │ tooling       │
-│ asm       │ x86_64 assembly via C++      │ beta         │ migration     │
+│ react       │ React 19 TSX tooling         │ beta         │ tooling       │
+│ asm         │ x86_64 assembly via C++      │ beta         │ migration     │
 └─────────────┴──────────────────────────────┴──────────────┴───────────────┘
 ```
 
