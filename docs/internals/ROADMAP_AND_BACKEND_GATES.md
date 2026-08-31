@@ -40,7 +40,6 @@ runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 | `rust` | Rust 2021 | beta | Yes | Keep beta until runtime parity and cross-platform Gate 8 evidence |
 | `react` | React 19 TSX | beta | No | Treat as web tooling, not semantic oracle |
 | `asm` | x86_64 assembly via C++ | beta | No | Keep beta |
-| embedded targets | ELF / HEX / BIN | experimental | No | 4 standalone F4 + 21 official STM32Cube/CMSIS profiles build; physical HIL and HIR migration remain |
 
 ## Eight backend gates
 
@@ -74,24 +73,22 @@ It is no longer the production compiler architecture.
 
 The RC1 candidate freezes:
 
-- 46 canonical keywords shared exactly by the lexer, self-host frontend, LSP,
+- 43 canonical keywords shared exactly by the lexer, self-host frontend, LSP,
   grammar, and VS Code extension;
 - `fn` as the only function declaration spelling (`def` is an identifier);
 - shallow immutable `let`/`const` bindings and explicit `set` assignment;
 - bodyless trait signatures with verified implementation contracts;
 - `Task<T>`, `await`, exceptions, `guard`, `defer`, `match`, interpolation, and
   pipelines;
-- fixed-width scalars plus embedded-only `volatile`, `interrupt`, and
-  `critical` constructs, allocation-free `Buffer<T, N>`, and explicit
-  target/board diagnostics;
+- fixed-width scalars and explicit unsafe/native interoperability boundaries;
 - strict Boolean conditions;
 - signed i64 wrap/division/shift semantics, IEEE binary64 semantics, canonical
   scalar text, and identical constant-folding behavior.
 
-Expression-bodied functions, value-producing `if`/`match`, destructuring, and
-iterator-combinator syntax are deferred until after RC1. They may return only
-as additive RFCs with exact Python/Nyx AST and HIR parity. No grammar change
-lands after RC1 without a compatibility proof.
+Expression-bodied functions and value-producing `if`/`match` are implemented.
+Destructuring, Result propagation, closures, iterator/yield, compile-time
+`when`, and visibility syntax are active pre-RC1 RFC candidates. No grammar
+change lands after RC1 without a compatibility proof.
 
 ## Release codenames
 

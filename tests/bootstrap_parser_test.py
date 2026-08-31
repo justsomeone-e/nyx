@@ -19,7 +19,7 @@ from src.core.ast_nodes import (
     ProgramNode, VarDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
     NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, FunctionCallNode,
     FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
-    ForNode, MatchNode, MatchExprNode, UnsafeBlockNode, CriticalBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
+    ForNode, MatchNode, MatchExprNode, UnsafeBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
     NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
     MemberAccessNode, IndexAccessNode, NullCoalesceNode, ConditionalExprNode, LambdaNode, ArrayNode,
     TypeAliasNode, EnumDefNode, TestBlockNode, AssertNode, TryCatchNode,
@@ -36,8 +36,7 @@ def py_ast_to_canonical(node) -> str:
         t = str(node.type_annot) if node.type_annot else ""
         const_s = " const=true" if node.is_const else ""
         type_s = f" type='{t}'" if t else ""
-        kind = "VolatileVarDecl" if node.is_volatile else "VarDecl"
-        return f"({kind} name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
+        return f"(VarDecl name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, AssignNode):
         return f"(Assign op='=' body=[{py_ast_to_canonical(node.target)} {py_ast_to_canonical(node.expr)}])"
     if isinstance(node, NumberNode):
@@ -95,8 +94,7 @@ def py_ast_to_canonical(node) -> str:
         value_attr = f" val='{node.doc_comment}'" if node.doc_comment else ""
         async_attr = " async=true" if node.is_async else ""
         params_attr = f" params=[{params_s}]" if params_s else ""
-        kind = "InterruptFn" if node.is_interrupt else "FunctionDef"
-        return f"({kind} name='{node.name}'{value_attr} type='{ret}'{async_attr}{params_attr} body=[{body}])"
+        return f"(FunctionDef name='{node.name}'{value_attr} type='{ret}'{async_attr}{params_attr} body=[{body}])"
     if isinstance(node, StructDefNode):
         params_s = ", ".join(f"{p.name}: {str(p.type_annot) if p.type_annot else ''}" for p in node.fields)
         value_attr = f" val='{node.doc_comment}'" if node.doc_comment else ""
@@ -146,9 +144,6 @@ def py_ast_to_canonical(node) -> str:
     if isinstance(node, UnsafeBlockNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(UnsafeBlock body=[{body}])"
-    if isinstance(node, CriticalBlockNode):
-        body = " ".join(py_ast_to_canonical(s) for s in node.body)
-        return f"(CriticalBlock body=[{body}])"
     if isinstance(node, SpawnNode):
         body = " ".join(py_ast_to_canonical(s) for s in node.body)
         return f"(Spawn body=[{body}])"
@@ -252,8 +247,6 @@ def run_bootstrap_parser_test() -> bool:
         ("while_and_break", "while true { break; }"),
         ("for_range_loop", "for i in 0..10 { continue; }"),
         ("unsafe_block", "unsafe { var ptr = addr(x); }"),
-        ("embedded_control_surface", "volatile var ticks: u32 = 0; interrupt fn TIM2_IRQHandler() -> void { critical { set ticks = ticks + 1; } }"),
-        ("fixed_buffer_const_generic", "var packet: Buffer<u8, 64> = [1, 2, 3]; set packet[1] = 9;"),
         ("match_pattern", "match x { 1 => { print(\"One\"); } 2 => { print(\"Two\"); } }"),
         ("match_result_commas", 'match r { Ok(v) => print("OK", v), Err(e) => print("ERR", e), "_" => print("OTHER") }'),
         ("extern_ffi_decl", "extern \"C\" fn puts(s: string) -> int;"),

@@ -16,6 +16,7 @@ from src.core.backend_capabilities import (
     BACKENDS,
     CAPABILITY_SCHEMA_VERSION,
     normalize_backend_name,
+    resolve_backend,
     stdlib_modules_for_target,
 )
 from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
@@ -34,7 +35,7 @@ def run_capability_suite() -> bool:
 
     assert normalize_backend_name("python") == "python"
     assert normalize_backend_name("node") == "js"
-    assert normalize_backend_name("stm32") == "stm32f4"
+    assert resolve_backend("stm32") is None
     assert normalize_backend_name("desktop") == "cpp"
     assert "fs" in stdlib_modules_for_target("js")
     assert "fs" not in stdlib_modules_for_target("rust")
@@ -45,7 +46,7 @@ def run_capability_suite() -> bool:
     for target in ("cpp", "js", "python"):
         assert {"channels", "spawn"} <= BACKENDS[target].features
     assert {"channels", "spawn"}.isdisjoint(BACKENDS["rust"].features)
-    for target in ("asm", "react", "stm32f4"):
+    for target in ("asm", "react"):
         assert "typed_hir_v1" not in BACKENDS[target].features
     assert "int64_wrap" not in BACKENDS["wasm"].features
     assert "wasm32" in BACKENDS["wasm"].features
@@ -62,7 +63,7 @@ def run_capability_suite() -> bool:
     manifest = json.loads(cli_manifest.stdout)
     assert manifest["schema_version"] == CAPABILITY_SCHEMA_VERSION
     assert {backend["name"] for backend in manifest["backends"]} >= {
-        "cpp", "js", "python", "rust", "react", "wasm", "stm32f4"
+        "cpp", "js", "python", "rust", "react", "wasm"
     }
 
     previous_exit_mode = DiagnosticEmitter.EXIT_ON_ERROR
@@ -73,11 +74,6 @@ def run_capability_suite() -> bool:
             _write(js_source, '#target js\nimport "std/fs"\nfn main() {}\n')
             js_ast = ModuleLoader(base_dir=temp_dir).load_program(js_source)
             assert js_ast.target == "js"
-
-            embedded_source = os.path.join(temp_dir, "embedded_ok.nyx")
-            _write(embedded_source, '#target stm32\nimport "native/gpio"\nfn main() {}\n')
-            embedded_ast = ModuleLoader(base_dir=temp_dir).load_program(embedded_source)
-            assert embedded_ast.target == "stm32f4"
 
             portable_str = os.path.join(temp_dir, "portable_str.nyx")
             _write(

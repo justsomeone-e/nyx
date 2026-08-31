@@ -94,15 +94,3 @@ never reports a fake network installation.
 * `nyx version`: Displays compiler version and detected host toolchains.
 * `nyx doctor`: Reports actionable C++20, Node.js, Rust, and Python availability.
 * `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract.
-
-### STM32Cube/CMSIS provider
-
-* `nyx boards --install F1`: sparsely installs official CMSIS and Nucleo assets.
-* `nyx boards --probe --cube-root .toolchains/stm32cube`: reports provider evidence.
-* `nyx build app.nyx --board nucleo-f103rb --cube-root .toolchains/stm32cube`:
-  compiles Nyx C++, CMSIS C, and startup assembly separately, then links ELF,
-  HEX, and BIN artifacts with the selected ST linker script.
-
-The provider never treats a missing package as success. GNU-ld/LLD dialect
-normalization is applied to a generated build copy; installed vendor files are
-left unchanged.

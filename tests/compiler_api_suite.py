@@ -28,7 +28,6 @@ def run_compiler_api_suite() -> bool:
         "rust": (".rs", "pub fn add"),
         "react": (".tsx", "export default function NyxApp"),
         "wasm": (".wat", "(module"),
-        "stm32": (".cpp", "int64_t add"),
     }
     for target, (extension, marker) in expected.items():
         result = compile_source(source, target=target)

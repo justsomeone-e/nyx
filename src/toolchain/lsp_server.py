@@ -294,7 +294,7 @@ class LanguageServer:
             (r"\btrait\s+([A-Za-z_][A-Za-z0-9_]*)", 8, "trait {0}"),
             (r"\benum\s+([A-Za-z_][A-Za-z0-9_]*)", 13, "enum {0}"),
             (r"\btype\s+([A-Za-z_][A-Za-z0-9_]*)", 7, "type {0}"),
-            (r"\b(?:volatile\s+)?(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)", 6, "local {0}"),
+            (r"\b(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)", 6, "local {0}"),
         )
         for pattern, kind, template in source_patterns:
             for match in re.finditer(pattern, text):

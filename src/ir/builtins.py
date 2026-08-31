@@ -32,7 +32,6 @@ BUILTINS: Dict[str, BuiltinSignature] = {
     "contains": _exact((STRING, STRING), BOOL),
     "is_number": _exact((STRING,), BOOL),
     "addr": _exact((ANY,), IRType("uintptr")),
-    "buffer_ptr": _exact((ANY,), IRType("uintptr")),
     "peek": _exact((IRType("uintptr"),), IRType("uintptr")),
     "memdump": _exact((IRType("uintptr"), INT), VOID),
     "delay_ms": _exact((INT,), VOID),

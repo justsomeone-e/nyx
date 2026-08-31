@@ -12,9 +12,6 @@ class TokenType:
     TYPE_ALIAS = "TYPE_ALIAS"
     ENUM = "ENUM"
     UNSAFE = "UNSAFE"
-    VOLATILE = "VOLATILE"
-    INTERRUPT = "INTERRUPT"
-    CRITICAL = "CRITICAL"
     EXTERN = "EXTERN"
     
     ASYNC = "ASYNC"

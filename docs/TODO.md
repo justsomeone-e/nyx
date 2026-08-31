@@ -1,72 +1,98 @@
-# Nyx v4 TODO
+# Nyx v4 Development TODO
 
-## Tamamlandı
+Bu dosya Nyx v4 geliştirme hattının aktif görev listesidir. `v4.0.0 Nirvana`
+stable sürümü henüz yayınlanmadı; beta ve RC etiketleri ancak aşağıdaki kapılar
+gerçekten tamamlandığında oluşturulacaktır.
 
-- [x] v3.0.0-beta.4 yayını.
-- [x] C++20, ES2022, Python 3, Rust 2021, React 19, WASM ve gömülü hedefler.
-- [x] Bundle ABI v1 ve React hook paketi.
-- [x] Çoklu hedef stdlib sözleşmesi ve parity testleri.
-- [x] Typed HIR v1, doğrulayıcı, deterministik serileştirme ve optimizasyon geçişleri.
-- [x] HIR tabanlı WASM üretimi ve runtime-equivalence testleri.
-- [x] Public compiler API, plugin sözleşmesi, LSP ve taşınabilir kurucular.
-- [x] 138/138 regresyon ve birleşik test bataryası.
-- [x] `cpp` üreticisini AST'den HIR'a taşı.
-- [x] `js` üreticisini AST'den HIR'a taşı.
-- [x] `python` referans üreticisini AST'den HIR'a taşı.
-- [x] `rust` Rust 2021 üreticisini AST'den canonical typed HIR'a taşı ve 159 kabul + 3 açık capability-rejection corpusunda `rustc` ile doğrula.
-- [x] `let`/`const`, `Task<T>`, exception, trait ve strict-`bool` sözleşmelerini dondur.
-- [x] i64, binary64, bölme, taşma, shift ve canonical scalar-text semantiğini dondur.
-- [x] Native stage-1 derleyiciyi tam kabul/ret corpusunda doğrula.
-- [x] Native `nyxc input.nyx output.cpp` stage-2 frontend'ini üret ve çalıştır.
-- [x] Stage-2'nin aynı compiler kaynağından byte-identical stage-3 C++ üretmesini doğrula.
-- [x] Nyx-authored AST -> typed HIR lowering katmanını tamamla.
-- [x] Normal `nyxc check/emit-cpp/compile` ve kurulum yolundan Python zorunluluğunu kaldır.
-- [x] Windows, Linux ve macOS CI matrisini tanımla.
-- [x] VS Code için yerel VSIX, tek-tık Run/Build/Check ve kalıcı terminal komutlarını paketle.
-- [x] `cpp` için Clang++/GCC/G++/MSVC ve `NYX_CXX` teşhislerini CLI ile editörde eşitle.
-- [x] `fmt/lint/debug/profile/doc/add/remove/install/pkg` komutlarını gerçek dosya/process etkisi, dürüst çıktı ve hata exit-code sözleşmesiyle doğrula.
-- [x] `volatile`, `interrupt fn`, `critical` ve sabit genişlikli embedded tiplerini Python/Nyx lexer-parser eşliğiyle ekle.
-- [x] Nucleo kart profili, connector alias, gerçek F4 GPIO/UART/SPI/I²C/ADC/PWM/timer/NVIC HAL ve ELF vektör doğrulamasını ekle.
-- [x] Fiziksel HAL modüllerindeki masaüstü sahte başarı/stub davranışını kaldır.
-- [x] Freestanding `Buffer<T, N>` ve allocation-free SPI/I²C/UART toplu aktarım ABI'sini ekle.
-- [x] Resmî STM32Cube sparse installer/provider, karma C/C++/ASM derleme ve 25 kartlık ELF/HEX/BIN matrisini ekle.
-- [x] Maya expression-bodied `fn`, değer üreten `if` ve exhaustive literal `match` sözdizimini Python/Nyx AST, typechecker ve HIR parity ile ekle.
+## Yön kararları
 
-## v4.0.0-rc.1 kalanlar
+- [x] STM32, Nucleo, RP2040, AVR ve genel freestanding firmware hedeflerini v4
+  geliştirme kapsamından çıkar.
+- [x] Board profilleri, firmware flasher, STM32Cube sağlayıcısı ve fiziksel HAL
+  modüllerini aktif compiler/tooling yüzeyinden kaldır.
+- [x] Embedded'e özel `volatile`, `interrupt`, `critical`, `Buffer<T, N>` ve
+  `buffer_ptr` kalıntılarını iki frontend, HIR, codegen, LSP ve editörden kaldır;
+  kullanılmayan keyword bırakma.
+- [ ] Sabit boyutlu koleksiyon gerekiyorsa bunu donanım hedefinden bağımsız yeni
+  bir `Array<T, N>`/`array[T, N]` RFC'si olarak tasarla.
+- [x] Ana hedefleri `cpp`, `js`, `python`, `rust`, `wasm`, `react` ve `asm`
+  olarak sınırla.
+- [ ] Birincil geliştirme hedeflerini `cpp` native ve `wasm` olarak belirle;
+  diğer backendleri açık capability sözleşmeleriyle koru.
 
-- [x] Pre-Nyx uyumluluk yüzeyini ve eski target adlarını kaldır; kanonik `cpp/js/python/rust/wasm/react/asm` göçünü hedefli regresyonda doğrula.
-- [x] `any` koşullarında runtime `bool` doğrulamasıyla implicit truthiness'i tamamen kapat.
+## Compiler çekirdeği
+
+- [ ] `nyx build/run` için host-native varsayılanını tamamla; kaynak dosyada
+  `#target` zorunluluğunu kaldır ve CLI/manifest override sırasını dondur.
+- [ ] Python ve Nyx frontendlerinin lexer, parser, typechecker ve canonical HIR
+  parity kapısını her syntax değişikliğinde zorunlu tut.
+- [ ] HIR verifier hata kodlarını ve source-span davranışını public sözleşme yap.
+- [ ] C++ emitter'ın yalnız kullanılan runtime parçalarını üretmesini sağla;
+  gereksiz include ve boilerplate maliyetini ölç.
+- [ ] Stage 1 -> Stage 2 -> Stage 3 self-host zincirini temiz checkout'ta iki
+  kez doğrula ve Python sınırını açıkça belgeleyip test et.
+- [ ] Modül grafiği, cycle diagnostics ve incremental cache anahtarlarını
+  deterministik hale getir.
+- [ ] Compiler crash'lerini structured diagnostic'e dönüştüren negatif corpusu
+  genişlet.
+
+## Kullanılabilir syntax — Nim/Haxe esintili, Nyx semantiği
+
+Yeni keyword yalnız yeni ve test edilebilir bir semantik getiriyorsa eklenir.
+Alias veya completion listesini şişiren eş anlamlı keyword eklenmez. Her madde
+Python parser + Nyx parser + typechecker + HIR + backend parity gerektirir.
+
+- [x] Expression-bodied function: `fn square(x: int) -> int = x * x`.
+- [x] Değer üreten exhaustive `if` ve literal `match` ifadeleri.
+- [ ] Payload enum: `enum Result<T, E> { Ok(T), Err(E) }`.
+- [ ] `Ok(value)` / `Err(error)` ve enum destructuring pattern'ları.
+- [ ] Type-safe `?` ile `Result<T, E>` hata yayılımı.
+- [ ] Array, tuple ve struct destructuring declarations.
+- [ ] Slice/rest patterns: `[head, ..tail]`.
+- [ ] Tail-expression block'ları; gereksiz `return` kullanımını azalt.
+- [ ] Closure/lambda ifadeleri ve capture kuralları.
+- [ ] Iterator protokolü, `yield` ve doğrudan koleksiyon üzerinde `for`.
+- [ ] Compile-time `when` ile target/capability seçimi.
+- [ ] Public modül yüzeyi için tek bir `pub` görünürlük sözleşmesi.
+- [ ] Generic constraint/trait bound yazımı; başarısız constraint için okunaklı
+  diagnostic.
+- [ ] Named arguments ve default argument değerlendirme sırasını tanımla.
+- [ ] `select` ancak Channel/Task semantiği backendler arasında eşitlenirse ekle.
+
+## Standart kütüphane ve proje kullanımı
+
+- [ ] Koleksiyon API'sini `map`, `filter`, `fold`, iterator ve slice semantiğiyle
+  tamamla; bunları keyword değil stdlib fonksiyonu/protokolü olarak tut.
+- [ ] Dosya, süreç, ağ, zaman, encoding ve JSON modüllerinde hata dönüşlerini
+  `Result` modeline taşı.
+- [ ] `std/json_lite` sınırını dürüstçe koru veya gerçek JSON parser ekle;
+  substring tabanlı extractor'ı tam JSON gibi sunma.
+- [ ] Paket manifesti, lockfile ve local dependency çözümünü deterministik yap.
+- [ ] En az üç gerçek örnek uygulama: CLI aracı, WASM modülü ve küçük servis.
+
+## Tooling
+
+- [ ] Formatter'ı yeni grammar ile idempotent tut.
+- [ ] LSP completion listesini compiler'ın canonical language surface'inden
+  üret; ölü keyword ve olmayan stdlib sembolü yayınlama.
+- [ ] Rename, references ve semantic token desteği ekle.
+- [ ] VS Code Run/Build/Check komutlarını default native target ile doğrula.
+- [ ] Compiler diagnostic'lerini kısa hata, açıklama ve düzeltme önerisi olarak
+  standardize et.
+
+## v4.0.0-rc.1 kapıları
+
+- [ ] Embedded kaldırma sonrası birleşik test bataryasını %100 geçir.
 - [ ] Temiz Windows/Linux/macOS x64 ve macOS arm64 paketleme-soak matrisini çalıştır.
-- [x] Makineye özel yol ve timestamp bırakmadan yeniden üretilebilir release arşivi oluştur.
-- [x] Kaynak arşivleri, native binaryler ve VSIX için checksum, provenance ve SPDX SBOM iş akışını tanımla ve sözleşmesini doğrula.
-- [x] README, changelog, spec, manifest, CLI ve VS Code geliştirme sürümlerini `VERSION` kaynağıyla eşitle.
-- [ ] Temiz çapraz-platform kapısından sonra tüm yüzeyleri ve etiketi tam `4.0.0-rc.1` sürümüne geçir.
-- [ ] `v4.0.0-rc.1` release auditini temiz checkout'ta iki kez geçir.
-
-## v4.0.0 stable
-
-- [x] Stage 1'in stage 2'yi üretmesini sağla.
-- [x] İki stage-2 derlemesinde eş HIR/çıktı kanıtla.
-- [ ] Stable backendlerin tamamını sekiz kalite kapısından geçir.
+- [ ] Stable backendlerin HIR, runtime parity ve capability negatif kapılarını geçir.
 - [ ] HIR, compiler API, plugin API ve Bundle ABI uyumluluk politikasını yayınla.
-- [ ] Checksum, provenance/SBOM ve geri dönüş prosedürünü yayınla.
-- [ ] RC soak süresini blockersız tamamla ve `v4.0.0` yayın kararını ver.
+- [ ] Checksum, provenance/SBOM ve rollback prosedürünü doğrula.
+- [ ] Temiz checkout'ta release auditini iki kez geçir.
+- [ ] Product Owner onayından sonra `4.0.0-rc.1` etiketini oluştur.
 
-## RC1 sonrası yeni hedefler
+## v4.0.0 Nirvana stable kapıları
 
-- [ ] Value-match için `Ok(value)` / `Err(error)` ve enum destructuring.
-- [ ] `Result<T, E>` için type-safe `?` hata yayılımı.
-- [ ] Array/struct destructuring declarations ve slice patterns.
-- [ ] Tail-expression block'ları ve iterator/yield protokolü.
-- [ ] Compile-time `when` ile hedef/capability seçimi.
-
-- [ ] DMA stream, EXTI, input-capture/encoder ve watchdog typed API'leri.
-- [ ] Kayıtlı Nucleo profilleri için gerçek kart üzerinde GPIO/UART/SPI/I²C HIL matrisi.
-
-- [ ] `c` — C17.
-- [ ] `llvm` — doğrudan LLVM IR.
-- [ ] `go` — Go.
-- [ ] `jvm` — JVM/Java 21 uyumlu class dosyaları.
-- [ ] `dotnet` — .NET 10.
-- [ ] `lua` — Lua 5.4.
-- [ ] `nyx-ocaml` — bağımsız parser/typechecker ve canonical HIR oracle.
+- [ ] RC soak süresini blocker olmadan tamamla.
+- [ ] Belgelenen syntax ve backend sözleşmelerini stable olarak dondur.
+- [ ] Kurulum, örnek projeler, LSP ve paketleme yollarını temiz makinelerde doğrula.
+- [ ] Product Owner kararıyla `v4.0.0 Nirvana` yayınını oluştur.

@@ -1,5 +1,13 @@
 # Change Log
 
+## 4.0.0-dev.2
+
+- Removed STM32/Nucleo/freestanding targets and their board completions.
+- Removed the obsolete `volatile`, `interrupt`, `critical`, `Buffer<T, N>`, and
+  `buffer_ptr` language surface.
+- Synced syntax highlighting, snippets, LSP completions, and the canonical
+  43-keyword compiler catalog.
+
 ## 4.0.0-dev.1
 
 - Added one-click Run, Build, Check, and Toolchain Doctor commands.

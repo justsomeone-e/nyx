@@ -1,13 +1,11 @@
 > [!IMPORTANT]
-> ## v4.0.0-dev.1 — Maya is FROZEN
+> ## Nyx v4 is in active development
 >
-> This is a completed, frozen reference release—not paused development. The
-> v4 scope was frozen after the language surface, canonical typed HIR, backend
-> contracts, self-hosting path, installer flow, and regression gates reached
-> the boundaries defined for this release. Keeping those contracts unchanged
-> prevents v4 from becoming a moving target; new syntax, backends, and breaking
-> API changes belong to a future major version. Detailed status, design,
-> installation, and verification information is provided below.
+> `v4.0.0-dev.1` remains an immutable Maya snapshot. `v4.0.0-dev.2` resumes
+> focused v4 development and removes microcontroller/freestanding firmware
+> support from the active codebase. Current work focuses on the compiler,
+> self-hosting, native/WASM backends, language ergonomics, and tooling. Nyx has
+> not reached beta, RC1, or the `v4.0.0 Nirvana` stable release.
 
 <div align="center">
 
@@ -25,13 +23,13 @@
   </p>
 
   <p align="center">
-    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-dev.1"><img src="https://img.shields.io/badge/STATUS-FROZEN-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Frozen release"></a>
+    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.2-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="docs/TODO.md"><img src="https://img.shields.io/badge/STATUS-ACTIVE%20DEVELOPMENT-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Active development"></a>
     <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
-  <p><strong>v4 release line: NIRVANA · Maya: FROZEN</strong></p>
+  <p><strong>v4 release line: MAYA → NIRVANA · ACTIVE DEVELOPMENT</strong></p>
 
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
@@ -68,9 +66,9 @@ A source file is lexed, parsed, type-checked, lowered, verified, optimized, and 
 
 The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `python` target, but it is not required by the distributed native `nyxc` path.
 
-> **Release status:** `4.0.0-dev.1` / Maya is frozen as a reference release.
-> It is not an RC or a promise of a later v4 promotion; future breaking
-> language work belongs to a later major version.
+> **Release status:** `4.0.0-dev.1` / Maya is preserved as a historical snapshot;
+> `4.0.0-dev.2` is the active compiler-focused development release. No beta, RC, or stable
+> promotion has been made.
 
 ---
 
@@ -79,18 +77,17 @@ The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native s
 ## Release line
 
 The names below describe the intended direction of the project. Their meanings
-are metaphorical, not technical requirements, and the future rows are not
-automatic release promises. `v4.0.0-dev.1` is the final frozen Maya snapshot;
-the later v4 names are retained as the original release plan but are not
-scheduled releases.
+are metaphorical, not technical requirements, and a release is created only
+after its compiler and compatibility gates pass.
 
 | Version | Codename | Meaning | Intended focus | Status |
 | :-- | :-- | :-- | :-- | :-- |
 | `v2.x` | — | — | Initial multi-target compiler, standard library, and CLI foundation | Historical |
 | `v3.x` | — | — | Bundle ABI, Unicode/byte correctness, parity testing, and native interop | Historical |
-| `v4.0.0-dev.1` | **Maya** | Illusion / appearance | Frozen language contract, verified HIR, self-hosting path, backend contracts, LSP, installers, and regression gates | **Frozen** |
-| `v4.0.0-beta.*` | Nocturne | Night piece | Intended v4 integration and stabilization cycle | Not scheduled |
-| `v4.0.0-rc.1` | Samsara | Cycle of existence | Intended release-candidate compatibility and soak testing | Not scheduled |
+| `v4.0.0-dev.1` | **Maya** | Illusion / appearance | Preserved development snapshot and starting point for the resumed v4 line | Historical snapshot |
+| `v4.0.0-dev.2` | **Maya** | Scope reset | Microcontroller removal; compiler, syntax ergonomics, native/WASM, self-hosting, and LSP focus | **Latest development release** |
+| `v4.0.0-beta.*` | Nocturne | Night piece | v4 integration and stabilization cycle | Planned after development gates |
+| `v4.0.0-rc.1` | Samsara | Cycle of existence | Release-candidate compatibility and soak testing | Planned after beta |
 | `v4.0.0-rc.2` | Bodhi | Awakening | Intended follow-up RC fixes only | Not scheduled |
 | `v4.0.0-rc.3` | Moksha | Liberation | Intended final RC verification only | Not scheduled |
 | `v4.0.0` | Nirvana | Final release / release from the cycle | Intended v4 stable promotion | Not scheduled |
@@ -99,25 +96,13 @@ scheduled releases.
 | `v7.0.0` | Apotheosis | Highest development | Additional service and managed-runtime targets with explicit concurrency mappings | Future target |
 | `v8.0.0` | Elysium | Ideal peaceful place | Mature multi-target ecosystem, long-term compatibility, and production release discipline | Future target |
 
-Future versions will begin from a new compatibility decision. They must not
-silently alter the frozen v4 Maya contracts.
+### Why the scope changed
 
-### Why the project was stopped
-
-Nyx was stopped as an original development effort because its scope grew faster
-than its validated use case. It became a compiler, several backend toolchains,
-an embedded platform layer, a self-hosting project, an IDE extension, and a
-standard library at the same time. The implementation and test surface became
-large, while there was not yet a real user or product depending on the whole
-stack. Continuing to add targets and syntax would have produced more surface
-area without proving that anyone needed it.
-
-The responsible stopping point was therefore a working, documented Maya
-snapshot with explicit contracts and tests. The project is not presented as
-unfinished work waiting for the original roadmap to resume. The source remains
-available for study, forks, and independent community development under the
-repository license; any future official language changes belong to a new major
-version and a newly validated use case.
+Nyx previously attempted compiler work, many backend toolchains, firmware and
+board support, self-hosting, IDE integration, and a standard library at the same
+time. The active v4 line removes the microcontroller platform layer so effort
+can stay on the language itself: compiler correctness, clear semantics,
+native/WASM output, readable syntax, diagnostics, and tooling.
 
 ---
 
@@ -131,7 +116,7 @@ version and a newly validated use case.
 
 ### ⚡ One frontend, capability-gated targets
 
-Nyx exposes eight target families without pretending they all have the same maturity. `nyx targets --json` is the machine-readable source of truth.
+Nyx exposes seven target families without pretending they all have the same maturity. `nyx targets --json` is the machine-readable source of truth.
 
 ```text
 ┌─────────────┬──────────────────────────────┬──────────────┬───────────────┐
@@ -144,55 +129,10 @@ Nyx exposes eight target families without pretending they all have the same matu
 │ rust        │ Rust 2021 source/object      │ beta         │ yes           │
 │ react     │ React 19 TSX tooling         │ beta         │ tooling       │
 │ asm       │ x86_64 assembly via C++      │ beta         │ migration     │
-│ embedded    │ ELF / HEX / BIN firmware     │ experimental │ migration     │
 └─────────────┴──────────────────────────────┴──────────────┴───────────────┘
 ```
 
 Unsupported syntax or standard-library modules fail with a capability diagnostic; a narrow backend may not silently change the program's meaning.
-
-### ◈ First-class Cortex-M hardware surface
-
-Embedded programs can use `volatile var`, `interrupt fn`, `critical {}`,
-fixed-width scalars, board connector aliases, MMIO, GPIO, UART, SPI, I²C, ADC,
-PWM, timers, NVIC control, and allocation-free `Buffer<T, N>` bulk I/O without
-injecting C++ through `#native raw`.
-
-```nyx
-#target stm32f4
-import "std/board"
-import "std/gpio"
-import "std/timer"
-
-volatile var ticks: u32 = 0
-
-interrupt fn TIM3_IRQHandler() -> void {
-    timer_clear_update(3)
-    critical { set ticks = ticks + 1 }
-}
-
-fn main() -> void {
-    mode(board_pin("LED"), PIN_OUTPUT)
-    timer_start(3, 1000, true)
-    loop { }
-}
-```
-
-The built-in register-level BSP produces ELF/HEX/BIN for NUCLEO-F401RE,
-F410RB, F411RE, and F446RE. Another 21 Nucleo profiles become build-ready from
-official STM32Cube CMSIS packages. Nyx can install only the required CMSIS and
-Nucleo assets, then resolve device macros, startup assembly, IRQs, system C, and
-the board linker script automatically:
-
-```powershell
-nyx boards --install F1
-nyx boards --probe --cube-root .toolchains/stm32cube
-nyx build firmware.nyx --board nucleo-f103rb --cube-root .toolchains/stm32cube
-```
-
-The verified local matrix emits ARM ELF/HEX/BIN for all 25 registered profiles;
-physical pin-level behavior remains a separate hardware-in-the-loop gate.
-`nyx flash --dry-run` exposes the exact STM32CubeProgrammer/OpenOCD command
-before a physical device is touched.
 
 ### ◇ Deterministic typed-HIR pipeline
 
@@ -669,7 +609,6 @@ fuzzing, and negative diagnostics.
 | **`rust`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
 | **`react`** | wrapper/tooling contract | N/A | beta tooling |
 | **`asm`** | native subset | via C++ | beta |
-| **embedded** | target-specific subset | migration pending | experimental |
 
 The figures above are local evidence for the frozen Maya snapshot. They are not
 a claim that this development release is an RC or stable promotion.

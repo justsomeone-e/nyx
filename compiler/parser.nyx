@@ -613,22 +613,6 @@ impl Parser {
                 false, [], [], [target, value], tok.line, tok.col)
         }
 
-        // Volatile storage shared with hardware and interrupt handlers.
-        if tok.type_name == "VOLATILE" {
-            self.advance()
-            self.expect("VAR")
-            var name = self.expect("IDENT").value
-            var type_annot = ""
-            if self.match_type("COLON") {
-                type_annot = self.parse_type()
-            }
-            self.expect("ASSIGN")
-            var init_expr = self.parse_expr(0)
-            self.match_type("SEMICOLON")
-            return ASTNode("VolatileVarDecl", name, "", "", type_annot, false,
-                false, false, false, [], [], [init_expr], tok.line, tok.col)
-        }
-
         // Variable declaration. let and const are immutable bindings.
         if tok.type_name == "VAR" or tok.type_name == "LET" or tok.type_name == "CONST" {
             var is_const = (tok.type_name == "LET" or tok.type_name == "CONST")
@@ -690,16 +674,11 @@ impl Parser {
         }
 
         // Function definition
-        if tok.type_name == "FN" or tok.type_name == "ASYNC" or tok.type_name == "INTERRUPT" {
+        if tok.type_name == "FN" or tok.type_name == "ASYNC" {
             var doc_comment = self.last_doc_comment
             var is_async = false
-            var is_interrupt = false
             if tok.type_name == "ASYNC" {
                 is_async = true
-                self.advance()
-                self.expect("FN")
-            } elif tok.type_name == "INTERRUPT" {
-                is_interrupt = true
                 self.advance()
                 self.expect("FN")
             } else {
@@ -747,9 +726,7 @@ impl Parser {
             // is_safe is otherwise unused for functions; retain whether the
             // source declared an arrow so HIR can distinguish implicit `any`
             // from an explicit `-> void` without changing AST snapshots.
-            var function_kind = "FunctionDef"
-            if is_interrupt { function_kind = "InterruptFn" }
-            return ASTNode(function_kind, name, doc_comment, "", ret_type, false,
+            return ASTNode("FunctionDef", name, doc_comment, "", ret_type, false,
                 is_async, has_explicit_return, false, params, generic_params, body, tok.line, tok.col)
         }
 
@@ -1034,14 +1011,6 @@ impl Parser {
             self.advance()
             var body = self.parse_block()
             return ASTNode("UnsafeBlock", "", "", "", "", false, false, false, false, [], [], body, tok.line, tok.col)
-        }
-
-        // Interrupt-masked scope for embedded targets.
-        if tok.type_name == "CRITICAL" {
-            self.advance()
-            var body = self.parse_block()
-            return ASTNode("CriticalBlock", "", "", "", "", false, false, false,
-                false, [], [], body, tok.line, tok.col)
         }
 
         // Spawn block

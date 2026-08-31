@@ -1,6 +1,6 @@
 # Nyx v4 Syntax and Semantic Contract
 
-Status: `v4.0.0-dev.1` (`Maya`) development contract.
+Status: `v4.0.0-dev.2` (`Maya`) development contract.
 
 This file defines the compatibility boundary for Nyx source. The readable
 examples live in [`../LANGUAGE_REFERENCE.md`](../LANGUAGE_REFERENCE.md). The
@@ -17,7 +17,7 @@ machine-readable keyword and target contracts live in
 - Strings support `\\`, `\"`, `\n`, `\r`, `\t`, `\0`, and `\uXXXX` escapes.
 - Unicode normalization is never implicit.
 
-The stable v4 surface contains 46 keywords. Their exact grouping and editor
+The stable v4 surface contains 43 keywords. Their exact grouping and editor
 order are generated from `STABLE_KEYWORD_GROUPS`; editor completion is required
 to match that contract exactly. The pre-v4 `def` alias is not a keyword;
 function declarations use only `fn`.
@@ -30,15 +30,13 @@ proved by exact Python/Nyx AST parity tests.
 ```ebnf
 program          = { item | statement } EOF ;
 
-item             = function | interrupt_function | struct | trait | implementation | enum
+item             = function | struct | trait | implementation | enum
                  | type_alias | extern_function | import | native_directive
                  | test_block ;
 
 function         = [ "async" ] "fn" identifier [ generic_parameters ]
                    "(" [ parameters ] ")" [ "->" type ]
                    ( block | "=" expression [ ";" ] ) ;
-interrupt_function = "interrupt" "fn" identifier "(" ")"
-                     [ "->" "void" ] block ;
 trait_method     = [ "async" ] "fn" identifier [ generic_parameters ]
                    "(" [ parameters ] ")" [ "->" type ] ;
 struct           = "struct" identifier [ generic_parameters ]
@@ -47,19 +45,15 @@ trait            = "trait" identifier "{" { trait_method } "}" ;
 implementation   = "impl" identifier [ "for" identifier ]
                    "{" { function } "}" ;
 
-statement        = declaration | volatile_declaration | assignment | expression
+statement        = declaration | assignment | expression
                  | if_statement | for_statement | while_statement
                  | loop_statement | match_statement | try_statement
                  | guard_statement | defer_statement | unsafe_block
-                 | critical_block
                  | spawn_block | return_statement | throw_statement
                  | break_statement | continue_statement ;
 
 declaration      = ( "var" | "let" | "const" ) identifier
                    [ ":" type ] "=" expression ;
-volatile_declaration = "volatile" "var" identifier
-                       [ ":" type ] "=" expression ;
-critical_block   = "critical" block ;
 assignment       = [ "set" ] assignable "=" expression ;
 if_statement     = "if" expression block
                    { ( "elif" expression | "else" "if" expression ) block }
@@ -110,7 +104,7 @@ logical AND/OR, null coalescing, then pipeline.
 - `int` has the canonical signed 64-bit hosted representation.
 - `float` has the canonical IEEE-754 binary64 hosted representation.
 - `i8/i16/i32/i64`, `u8/u16/u32/u64`, and `f32/f64` select concrete storage
-  widths on declaring native/freestanding backends. Literal narrowing is
+  widths on declaring native and Rust backends. Literal narrowing is
   rejected before code generation.
 - Source integer literals are restricted to
   `-9223372036854775808..9223372036854775807`; `E2012` rejects any other
@@ -201,21 +195,15 @@ New syntax must be additive, have exact Python/Nyx frontend parity, lower to
 target-neutral HIR, and either pass runtime parity on every declaring backend or
 be rejected by an explicit capability gate.
 
-## 9. Embedded control contract
+## 9. Language evolution rule
 
-- `volatile var` is available only on freestanding embedded targets and does
-  not imply atomicity.
-- `interrupt fn NAME() -> void` has no parameters, generics, or async marker;
-  the board profile owns the exact name-to-IRQ mapping.
-- `critical { ... }` saves PRIMASK, masks interrupts, and restores the prior
-  state on normal exit, return, guard, or deferred cleanup.
-- Physical HAL modules are embedded-only. A hosted target must emit `E1400`
-  rather than link a simulated implementation.
-- `Buffer<T, N>` is embedded-only fixed storage. `N` is a positive integer
-  const argument; dynamic `Array<T>` allocation is rejected on freestanding
-  targets. Pointer-length interop uses `buffer_ptr(buffer)` plus `len(buffer)`.
-- A board profile may narrow target-level HAL support. Importing an unavailable
-  peripheral module must emit `E1403` before code generation.
-- Built-in F4 firmware generation is still a legacy AST backend migration
-  surface. It cannot be promoted from experimental until the flags and blocks
-  above are represented in canonical typed HIR.
+Microcontroller and freestanding firmware targets are not part of the active
+v4 language contract. The former `volatile`, `interrupt`, `critical`,
+`Buffer<T, N>`, and `buffer_ptr` surface has been removed from both frontends.
+A future fixed-size collection must be target-neutral and enter through a new
+syntax RFC.
+
+New syntax must introduce a distinct, testable semantic operation. Alias
+keywords that only duplicate an existing spelling are rejected. Every accepted
+syntax RFC requires Python/Nyx frontend parity, type-checker coverage, canonical
+HIR lowering, structured negative diagnostics, and backend capability tests.

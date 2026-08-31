@@ -31,12 +31,11 @@ set counter.value = 1       // valid: the binding still refers to the same Count
 
 The portable scalar types are `int`, `float`, `bool`, `string`, `char`,
 `uintptr`, and `void`. Generic library/compiler types include `Array<T>`,
-`Option<T>`, `Result<T, E>`, `Channel<T>`, and `Task<T>`. Freestanding targets
-also provide allocation-free `Buffer<T, N>` with a compile-time capacity.
+`Option<T>`, `Result<T, E>`, `Channel<T>`, and `Task<T>`.
 
 Fixed-width scalar spellings are `i8`, `i16`, `i32`, `i64`, `u8`, `u16`,
-`u32`, `u64`, `f32`, and `f64`. They select concrete storage widths on the
-native, Rust, and freestanding backends. A directly assigned integer literal
+`u32`, `u64`, `f32`, and `f64`. They select concrete storage widths on native
+and Rust backends. A directly assigned integer literal
 must fit its declared width (`E2024`); implicit narrowing is not permitted.
 The hosted cross-backend arithmetic contract remains the canonical `int` and
 `float` contract below until width-specific overflow semantics are frozen for
@@ -297,85 +296,7 @@ unsafe {
 
 Raw memory operations must remain inside an explicit `unsafe` boundary.
 
-## 11. Freestanding hardware without native source injection
-
-Normal Cortex-M work does not require `#native raw`. The embedded surface has
-fixed-width values, volatile storage, profile-checked interrupt declarations,
-interrupt-safe critical sections, connector aliases, MMIO, and peripheral
-modules:
-
-```nyx
-#target stm32f4
-
-import "std/board"
-import "std/gpio"
-import "std/adc"
-import "std/pwm"
-import "std/timer"
-import "std/spi"
-
-volatile var ticks: u32 = 0
-
-interrupt fn TIM3_IRQHandler() -> void {
-    timer_clear_update(3)
-    critical { set ticks = ticks + 1 }
-}
-
-fn main() -> void {
-    let led = board_pin("LED")
-    let analog = board_pin("A0")
-    mode(led, PIN_OUTPUT)
-    let sample = adc_read(analog)
-    pwm_open(board_pin("D3"), 2000)
-    pwm_percent(board_pin("D3"), 50)
-    timer_start(3, 1000, true)
-
-    var tx: Buffer<u8, 4> = [159, 0, 0, 0]
-    var rx: Buffer<u8, 4> = []
-    let spi = spi_open(1, 1000000)
-    spi_exchange(spi, buffer_ptr(tx), buffer_ptr(rx), len(tx))
-    loop { }
-}
-```
-
-`volatile` prevents the compiler from treating a hardware/shared load as an
-ordinary cached value; it is not an atomicity primitive. `critical { ... }`
-masks interrupts and restores the previous PRIMASK state on every scope exit.
-`interrupt fn` accepts no parameters or generics, returns `void`, and its exact
-handler name must exist in the selected board profile.
-
-`Buffer<T, N>` is fixed stack/static storage: `N` must be a positive integer
-literal, a short initializer is zero-filled, and an oversized initializer is
-`E2026`. A literal out-of-range index is `E2027`; a dynamic out-of-range index
-traps instead of corrupting adjacent memory. `buffer_ptr(buffer)` and
-`len(buffer)` expose a pointer-length pair to allocation-free UART/SPI/I²C
-bulk APIs. Dynamic `Array<T>` storage is rejected on freestanding targets.
-
-The embedded standard library currently includes `std/board`, `std/gpio`,
-`std/serial`, `std/mmio`, `std/spi`, `std/i2c`, `std/adc`, `std/pwm`,
-`std/timer`, and `std/interrupt`. Hardware waits are bounded and report errors;
-desktop builds reject these physical modules instead of running fake stubs.
-Board capability checks also reject a module that the selected MCU cannot
-implement (`E1403`); for example, the built-in F410 profile exposes TIM5/TIM6
-but not the TIM2-backed Arduino PWM module.
-
-The built-in standalone BSP currently links real firmware for
-`nucleo-f401re`, `nucleo-f410rb`, `nucleo-f411re`, and `nucleo-f446re`.
-Additional Nucleo identities are registered but honestly require a matching
-STM32Cube/CMSIS or custom `board.toml` BSP. The compiler gate proves ELF/HEX/BIN
-and vector-table correctness; it does not claim electrical validation without
-a connected board.
-
-```text
-nyx boards
-nyx build firmware.nyx --board nucleo-f401re
-nyx flash build/nucleo-f401re/firmware.elf --board nucleo-f401re
-```
-
-`#native raw` remains an explicit escape hatch for a register or peripheral
-that has no typed Nyx contract yet, rather than the default embedded API.
-
-## 12. CLI
+## 11. CLI
 
 ```text
 nyx check main.nyx
@@ -385,12 +306,9 @@ nyx bundle main.nyx --output dist --react
 nyx test main.nyx
 nyx self-host verify
 nyx targets --json
-nyx boards --json
-nyx build firmware.nyx --board nucleo-f401re
-nyx flash build/nucleo-f401re/firmware.elf --board nucleo-f401re
 ```
 
 The canonical stable hosted backends are `cpp` (C++20/native), `js`
-(ES2022/Node.js), and `python` (Python 3). `wasm`, `rust`, `react`, `asm`,
-and embedded targets expose narrower, machine-readable capability sets and must
+(ES2022/Node.js), and `python` (Python 3). `wasm`, `rust`, `react`, and `asm`
+expose narrower, machine-readable capability sets and must
 reject unsupported semantics.

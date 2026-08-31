@@ -116,7 +116,6 @@ from tests.native_library_suite import run_native_library_suite
 from tests.manifest_suite import run_manifest_suite
 from tests.linking_suite import run_linking_suite
 from tests.platform_suite import run_platform_suite
-from tests.hardware_suite import run_hardware_suite
 from tests.sdk_suite import run_sdk_suite
 from tests.interop_suite import run_interop_suite
 from tests.bootstrap_lexer_test import run_bootstrap_lexer_test
@@ -243,9 +242,6 @@ def main():
     plat_ok = run_platform_suite()
 
     print()
-    hw_ok = run_hardware_suite()
-
-    print()
     sdk_ok = run_sdk_suite()
 
     print()
@@ -268,7 +264,7 @@ def main():
     
     all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
-                  natlib_ok and man_ok and link_ok and plat_ok and hw_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
+                  natlib_ok and man_ok and link_ok and plat_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
     print("=" * 70)
     if all_passed:
         print("🏆 ALL TEST SUITES PASSED (100% SUCCESS RATE)")

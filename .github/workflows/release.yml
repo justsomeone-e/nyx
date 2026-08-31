@@ -229,53 +229,5 @@ jobs:
             dist/*.spdx.json
             dist/SHA256SUMS
             dist/native/*
-          body: |
-            ## ⚡ nyx ${{ github.ref_name }}
-
-            Next-Generation Multi-Target Systems & Application Programming Language.
-
-            ### v4 Release Candidate
-            * **Native self-hosting**: the Nyx-authored lexer, parser, type
-              checker, typed-HIR lowerer, and HIR C++ emitter rebuild the
-              standalone `nyxc` compiler reproducibly.
-            * **Frozen language contract**: 43 canonical keywords, `fn`-only
-              declarations, verified trait implementations, strict Boolean
-              conditions, `Task<T>`, exceptions, and immutable bindings.
-            * **Exact hosted semantics**: `cpp`, `js`, and `python` share the
-              signed-i64, IEEE-binary64, Unicode, control-flow, and canonical
-              scalar-text contracts through verified HIR.
-            * **Capability-gated targets**: `wasm`, `rust`, `react`,
-              `asm`, and embedded targets remain beta/experimental and reject
-              unsupported semantics explicitly.
-            * **Bundle ABI v1 and tooling**: WASM/JS/TypeScript/React artifacts,
-              compiler/plugin APIs, LSP support, deterministic lockfiles, and
-              native-first installers.
-
-            ### 📦 Automated Installation
-
-            Native `nyxc` binaries are attached for Windows x64, Linux x64,
-            macOS Intel, and macOS Apple Silicon. `SHA256SUMS`, an SPDX 2.3
-            SBOM, and signed GitHub artifact attestations accompany the release.
-            Python is optional for legacy orchestration commands.
-
-            The attached `nyx-language-support-*.vsix` installs the official
-            VS Code integration locally without Marketplace access. It adds
-            one-click Run/Build/Check commands whose output remains in the
-            integrated terminal. Native `cpp` builds require Clang++,
-            GCC/G++, or MSVC cl with C++20 support (`nyx doctor`).
-
-            Verify provenance with:
-            ```bash
-            gh attestation verify <artifact> -R justsomeone-e/nyx
-            ```
-
-            **Windows (PowerShell):**
-            ```powershell
-            irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
-            ```
-
-            **Linux / macOS (Bash):**
-            ```bash
-            curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
-            ```
+          body_path: RELEASE_NOTES.md
           generate_release_notes: true

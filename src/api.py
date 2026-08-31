@@ -18,7 +18,6 @@ from src.codegen.hir_rust import RustEmissionError, emit_rust
 from src.codegen.wasm_ir import BundleCompileError
 from src.core.ast_nodes import ProgramNode
 from src.core.backend_capabilities import normalize_backend_name, resolve_backend
-from src.core.board_model import BoardProfile
 from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
 from src.core.module_loader import ModuleLoader
 from src.core.type_checker import TypeChecker
@@ -229,11 +228,9 @@ class NyxCompiler:
         self,
         base_dir: Optional[str] = None,
         plugins: Iterable[CompilerPlugin] = (),
-        board: Optional[BoardProfile] = None,
     ):
         self.base_dir = os.path.abspath(base_dir or os.getcwd())
         self.plugins = tuple(plugins)
-        self.board = board
         plugin_names = [plugin.name for plugin in self.plugins]
         if len(plugin_names) != len(set(plugin_names)):
             raise ValueError("Compiler plugin names must be unique within a session")
@@ -249,7 +246,7 @@ class NyxCompiler:
         active_target = resolved_target
         try:
             with DiagnosticEmitter.scoped(exit_on_error=False, emit_output=False):
-                loader = ModuleLoader(base_dir=self.base_dir, target=target, board=self.board)
+                loader = ModuleLoader(base_dir=self.base_dir, target=target)
                 ast = loader.load_program(filename, source)
                 active_target = ast.target
                 context = PluginContext(filename, self.base_dir, ast.target, source)
@@ -463,7 +460,7 @@ class NyxCompiler:
 
         if target == "cpp":
             return SourceArtifact(target, "cpp20", ".cpp", "text/x-c++src", emit_cpp(hir))
-        if target in ("asm", "stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"):
+        if target == "asm":
             return SourceArtifact(target, "cpp20", ".cpp", "text/x-c++src", codegen.gen_cpp())
         if target == "js":
             return SourceArtifact(target, "javascript", ".js", "text/javascript", emit_javascript(hir))

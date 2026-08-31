@@ -289,15 +289,6 @@ async function activate(context) {
                 addSnippet('test', 'test "${1:test title}" {\n\tassert(${2:condition}, "${3:failure message}");\n}', 'Unit Test Block', 'Defines an automated in-file unit test.');
                 addSnippet('assert', 'assert(${1:condition}, "${2:message}");', 'Assertion', 'Asserts condition is true; halts on failure.');
 
-                if (currentTarget === 'stm32f4' || currentTarget === 'stm32' || currentTarget === 'embedded') {
-                    addSnippet('volatile var', 'volatile var ${1:ticks}: ${2:u32} = ${3:0};', 'Volatile Embedded Storage', 'Declares storage observed by hardware or an interrupt handler.');
-                    addSnippet('interrupt fn', 'interrupt fn ${1:TIM3_IRQHandler}() -> void {\n\t${2:timer_clear_update(3)};\n\t${0}\n}', 'Hardware Interrupt Handler', 'Declares a profile-validated Cortex-M interrupt handler.');
-                    addSnippet('critical', 'critical {\n\t${0:// atomic register or shared-state update}\n}', 'Interrupt-Masked Scope', 'Masks interrupts and restores the previous PRIMASK state on every exit path.');
-                    addSnippet('Buffer', 'var ${1:packet}: Buffer<${2:u8}, ${3:64}> = [${0}];', 'Fixed Embedded Buffer', 'Declares allocation-free fixed-capacity storage for UART, SPI, I²C, and DMA.');
-                    addSnippet('buffer_ptr', 'buffer_ptr(${1:buffer})', 'Buffer Data Pointer', 'Returns the stable data address of a fixed Buffer for typed HAL calls.', vscode.CompletionItemKind.Function);
-                    addSnippet('board_pin', 'board_pin("${1|LED,BUTTON,D0,D1,D2,D3,D4,D5,D6,D7,D8,D9,D10,D11,D12,D13,D14,D15,A0,A1,A2,A3,A4,A5,I2C_SDA,I2C_SCL|}")', 'Board Connector Alias', 'Resolves a pin from the selected --board profile.', vscode.CompletionItemKind.Function);
-                }
-
                 // Target specifics
                 if (currentTarget === 'react') {
                     addSnippet('useState', 'var [${1:state}, set${1/(.*)/${1:/capitalize}/}] = useState(${2:initialValue});', 'React useState Hook', 'Reactive state variable with updater.', vscode.CompletionItemKind.Function);
@@ -399,7 +390,7 @@ async function activate(context) {
                     [/\btrait\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Interface, match => `trait ${match[1]}`],
                     [/\benum\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Enum, match => `enum ${match[1]}`],
                     [/\btype\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.TypeParameter, match => `type ${match[1]}`],
-                    [/\b(?:volatile\s+)?(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Variable, match => `local ${match[1]}`]
+                    [/\b(?:var|let|const)\s+([A-Za-z_][A-Za-z0-9_]*)/g, vscode.CompletionItemKind.Variable, match => `local ${match[1]}`]
                 ];
                 localPatterns.forEach(([pattern, kind, detail]) => {
                     for (const match of fullText.matchAll(pattern)) {

@@ -4,7 +4,43 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
-## [Unreleased] - v4.0.0-rc.1 candidate
+## [4.0.0-dev.2] - 2026-08-31
+
+### Scope reset: microcontroller support removed
+
+* Removed STM32F1/F4, Nucleo, RP2040, AVR, generic embedded, and freestanding
+  firmware targets from the backend registry and CLI.
+* Removed board profiles, custom board manifests, STM32Cube/CMSIS resolution,
+  linker/startup/runtime assets, firmware flashing, and ELF/HEX/BIN build paths.
+* Removed the physical hardware standard-library surface: `std/board`,
+  `std/gpio`, `std/adc`, `std/pwm`, `std/spi`, `std/i2c`, `std/serial`,
+  `std/timer`, `std/interrupt`, and `std/mmio`.
+* Removed embedded-only language residue from both Python and Nyx-authored
+  frontends: `volatile`, `interrupt`, `critical`, `Buffer<T, N>`, and
+  `buffer_ptr`. The canonical surface is now 43 keywords.
+* Removed obsolete hardware fixtures, editor snippets/completions, documentation,
+  and regression suites. Historical releases and Git history retain the deleted
+  implementation.
+
+### Why
+
+Nyx was trying to maintain a language, seven application backends, self-hosting,
+IDE tooling, and a broad physical-board platform simultaneously. The firmware
+layer was larger than the project could support without weakening compiler
+correctness. Dev.2 deliberately narrows v4 toward the compiler itself: typed HIR,
+native/WASM output, self-hosting, readable Nim/Haxe-inspired syntax, diagnostics,
+and deterministic tooling. Fixed-size collections may return later only through
+a target-neutral language RFC.
+
+### Validation
+
+* Python/Nyx frontend and 184-case canonical HIR byte parity passed.
+* 530 fuzz cases completed with zero unhandled compiler crashes.
+* Python, JavaScript, C++20, and Rust backend conformance passed.
+* VS Code/LSP, installer, FFI, SDK, interop, and clean-environment smoke suites passed.
+* The 138-point exhaustive regression battery passed 138/138.
+
+## [4.0.0-dev.1] - 2026-08-29
 
 ### Compiler architecture
 

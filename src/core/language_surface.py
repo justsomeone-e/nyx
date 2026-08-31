@@ -11,13 +11,13 @@ from .tokens import TokenType
 STABLE_KEYWORD_GROUPS = {
     "declaration": (
         "var", "let", "set", "const", "fn", "struct", "trait", "impl",
-        "type", "enum", "extern", "volatile", "interrupt",
+        "type", "enum", "extern",
     ),
     "control-flow": (
         "if", "elif", "else", "for", "in", "loop", "while", "match",
         "try", "catch", "throw", "return", "break", "continue", "await",
     ),
-    "scope-and-safety": ("defer", "guard", "unsafe", "critical"),
+    "scope-and-safety": ("defer", "guard", "unsafe"),
     "concurrency": ("spawn", "async"),
     "modules": ("use", "import", "from", "as"),
     "testing": ("test", "assert"),
@@ -43,14 +43,14 @@ LEGACY_KEYWORD_ALIASES = {}
 # are callable runtime names rather than statement/declaration keywords.
 BUILTIN_NAMES = (
     "print", "input", "addr", "peek", "memdump", "channel", "Ok", "Err",
-    "len", "args", "buffer_ptr", "to_string", "to_int", "contains",
+    "len", "args", "to_string", "to_int", "contains",
     "is_number", "delay_ms",
 )
 
 TYPE_NAMES = (
     "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
     "float", "f32", "f64", "bool", "string", "char", "uintptr", "void", "any",
-    "Array", "Buffer", "Option", "Result", "Channel", "Task",
+    "Array", "Option", "Result", "Channel", "Task",
 )
 
 KEYWORD_TOKEN_TYPES = {
@@ -65,9 +65,6 @@ KEYWORD_TOKEN_TYPES = {
     "type": TokenType.TYPE_ALIAS,
     "enum": TokenType.ENUM,
     "unsafe": TokenType.UNSAFE,
-    "volatile": TokenType.VOLATILE,
-    "interrupt": TokenType.INTERRUPT,
-    "critical": TokenType.CRITICAL,
     "extern": TokenType.EXTERN,
     "async": TokenType.ASYNC,
     "await": TokenType.AWAIT,

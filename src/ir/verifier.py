@@ -837,7 +837,7 @@ class IRVerifier:
             self._visit_expr(expr.obj, active)
             self._visit_expr(expr.index, active)
             self._expect_compatible(INT, expr.index.type, expr.index.span, "Index")
-            if expr.obj.type.name not in ("Array", "Buffer", "string", "any"):
+            if expr.obj.type.name not in ("Array", "string", "any"):
                 self._issue("HIR0006", f"Type '{expr.obj.type}' cannot be indexed", expr.obj.span)
         elif isinstance(expr, IRArray):
             element_type = expr.type.arguments[0] if expr.type.name == "Array" and expr.type.arguments else ANY

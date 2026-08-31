@@ -56,13 +56,11 @@ print(calculate_distance(pt, pt))
     for canonical_label in (
         "append_string",
         "fnv1a_64_hex",
-        "nucleo-f401re",
         "cpp",
-        "Buffer",
         "args",
     ):
         assert canonical_label in labels, f"Missing canonical completion: {canonical_label}"
-    assert len(comp_items) >= 200, "Canonical completion catalog unexpectedly shrank"
+    assert len(comp_items) >= 140, "Canonical completion catalog unexpectedly shrank"
     assert set(STABLE_KEYWORDS).issubset(labels)
     assert set(EXPERIMENTAL_KEYWORDS).issubset(labels)
     assert set(RESERVED_KEYWORDS).isdisjoint(labels)

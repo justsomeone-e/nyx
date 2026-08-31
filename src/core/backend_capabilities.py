@@ -69,12 +69,6 @@ V4_NUMERIC_FEATURES = frozenset({
     "canonical_scalar_text", "float64_ieee", "int64_wrap",
 })
 HIR_V1_FEATURES = frozenset({"typed_hir_v1"})
-EMBEDDED_FEATURES = frozenset({
-    "control_flow", "freestanding", "functions", "hardware_io", "interrupts",
-    "static_memory", "structs", "unsafe_memory",
-})
-
-
 BACKENDS: Dict[str, BackendSpec] = {
     "cpp": BackendSpec(
         "cpp", "C++20 Native", "native", "executable/library", "stable",
@@ -109,26 +103,6 @@ BACKENDS: Dict[str, BackendSpec] = {
             "control_flow", "functions", "numeric", "string_abi", "unicode", "wasm32",
         }),
     ),
-    "stm32f4": BackendSpec(
-        "stm32f4", "STM32F4 Cortex-M4", "embedded", "elf/hex/bin", "experimental",
-        ("stm32", "f4"), EMBEDDED_FEATURES,
-    ),
-    "stm32f1": BackendSpec(
-        "stm32f1", "STM32F1 Cortex-M3", "embedded", "elf/hex/bin", "experimental",
-        ("f1", "bluepill"), EMBEDDED_FEATURES,
-    ),
-    "rp2040": BackendSpec(
-        "rp2040", "RP2040 Cortex-M0+", "embedded", "elf/hex/bin", "experimental",
-        ("pico",), EMBEDDED_FEATURES,
-    ),
-    "atmega328p": BackendSpec(
-        "atmega328p", "ATmega328P AVR", "embedded", "elf/hex/bin", "experimental",
-        ("arduino", "avr", "uno"), EMBEDDED_FEATURES,
-    ),
-    "embedded": BackendSpec(
-        "embedded", "Generic Freestanding", "embedded", "elf/hex/bin", "experimental",
-        ("baremetal",), EMBEDDED_FEATURES,
-    ),
 }
 
 
@@ -141,12 +115,7 @@ for _name, _backend in BACKENDS.items():
 CPP_HOSTS = frozenset({"cpp", "asm"})
 PARITY_HOSTS = frozenset({"cpp", "asm", "js", "python"})
 DYNAMIC_HOSTS = frozenset({"cpp", "asm", "js", "python", "rust"})
-EMBEDDED_TARGETS = frozenset({"stm32f4", "stm32f1", "rp2040", "atmega328p", "embedded"})
-MEMORY_TARGETS = CPP_HOSTS | EMBEDDED_TARGETS
-PHYSICAL_HARDWARE_TARGETS = EMBEDDED_TARGETS
-BOARD_SCOPED_STDLIB_MODULES = frozenset({
-    "board", "gpio", "serial", "spi", "i2c", "mmio", "adc", "pwm", "timer", "interrupt",
-})
+MEMORY_TARGETS = CPP_HOSTS
 
 
 STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
@@ -166,16 +135,6 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     "process": StdlibContract("process", CPP_HOSTS),
     "thread": StdlibContract("thread", CPP_HOSTS),
     "memory": StdlibContract("memory", MEMORY_TARGETS),
-    "board": StdlibContract("board", PHYSICAL_HARDWARE_TARGETS),
-    "gpio": StdlibContract("gpio", PHYSICAL_HARDWARE_TARGETS),
-    "i2c": StdlibContract("i2c", PHYSICAL_HARDWARE_TARGETS),
-    "mmio": StdlibContract("mmio", PHYSICAL_HARDWARE_TARGETS),
-    "serial": StdlibContract("serial", PHYSICAL_HARDWARE_TARGETS),
-    "spi": StdlibContract("spi", PHYSICAL_HARDWARE_TARGETS),
-    "adc": StdlibContract("adc", PHYSICAL_HARDWARE_TARGETS),
-    "pwm": StdlibContract("pwm", PHYSICAL_HARDWARE_TARGETS),
-    "timer": StdlibContract("timer", PHYSICAL_HARDWARE_TARGETS),
-    "interrupt": StdlibContract("interrupt", PHYSICAL_HARDWARE_TARGETS),
 }
 
 

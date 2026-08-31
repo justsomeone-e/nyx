@@ -29,7 +29,7 @@ Initializes `nyx.toml` and `nyx.lock`. Existing manifests require explicit `--fo
 ### 3. `nyx check [file.nyx]`
 Performs fast static semantic and type-checking across project source files without invoking backend compilers.
 
-### 4. `nyx build [file.nyx] [--target <backend>] [--board <profile>] [--release]`
+### 4. `nyx build [file.nyx] [--target <backend>] [--release]`
 Transpiles and builds the program into the `build/<target>/` directory.
 Supported targets:
 * `--target cpp` (Default: C++20 / Native Executable)
@@ -37,9 +37,7 @@ Supported targets:
 * `--target python` (Python 3)
 * `--target rust` (Rust 2021 Source)
 
-For a freestanding board, `--board` selects MCU flags, linker memory, BSP,
-connector aliases, interrupt vectors, and programmer metadata. Native console
-executables finish when `main` returns; use `nyx run file.nyx` to keep their
+Native console executables finish when `main` returns; use `nyx run file.nyx` to keep their
 output visible in the current terminal instead of double-clicking the EXE.
 
 ### 5. `nyx run [file.nyx] [--target <backend>]`
@@ -91,27 +89,3 @@ Displays project metadata, dependencies, native settings, and build configuratio
 ### 19. `nyx targets [--json]`
 Displays the human-readable or machine-readable backend and standard-library
 capability contract.
-
-### 20. `nyx boards [--json]`
-Lists recognized Nucleo/embedded profiles and distinguishes built-in standalone
-BSPs from profiles that still require STM32Cube/CMSIS configuration.
-
-`nyx boards --init [board.toml]` writes a non-overwriting custom-board template.
-
-`nyx boards --install <F0|F1|F3|L0|L1|L4|G0|G4|H7|U5|WB|WL>` performs a sparse
-clone from the official STMicroelectronics repository. It installs CMSIS Core,
-the family device package, and Nucleo project/linker assets under
-`.toolchains/stm32cube`; `--install-root` selects a different location and
-`--dry-run` prints the exact Git commands without writing files.
-
-`nyx boards --probe [--cube-root <path>]` reports which package-backed profiles
-are build-ready. Pass the same `--cube-root` to `check`, `build`, or `flash`.
-
-Custom profile schema v2 accepts `include_dirs`, `source_files`, `defines`,
-`ldflags`, and `startup_owns_vectors`, so vendor C, C++, and assembly sources are
-compiled with their correct language drivers before the final firmware link.
-
-### 21. `nyx flash <firmware.elf|.hex|.bin> --board <profile>`
-Programs an explicitly selected firmware image through STM32CubeProgrammer or
-OpenOCD. `--dry-run` prints the exact command without touching hardware;
-`--probe`, `--probe-serial`, and connect-under-reset options select the probe.

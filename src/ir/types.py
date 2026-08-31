@@ -117,16 +117,6 @@ def from_inferred_name(name: object, default: IRType = ANY) -> IRType:
                 optional,
                 pointer,
             )
-    if text.startswith("Buffer<") and text.endswith(">"):
-        body = text[7:-1]
-        if "," in body:
-            element, capacity = body.rsplit(",", 1)
-            return IRType(
-                "Buffer",
-                (from_inferred_name(element), IRType(capacity.strip())),
-                optional,
-                pointer,
-            )
     return IRType(text, optional=optional, pointer=pointer)
 
 
@@ -143,11 +133,6 @@ def compatible(expected: IRType, actual: IRType) -> bool:
         return True
     if expected.name == "float" and actual.name == "int":
         return True
-    if (
-        expected.name == "Buffer" and len(expected.arguments) == 2
-        and actual.name == "Array" and len(actual.arguments) == 1
-    ):
-        return compatible(expected.arguments[0], actual.arguments[0])
     if expected.pointer and actual.pointer:
         return True
     if expected.name == actual.name and expected.arguments and actual.arguments:

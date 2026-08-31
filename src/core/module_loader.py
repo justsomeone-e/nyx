@@ -14,9 +14,7 @@ from src.core.ast_nodes import (
     VarDeclNode, NativeIncludeNode, NativeLinkNode, NativeRawNode
 )
 from src.core.diagnostics import DiagnosticEmitter
-from src.core.board_model import BoardProfile
 from src.core.backend_capabilities import (
-    BOARD_SCOPED_STDLIB_MODULES,
     get_stdlib_contract,
     normalize_backend_name,
     resolve_backend,
@@ -28,13 +26,11 @@ class ModuleLoader:
         self,
         base_dir: Optional[str] = None,
         target: Optional[str] = None,
-        board: Optional[BoardProfile] = None,
     ):
         self.base_dir = base_dir or os.getcwd()
         self.stdlib_dir = os.path.join(_root_dir, "src", "stdlib")
         self.requested_target = target
         self.target_name = ""
-        self.board = board
         self.loaded_modules: Dict[str, ProgramNode] = {}
         self.import_stack: List[str] = []
         self.symbol_origins: Dict[str, str] = {}
@@ -142,24 +138,6 @@ class ModuleLoader:
                     help_msg=f"Choose a supported target or replace '{imp.path}' with a portable module."
                 )
                 return
-            if (
-                self.board is not None
-                and stdlib_module in BOARD_SCOPED_STDLIB_MODULES
-                and stdlib_module not in self.board.peripherals
-            ):
-                available = ", ".join(sorted(self.board.peripherals)) or "none"
-                DiagnosticEmitter.emit_error(
-                    parent_file, parent_source, imp.line, imp.col,
-                    "E1403", f"Standard Library Module Unsupported on Board: '{imp.path}'",
-                    length=len(imp.path) + 2,
-                    note=f"'{self.board.name}' exposes: {available}.",
-                    help_msg=(
-                        f"Remove '{imp.path}', select a board that implements it, or provide "
-                        "a custom board.toml with a matching BSP capability."
-                    )
-                )
-                return
-
         # Circular import check
         if target_path in self.import_stack:
             cycle = " -> ".join(self.import_stack + [target_path])

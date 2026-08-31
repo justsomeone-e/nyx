@@ -503,7 +503,6 @@ impl Lexer {
                 elif ident == "let" { tt = "LET" }
                 elif ident == "set" { tt = "SET" }
                 elif ident == "const" { tt = "CONST" }
-                elif ident == "volatile" { tt = "VOLATILE" }
                 elif ident == "fn" { tt = "FN" }
                 elif ident == "struct" { tt = "STRUCT" }
                 elif ident == "trait" { tt = "TRAIT" }
@@ -511,8 +510,6 @@ impl Lexer {
                 elif ident == "type" { tt = "TYPE_ALIAS" }
                 elif ident == "enum" { tt = "ENUM" }
                 elif ident == "unsafe" { tt = "UNSAFE" }
-                elif ident == "interrupt" { tt = "INTERRUPT" }
-                elif ident == "critical" { tt = "CRITICAL" }
                 elif ident == "extern" { tt = "EXTERN" }
                 elif ident == "async" { tt = "ASYNC" }
                 elif ident == "await" { tt = "AWAIT" }

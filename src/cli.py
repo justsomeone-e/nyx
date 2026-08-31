@@ -16,23 +16,12 @@ if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)
 
 from src.core import Lexer, Parser, TypeChecker
-from src.core.target_model import resolve_target, TARGET_REGISTRY
-from src.core.board_model import (
-    BOARD_REGISTRY,
-    BoardProfileError,
-    board_manifest,
-    resolve_board,
-    write_board_template,
-)
 from src.core.backend_capabilities import (
     BACKENDS,
     capability_manifest,
     normalize_backend_name,
     resolve_backend,
 )
-from src.core.embedded_builder import EmbeddedBuilder
-from src.core.firmware_flasher import FirmwareFlashError, FirmwareFlasher
-from src.core.stm32cube_provider import cube_board_report, install_cube_package
 from src.codegen import UniversalCodeGen
 from src.codegen.cpp_toolchain import CppToolchain
 from src.toolchain import (
@@ -53,18 +42,13 @@ def print_help():
 Project & Development Commands:
   nyx new <project_name>             Create a new nyx project in a directory
   nyx init [name]                    Initialize a nyx.toml project in current directory
-  nyx check [file.nyx] [--board b]   Fast type-check and semantic validation
+  nyx check [file.nyx] [--target t]  Fast type-check and semantic validation
   nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
   nyx bundle [file.nyx] [-o dir]     Bundle Polyglot Web/WASM package (.wasm, .mjs, .d.ts, .tsx)
   nyx self-host verify               Verify the native stage-1 -> stage-2 bootstrap
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
   nyx targets [--json]               Inspect backend and stdlib capability contracts
-  nyx boards [--json]                List Nucleo/custom-board support profiles
-  nyx boards --init [board.toml]      Create a custom circuit/board profile template
-  nyx boards --probe [--cube-root p]  Inspect installed STM32Cube/CMSIS packages
-  nyx boards --install F1             Install official CMSIS/Nucleo assets sparsely
-  nyx flash <firmware> --board NAME  Program an STM32 through on-board ST-LINK
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
   nyx test [file.nyx | all]          Execute in-file unit tests or test framework
@@ -99,7 +83,6 @@ def parse_nyx_toml():
         "name": "nyx_app",
         "version": "0.1.0",
         "target": "cpp",
-        "board": "",
         "entry": "src/main.nyx",
         "output_type": "exe"
     }
@@ -111,7 +94,6 @@ def parse_nyx_toml():
             config["name"] = mf.package.get("name", config["name"])
             config["version"] = mf.package.get("version", config["version"])
             config["target"] = mf.package.get("target") or mf.build.get("target") or config["target"]
-            config["board"] = mf.build.get("board", config["board"])
             config["entry"] = mf.package.get("entry") or mf.build.get("entry") or config["entry"]
             config["output_type"] = mf.build.get("output_type", config["output_type"])
         except Exception:
@@ -124,8 +106,6 @@ def parse_nyx_toml():
                         config["version"] = line.split("=")[1].strip().strip('"').strip("'")
                     elif line.startswith("default =") or line.startswith("target ="):
                         config["target"] = line.split("=")[1].strip().strip('"').strip("'")
-                    elif line.startswith("board ="):
-                        config["board"] = line.split("=")[1].strip().strip('"').strip("'")
                     elif line.startswith("entry ="):
                         config["entry"] = line.split("=")[1].strip().strip('"').strip("'")
                     elif line.startswith("output_type ="):
@@ -199,27 +179,15 @@ def get_option_value(*names, default=None):
             return sys.argv[index + 1]
     return default
 
-def cmd_check(entry_file, target=None, board_name="", cube_root="") -> int:
+def cmd_check(entry_file, target=None) -> int:
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File not found '{entry_file}'\033[0m")
         return 1
-    board = None
-    if board_name:
-        try:
-            board = resolve_board(board_name, cube_root=cube_root or None)
-        except BoardProfileError as exc:
-            print(f"\033[91m[!] Invalid board profile:\033[0m {exc}")
-            return 1
-        if board is None:
-            print(f"\033[91m[!] Unknown board '{board_name}'. Run 'nyx boards'.\033[0m")
-            return 1
-        target = board.compiler_target
     print(f"\033[96m[*] Checking semantics & types for:\033[0m {entry_file}")
     from src.api import NyxCompiler
-    result = NyxCompiler(
-        os.path.dirname(os.path.abspath(entry_file)),
-        board=board,
-    ).check_file(entry_file, target=target)
+    result = NyxCompiler(os.path.dirname(os.path.abspath(entry_file))).check_file(
+        entry_file, target=target
+    )
     if not result.success:
         for diagnostic in result.diagnostics:
             print(diagnostic.rendered)
@@ -227,22 +195,10 @@ def cmd_check(entry_file, target=None, board_name="", cube_root="") -> int:
     print("\033[92m[OK] Check Passed: 0 syntax or semantic errors found.\033[0m")
     return 0
 
-def cmd_build(entry_file, target, is_release=False, output_type="exe", board_name="", cube_root="") -> int:
+def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: Source file not found '{entry_file}'.\033[0m")
         return 1
-
-    board = None
-    if board_name:
-        try:
-            board = resolve_board(board_name, cube_root=cube_root or None)
-        except BoardProfileError as exc:
-            print(f"\033[91m[!] Invalid board profile:\033[0m {exc}")
-            return 1
-        if board is None:
-            print(f"\033[91m[!] Unknown board '{board_name}'. Run 'nyx boards'.\033[0m")
-            return 1
-        target = board.compiler_target
 
     backend = resolve_backend(target)
     if backend is None:
@@ -250,7 +206,7 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
         return 1
     target = backend.name
 
-    build_dir = os.path.join("build", board.name if board else target)
+    build_dir = os.path.join("build", target)
     os.makedirs(build_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(entry_file))[0]
     
@@ -262,7 +218,6 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
     loader = ModuleLoader(
         base_dir=os.path.dirname(os.path.abspath(entry_file)),
         target=target,
-        board=board,
     )
     ast = loader.load_program(entry_file, code)
     if target:
@@ -271,33 +226,6 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe", board_nam
     
     codegen = UniversalCodeGen(ast)
     
-    target_spec = resolve_target(target)
-    if target_spec and target_spec.is_freestanding:
-        cpp_code = codegen.gen_cpp()
-        target_build_dir = os.path.join("build", board.name if board else target_spec.name)
-        os.makedirs(target_build_dir, exist_ok=True)
-        out_cpp = os.path.join(target_build_dir, f"{base_name}.cpp")
-        with open(out_cpp, "w", encoding="utf-8") as f:
-            f.write(cpp_code)
-        print(f"\033[96m[*] Transpiled Freestanding C++20:\033[0m {out_cpp}")
-        
-        builder = EmbeddedBuilder(target_spec, os.getcwd(), board=board)
-        res = builder.build_firmware(out_cpp, base_name)
-        if res.get("success"):
-            architecture = f"{board.display_name} / {board.mcu}" if board else target_spec.description
-            print(f"\033[92m[OK] Target Architecture:\033[0m {architecture}")
-            if res.get("elf"): print(f"\033[92m[OK] Linked Embedded ELF Binary:\033[0m {res['elf']}")
-            if res.get("hex"): print(f"\033[92m[OK] Generated Intel HEX Firmware:\033[0m {res['hex']}")
-            if res.get("bin"): print(f"\033[92m[OK] Generated Raw BIN Firmware:\033[0m {res['bin']}")
-            if res.get("size"):
-                print(f"\n--- Flash / RAM Memory Footprint ---\n{res['size']}\n")
-            for warning in res.get("warnings", []):
-                print(f"\033[93m[!] Artifact conversion warning:\033[0m {warning}")
-            return 0
-        else:
-            print(f"\033[93m[!] Embedded Cross-Build Diagnostic:\033[0m\n{res.get('error')}\n")
-            return 1
-
     if target == "cpp":
         cpp_code = codegen.gen_cpp()
         out_cpp = os.path.join(build_dir, f"{base_name}.cpp")
@@ -416,9 +344,6 @@ def cmd_run(entry_file, target) -> int:
     backend = resolve_backend(target)
     if backend is None:
         print(f"\033[91m[!] Unknown target '{target}'. Run 'nyx targets'.\033[0m")
-        return 1
-    if backend.family == "embedded":
-        print(f"\033[91m[!] Target '{backend.name}' is freestanding and cannot run on the host. Use 'nyx build'.\033[0m")
         return 1
     target = backend.name
 
@@ -962,132 +887,6 @@ def cmd_targets(as_json: bool = False) -> int:
     return 0
 
 
-def cmd_boards(
-    as_json: bool = False,
-    init_path: str = "",
-    cube_root: str = "",
-    probe: bool = False,
-    install_family: str = "",
-    install_root: str = "",
-    dry_run: bool = False,
-) -> int:
-    if init_path:
-        try:
-            write_board_template(init_path)
-        except (BoardProfileError, OSError) as exc:
-            print(f"\033[91m[!] Could not create board profile:\033[0m {exc}")
-            return 1
-        print(f"\033[92m[OK] Custom board template created:\033[0m {os.path.abspath(init_path)}")
-        return 0
-    if install_family:
-        destination_root = install_root or os.path.join(os.getcwd(), ".toolchains", "stm32cube")
-        try:
-            result = install_cube_package(
-                install_family,
-                destination_root,
-                dry_run=dry_run,
-            )
-        except BoardProfileError as exc:
-            print(f"\033[91m[!] STM32Cube installation failed:\033[0m {exc}")
-            return 1
-        if dry_run:
-            print("================== STM32CUBE INSTALL DRY RUN =====================")
-            for command in result["commands"]:
-                print(f"  {subprocess.list2cmdline(command)}")
-            print("===================================================================")
-            return 0
-        state = "already installed" if result["already_present"] else "installed"
-        print(f"\033[92m[OK] STM32Cube{result['family']} {state}:\033[0m {result['destination']}")
-        print(f"     Build with --cube-root {os.path.abspath(destination_root)}")
-        return 0
-    if probe:
-        reports = [
-            cube_board_report(board, cube_root or None)
-            for board in BOARD_REGISTRY.values()
-            if board.support == "cmsis-pack"
-        ]
-        if as_json:
-            print(json.dumps({"schema_version": 1, "providers": reports}, ensure_ascii=False, sort_keys=True))
-            return 0
-        print("=================== NYX STM32CUBE PROVIDER PROBE ==================")
-        for report in reports:
-            state = "READY" if report["build_ready"] else "MISSING"
-            detail = report.get("package_root") or report.get("error", "")
-            print(f"  {report['board']:<20} [{state}] {detail}")
-        print("===================================================================")
-        return 0
-    if as_json:
-        print(json.dumps(board_manifest(), ensure_ascii=False, sort_keys=True))
-        return 0
-    print("======================= NYX EMBEDDED BOARDS =======================")
-    print("  support=standalone : built-in BSP can build now")
-    print("  support=cmsis-pack : board is known; configure STM32Cube/CMSIS or board.toml")
-    for name in sorted(BOARD_REGISTRY):
-        board = BOARD_REGISTRY[name]
-        peripherals = ",".join(board.peripherals) or "none"
-        print(f"\n  {board.name:<20} {board.mcu:<18} [{board.support}]")
-        print(f"      cpu={board.cpu} peripherals={peripherals}")
-    print("\nUse 'nyx boards --init board.toml' for a custom circuit/BSP profile.")
-    print("===================================================================")
-    return 0
-
-
-def cmd_flash(firmware, board_name, *, probe="auto", serial_number="", dry_run=False, cube_root="") -> int:
-    if not board_name:
-        print("\033[91m[!] --board is required for flashing. Run 'nyx boards'.\033[0m")
-        return 1
-    try:
-        board = resolve_board(board_name, cube_root=cube_root or None)
-    except BoardProfileError as exc:
-        print(f"\033[91m[!] Invalid board profile:\033[0m {exc}")
-        return 1
-    if board is None:
-        print(f"\033[91m[!] Unknown board '{board_name}'. Run 'nyx boards'.\033[0m")
-        return 1
-    if not firmware:
-        print("\033[91m[!] Firmware path is required (.elf, .hex, .bin, or .nyx).\033[0m")
-        return 1
-
-    if firmware.endswith(".nyx"):
-        status = cmd_build(
-            firmware,
-            board.compiler_target,
-            board_name=board_name,
-            cube_root=cube_root,
-        )
-        if status != 0:
-            return status
-        base_name = os.path.splitext(os.path.basename(firmware))[0]
-        firmware = os.path.join("build", board.name, f"{base_name}.elf")
-
-    flasher = FirmwareFlasher(board)
-    try:
-        options = {
-            "probe": probe,
-            "serial_number": serial_number,
-            "connect_under_reset": "--connect-under-reset" in sys.argv,
-        }
-        if dry_run:
-            selected = "cube" if probe == "auto" else probe
-            placeholder = "STM32_Programmer_CLI" if selected in ("cube", "stlink", "stm32cubeprogrammer") else "openocd"
-            command = flasher.build_command(firmware, tool_override=placeholder, **options)
-            print("\033[96m[*] Flash command (dry run; hardware untouched):\033[0m")
-            print(subprocess.list2cmdline(command))
-            return 0
-        result = flasher.flash(firmware, **options)
-    except FirmwareFlashError as exc:
-        print(f"\033[91m[!] Flash failed before programming:\033[0m {exc}")
-        return 1
-
-    if result["stdout"]:
-        print(str(result["stdout"]).rstrip())
-    if result["stderr"]:
-        print(str(result["stderr"]).rstrip())
-    if result["success"]:
-        print(f"\033[92m[OK] Programmed and verified {board.display_name}.\033[0m")
-        return 0
-    print(f"\033[91m[!] Programmer exited with code {result['returncode']}.\033[0m")
-    return int(result["returncode"] or 1)
 def cmd_repl():
     print_banner()
     print("\033[92m[*] Nyx Interactive Polyglot REPL (v3.0.0)\033[0m")
@@ -1279,23 +1078,6 @@ def main():
         cmd_doctor()
     elif cmd == "targets":
         sys.exit(cmd_targets("--json" in sys.argv))
-    elif cmd == "boards":
-        init_path = ""
-        if "--init" in sys.argv:
-            init_index = sys.argv.index("--init")
-            init_path = sys.argv[init_index + 1] if init_index + 1 < len(sys.argv) else "board.toml"
-        cube_root = get_option_value("--cube-root", default="")
-        install_family = get_option_value("--install", default="")
-        install_root = get_option_value("--install-root", default="")
-        sys.exit(cmd_boards(
-            "--json" in sys.argv,
-            init_path,
-            cube_root,
-            "--probe" in sys.argv,
-            install_family,
-            install_root,
-            "--dry-run" in sys.argv,
-        ))
     elif cmd == "repl":
         cmd_repl()
     elif cmd == "tutorial":
@@ -1317,46 +1099,18 @@ def main():
     elif cmd == "check":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         target = get_option_value("--target", "-t", default=config.get("target"))
-        board_name = get_option_value("--board", default=config.get("board", ""))
-        cube_root = get_option_value("--cube-root", default="")
-        sys.exit(cmd_check(entry, target=target, board_name=board_name, cube_root=cube_root))
+        sys.exit(cmd_check(entry, target=target))
     elif cmd == "build":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
         target = get_target_from_args(config.get("target", "cpp"), entry_file=entry)
         is_release = "--release" in sys.argv
         output_type = config.get("output_type", "exe")
-        board_name = get_option_value("--board", default=config.get("board", ""))
-        cube_root = get_option_value("--cube-root", default="")
         sys.exit(cmd_build(
             entry,
             target,
             is_release,
             output_type=output_type,
-            board_name=board_name,
-            cube_root=cube_root,
         ))
-    elif cmd == "flash":
-        firmware = next(
-            (
-                argument for argument in sys.argv[2:]
-                if argument.lower().endswith((".elf", ".hex", ".bin", ".nyx"))
-            ),
-            None,
-        )
-        board_name = get_option_value("--board", default=config.get("board", ""))
-        probe = get_option_value("--probe", default="auto")
-        serial_number = get_option_value("--probe-serial", "--serial", default="")
-        cube_root = get_option_value("--cube-root", default="")
-        sys.exit(
-            cmd_flash(
-                firmware,
-                board_name,
-                probe=probe,
-                serial_number=serial_number,
-                dry_run="--dry-run" in sys.argv,
-                cube_root=cube_root,
-            )
-        )
     elif cmd == "bundle":
         raw_args = [a for a in sys.argv[2:] if not a.startswith("--")]
         entry = get_entry_file(raw_args[0] if raw_args else config.get("entry", "src/main.nyx"))

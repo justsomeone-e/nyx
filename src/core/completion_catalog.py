@@ -18,7 +18,6 @@ from .ast_nodes import (
     VarDeclNode,
 )
 from .backend_capabilities import BACKENDS, STDLIB_CONTRACTS
-from .board_model import BOARD_REGISTRY
 from .language_surface import (
     BUILTIN_NAMES,
     EXPERIMENTAL_KEYWORDS,
@@ -41,7 +40,6 @@ _BUILTIN_DETAILS = {
     "Err": ("fn Err<E>(error: E) -> Result<any, E>", "Constructs an error Result value."),
     "len": ("fn len<T>(value: T) -> int", "Returns a collection, buffer, or string length."),
     "args": ("fn args() -> Array<string>", "Returns process command-line arguments on hosted targets."),
-    "buffer_ptr": ("fn buffer_ptr<T, N>(buffer: Buffer<T, N>) -> uintptr", "Returns fixed Buffer storage for typed embedded I/O."),
     "to_string": ("fn to_string<T>(value: T) -> string", "Formats a value using canonical Nyx scalar text."),
     "to_int": ("fn to_int(value: string) -> int", "Parses a signed Nyx integer."),
     "contains": ("fn contains(value: string, part: string) -> bool", "Tests whether a string contains a substring."),
@@ -136,14 +134,6 @@ def completion_catalog() -> Dict[str, list]:
         }
         for name, spec in sorted(BACKENDS.items())
     ]
-    boards = [
-        {
-            "name": name,
-            "detail": profile.display_name,
-            "documentation": f"{profile.mcu} · {profile.support}",
-        }
-        for name, profile in sorted(BOARD_REGISTRY.items())
-    ]
     return {
         "stableKeywords": list(STABLE_KEYWORDS),
         "experimentalKeywords": list(EXPERIMENTAL_KEYWORDS),
@@ -154,5 +144,5 @@ def completion_catalog() -> Dict[str, list]:
         "stdlibModules": modules,
         "stdlibSymbols": symbols,
         "targets": targets,
-        "boards": boards,
+        "boards": [],
     }

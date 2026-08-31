@@ -301,10 +301,8 @@ async function main() {
     for (const canonicalLabel of [
         'append_string',
         'fnv1a_64_hex',
-        'nucleo-f401re',
         'cpp',
         'args',
-        'Buffer',
         'local_helper',
         'local_value'
     ]) {

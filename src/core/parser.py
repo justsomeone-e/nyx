@@ -98,23 +98,10 @@ class Parser:
         name = self.expect(TokenType.IDENT, "E1002", "Expected a valid type name like int, string, float, bool").value
         generic_args: List[TypeNode] = []
         
-        # Generic arguments: Array<int>, Map<string, User>, Buffer<u8, 64>.
-        # Integer arguments are compile-time capacities, not runtime values.
+        # Generic arguments: Array<int>, Map<string, User>.
         if self.match(TokenType.LT):
             while self.current().type not in (TokenType.GT, TokenType.EOF):
-                if self.current().type == TokenType.NUMBER:
-                    capacity = self.advance()
-                    if not isinstance(capacity.value, int) or isinstance(capacity.value, bool):
-                        DiagnosticEmitter.emit_error(
-                            self.filepath, self.source, capacity.line, capacity.col,
-                            "E1025", "Const generic arguments must be integer literals",
-                            expected="positive integer capacity",
-                            found=str(capacity.value),
-                            help_msg="Use a declaration such as Buffer<u8, 64>.",
-                        )
-                    generic_args.append(TypeNode(str(capacity.value), line=capacity.line, col=capacity.col))
-                else:
-                    generic_args.append(self.parse_type())
+                generic_args.append(self.parse_type())
                 self.match(TokenType.COMMA)
             self.expect(TokenType.GT, "E1003", "Close generic arguments with '>'")
 
@@ -201,20 +188,6 @@ class Parser:
             self.expect(TokenType.ASSIGN, "E1004", "Expected '=' after assignment target")
             expr = self.parse_expression()
             return AssignNode(target, expr, tok.line, tok.col)
-
-        # Volatile storage for memory shared with hardware/interrupt handlers.
-        if tok.type == TokenType.VOLATILE:
-            self.advance()
-            self.expect(TokenType.VAR, "E1020", "Use 'volatile var name: u32 = value'")
-            name = self.expect(TokenType.IDENT).value
-            type_annot = None
-            if self.match(TokenType.COLON):
-                type_annot = self.parse_type()
-            self.expect(TokenType.ASSIGN, "E1004", f"Initialize volatile variable '{name}' with '='")
-            expr = self.parse_expression()
-            return VarDeclNode(
-                name, type_annot, expr, False, tok.line, tok.col, is_volatile=True
-            )
 
         # Variable declaration.  ``let`` and ``const`` are immutable; ``var``
         # is the mutable binding form.
@@ -330,13 +303,6 @@ class Parser:
             body = self.parse_block()
             return UnsafeBlockNode(body, tok.line, tok.col)
 
-        # Interrupt-masked scope. The backend restores the previous PRIMASK
-        # state on every exit path (including return/guard).
-        if tok.type == TokenType.CRITICAL:
-            self.advance()
-            body = self.parse_block()
-            return CriticalBlockNode(body, tok.line, tok.col)
-
         # Concurrency: spawn { ... }
         if tok.type == TokenType.SPAWN:
             self.advance()
@@ -365,15 +331,6 @@ class Parser:
                 msg = self.expect(TokenType.STRING).value
             self.expect(TokenType.RPAREN)
             return AssertNode(cond, msg, tok.line, tok.col)
-
-        # Hardware interrupt handler: interrupt fn TIM2_IRQHandler() { ... }
-        if tok.type == TokenType.INTERRUPT:
-            self.advance()
-            function = self.parse_function()
-            function.is_interrupt = True
-            function.line = tok.line
-            function.col = tok.col
-            return function
 
         # Function Definition (Sync or Async)
         if tok.type in (TokenType.FN, TokenType.ASYNC):

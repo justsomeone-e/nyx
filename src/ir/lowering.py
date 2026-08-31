@@ -316,7 +316,7 @@ class HIRLowerer:
             end = self._lower_expr(node.end_expr) if node.end_expr is not None else None
             collection = self._lower_expr(node.collection_expr) if node.collection_expr is not None else None
             item_type = INT
-            if collection is not None and collection.type.name in ("Array", "Buffer") and collection.type.arguments:
+            if collection is not None and collection.type.name == "Array" and collection.type.arguments:
                 item_type = collection.type.arguments[0]
             self.scopes.push()
             try:
@@ -337,11 +337,6 @@ class HIRLowerer:
         if isinstance(node, ast.GuardNode):
             return IRGuard(span, self._lower_expr(node.condition), self._lower_block(node.else_body))
         if isinstance(node, ast.UnsafeBlockNode):
-            return IRUnsafeBlock(span, self._lower_block(node.body))
-        if isinstance(node, ast.CriticalBlockNode):
-            # Embedded targets still use the legacy freestanding emitter.  HIR
-            # retains the block boundary until a dedicated embedded HIR node is
-            # introduced; hosted targets are rejected by the type checker.
             return IRUnsafeBlock(span, self._lower_block(node.body))
         if isinstance(node, ast.SpawnNode):
             return IRSpawn(span, self._lower_block(node.body))
@@ -457,7 +452,7 @@ class HIRLowerer:
         if isinstance(node, ast.IndexAccessNode):
             obj = self._lower_expr(node.obj)
             index = self._lower_expr(node.index_expr)
-            value_type = obj.type.arguments[0] if obj.type.name in ("Array", "Buffer") and obj.type.arguments else ANY
+            value_type = obj.type.arguments[0] if obj.type.name == "Array" and obj.type.arguments else ANY
             return IRIndexAccess(span, value_type, obj, index)
         if isinstance(node, ast.ArrayNode):
             elements = tuple(self._lower_expr(element) for element in node.elements)

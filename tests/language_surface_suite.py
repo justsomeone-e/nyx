@@ -147,7 +147,7 @@ fn main() {
             output = _run_artifact(target, result.artifact.content, directory)
             assert output.replace("\r\n", "\n").strip() == "caught: 42", (target, output)
 
-        for target in ("rust", "react", "wasm", "stm32f4"):
+        for target in ("rust", "react", "wasm"):
             result = compiler.compile_source(
                 exception_source,
                 target=target,
@@ -194,7 +194,7 @@ async fn main() {
                 "async: 84\nmethod: 42\ncaught: async boom"
             ), (target, output)
 
-        for target in ("rust", "react", "wasm", "stm32f4"):
+        for target in ("rust", "react", "wasm"):
             result = compiler.compile_source(
                 async_source,
                 target=target,
