@@ -164,6 +164,18 @@ fn main() { lifecycle(false); lifecycle(true) }
     for marker in ("wrapping_add", "wrapping_sub", "wrapping_mul", "_nyx_i64_div", "_nyx_i64_mod"):
         assert marker in numeric, marker
 
+    global_update = _compile_metadata(
+        compiler,
+        "var total = 0\nfor value in 1..3 { total = total + value }\nprint(total)",
+        "global_update_locking",
+    )
+    value_pos = global_update.find("let _nyx_value_")
+    write_lock_pos = global_update.find("*_nyx_global_total.lock().unwrap() =", value_pos)
+    assert value_pos >= 0 and write_lock_pos > value_pos
+    read_lock_pos = global_update.find("_nyx_global_total.lock().unwrap()", value_pos)
+    value_end_pos = global_update.find(";", value_pos)
+    assert value_pos < read_lock_pos < value_end_pos < write_lock_pos
+
     plugin_compiler = NyxCompiler(ROOT_DIR, plugins=(_HIRRewritePlugin(),))
     rewritten = _compile_metadata(plugin_compiler, "fn main() { print(41) }", "hir_plugin")
     assert "42_i64" in rewritten and "41_i64" not in rewritten

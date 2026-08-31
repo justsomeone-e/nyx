@@ -744,16 +744,22 @@ class HIRRustEmitter:
         value = self._expr_as(node.expr, target_type)
         if isinstance(node.target, IRReference) and node.target.symbol in self.globals:
             name = self._symbol(node.target.symbol, node.target.name)
-            return [f"{prefix}*{name}.lock().unwrap() = {value};"]
+            value_name = self._temporary("value")
+            return [
+                f"{prefix}let {value_name}: {self._rust_type(target_type)} = {value};",
+                f"{prefix}*{name}.lock().unwrap() = {value_name};",
+            ]
         root = self._root_reference(node.target)
         if root is not None and root.symbol in self.globals:
             guard = self._temporary("global")
+            value_name = self._temporary("value")
             global_name = self._symbol(root.symbol, root.name)
             target = self._lvalue(node.target, global_guard=(root.symbol, guard))
             return [
+                f"{prefix}let {value_name}: {self._rust_type(target_type)} = {value};",
                 f"{prefix}{{",
                 f"{prefix}    let mut {guard} = {global_name}.lock().unwrap();",
-                f"{prefix}    {target} = {value};",
+                f"{prefix}    {target} = {value_name};",
                 f"{prefix}}}",
             ]
         return [f"{prefix}{self._lvalue(node.target)} = {value};"]
