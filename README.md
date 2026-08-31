@@ -74,6 +74,53 @@ The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native s
 
 ---
 
+<a id="release-line"></a>
+
+## Release line
+
+The names below describe the intended direction of the project. Their meanings
+are metaphorical, not technical requirements, and the future rows are not
+automatic release promises. `v4.0.0-dev.1` is the final frozen Maya snapshot;
+the later v4 names are retained as the original release plan but are not
+scheduled releases.
+
+| Version | Codename | Meaning | Intended focus | Status |
+| :-- | :-- | :-- | :-- | :-- |
+| `v2.x` | — | — | Initial multi-target compiler, standard library, and CLI foundation | Historical |
+| `v3.x` | — | — | Bundle ABI, Unicode/byte correctness, parity testing, and native interop | Historical |
+| `v4.0.0-dev.1` | **Maya** | Illusion / appearance | Frozen language contract, verified HIR, self-hosting path, backend contracts, LSP, installers, and regression gates | **Frozen** |
+| `v4.0.0-beta.*` | Nocturne | Night piece | Intended v4 integration and stabilization cycle | Not scheduled |
+| `v4.0.0-rc.1` | Samsara | Cycle of existence | Intended release-candidate compatibility and soak testing | Not scheduled |
+| `v4.0.0-rc.2` | Bodhi | Awakening | Intended follow-up RC fixes only | Not scheduled |
+| `v4.0.0-rc.3` | Moksha | Liberation | Intended final RC verification only | Not scheduled |
+| `v4.0.0` | Nirvana | Final release / release from the cycle | Intended v4 stable promotion | Not scheduled |
+| `v5.0.0` | Aether | Upper sky / pure medium | New major language work, portable C/LLVM direction, and an independent reference frontend | Future target |
+| `v6.0.0` | Eclipse | Obscuring and transition | Direct native code generation and broader optimization/tooling contracts | Future target |
+| `v7.0.0` | Apotheosis | Highest development | Additional service and managed-runtime targets with explicit concurrency mappings | Future target |
+| `v8.0.0` | Elysium | Ideal peaceful place | Mature multi-target ecosystem, long-term compatibility, and production release discipline | Future target |
+
+Future versions will begin from a new compatibility decision. They must not
+silently alter the frozen v4 Maya contracts.
+
+### Why the project was stopped
+
+Nyx was stopped as an original development effort because its scope grew faster
+than its validated use case. It became a compiler, several backend toolchains,
+an embedded platform layer, a self-hosting project, an IDE extension, and a
+standard library at the same time. The implementation and test surface became
+large, while there was not yet a real user or product depending on the whole
+stack. Continuing to add targets and syntax would have produced more surface
+area without proving that anyone needed it.
+
+The responsible stopping point was therefore a working, documented Maya
+snapshot with explicit contracts and tests. The project is not presented as
+unfinished work waiting for the original roadmap to resume. The source remains
+available for study, forks, and independent community development under the
+repository license; any future official language changes belong to a new major
+version and a newly validated use case.
+
+---
+
 <a id="features"></a>
 
 ## `02` — Key Features
