@@ -97,7 +97,10 @@ tests/**/*.py
 !tests/hir_cpp_suite.py
 !tests/hir_javascript_suite.py
 !tests/hir_python_suite.py
+!tests/hir_rust_suite.py
 !tests/language_surface_suite.py
+!tests/maya_surface_suite.py
+!tests/toolchain_cli_suite.py
 !tests/numeric_semantics_suite.py
 !tests/release_packaging_suite.py
 !tests/version_contract_suite.py
