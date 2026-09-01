@@ -115,7 +115,7 @@ def _driver_source(source: str) -> str:
         return
     }}
 
-    var lowerer = HIRLowerer("<bootstrap-input>", "cpp", [], [], 0, "module", false, "")
+    var lowerer = HIRLowerer("<bootstrap-input>", "cpp", [], [], [], [], 0, "module", false, "")
     var hir_module = lowerer.lower_program(ast)
     if lowerer.has_error {{
         print("SELF_HOST_HIR_ERROR:", lowerer.error_msg)
@@ -123,7 +123,7 @@ def _driver_source(source: str) -> str:
     }}
 
     var generator = HIRCodeGen(0, "", false, "", 0,
-        HIRType("", [], false, false, [], []), false)
+        HIRType("", [], false, false, [], []), false, "")
     var generated = generator.generate(hir_module)
     if generator.has_error {{
         print("SELF_HOST_CODEGEN_ERROR:", generator.error_msg)
@@ -176,7 +176,7 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
         return
     }
 
-    var lowerer = HIRLowerer(source_path, "cpp", [], [], 0, "module", false, "")
+    var lowerer = HIRLowerer(source_path, "cpp", [], [], [], [], 0, "module", false, "")
     var hir_module = lowerer.lower_program(ast)
     if lowerer.has_error {
         nyxc_fail("HIR", lowerer.error_msg, 1)
@@ -193,7 +193,7 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
         return
     }
     var generator = HIRCodeGen(0, "", false, "", 0,
-        HIRType("", [], false, false, [], []), false)
+        HIRType("", [], false, false, [], []), false, "")
     var generated = generator.generate(hir_module)
     if generator.has_error {
         nyxc_fail("CODEGEN", generator.error_msg, 1)

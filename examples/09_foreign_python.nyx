@@ -1,0 +1,8 @@
+#target python
+
+import python "platform" as platform
+
+fn main() {
+    print("Python platform:", platform.system())
+    print("Python machine:", platform.machine())
+}

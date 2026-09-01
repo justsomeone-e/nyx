@@ -45,6 +45,9 @@ _BUILTIN_DETAILS = {
     "contains": ("fn contains(value: string, part: string) -> bool", "Tests whether a string contains a substring."),
     "is_number": ("fn is_number(value: string) -> bool", "Tests whether text has numeric syntax."),
     "delay_ms": ("fn delay_ms(milliseconds: int) -> void", "Suspends or delays for the requested milliseconds."),
+    "map": ("fn map<T, U>(items: Array<T>, transform: fn(T) -> U) -> Array<U>", "Transforms each array element in order."),
+    "filter": ("fn filter<T>(items: Array<T>, predicate: fn(T) -> bool) -> Array<T>", "Keeps array elements whose predicate is true."),
+    "fold": ("fn fold<T, A>(items: Array<T>, initial: A, reducer: fn(A, T) -> A) -> A", "Reduces an array from left to right."),
 }
 
 

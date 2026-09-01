@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import tempfile
 import shutil
@@ -22,6 +23,10 @@ def run_platform_suite() -> bool:
         print("[!] Native C++ compiler not found. Skipping Platform execution suite.")
         return True
 
+    host_os = "windows" if os.name == "nt" else ("macos" if sys.platform == "darwin" else "linux")
+    machine = platform.machine().lower()
+    host_arch = "x86_64" if machine in {"amd64", "x86_64"} else ("arm64" if machine in {"arm64", "aarch64"} else machine)
+
     tests = [
         (
             "plat_01_platform_info",
@@ -32,7 +37,7 @@ print("OS:", os_name())
 print("Arch:", arch())
 print("Is Windows:", is_windows())
 """,
-            "OS: windows\nArch: x86_64\nIs Windows: true"
+            f"OS: {host_os}\nArch: {host_arch}\nIs Windows: {'true' if os.name == 'nt' else 'false'}"
         ),
         (
             "plat_02_env_vars",
@@ -49,7 +54,7 @@ print("Has PATH env:", has_p)
             """#target cpp
 import "std/process"
 
-var status = exec_cmd("echo nyx_process_ok")
+var status = exec_cmd("echo nyx_process_ok").unwrap()
 print("Exec status is zero:", status == 0)
 """,
             "nyx_process_ok\nExec status is zero: true"

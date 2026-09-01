@@ -155,6 +155,7 @@ def run_bootstrap_lexer_test() -> bool:
         ),
         ("complete_keyword_surface", " ".join(KEYWORD_TOKEN_TYPES)),
         ("removed_aliases_are_identifiers", "def val"),
+        ("dollar_identifier_normalization", "$gold $$gold nyx$destructure$1"),
         (
             "native_directives_and_ffi",
             '#target cpp\n#native include <vector>\n#native link "user32.lib"\n#native use std::vector;\n#native raw int x = 42;\nextern "C" fn puts(s: string) -> int',

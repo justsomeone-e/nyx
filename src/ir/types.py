@@ -108,15 +108,24 @@ def from_inferred_name(name: object, default: IRType = ANY) -> IRType:
     pointer = text.startswith("*")
     if pointer:
         text = text[1:]
-    for generic_name in ("Array", "Task", "Option"):
-        prefix = generic_name + "<"
-        if text.startswith(prefix) and text.endswith(">"):
-            return IRType(
-                generic_name,
-                (from_inferred_name(text[len(prefix):-1]),),
-                optional,
-                pointer,
-            )
+    generic_start = text.find("<")
+    if generic_start > 0 and text.endswith(">"):
+        generic_name = text[:generic_start].strip()
+        inner = text[generic_start + 1:-1]
+        arguments = []
+        depth = 0
+        start = 0
+        for index, character in enumerate(inner):
+            if character == "<":
+                depth += 1
+            elif character == ">":
+                depth -= 1
+            elif character == "," and depth == 0:
+                arguments.append(from_inferred_name(inner[start:index].strip()))
+                start = index + 1
+        if inner.strip():
+            arguments.append(from_inferred_name(inner[start:].strip()))
+        return IRType(generic_name, tuple(arguments), optional, pointer)
     return IRType(text, optional=optional, pointer=pointer)
 
 
@@ -134,6 +143,8 @@ def compatible(expected: IRType, actual: IRType) -> bool:
     if expected.name == "float" and actual.name == "int":
         return True
     if expected.pointer and actual.pointer:
+        return True
+    if expected.name == actual.name and (not expected.arguments or not actual.arguments):
         return True
     if expected.name == actual.name and expected.arguments and actual.arguments:
         return len(expected.arguments) == len(actual.arguments) and all(

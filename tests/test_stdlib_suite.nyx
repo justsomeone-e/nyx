@@ -4,7 +4,7 @@ import "std/http"
 import "std/ai"
 
 fn test_fs_module() {
-    var ok = write_string("test_temp.txt", "Nyx File System Output");
+    var ok = write_string("test_temp.txt", "Nyx File System Output").unwrap();
     guard ok else {
         print("Failed to write file");
         return;

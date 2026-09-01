@@ -1,0 +1,8 @@
+#target js
+
+import js "node:os" as os
+
+fn main() {
+    print("Node hostname:", os.hostname())
+    print("Node platform:", os.platform())
+}

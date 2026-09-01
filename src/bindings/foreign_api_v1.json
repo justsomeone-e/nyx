@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "modules": [
+    {
+      "ecosystem": "cpp",
+      "module": "std::filesystem",
+      "functions": {
+        "current_path": { "params": [], "returns": "foreign::cpp::std::filesystem::path" },
+        "exists": { "params": ["string"], "returns": "bool" },
+        "remove": { "params": ["string"], "returns": "bool" }
+      },
+      "types": {
+        "foreign::cpp::std::filesystem::path": {
+          "methods": {
+            "string": { "params": [], "returns": "string" },
+            "filename": { "params": [], "returns": "foreign::cpp::std::filesystem::path" },
+            "parent_path": { "params": [], "returns": "foreign::cpp::std::filesystem::path" },
+            "extension": { "params": [], "returns": "foreign::cpp::std::filesystem::path" }
+          }
+        }
+      }
+    },
+    {
+      "ecosystem": "js",
+      "module": "node:os",
+      "functions": {
+        "hostname": { "params": [], "returns": "string" },
+        "platform": { "params": [], "returns": "string" },
+        "arch": { "params": [], "returns": "string" },
+        "homedir": { "params": [], "returns": "string" },
+        "release": { "params": [], "returns": "string" },
+        "type": { "params": [], "returns": "string" }
+      },
+      "types": {}
+    },
+    {
+      "ecosystem": "js",
+      "module": "node:fs",
+      "functions": {
+        "readFileSync": { "params": ["string", "string"], "returns": "string" },
+        "writeFileSync": { "params": ["string", "string"], "returns": "void" },
+        "existsSync": { "params": ["string"], "returns": "bool" }
+      },
+      "types": {}
+    },
+    {
+      "ecosystem": "python",
+      "module": "platform",
+      "functions": {
+        "system": { "params": [], "returns": "string" },
+        "machine": { "params": [], "returns": "string" },
+        "node": { "params": [], "returns": "string" },
+        "release": { "params": [], "returns": "string" },
+        "version": { "params": [], "returns": "string" },
+        "platform": { "params": [], "returns": "string" }
+      },
+      "types": {}
+    },
+    {
+      "ecosystem": "python",
+      "module": "os",
+      "functions": {
+        "getcwd": { "params": [], "returns": "string" },
+        "chdir": { "params": ["string"], "returns": "void" }
+      },
+      "types": {}
+    }
+  ]
+}

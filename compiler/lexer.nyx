@@ -492,7 +492,9 @@ impl Lexer {
                 }
                 var ident = ""
                 for i in start_pos..self.pos-1 {
-                    if self.source[i] != "$" {
+                    // Match the Python frontend: '$' is stripped only while it
+                    // is a leading source marker; embedded '$' stays canonical.
+                    if self.source[i] != "$" or len(ident) > 0 {
                         ident = ident + self.source[i]
                     }
                 }
@@ -518,6 +520,7 @@ impl Lexer {
                 elif ident == "test" { tt = "TEST" }
                 elif ident == "assert" { tt = "ASSERT" }
                 elif ident == "return" { tt = "RETURN" }
+                elif ident == "yield" { tt = "YIELD" }
                 elif ident == "continue" { tt = "CONTINUE" }
                 elif ident == "break" { tt = "BREAK" }
                 elif ident == "defer" { tt = "DEFER" }

@@ -11,6 +11,7 @@ from src.ir.model import (
     IRArray,
     IRAssert,
     IRAwait,
+    IRResultPropagate,
     IRBinary,
     IRBreak,
     IRCall,
@@ -21,6 +22,7 @@ from src.ir.model import (
     IRExpr,
     IRExprStatement,
     IRExternFunction,
+    IRForeignImport,
     IRFor,
     IRFunction,
     IRGuard,
@@ -43,6 +45,7 @@ from src.ir.model import (
     IRStruct,
     IRTestBlock,
     IRThrow,
+    IRYield,
     IRTrait,
     IRTryCatch,
     IRTypeAlias,
@@ -88,8 +91,29 @@ class Result {
     }
 }
 
+class _NyxResultPropagation {
+    constructor(error) { this.error = error; }
+}
+
+function _nyxPropagate(result) {
+    if (!(result instanceof Result)) throw new TypeError("Nyx '?' operand is not a Result");
+    if (!result.is_ok) throw new _NyxResultPropagation(result.error);
+    return result.value;
+}
+
+class NyxEnumValue {
+    constructor(enumName, variantName, payload) {
+        this.enum_name = enumName;
+        this.variant_name = variantName;
+        this.payload = payload;
+    }
+}
+
 function Ok(value) { return new Result(true, value); }
 function Err(error) { return new Result(false, error); }
+function _nyxMap(items, transform) { return items.map(transform); }
+function _nyxFilter(items, predicate) { return items.filter(predicate); }
+function _nyxFold(items, initial, reducer) { return items.reduce(reducer, initial); }
 function _nyxI64(value) { return BigInt.asIntN(64, typeof value === "bigint" ? value : BigInt(value)); }
 function _nyxI64Add(left, right) { return _nyxI64(left + right); }
 function _nyxI64Sub(left, right) { return _nyxI64(left - right); }
@@ -163,6 +187,11 @@ function to_int(value) {
 }
 function _nyx_require_bool(value) {
     if (typeof value !== "boolean") throw new TypeError("Nyx condition must have type bool");
+    return value;
+}
+
+function _nyx_destructure_check(value, minimum, message) {
+    if (value.length < Number(minimum)) throw new Error(String(message));
     return value;
 }
 
@@ -257,6 +286,11 @@ const _nyx_time_sleep_ms = delay_ms;
 
 const _nyx_base64_encode = value => Buffer.from(value, "utf8").toString("base64");
 const _nyx_base64_decode = value => Buffer.from(value, "base64").toString("utf8");
+const _nyx_base64_decode_result = value => {
+    if (typeof value !== "string" || value.length % 4 !== 0 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) return Err("invalid base64 encoding");
+    try { return Ok(Buffer.from(value, "base64").toString("utf8")); }
+    catch (error) { return Err(`invalid base64 encoding: ${error.message}`); }
+};
 const _nyx_hash_fnv1a_64_hex = value => {
     let hash = 0xcbf29ce484222325n;
     for (const byte of Buffer.from(value, "utf8")) {
@@ -280,6 +314,22 @@ const _nyx_fs_exists = path => {
 const _nyx_fs_remove_file = path => {
     try { _nyxFs.unlinkSync(path); return true; } catch { return false; }
 };
+const _nyx_fs_read_to_string_result = path => {
+    try { return Ok(_nyxFs.readFileSync(path, "utf8")); }
+    catch (error) { return Err(`cannot read file '${path}': ${error.message}`); }
+};
+const _nyx_fs_write_string_result = (path, content) => {
+    try { _nyxFs.writeFileSync(path, content, "utf8"); return Ok(true); }
+    catch (error) { return Err(`cannot write file '${path}': ${error.message}`); }
+};
+const _nyx_fs_append_string_result = (path, content) => {
+    try { _nyxFs.appendFileSync(path, content, "utf8"); return Ok(true); }
+    catch (error) { return Err(`cannot append file '${path}': ${error.message}`); }
+};
+const _nyx_fs_remove_file_result = path => {
+    try { _nyxFs.unlinkSync(path); return Ok(true); }
+    catch (error) { return Err(`cannot remove file '${path}': ${error.message}`); }
+};
 
 const _nyx_json_get_string = (document, key) => {
     const marker = `"${key}":`;
@@ -302,6 +352,23 @@ const _nyx_json_get_int = (document, key) => {
     while (end < document.length && /[0-9]/.test(document[end])) end++;
     return to_int(document.slice(start, end));
 };
+const _nyx_json_get_string_result = (document, key) => {
+    const marker = `"${key}":`; let start = document.indexOf(marker);
+    if (start < 0) return Err(`JSON field not found: ${key}`);
+    start += marker.length; while (start < document.length && (document[start] === " " || document[start] === "\t")) start++;
+    if (document[start] !== '"') return Err(`JSON field is not a string: ${key}`);
+    const end = document.indexOf('"', start + 1);
+    return end < 0 ? Err(`unterminated JSON string field: ${key}`) : Ok(document.slice(start + 1, end));
+};
+const _nyx_json_get_int_result = (document, key) => {
+    const marker = `"${key}":`; let start = document.indexOf(marker);
+    if (start < 0) return Err(`JSON field not found: ${key}`);
+    start += marker.length; while (start < document.length && (document[start] === " " || document[start] === "\t")) start++;
+    const match = document.slice(start).match(/^-?[0-9]+/);
+    if (!match) return Err(`JSON field is not an integer: ${key}`);
+    try { const value = BigInt(match[0]); if (value < -(1n << 63n) || value > (1n << 63n) - 1n) return Err(`JSON integer is out of range: ${key}`); return Ok(_nyxI64(value)); }
+    catch { return Err(`JSON field is not an integer: ${key}`); }
+};
 '''
 
 
@@ -319,6 +386,11 @@ class HIRJavaScriptEmitter:
             item.name: item for item in module.items if isinstance(item, IRStruct)
         }
         self.methods = {}
+        self.enum_variants = {
+            f"enum::{item.name}::variant::{member.name}": (item, member)
+            for item in module.items if isinstance(item, IREnum)
+            for member in item.members if member.is_variant
+        }
         self.current_return_type: IRType | None = None
         self.counter = 0
         for item in module.items:
@@ -331,12 +403,23 @@ class HIRJavaScriptEmitter:
     def emit(self) -> str:
         lines = _JAVASCRIPT_RUNTIME.splitlines()
         lines.append("")
+        for item in self.module.items:
+            if isinstance(item, IRForeignImport):
+                if item.ecosystem != "js":
+                    raise JavaScriptEmissionError(
+                        f"JavaScript target cannot consume '{item.ecosystem}' foreign import '{item.module}'"
+                    )
+                lines.append(
+                    f"const {self._symbol(item.symbol, item.alias)} = require({self._string(item.module)});"
+                )
+        if any(isinstance(item, IRForeignImport) for item in self.module.items):
+            lines.append("")
         declarations: List[IRNode] = []
         statements: List[IRStatement] = []
         for item in self.module.items:
             if isinstance(item, IRStatement):
                 statements.append(item)
-            elif isinstance(item, (IRImpl, IRNativeDirective)):
+            elif isinstance(item, (IRImpl, IRNativeDirective, IRForeignImport)):
                 continue
             else:
                 declarations.append(item)
@@ -389,14 +472,35 @@ class HIRJavaScriptEmitter:
         for item in self.module.items:
             if isinstance(
                 item,
-                (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction, IRVarDecl),
+                (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction, IRVarDecl, IRForeignImport),
             ):
-                self.symbol_names[item.symbol] = self._identifier(item.name)
+                preferred = item.alias if isinstance(item, IRForeignImport) else item.name
+                self.symbol_names[item.symbol] = self._identifier(preferred)
+            if isinstance(item, IREnum):
+                for member in item.members:
+                    if member.is_variant:
+                        self.symbol_names[f"enum::{item.name}::variant::{member.name}"] = self._identifier(member.name)
 
     def _emit_declaration(self, node: IRNode) -> List[str]:
         if isinstance(node, IRTypeAlias):
             return [f"const {self._symbol(node.symbol, node.name)} = Object;"]
         if isinstance(node, IREnum):
+            if any(member.is_variant for member in node.members):
+                lines = [f"const {self._symbol(node.symbol, node.name)} = NyxEnumValue;"]
+                for member in node.members:
+                    if not member.is_variant:
+                        raise JavaScriptEmissionError(
+                            f"Payload enum '{node.name}' cannot mix discriminant member '{member.name}'"
+                        )
+                    params = [f"_nyxPayload{index}" for index in range(len(member.payload_types))]
+                    constructor = self._symbol(
+                        f"enum::{node.name}::variant::{member.name}", member.name
+                    )
+                    lines.append(
+                        f"function {constructor}({', '.join(params)}) {{ return new NyxEnumValue("
+                        f"{self._string(node.name)}, {self._string(member.name)}, [{', '.join(params)}]); }}"
+                    )
+                return lines
             members = []
             for member in node.members:
                 value = self._expr(member.value) if member.value is not None else self._string(member.name)
@@ -478,14 +582,28 @@ class HIRJavaScriptEmitter:
             if parameter.default is not None:
                 name += f" = {self._expr_as(parameter.default, parameter.type)}"
             parameters.append(name)
+        generator = node.return_type.name == "Iterator"
         async_prefix = "async " if node.is_async else ""
+        star = "*" if generator else ""
         lines = [
-            f"{prefix}{async_prefix}function {self._symbol(node.symbol, node.name)}({', '.join(parameters)}) {{"
+            f"{prefix}{async_prefix}function{star} {self._symbol(node.symbol, node.name)}({', '.join(parameters)}) {{"
         ]
         previous_return = self.current_return_type
         self.current_return_type = node.return_type
         try:
-            lines.extend(self._emit_block(node.body, indent + 1))
+            if node.return_type.name == "Result" and len(node.return_type.arguments) == 2:
+                caught = self._temporary("propagated")
+                lines.append(f"{prefix}    try {{")
+                lines.extend(self._emit_block(node.body, indent + 2))
+                lines.append(f"{prefix}    }} catch ({caught}) {{")
+                lines.append(
+                    f"{prefix}        if ({caught} instanceof _NyxResultPropagation) "
+                    f"return Err({caught}.error);"
+                )
+                lines.append(f"{prefix}        throw {caught};")
+                lines.append(f"{prefix}    }}")
+            else:
+                lines.extend(self._emit_block(node.body, indent + 1))
         finally:
             self.current_return_type = previous_return
         lines.append(f"{prefix}}}")
@@ -550,6 +668,8 @@ class HIRJavaScriptEmitter:
             ]
         if isinstance(node, IRThrow):
             return [f"{prefix}throw new Error(to_string({self._expr(node.expr)}));"]
+        if isinstance(node, IRYield):
+            return [f"{prefix}yield {self._expr(node.expr)};"]
         if isinstance(node, IRIf):
             lines = [f"{prefix}if ({self._condition(node.condition)}) {{"]
             lines.extend(self._emit_block(node.then_branch, indent + 1))
@@ -641,7 +761,22 @@ class HIRJavaScriptEmitter:
             )
             binding = isinstance(pattern, IRReference) and pattern.name != "_"
             payload = None
-            if isinstance(pattern, IRCall) and pattern.callee in ("Ok", "Err"):
+            variant = self.enum_variants.get(pattern.callee_symbol) if isinstance(pattern, IRCall) else None
+            payload_bindings = []
+            if variant is not None:
+                enum_node, member = variant
+                condition = (
+                    f"{value} instanceof NyxEnumValue && "
+                    f"{value}.enum_name === {self._string(enum_node.name)} && "
+                    f"{value}.variant_name === {self._string(member.name)}"
+                )
+                for index, argument in enumerate(pattern.args):
+                    if isinstance(argument, IRReference) and argument.name != "_":
+                        payload_bindings.append(
+                            f"{prefix}    const {self._symbol(argument.symbol, argument.name)} = "
+                            f"{value}.payload[{index}];"
+                        )
+            elif isinstance(pattern, IRCall) and pattern.callee in ("Ok", "Err"):
                 expected = "true" if pattern.callee == "Ok" else "false"
                 condition = f"{value} instanceof Result && {value}.is_ok === {expected}"
                 if pattern.args and isinstance(pattern.args[0], IRReference):
@@ -664,6 +799,7 @@ class HIRJavaScriptEmitter:
                 lines.append(f"{prefix}    const {self._symbol(pattern.symbol, pattern.name)} = {value};")
             if payload is not None:
                 lines.append(f"{prefix}    const {payload} = {value}.value;")
+            lines.extend(payload_bindings)
             lines.extend(self._emit_block(case.body, indent + 1))
             lines.append(f"{prefix}}}")
             emitted_condition = True
@@ -732,6 +868,8 @@ class HIRJavaScriptEmitter:
             return f"({operator}{operand})"
         if isinstance(node, IRAwait):
             return f"(await {self._expr(node.expr)})"
+        if isinstance(node, IRResultPropagate):
+            return f"_nyxPropagate({self._expr(node.expr)})"
         if isinstance(node, IRCall):
             expected_types = self._call_parameter_types(node)
             args = ", ".join(
@@ -746,7 +884,15 @@ class HIRJavaScriptEmitter:
                 if node.callee == "len" and not node.args:
                     return f"_nyxI64(BigInt({receiver}.length))"
                 return f"{receiver}.{self._identifier(node.callee)}({args})"
-            callee = self._symbol(node.callee_symbol, node.callee)
+            collection_builtins = {
+                "map": "_nyxMap",
+                "filter": "_nyxFilter",
+                "fold": "_nyxFold",
+            }
+            if node.callee_symbol.startswith("builtin::") and node.callee in collection_builtins:
+                callee = collection_builtins[node.callee]
+            else:
+                callee = self._symbol(node.callee_symbol, node.callee)
             if node.callee_symbol.startswith("type::struct::"):
                 return f"new {callee}({args})"
             return f"{callee}({args})"

@@ -138,11 +138,18 @@ struct HIRStructField {
     field_type: HIRType
 }
 
+struct HIRFunctionInfo {
+    name: string,
+    params: Array<FunctionParam>
+}
+
 struct HIRLowerer {
     source_name: string,
     target: string,
     scopes: Array<HIRScope>,
     struct_fields: Array<HIRStructField>,
+    functions: Array<HIRFunctionInfo>,
+    reserved_names: Array<string>,
     counter: int,
     current_owner: string,
     has_error: bool,
@@ -212,6 +219,44 @@ impl HIRLowerer {
         return self.current_owner + "::local::" + to_string(self.counter) + "::" + name
     }
 
+    fn name_is_reserved(self, name: string) -> bool {
+        for i in 0..len(self.reserved_names)-1 {
+            if self.reserved_names[i] == name { return true }
+        }
+        return false
+    }
+
+    fn reserve_name(self, name: string) {
+        if name == "" or name == "_" { return }
+        if not self.name_is_reserved(name) { self.reserved_names.push(name) }
+        var emitted_name = ""
+        for i in 0..len(name)-1 {
+            if name[i] == "$" { emitted_name = emitted_name + "_" }
+            else { emitted_name = emitted_name + name[i] }
+        }
+        if not self.name_is_reserved(emitted_name) {
+            self.reserved_names.push(emitted_name)
+        }
+    }
+
+    fn reserve_user_names(self, node: ASTNode) -> void {
+        self.reserve_name(node.name)
+        for i in 0..len(node.params)-1 { self.reserve_name(node.params[i].name) }
+        for i in 0..len(node.children)-1 { self.reserve_user_names(node.children[i]) }
+    }
+
+    fn next_internal_name(self, purpose: string) -> string {
+        while true {
+            self.counter = self.counter + 1
+            var candidate = "nyx_internal_" + purpose + "_" + to_string(self.counter)
+            if not self.name_is_reserved(candidate) {
+                self.reserve_name(candidate)
+                return candidate
+            }
+        }
+        return ""
+    }
+
     fn lookup_struct_field(self, struct_name: string, field_name: string) -> HIRType {
         for i in 0..len(self.struct_fields)-1 {
             var field = self.struct_fields[i]
@@ -220,6 +265,45 @@ impl HIRLowerer {
             }
         }
         return hir_type("any")
+    }
+
+    fn struct_field_count(self, struct_name: string) -> int {
+        var count = 0
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == struct_name { count = count + 1 }
+        }
+        return count
+    }
+
+    fn struct_field_name_at(self, struct_name: string, field_index: int) -> string {
+        var current = 0
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == struct_name {
+                if current == field_index { return self.struct_fields[i].field_name }
+                current = current + 1
+            }
+        }
+        return ""
+    }
+
+    fn struct_field_type_at(self, struct_name: string, field_index: int) -> HIRType {
+        var current = 0
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == struct_name {
+                if current == field_index { return self.struct_fields[i].field_type }
+                current = current + 1
+            }
+        }
+        return hir_type("any")
+    }
+
+    fn lookup_function_params(self, name: string) -> Array<FunctionParam> {
+        for i in 0..len(self.functions)-1 {
+            if self.functions[i].name == name {
+                return self.functions[i].params
+            }
+        }
+        return []
     }
 
     fn declare_callable(self, prefix: string, name: string, params: Array<HIRType>, result: HIRType, node: ASTNode) {
@@ -253,7 +337,12 @@ impl HIRLowerer {
         self.declare_callable("builtin", "Err", [any_type], result_type, node)
         self.declare_callable("builtin", "len", [any_type], int_type, node)
         self.declare_callable("builtin", "args", no_types, hir_array_type(string_type), node)
+        self.declare_callable("builtin", "map", [any_type, any_type], any_type, node)
+        self.declare_callable("builtin", "filter", [any_type, any_type], any_type, node)
+        self.declare_callable("builtin", "fold", [any_type, any_type, any_type], any_type, node)
 
+        self.declare_callable("intrinsic", "_nyx_destructure_check",
+            [any_type, int_type, string_type], any_type, node)
         self.declare_callable("intrinsic", "_nyx_bootstrap_read_file", [string_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_bootstrap_write_file", [string_type, string_type], bool_type, node)
         self.declare_callable("intrinsic", "_nyx_bootstrap_file_exists", [string_type], bool_type, node)
@@ -277,18 +366,29 @@ impl HIRLowerer {
         self.declare_callable("intrinsic", "_nyx_time_sleep_ms", [int_type], void_type, node)
         self.declare_callable("intrinsic", "_nyx_base64_encode", [string_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_base64_decode", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_base64_decode_result", [string_type], hir_type_from_name("Result<string, string>"), node)
         self.declare_callable("intrinsic", "_nyx_hash_fnv1a_64_hex", [string_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_fs_read_to_string", [string_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_fs_write_string", [string_type, string_type], bool_type, node)
         self.declare_callable("intrinsic", "_nyx_fs_append_string", [string_type, string_type], bool_type, node)
         self.declare_callable("intrinsic", "_nyx_fs_exists", [string_type], bool_type, node)
         self.declare_callable("intrinsic", "_nyx_fs_remove_file", [string_type], bool_type, node)
+        self.declare_callable("intrinsic", "_nyx_fs_read_to_string_result", [string_type], hir_type_from_name("Result<string, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_fs_write_string_result", [string_type, string_type], hir_type_from_name("Result<bool, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_fs_append_string_result", [string_type, string_type], hir_type_from_name("Result<bool, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_fs_remove_file_result", [string_type], hir_type_from_name("Result<bool, string>"), node)
         self.declare_callable("intrinsic", "_nyx_json_get_string", [string_type, string_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_json_get_int", [string_type, string_type], int_type, node)
+        self.declare_callable("intrinsic", "_nyx_json_get_string_result", [string_type, string_type], hir_type_from_name("Result<string, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_json_get_int_result", [string_type, string_type], hir_type_from_name("Result<int, string>"), node)
         self.declare_callable("intrinsic", "_nyx_net_tcp_connect", [string_type, int_type], int_type, node)
         self.declare_callable("intrinsic", "_nyx_net_tcp_send", [int_type, string_type], bool_type, node)
         self.declare_callable("intrinsic", "_nyx_net_tcp_recv", [int_type, int_type], string_type, node)
         self.declare_callable("intrinsic", "_nyx_net_tcp_close", [int_type], void_type, node)
+        self.declare_callable("intrinsic", "_nyx_net_tcp_connect_result", [string_type, int_type], hir_type_from_name("Result<int, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_net_tcp_send_result", [int_type, string_type], hir_type_from_name("Result<bool, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_net_tcp_recv_result", [int_type, int_type], hir_type_from_name("Result<string, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_net_tcp_close_result", [int_type], hir_type_from_name("Result<bool, string>"), node)
         self.declare_callable("intrinsic", "_nyx_mutex_create", no_types, int_type, node)
         self.declare_callable("intrinsic", "_nyx_mutex_lock", [int_type], void_type, node)
         self.declare_callable("intrinsic", "_nyx_mutex_unlock", [int_type], void_type, node)
@@ -314,6 +414,7 @@ impl HIRLowerer {
                 }
                 symbol = HIRSymbol(node.name, "function::" + node.name,
                     hir_function_type(parameter_types, public_result_type), "function", true)
+                self.functions.push(HIRFunctionInfo(node.name, node.params))
             } elif node.kind == "ExternFn" {
                 var parameter_types: Array<HIRType> = []
                 for p in 0..len(node.params)-1 {
@@ -337,8 +438,29 @@ impl HIRLowerer {
             } elif node.kind == "EnumDef" {
                 symbol = HIRSymbol(node.name, "type::enum::" + node.name,
                     hir_type(node.name), "enum", true)
+            } elif node.kind == "Import" and node.op != "" {
+                symbol = HIRSymbol(node.name, "foreign::" + node.op + "::" + node.name,
+                    hir_type("foreign::" + node.op), "foreign-module", true)
             }
             if symbol.found { self.declare_symbol(symbol, node) }
+            if node.kind == "EnumDef" {
+                var result_arguments: Array<HIRType> = []
+                for g in 0..len(node.generic_args)-1 {
+                    result_arguments.push(hir_type(node.generic_args[g]))
+                }
+                var variant_result = HIRType(node.name, result_arguments, false, false, [], [])
+                for m in 0..len(node.children)-1 {
+                    var member = node.children[m]
+                    if member.is_safe {
+                        var payload_types: Array<HIRType> = []
+                        for p in 0..len(member.params)-1 {
+                            payload_types.push(hir_type_from_name(member.params[p].type_annot))
+                        }
+                        self.declare_callable("enum::" + node.name + "::variant",
+                            member.name, payload_types, variant_result, member)
+                    }
+                }
+            }
         }
     }
 
@@ -354,6 +476,9 @@ impl HIRLowerer {
         result.symbol = identity
         result.type_info = hir_type_from_name(param.type_annot)
         result.has_type = true
+        if len(param.default_expr) > 0 {
+            result.first = [self.lower_expr(param.default_expr[0])]
+        }
         return result
     }
 
@@ -396,6 +521,16 @@ impl HIRLowerer {
     }
 
     fn lower_top_level(self, node: ASTNode) -> HIRNode {
+        if node.kind == "Import" and node.op != "" {
+            var symbol = self.require_symbol(node.name, node)
+            var result = hir_empty_node("IRForeignImport", self.span(node))
+            result.name = node.name
+            result.symbol = symbol.identity
+            result.value = node.value
+            result.op = node.op
+            result.aux_name = node.type_name
+            return result
+        }
         if node.kind == "FunctionDef" {
             var symbol = self.require_symbol(node.name, node)
             return self.lower_function(node, symbol.identity)
@@ -458,12 +593,20 @@ impl HIRLowerer {
                 var member = hir_empty_node("IREnumMember", self.span(member_ast))
                 member.name = member_ast.name
                 if len(member_ast.children) > 0 { member.first = [self.lower_expr(member_ast.children[0])] }
+                member.flag_a = member_ast.is_safe
+                for p in 0..len(member_ast.params)-1 {
+                    var payload_type = hir_empty_node("__type__", self.span(member_ast))
+                    payload_type.type_info = hir_type_from_name(member_ast.params[p].type_annot)
+                    payload_type.has_type = true
+                    member.second.push(payload_type)
+                }
                 members.push(member)
             }
             var result = hir_empty_node("IREnum", self.span(node))
             result.name = node.name
             result.symbol = symbol.identity
             result.first = members
+            result.strings = node.generic_args
             return result
         }
         if node.kind == "ExternFn" {
@@ -494,6 +637,8 @@ impl HIRLowerer {
     }
 
     fn lower_program(self, program: ASTNode) -> HIRModule {
+        self.reserved_names = []
+        self.reserve_user_names(program)
         for i in 0..len(program.children)-1 {
             if program.children[i].kind == "Directive" and program.children[i].name == "target" {
                 self.target = program.children[i].value
@@ -505,8 +650,13 @@ impl HIRLowerer {
         self.predeclare_top_level(program)
         var items: Array<HIRNode> = []
         for i in 0..len(program.children)-1 {
-            var item = self.lower_top_level(program.children[i])
-            if item.kind != "__skip__" { items.push(item) }
+            if program.children[i].kind == "DestructureDecl" {
+                var declarations = self.lower_destructure(program.children[i])
+                for d in 0..len(declarations)-1 { items.push(declarations[d]) }
+            } else {
+                var item = self.lower_top_level(program.children[i])
+                if item.kind != "__skip__" { items.push(item) }
+            }
         }
         self.exit_scope()
         return HIRModule(self.source_name, self.target, items, 1)
@@ -515,15 +665,110 @@ impl HIRLowerer {
     fn lower_block(self, statements: Array<ASTNode>, create_scope: bool) -> Array<HIRNode> {
         if create_scope { self.enter_scope() }
         var result: Array<HIRNode> = []
-        for i in 0..len(statements)-1 { result.push(self.lower_statement(statements[i])) }
+        for i in 0..len(statements)-1 {
+            if statements[i].kind == "DestructureDecl" {
+                var declarations = self.lower_destructure(statements[i])
+                for d in 0..len(declarations)-1 { result.push(declarations[d]) }
+            } else {
+                result.push(self.lower_statement(statements[i]))
+            }
+        }
         if create_scope { self.exit_scope() }
         return result
+    }
+
+    fn lower_destructure(self, node: ASTNode) -> Array<HIRNode> {
+        var span = self.span(node)
+        var source_expr = self.lower_expr(node.children[len(node.children)-1])
+        var binding_count = len(node.children) - 1
+        if node.value == "array" {
+            var minimum = hir_empty_node("IRLiteral", span)
+            minimum.value = to_string(binding_count)
+            minimum.value_kind = "int"
+            minimum.type_info = hir_type("int")
+            minimum.has_type = true
+
+            var message = hir_empty_node("IRLiteral", span)
+            message.value = "Array destructuring requires at least " +
+                to_string(binding_count) + " elements"
+            message.value_kind = "string"
+            message.type_info = hir_type("string")
+            message.has_type = true
+
+            var checked_source = hir_empty_node("IRCall", span)
+            checked_source.name = "_nyx_destructure_check"
+            checked_source.symbol = "intrinsic::_nyx_destructure_check"
+            checked_source.first = [source_expr, minimum, message]
+            checked_source.type_info = source_expr.type_info
+            checked_source.has_type = true
+            source_expr = checked_source
+        }
+        var temp_name = self.next_internal_name("destructure")
+        var temp_symbol = HIRSymbol(temp_name,
+            self.current_owner + "::local::" + to_string(self.counter) + "::" + temp_name,
+            source_expr.type_info, "temporary", true)
+        self.declare_symbol(temp_symbol, node)
+
+        var temp_decl = hir_empty_node("IRVarDecl", span)
+        temp_decl.name = temp_name
+        temp_decl.symbol = temp_symbol.identity
+        temp_decl.type_info = source_expr.type_info
+        temp_decl.has_type = true
+        temp_decl.first = [source_expr]
+        temp_decl.flag_a = true
+        var declarations: Array<HIRNode> = [temp_decl]
+
+        var source_ref = hir_empty_node("IRReference", span)
+        source_ref.name = temp_name
+        source_ref.symbol = temp_symbol.identity
+        source_ref.type_info = source_expr.type_info
+        source_ref.has_type = true
+
+        for i in 0..binding_count-1 {
+            var binding_name = node.children[i].name
+            if binding_name == "_" { continue }
+            var binding_type = hir_type("any")
+            var extracted = hir_empty_node("IRIndexAccess", span)
+            if node.value == "array" {
+                if source_expr.type_info.name == "Array" and len(source_expr.type_info.arguments) > 0 {
+                    binding_type = source_expr.type_info.arguments[0]
+                }
+                var index = hir_empty_node("IRLiteral", span)
+                index.value = to_string(i)
+                index.value_kind = "int"
+                index.type_info = hir_type("int")
+                index.has_type = true
+                extracted.first = [source_ref]
+                extracted.second = [index]
+            } else {
+                binding_type = self.struct_field_type_at(node.name, i)
+                extracted = hir_empty_node("IRMemberAccess", span)
+                extracted.name = self.struct_field_name_at(node.name, i)
+                extracted.first = [source_ref]
+            }
+            extracted.type_info = binding_type
+            extracted.has_type = true
+
+            var symbol = HIRSymbol(binding_name, self.next_symbol(binding_name),
+                binding_type, "variable", true)
+            self.declare_symbol(symbol, node.children[i])
+            var declaration = hir_empty_node("IRVarDecl", span)
+            declaration.name = binding_name
+            declaration.symbol = symbol.identity
+            declaration.type_info = binding_type
+            declaration.has_type = true
+            declaration.first = [extracted]
+            declaration.flag_a = node.is_const
+            declarations.push(declaration)
+        }
+        return declarations
     }
 
     fn is_expression_ast(self, node: ASTNode) -> bool {
         return node.kind == "Number" or node.kind == "String" or node.kind == "Boolean" or
             node.kind == "Null" or node.kind == "Identifier" or node.kind == "BinaryOp" or
             node.kind == "UnaryOp" or node.kind == "Await" or node.kind == "FunctionCall" or node.kind == "MemberAccess" or
+            node.kind == "ResultPropagate" or
             node.kind == "IndexAccess" or node.kind == "Array" or node.kind == "NullCoalesce" or
             node.kind == "Lambda" or node.kind == "ConditionalExpr" or
             node.kind == "MatchExpr"
@@ -721,13 +966,14 @@ impl HIRLowerer {
             return result
         }
         if node.kind == "Match" {
+            var subject = self.lower_expr(node.children[0])
             var cases: Array<HIRNode> = []
             var index = 1
             while index + 1 < len(node.children) {
                 var pattern_ast = node.children[index]
                 var case_ast = node.children[index + 1]
                 self.enter_scope()
-                var pattern = self.lower_pattern(pattern_ast)
+                var pattern = self.lower_pattern(pattern_ast, subject.type_info)
                 var body = self.lower_block(case_ast.children, false)
                 self.exit_scope()
                 var match_case = hir_empty_node("IRMatchCase", self.span(case_ast))
@@ -737,7 +983,7 @@ impl HIRLowerer {
                 index = index + 2
             }
             var result = hir_empty_node("IRMatch", span)
-            result.first = [self.lower_expr(node.children[0])]
+            result.first = [subject]
             result.items = cases
             return result
         }
@@ -755,6 +1001,35 @@ impl HIRLowerer {
         if symbol.kind == "struct" { return symbol.type_info }
         if len(symbol.type_info.return_types) > 0 { return symbol.type_info.return_types[0] }
         return hir_type("any")
+    }
+
+    fn inferred_call_result_type(self, symbol: HIRSymbol, args: Array<HIRNode>) -> HIRType {
+        var declared = self.call_result_type(symbol)
+        if len(declared.arguments) == 0 or not contains(symbol.kind, "enum::") { return declared }
+        var inferred: Array<HIRType> = []
+        for r in 0..len(declared.arguments)-1 {
+            var declared_argument = declared.arguments[r]
+            var replacement = hir_type("any")
+            for p in 0..len(symbol.type_info.parameter_types)-1 {
+                if p < len(args) and symbol.type_info.parameter_types[p].name == declared_argument.name {
+                    replacement = args[p].type_info
+                    break
+                }
+            }
+            inferred.push(replacement)
+        }
+        return HIRType(declared.name, inferred, declared.optional, declared.pointer, [], [])
+    }
+
+    fn specialize_pattern_type(self, declared: HIRType, variant_result: HIRType,
+        subject_type: HIRType) -> HIRType {
+        if variant_result.name != subject_type.name { return declared }
+        for i in 0..len(variant_result.arguments)-1 {
+            if i < len(subject_type.arguments) and variant_result.arguments[i].name == declared.name {
+                return subject_type.arguments[i]
+            }
+        }
+        return declared
     }
 
     fn binary_type(self, node: ASTNode, left: HIRNode, right: HIRNode) -> HIRType {
@@ -788,32 +1063,43 @@ impl HIRLowerer {
         return current
     }
 
-    fn lower_pattern(self, node: ASTNode) -> HIRNode {
+    fn lower_pattern(self, node: ASTNode, expected_type: HIRType) -> HIRNode {
         if node.kind == "Identifier" {
             var result = hir_empty_node("IRReference", self.span(node))
             result.name = node.name
-            result.type_info = hir_type("any")
+            result.type_info = expected_type
             result.has_type = true
             if node.name == "_" {
                 result.symbol = "pattern::_"
                 return result
             }
             var symbol = HIRSymbol(node.name, self.next_symbol(node.name),
-                hir_type("any"), "pattern-binding", true)
+                expected_type, "pattern-binding", true)
             self.declare_symbol(symbol, node)
             result.symbol = symbol.identity
             return result
         }
         if node.kind == "FunctionCall" {
-            var args: Array<HIRNode> = []
-            for i in 0..len(node.children)-1 { args.push(self.lower_pattern(node.children[i])) }
             var symbol = self.resolve_symbol(node.name)
+            var args: Array<HIRNode> = []
+            var variant_result = self.call_result_type(symbol)
+            for i in 0..len(node.children)-1 {
+                var payload_type = hir_type("any")
+                if symbol.found and contains(symbol.kind, "enum::") and i < len(symbol.type_info.parameter_types) {
+                    payload_type = self.specialize_pattern_type(
+                        symbol.type_info.parameter_types[i], variant_result, expected_type)
+                }
+                args.push(self.lower_pattern(node.children[i], payload_type))
+            }
             var result = hir_empty_node("IRCall", self.span(node))
             result.name = node.name
             result.symbol = "pattern-constructor::" + node.name
             if symbol.found { result.symbol = symbol.identity }
             result.first = args
-            result.type_info = self.call_result_type(symbol)
+            result.type_info = variant_result
+            if symbol.found and contains(symbol.kind, "enum::") {
+                result.type_info = hir_type(variant_result.name)
+            }
             result.has_type = true
             return result
         }
@@ -840,6 +1126,34 @@ impl HIRLowerer {
         result.symbol = symbol.identity
         result.first = args
         result.type_info = self.call_result_type(symbol)
+        result.has_type = true
+        return result
+    }
+
+    fn lower_lambda_with_types(self, node: ASTNode, parameter_types: Array<HIRType>) -> HIRNode {
+        self.counter = self.counter + 1
+        var identity = self.current_owner + "::lambda::" + to_string(self.counter)
+        self.enter_scope()
+        var parameters: Array<HIRNode> = []
+        var actual_types: Array<HIRType> = []
+        for i in 0..len(node.params)-1 {
+            var name = node.params[i].name
+            var value_type = hir_type("any")
+            if i < len(parameter_types) { value_type = parameter_types[i] }
+            var symbol_id = identity + "::param::" + to_string(i) + "::" + name
+            self.declare_symbol(HIRSymbol(name, symbol_id, value_type, "lambda-param", true), node)
+            var parameter = self.parameter(FunctionParam(name, "", "", []), symbol_id, node)
+            parameter.type_info = value_type
+            parameter.has_type = true
+            parameters.push(parameter)
+            actual_types.push(value_type)
+        }
+        var body = self.lower_expr(node.children[0])
+        self.exit_scope()
+        var result = hir_empty_node("IRLambda", self.span(node))
+        result.first = parameters
+        result.second = [body]
+        result.type_info = hir_function_type(actual_types, body.type_info)
         result.has_type = true
         return result
     }
@@ -995,16 +1309,72 @@ impl HIRLowerer {
             result.has_type = true
             return result
         }
+        if node.kind == "ResultPropagate" {
+            var expr = self.lower_expr(node.children[0])
+            var result_type = hir_type("any")
+            if expr.type_info.name == "Result" and len(expr.type_info.arguments) == 2 {
+                result_type = expr.type_info.arguments[0]
+            }
+            var result = hir_empty_node("IRResultPropagate", span)
+            result.first = [expr]
+            result.type_info = result_type
+            result.has_type = true
+            return result
+        }
         if node.kind == "FunctionCall" {
+            if (node.name == "map" or node.name == "filter" or node.name == "fold") and len(node.children) > 0 {
+                var collection = self.lower_expr(node.children[0])
+                var element_type = hir_type("any")
+                if collection.type_info.name == "Array" and len(collection.type_info.arguments) == 1 {
+                    element_type = collection.type_info.arguments[0]
+                }
+                var collection_args: Array<HIRNode> = [collection]
+                var result_type = hir_type("any")
+                if node.name == "map" and len(node.children) == 2 {
+                    var callback = self.lower_lambda_with_types(node.children[1], [element_type])
+                    collection_args.push(callback)
+                    result_type = HIRType("Array", [callback.type_info.return_types[0]], false, false, [], [])
+                } elif node.name == "filter" and len(node.children) == 2 {
+                    collection_args.push(self.lower_lambda_with_types(node.children[1], [element_type]))
+                    result_type = collection.type_info
+                } elif node.name == "fold" and len(node.children) == 3 {
+                    var initial = self.lower_expr(node.children[1])
+                    collection_args.push(initial)
+                    collection_args.push(self.lower_lambda_with_types(node.children[2], [initial.type_info, element_type]))
+                    result_type = initial.type_info
+                }
+                var collection_symbol = self.resolve_symbol(node.name)
+                var collection_call = hir_empty_node("IRCall", span)
+                collection_call.name = node.name
+                collection_call.symbol = collection_symbol.identity
+                collection_call.first = collection_args
+                collection_call.type_info = result_type
+                collection_call.has_type = true
+                return collection_call
+            }
             var args: Array<HIRNode> = []
             for i in 0..len(node.children)-1 { args.push(self.lower_expr(node.children[i])) }
             var symbol = self.resolve_symbol(node.name)
             if not symbol.found { self.fail("Unresolved function or constructor '" + node.name + "'", node) }
+            var param_count = len(symbol.type_info.parameter_types)
+            if len(args) < param_count {
+                var callee_params = self.lookup_function_params(node.name)
+                for i in len(args)..param_count-1 {
+                    if i < len(callee_params) and len(callee_params[i].default_expr) > 0 {
+                        args.push(self.lower_expr(callee_params[i].default_expr[0]))
+                    }
+                }
+            }
             var result = hir_empty_node("IRCall", span)
             result.name = node.name
             result.symbol = symbol.identity
             result.first = args
-            result.type_info = self.call_result_type(symbol)
+            result.type_info = self.inferred_call_result_type(symbol, args)
+            if symbol.identity == "builtin::Ok" and len(args) > 0 {
+                result.type_info = HIRType("Result", [args[0].type_info, hir_type("any")], false, false, [], [])
+            } elif symbol.identity == "builtin::Err" and len(args) > 0 {
+                result.type_info = HIRType("Result", [hir_type("any"), args[0].type_info], false, false, [], [])
+            }
             result.has_type = true
             return result
         }
@@ -1070,27 +1440,9 @@ impl HIRLowerer {
             return result
         }
         if node.kind == "Lambda" {
-            self.counter = self.counter + 1
-            var identity = self.current_owner + "::lambda::" + to_string(self.counter)
-            self.enter_scope()
-            var parameters: Array<HIRNode> = []
             var parameter_types: Array<HIRType> = []
-            for i in 0..len(node.params)-1 {
-                var name = node.params[i].name
-                var symbol_id = identity + "::param::" + to_string(i) + "::" + name
-                var any_type = hir_type("any")
-                self.declare_symbol(HIRSymbol(name, symbol_id, any_type, "lambda-param", true), node)
-                parameters.push(self.parameter(FunctionParam(name, ""), symbol_id, node))
-                parameter_types.push(any_type)
-            }
-            var body = self.lower_expr(node.children[0])
-            self.exit_scope()
-            var result = hir_empty_node("IRLambda", span)
-            result.first = parameters
-            result.second = [body]
-            result.type_info = hir_function_type(parameter_types, body.type_info)
-            result.has_type = true
-            return result
+            for i in 0..len(node.params)-1 { parameter_types.push(hir_type("any")) }
+            return self.lower_lambda_with_types(node, parameter_types)
         }
         self.fail("Unsupported expression node '" + node.kind + "'", node)
         return hir_empty_node("IRLiteral", span)

@@ -166,6 +166,13 @@ class Parser:
         # Import Statement: import "path", use "path", import { a, b } from "path", import "path" as alias
         if tok.type in (TokenType.IMPORT, TokenType.USE):
             self.advance()
+            ecosystem = None
+            source = None
+            if (
+                self.current().type == TokenType.IDENT
+                and self.current().value in ("cpp", "js", "python", "rust", "wasm")
+            ):
+                ecosystem = self.advance().value
             symbols = []
             if self.match(TokenType.LBRACE):
                 while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
@@ -176,10 +183,18 @@ class Parser:
             
             path_tok = self.expect(TokenType.STRING, "E1006", "Expected module path string literal like 'std/math' or './utils'")
             path = path_tok.value
+            if ecosystem is not None and self.match(TokenType.FROM):
+                source = self.expect(
+                    TokenType.STRING,
+                    "E1013",
+                    "Expected a source header after 'from', for example '<filesystem>'",
+                ).value
             alias = None
             if self.match(TokenType.AS):
                 alias = self.expect(TokenType.IDENT).value
-            return ImportNode(path, alias, symbols, tok.line, tok.col)
+            if ecosystem is not None and not alias:
+                self.expect(TokenType.AS, "E1014", "Foreign imports require an explicit alias")
+            return ImportNode(path, alias, symbols, tok.line, tok.col, ecosystem, source)
 
         # Explicit reassignment: set target = value
         if tok.type == TokenType.SET:
@@ -194,7 +209,34 @@ class Parser:
         if tok.type in (TokenType.VAR, TokenType.LET, TokenType.CONST):
             is_const = tok.type in (TokenType.LET, TokenType.CONST)
             self.advance()
+
+            if self.match(TokenType.LBRACKET):
+                names: List[str] = []
+                if self.current().type == TokenType.RBRACKET:
+                    self.expect(TokenType.IDENT, "E1003", "Array destructuring requires at least one binding")
+                while self.current().type not in (TokenType.RBRACKET, TokenType.EOF):
+                    names.append(self.expect(TokenType.IDENT, "E1003", "Use identifiers in an array destructuring pattern").value)
+                    if not self.match(TokenType.COMMA):
+                        break
+                self.expect(TokenType.RBRACKET, "E1003", "Close the array destructuring pattern with ']'")
+                self.expect(TokenType.ASSIGN, "E1004", "Initialize the destructuring declaration with '='")
+                expr = self.parse_expression()
+                return DestructureDeclNode("array", names, expr, "", is_const, tok.line, tok.col)
+
             name = self.expect(TokenType.IDENT).value
+            if self.match(TokenType.LPAREN):
+                names: List[str] = []
+                if self.current().type == TokenType.RPAREN:
+                    self.expect(TokenType.IDENT, "E1003", "Struct destructuring requires at least one binding")
+                while self.current().type not in (TokenType.RPAREN, TokenType.EOF):
+                    names.append(self.expect(TokenType.IDENT, "E1003", "Use identifiers in a struct destructuring pattern").value)
+                    if not self.match(TokenType.COMMA):
+                        break
+                self.expect(TokenType.RPAREN, "E1003", "Close the struct destructuring pattern with ')'")
+                self.expect(TokenType.ASSIGN, "E1004", "Initialize the destructuring declaration with '='")
+                expr = self.parse_expression()
+                return DestructureDeclNode("struct", names, expr, name, is_const, tok.line, tok.col)
+
             type_annot = None
             if self.match(TokenType.COLON):
                 type_annot = self.parse_type()
@@ -280,22 +322,45 @@ class Parser:
                         pass
             return StructDefNode(name, fields, generic_params, self.last_doc_comment, tok.line, tok.col)
 
-        # Enum Definition: enum Color { Red, Green, Blue = 5 }
+        # Enum Definition: enum Color { Red, Blue = 5 } / enum Result<T, E> { Ok(T), Err(E) }
         if tok.type == TokenType.ENUM:
             self.advance()
             name = self.expect(TokenType.IDENT).value
+            generic_params = []
+            if self.match(TokenType.LT):
+                while self.current().type not in (TokenType.GT, TokenType.EOF):
+                    generic_params.append(self.expect(TokenType.IDENT).value)
+                    if not self.match(TokenType.COMMA):
+                        break
+                self.expect(TokenType.GT)
             members = []
             if self.match(TokenType.LBRACE):
                 while self.current().type not in (TokenType.RBRACE, TokenType.EOF):
                     if self.current().type == TokenType.IDENT:
                         m_name = self.advance().value
+                        payload_types = []
+                        is_variant = False
                         val = None
-                        if self.match(TokenType.ASSIGN):
+                        if self.match(TokenType.LPAREN):
+                            is_variant = True
+                            if not self.match(TokenType.RPAREN):
+                                while True:
+                                    payload_types.append(self.parse_type())
+                                    if self.match(TokenType.COMMA):
+                                        continue
+                                    self.expect(TokenType.RPAREN)
+                                    break
+                        elif self.match(TokenType.ASSIGN):
                             val = self.parse_expression()
-                        members.append((m_name, val))
-                    self.match(TokenType.COMMA)
+                        members.append(EnumMember(m_name, payload_types, val, is_variant))
+                    if not self.match(TokenType.COMMA) and self.current().type != TokenType.RBRACE:
+                        DiagnosticEmitter.emit_error(
+                            self.filepath, self.source, self.current().line, self.current().col,
+                            "E1015", "Enum members must be comma-separated",
+                            expected=", or }", found=f"{self.current().type} ('{self.current().value}')",
+                        )
                 self.expect(TokenType.RBRACE)
-            return EnumDefNode(name, members, tok.line, tok.col)
+            return EnumDefNode(name, members, generic_params, tok.line, tok.col)
 
         # Unsafe Block: unsafe { ... }
         if tok.type == TokenType.UNSAFE:
@@ -429,6 +494,10 @@ class Parser:
             self.advance()
             expr = self.parse_expression()
             return ThrowNode(expr, tok.line, tok.col)
+        if tok.type == TokenType.YIELD:
+            self.advance()
+            expr = self.parse_expression()
+            return YieldNode(expr, tok.line, tok.col)
         if tok.type == TokenType.BREAK:
             self.advance()
             return BreakNode(tok.line, tok.col)
@@ -699,6 +768,9 @@ class Parser:
                 self.advance()
                 args = self.parse_args()
                 node = FunctionCallNode(node.name, args, node.line, node.col)
+            elif self.current().type == TokenType.QUESTION:
+                question = self.advance()
+                node = ResultPropagateNode(node, question.line, question.col)
             else:
                 break
         return node
@@ -753,7 +825,20 @@ class Parser:
                     return LambdaNode([], body, tok.line, tok.col)
                 return NullNode(tok.line, tok.col)
             expr = self.parse_expression()
+            if self.current().type == TokenType.COMMA:
+                if not isinstance(expr, IdentifierNode):
+                    self.expect(TokenType.RPAREN, "E1016", "Lambda parameters must be identifiers")
+                names = [expr.name]
+                while self.match(TokenType.COMMA):
+                    names.append(self.expect(TokenType.IDENT, "E1016", "Lambda parameters must be identifiers").value)
+                self.expect(TokenType.RPAREN)
+                self.expect(TokenType.FAT_ARROW, "E1016", "A parenthesized parameter list requires '=>'")
+                body = self.parse_expression()
+                return LambdaNode(names, body, tok.line, tok.col)
             self.expect(TokenType.RPAREN)
+            if isinstance(expr, IdentifierNode) and self.match(TokenType.FAT_ARROW):
+                body = self.parse_expression()
+                return LambdaNode([expr.name], body, tok.line, tok.col)
             return expr
 
         # Array literal [1, 2, 3]

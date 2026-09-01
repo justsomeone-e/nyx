@@ -1,11 +1,11 @@
 > [!IMPORTANT]
-> ## Nyx v4 is in active development
+> ## Nyx v4.0.0-rc.1 is available
 >
-> `v4.0.0-dev.1` remains an immutable Maya snapshot. `v4.0.0-dev.2` resumes
-> focused v4 development and removes microcontroller/freestanding firmware
-> support from the active codebase. Current work focuses on the compiler,
-> self-hosting, native/WASM backends, language ergonomics, and tooling. Nyx has
-> not reached beta, RC1, or the `v4.0.0 Nirvana` stable release.
+> `v4.0.0-rc.1` is the first public release candidate for the compiler-focused
+> v4 line. It keeps the Maya scope reset: microcontroller/freestanding firmware
+> is outside the active codebase, while compiler correctness, self-hosting,
+> native/WASM backends, language ergonomics, and tooling are under RC soak.
+> This is not the `v4.0.0 Nirvana` stable release.
 
 <div align="center">
 
@@ -23,13 +23,13 @@
   </p>
 
   <p align="center">
-    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.2-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
-    <a href="docs/TODO.md"><img src="https://img.shields.io/badge/STATUS-ACTIVE%20DEVELOPMENT-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Active development"></a>
-    <a href="LICENSE.md"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
+    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/STATUS-RELEASE%20CANDIDATE-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Release candidate"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
-  <p><strong>v4 release line: MAYA → NIRVANA · ACTIVE DEVELOPMENT</strong></p>
+  <p><strong>v4 release line: MAYA → SAMSARA → NIRVANA · RC1</strong></p>
 
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
@@ -66,9 +66,9 @@ A source file is lexed, parsed, type-checked, lowered, verified, optimized, and 
 
 The compiler frontend and HIR-to-C++ emitter are also written in Nyx. A native stage-1 compiler produces stage 2; stage 2 reproduces byte-identical stage-3 C++ from the same compiler sources. Python remains useful for bootstrapping from zero, orchestration, and the `python` target, but it is not required by the distributed native `nyxc` path.
 
-> **Release status:** `4.0.0-dev.1` / Maya is preserved as a historical snapshot;
-> `4.0.0-dev.2` is the active compiler-focused development release. No beta, RC, or stable
-> promotion has been made.
+> **Release status:** `4.0.0-rc.1` / Samsara is the current public release
+> candidate. It is suitable for evaluation and feedback, not a stable API
+> compatibility promise.
 
 ---
 
@@ -85,9 +85,9 @@ after its compiler and compatibility gates pass.
 | `v2.x` | — | — | Initial multi-target compiler, standard library, and CLI foundation | Historical |
 | `v3.x` | — | — | Bundle ABI, Unicode/byte correctness, parity testing, and native interop | Historical |
 | `v4.0.0-dev.1` | **Maya** | Illusion / appearance | Preserved development snapshot and starting point for the resumed v4 line | Historical snapshot |
-| `v4.0.0-dev.2` | **Maya** | Scope reset | Microcontroller removal; compiler, syntax ergonomics, native/WASM, self-hosting, and LSP focus | **Latest development release** |
+| `v4.0.0-dev.2` | **Maya** | Scope reset | Microcontroller removal; compiler, syntax ergonomics, native/WASM, self-hosting, and LSP focus | Historical development release |
 | `v4.0.0-beta.*` | Nocturne | Night piece | v4 integration and stabilization cycle | Planned after development gates |
-| `v4.0.0-rc.1` | Samsara | Cycle of existence | Release-candidate compatibility and soak testing | Planned after beta |
+| `v4.0.0-rc.1` | **Samsara** | Cycle of existence | Release-candidate compatibility and soak testing | **Current release candidate** |
 | `v4.0.0-rc.2` | Bodhi | Awakening | Intended follow-up RC fixes only | Not scheduled |
 | `v4.0.0-rc.3` | Moksha | Liberation | Intended final RC verification only | Not scheduled |
 | `v4.0.0` | Nirvana | Final release / release from the cycle | Intended v4 stable promotion | Not scheduled |
@@ -298,10 +298,10 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\install.ps1
 ```
 
-Or install the latest repository script directly:
+Or install this exact RC1 release directly:
 
 ```powershell
-irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
+$env:NYX_RELEASE_TAG = 'v4.0.0-rc.1'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.ps1 | iex
 ```
 
 ### Linux / macOS
@@ -313,10 +313,10 @@ chmod +x install.sh
 ./install.sh
 ```
 
-Or use the repository installer:
+Or install this exact RC1 release directly:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.sh | NYX_RELEASE_TAG=v4.0.0-rc.1 bash
 ```
 
 ### Toolchain requirements
@@ -695,7 +695,7 @@ For larger architectural changes, discuss the intended design before implementin
 
 nyx is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-See [`LICENSE.md`](LICENSE.md) for the complete license text.
+See [`LICENSE`](LICENSE) for the complete license text.
 
 ---
 

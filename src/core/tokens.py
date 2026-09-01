@@ -33,6 +33,7 @@ class TokenType:
     TRY = "TRY"
     CATCH = "CATCH"
     THROW = "THROW"
+    YIELD = "YIELD"
     RETURN = "RETURN"
     BREAK = "BREAK"
     CONTINUE = "CONTINUE"

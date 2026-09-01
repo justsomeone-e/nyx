@@ -5,6 +5,7 @@
 
 #native include "string"
 #native include "vector"
+#native include "cerrno"
 
 #native raw {
 #ifdef _WIN32
@@ -85,20 +86,67 @@ inline void _nyx_net_tcp_close(int64_t sock) {
 #endif
     }
 }
+
+inline std::string _nyx_net_last_error(const std::string& operation) {
+#ifdef _WIN32
+    return operation + " failed with socket error " + std::to_string(WSAGetLastError());
+#else
+    return operation + " failed: " + std::string(std::strerror(errno));
+#endif
 }
 
-fn tcp_connect(host: string, port: int) -> int {
-    return _nyx_net_tcp_connect(host, port);
+inline NyxResult<int64_t, std::string> _nyx_net_tcp_connect_result(const std::string& host, int64_t port) {
+    if (host.empty()) return {false, 0, "host must not be empty"};
+    if (port < 1 || port > 65535) return {false, 0, "port must be between 1 and 65535"};
+    if (!_nyx_net_init_wsa()) return {false, 0, _nyx_net_last_error("socket initialization")};
+    int64_t sock = _nyx_net_tcp_connect(host, port);
+    if (sock < 0) return {false, 0, _nyx_net_last_error("TCP connect")};
+    return {true, sock, {}};
 }
 
-fn tcp_send(sock: int, data: string) -> bool {
-    return _nyx_net_tcp_send(sock, data);
+inline NyxResult<bool, std::string> _nyx_net_tcp_send_result(int64_t sock, const std::string& data) {
+    if (sock < 0) return {false, false, "invalid socket handle"};
+    size_t sent = 0;
+    while (sent < data.size()) {
+        int count = send((int)sock, data.data() + sent, static_cast<int>(data.size() - sent), 0);
+        if (count <= 0) return {false, false, _nyx_net_last_error("TCP send")};
+        sent += static_cast<size_t>(count);
+    }
+    return {true, true, {}};
 }
 
-fn tcp_recv(sock: int, max_bytes: int) -> string {
-    return _nyx_net_tcp_recv(sock, max_bytes);
+inline NyxResult<std::string, std::string> _nyx_net_tcp_recv_result(int64_t sock, int64_t max_bytes) {
+    if (sock < 0) return {false, {}, "invalid socket handle"};
+    if (max_bytes <= 0) return {false, {}, "max_bytes must be positive"};
+    std::vector<char> buffer(static_cast<size_t>(max_bytes));
+    int count = recv((int)sock, buffer.data(), static_cast<int>(max_bytes), 0);
+    if (count < 0) return {false, {}, _nyx_net_last_error("TCP receive")};
+    return {true, std::string(buffer.data(), static_cast<size_t>(count)), {}};
 }
 
-fn tcp_close(sock: int) {
-    _nyx_net_tcp_close(sock);
+inline NyxResult<bool, std::string> _nyx_net_tcp_close_result(int64_t sock) {
+    if (sock < 0) return {false, false, "invalid socket handle"};
+#ifdef _WIN32
+    if (closesocket((int)sock) != 0) return {false, false, _nyx_net_last_error("TCP close")};
+#else
+    if (close((int)sock) != 0) return {false, false, _nyx_net_last_error("TCP close")};
+#endif
+    return {true, true, {}};
+}
+}
+
+fn tcp_connect(host: string, port: int) -> Result<int, string> {
+    return _nyx_net_tcp_connect_result(host, port);
+}
+
+fn tcp_send(sock: int, data: string) -> Result<bool, string> {
+    return _nyx_net_tcp_send_result(sock, data);
+}
+
+fn tcp_recv(sock: int, max_bytes: int) -> Result<string, string> {
+    return _nyx_net_tcp_recv_result(sock, max_bytes);
+}
+
+fn tcp_close(sock: int) -> Result<bool, string> {
+    return _nyx_net_tcp_close_result(sock);
 }

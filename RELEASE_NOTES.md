@@ -1,51 +1,56 @@
-# Nyx v4.0.0-dev.2 — Maya Scope Reset
+# Nyx v4.0.0-rc.1 — Samsara
 
-This development release removes the microcontroller and freestanding firmware
-platform from the active Nyx v4 codebase. Historical releases and Git history
-still preserve the deleted implementation.
+Nyx v4.0.0-rc.1 is the first public release candidate for the compiler-focused
+v4 line. It is intended for evaluation, compatibility testing, and feedback;
+it is not the `v4.0.0 Nirvana` stable release and does not freeze every public
+API.
 
-## What was removed
+## Highlights
 
-- STM32F1/F4, Nucleo, RP2040, AVR, generic embedded, and freestanding targets.
-- Board profiles and custom board manifests.
-- STM32Cube/CMSIS discovery and integration.
-- Startup, linker, CRT, and HAL assets used to produce ELF/HEX/BIN firmware.
-- Firmware flashing through STM32CubeProgrammer and OpenOCD.
-- Physical hardware modules for board, GPIO, ADC, PWM, SPI, I2C, serial, timer,
-  interrupts, and MMIO.
-- Embedded-only syntax and APIs: `volatile`, `interrupt`, `critical`,
-  `Buffer<T, N>`, and `buffer_ptr`.
-- Hardware-specific fixtures, regression suites, VS Code snippets, completions,
-  and documentation.
+- Nyx-authored lexer, parser, type checker, typed-HIR lowerer, and C++ emitter
+  remain reproducible through the native stage-1 -> stage-2 -> stage-3 chain.
+- Default arguments now lower consistently through the Python and self-hosted
+  paths, including calls that omit trailing defaulted parameters.
+- Flat array and struct destructuring is available with single-evaluation
+  semantics, checked bounds/arity failures, const bindings, and hygienic
+  compiler temporaries.
+- The stable HIR runtime trio (`cpp`, `js`, `python`) retains shared typed-HIR
+  semantics. Rust, WASM, React, and assembly remain governed by their explicit
+  capability contracts.
+- The release includes native-first installers, a local VS Code `.vsix`,
+  deterministic source archives, checksums, an SPDX SBOM, and GitHub provenance
+  attestations once the tagged workflow completes.
 
-## Why it was removed
+## Scope
 
-Nyx was attempting to maintain the language, seven application backends,
-self-hosting, IDE tooling, a standard library, and a broad physical-board
-platform simultaneously. The firmware layer had become too large to maintain
-without weakening work on compiler correctness.
+The Maya scope reset remains in force. Microcontroller/freestanding firmware,
+board profiles, flashing, and physical HAL modules are not part of Nyx v4 RC1.
+The active scope is compiler correctness, HIR parity, self-hosting, native and
+WebAssembly output, readable syntax, diagnostics, and deterministic tooling.
 
-Dev.2 intentionally narrows v4 toward typed HIR, native and WebAssembly output,
-self-hosting, readable Nim/Haxe-inspired syntax, diagnostics, package tooling,
-and deterministic cross-backend behavior. Fixed-size collections can return in
-the future only as a target-neutral language feature with a dedicated RFC.
+## Install RC1
 
-## What remains
+### Windows PowerShell
 
-- Seven targets: C++20, JavaScript, Python, Rust, WebAssembly, React, and x86_64 assembly.
-- Nyx-authored lexer, parser, type checker, HIR lowerer, and C++ emitter.
-- Reproducible native stage-1 to stage-2 self-hosting.
-- Bundle ABI v1, compiler/plugin APIs, LSP, VS Code integration, and native-first installers.
-- A canonical 43-keyword language surface shared by the compiler and editor.
+```powershell
+$env:NYX_RELEASE_TAG = 'v4.0.0-rc.1'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.ps1 | iex
+```
+
+### Linux / macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.sh | NYX_RELEASE_TAG=v4.0.0-rc.1 bash
+```
+
+For a reviewed installation path, download the matching release archive, inspect
+the installer, verify `SHA256SUMS`, then run it locally.
 
 ## Validation
 
-- Exact Python/Nyx frontend parity and 184-case canonical HIR byte parity.
-- 530 fuzz cases with zero unhandled compiler crashes.
-- Python, JavaScript, C++20, and Rust backend conformance.
-- Clean-environment smoke, installer, LSP, FFI, SDK, interop, and packaging suites.
-- 138/138 exhaustive regression tests passed.
-
-Nyx v4 has not reached beta, RC1, or the Nirvana stable release. This is the
-latest active development snapshot.
-
+- The unified local test framework passed completely.
+- 138/138 regression battery, 530-case fuzz corpus, 194-case Python/Nyx HIR
+  byte parity, default arguments, destructuring, and native self-host
+  reproducibility all passed.
+- The tagged GitHub Actions workflow validates the full release candidate and
+  produces the platform artifacts. Treat published checksums and attestations
+  from that workflow as the release evidence.

@@ -1,5 +1,11 @@
 # Change Log
 
+## 4.0.0-rc.1
+
+- Align the extension package with the Nyx v4.0.0-rc.1 release candidate.
+- Keep compiler-derived language-surface metadata and Nyx tooling links in the
+  packaged extension.
+
 ## 4.0.0-dev.2
 
 - Removed STM32/Nucleo/freestanding targets and their board completions.

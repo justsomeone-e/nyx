@@ -21,7 +21,7 @@ fn main() {
     // 2. High-Resolution Time Verification
     var t_start = now_ms();
     print($"[TIME] Current timestamp (ms): {t_start}");
-    sleep_ms(20);
+    sleep_ms(20).unwrap();
     var t_end = now_ms();
     var elapsed = t_end - t_start;
     print($"[TIME] Elapsed after sleep (20ms): {elapsed}ms");
@@ -29,7 +29,7 @@ fn main() {
     // 3. Crypto & Base64 Verification
     var raw_text = "Nyx Systems Programming 2026!";
     var encoded = base64_encode(raw_text);
-    var decoded = base64_decode(encoded);
+    var decoded = base64_decode(encoded).unwrap();
     var h = hash_string(raw_text);
     
     print($"[CRYPTO] Raw: {raw_text}");

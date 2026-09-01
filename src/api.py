@@ -25,10 +25,13 @@ from src.ir import (
     IRLoweringError,
     IRAwait,
     IRCall,
+    IREnum,
     IRFunction,
     IRModule,
     IRSpawn,
+    IRResultPropagate,
     IRThrow,
+    IRYield,
     IRTryCatch,
     IRVerificationError,
     PassRecord,
@@ -87,10 +90,45 @@ def _contains_hir_call_symbol(value: object, symbols: frozenset[str]) -> bool:
     return False
 
 
+def _contains_payload_enum(value: object) -> bool:
+    if isinstance(value, IREnum) and any(member.is_variant for member in value.members):
+        return True
+    if isinstance(value, tuple):
+        return any(_contains_payload_enum(item) for item in value)
+    if is_dataclass(value):
+        return any(
+            _contains_payload_enum(getattr(value, field.name))
+            for field in fields(value)
+        )
+    return False
+
+
 def _validate_backend_features(hir: IRModule) -> None:
     backend = resolve_backend(hir.target)
     if backend is None:
         return
+    if _contains_payload_enum(hir) and "payload_enums" not in backend.features:
+        raise BackendCapabilityError(
+            f"target '{backend.name}' does not support payload enum semantics yet; "
+            "use cpp, js, or python"
+        )
+    if _contains_hir_node(hir, (IRResultPropagate,)) and "result_propagation" not in backend.features:
+        raise BackendCapabilityError(
+            f"target '{backend.name}' does not support Result propagation semantics yet; "
+            "use cpp, js, or python"
+        )
+    if _contains_hir_node(hir, (IRYield,)) and "iterator_yield" not in backend.features:
+        raise BackendCapabilityError(
+            f"target '{backend.name}' does not support lazy Iterator<T>/yield semantics yet; "
+            "use cpp, js, or python"
+        )
+    if _contains_hir_call_symbol(
+        hir, frozenset(("builtin::map", "builtin::filter", "builtin::fold"))
+    ) and "collection_combinators" not in backend.features:
+        raise BackendCapabilityError(
+            f"target '{backend.name}' does not support collection combinators yet; "
+            "use cpp, js, or python"
+        )
     if _contains_hir_node(hir, (IRThrow, IRTryCatch)) and "exceptions" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx exception semantics "

@@ -2,7 +2,7 @@
   "name": "nyx-language-support",
   "displayName": "Nyx Language Toolchain",
   "description": "Native compiler tooling, IntelliSense, and one-click multi-target workflows for Nyx.",
-  "version": "4.0.0-dev.2",
+  "version": "4.0.0-rc.1",
   "publisher": "nyx",
   "license": "AGPL-3.0-only",
   "repository": {

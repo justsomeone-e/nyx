@@ -126,6 +126,13 @@ from tests.cli_process_suite import run_cli_process_suite
 from tests.bundle_suite import run_bundle_suite
 from tests.self_host_suite import run_self_host_suite
 from tests.capability_suite import run_capability_suite
+from tests.foreign_import_suite import run_foreign_import_suite
+from tests.payload_enum_suite import run_payload_enum_suite
+from tests.result_propagation_suite import run_result_propagation_suite
+from tests.collection_api_suite import run_collection_api_suite
+from tests.fallible_stdlib_suite import run_fallible_stdlib_suite
+from tests.default_arguments_suite import run_default_arguments_suite
+from tests.destructuring_suite import run_destructuring_suite
 from tests.compiler_api_suite import run_compiler_api_suite
 from tests.installer_suite import run_installer_suite
 from tests.ir_suite import run_ir_suite
@@ -162,6 +169,28 @@ def main():
 
     print()
     capability_ok = run_capability_suite()
+
+    print()
+    foreign_import_ok = run_foreign_import_suite()
+
+    print()
+    payload_enum_ok = run_payload_enum_suite()
+
+    print()
+    result_propagation_ok = run_result_propagation_suite()
+
+    print()
+    collection_api_ok = run_collection_api_suite()
+
+    print()
+    fallible_stdlib_ok = run_fallible_stdlib_suite()
+
+
+    print()
+    default_arguments_ok = run_default_arguments_suite()
+
+    print()
+    destructuring_ok = run_destructuring_suite()
 
     print()
     compiler_api_ok = run_compiler_api_suite()
@@ -262,7 +291,7 @@ def main():
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
+    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and self_host_ok and capability_ok and foreign_import_ok and payload_enum_ok and result_propagation_ok and collection_api_ok and fallible_stdlib_ok and default_arguments_ok and destructuring_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
                   natlib_ok and man_ok and link_ok and plat_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
     print("=" * 70)

@@ -14,7 +14,10 @@ from src.core.ast_nodes import (
     VarDeclNode, NativeIncludeNode, NativeLinkNode, NativeRawNode
 )
 from src.core.diagnostics import DiagnosticEmitter
+from src.core.foreign_bindings import ForeignBindingRegistry
 from src.core.backend_capabilities import (
+    PENDING_FOREIGN_ECOSYSTEMS,
+    foreign_import_targets,
     get_stdlib_contract,
     normalize_backend_name,
     resolve_backend,
@@ -35,6 +38,7 @@ class ModuleLoader:
         self.import_stack: List[str] = []
         self.symbol_origins: Dict[str, str] = {}
         self.collected_declarations: List[ASTNode] = []
+        self._foreign_bindings: Optional[ForeignBindingRegistry] = None
 
     def resolve_module_path(self, import_path: str, current_file: str) -> Tuple[Optional[str], List[str]]:
         """Resolves module path to an absolute filesystem path and returns all searched candidate paths."""
@@ -106,6 +110,53 @@ class ModuleLoader:
         return root_ast
 
     def _process_import(self, imp: ImportNode, parent_file: str, parent_source: str):
+        if imp.ecosystem is not None:
+            if imp.ecosystem in PENDING_FOREIGN_ECOSYSTEMS:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1413", f"Foreign Ecosystem Integration Not Available Yet: '{imp.ecosystem}'",
+                    note="The syntax is reserved, but package resolution and ABI lowering are not implemented.",
+                    help_msg="Use cpp, js, or python foreign imports in this release.",
+                )
+                return
+            supported = foreign_import_targets(imp.ecosystem)
+            if not supported:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1410", f"Unknown Foreign Ecosystem: '{imp.ecosystem}'",
+                    help_msg="Use cpp, js, or python. Rust and wasm syntax is reserved for a later integration.",
+                )
+                return
+            if self.target_name not in supported:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1411", f"Foreign Import Unsupported on Target: '{imp.ecosystem}'",
+                    note=f"'{imp.ecosystem}' imports support: {', '.join(sorted(supported))}.",
+                    help_msg="Compile for the matching backend or provide a portable Nyx adapter.",
+                )
+                return
+            if imp.ecosystem == "cpp" and not imp.source:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1412", "C++ Foreign Import Requires a Header",
+                    help_msg='Use: import cpp "std::filesystem" from "<filesystem>" as fs',
+                )
+                return
+            try:
+                if self._foreign_bindings is None:
+                    self._foreign_bindings = ForeignBindingRegistry.load(self.base_dir)
+                imp.binding = self._foreign_bindings.resolve(imp.ecosystem, imp.path)
+            except ValueError as error:
+                DiagnosticEmitter.emit_error(
+                    parent_file, parent_source, imp.line, imp.col,
+                    "E1420", "Invalid Foreign Binding Manifest",
+                    note=str(error),
+                    help_msg="Fix or remove nyx.bindings.json before compiling the project.",
+                )
+                return
+            self.collected_declarations.append(imp)
+            return
+
         target_path, searched = self.resolve_module_path(imp.path, parent_file)
         if not target_path:
             DiagnosticEmitter.emit_error(

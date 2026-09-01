@@ -2,16 +2,17 @@ from typing import Dict, List, Optional, Any, Set
 import sys
 from .ast_nodes import (
     ASTNode, ProgramNode, NumberNode, StringNode, BooleanNode, NullNode,
-    IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, NullCoalesceNode, ConditionalExprNode, MemberAccessNode,
-    IndexAccessNode, ArrayNode, LambdaNode, FunctionCallNode, VarDeclNode,
+    IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, ResultPropagateNode, NullCoalesceNode, ConditionalExprNode, MemberAccessNode,
+    IndexAccessNode, ArrayNode, LambdaNode, FunctionCallNode, VarDeclNode, DestructureDeclNode,
     AssignNode, TypeAliasNode, StructDefNode, TraitDefNode, ImplBlockNode,
     EnumDefNode, UnsafeBlockNode, SpawnNode, TestBlockNode, AssertNode,
     FunctionDefNode, MatchNode, MatchExprNode, TryCatchNode, IfNode, WhileNode, ForNode,
-    ReturnNode, ThrowNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
+    ReturnNode, ThrowNode, YieldNode, BreakNode, ContinueNode, TypeNode, NativeIncludeNode,
     NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode,
-    DeferNode, GuardNode
+    DeferNode, GuardNode, ImportNode
 )
 from .diagnostics import DiagnosticEmitter
+from .foreign_bindings import ForeignCallableBinding, ForeignModuleBinding
 
 _INT64_MIN = -(1 << 63)
 _INT64_MAX = (1 << 63) - 1
@@ -28,6 +29,27 @@ _FIXED_INTEGER_RANGES = {
     "u64": (0, (1 << 64) - 1),
     "uintptr": (0, (1 << 64) - 1),
 }
+
+
+def _generic_type_parts(type_name: str) -> tuple[str, tuple[str, ...]]:
+    text = type_name.strip()
+    if "<" not in text or not text.endswith(">"):
+        return text, ()
+    base, raw_arguments = text.split("<", 1)
+    raw_arguments = raw_arguments[:-1]
+    arguments: List[str] = []
+    start = 0
+    depth = 0
+    for index, character in enumerate(raw_arguments):
+        if character == "<":
+            depth += 1
+        elif character == ">":
+            depth -= 1
+        elif character == "," and depth == 0:
+            arguments.append(raw_arguments[start:index].strip())
+            start = index + 1
+    arguments.append(raw_arguments[start:].strip())
+    return base.strip(), tuple(arguments)
 class TypeChecker:
     def __init__(self, ast: ProgramNode, filepath: str = '<anonymous>', source: str = ''):
         self.ast = ast
@@ -39,6 +61,10 @@ class TypeChecker:
         self.is_inside_unsafe = False
         self.current_return_type: Optional[str] = None
         self.current_is_async = False
+        self.foreign_modules: Dict[str, ForeignModuleBinding] = {}
+        self.foreign_types: Dict[str, Dict[str, ForeignCallableBinding]] = {}
+        self.enum_variants: Dict[str, Dict[str, Any]] = {}
+        self.generic_type_params: Set[str] = set()
         
         # Prepopulate builtin runtime functions
         self.builtins = {
@@ -47,7 +73,7 @@ class TypeChecker:
             'addr': 'uintptr', 'peek': 'uintptr', 'memdump': 'void',
             'delay_ms': 'void', 'channel': 'Channel', 'Ok': 'Result',
             'Err': 'Result', 'len': 'int', 'ord': 'int', 'char_code_at': 'int',
-            'args': 'Array<string>'
+            'args': 'Array<string>', 'map': 'any', 'filter': 'any', 'fold': 'any'
         }
         for b, t in self.builtins.items():
             self.scopes[0][b] = t
@@ -89,6 +115,8 @@ class TypeChecker:
             return True
         if expected == actual:
             return True
+        if expected in self.generic_type_params:
+            return True
         # Strip optional suffix for base type comparison
         exp_base = expected.rstrip('?')
         act_base = actual.rstrip('?')
@@ -102,6 +130,13 @@ class TypeChecker:
         # int can widen to float
         if exp_base == 'float' and act_base == 'int':
             return True
+        expected_name, expected_arguments = _generic_type_parts(exp_base)
+        actual_name, actual_arguments = _generic_type_parts(act_base)
+        if expected_arguments and actual_arguments and expected_name == actual_name:
+            return len(expected_arguments) == len(actual_arguments) and all(
+                self.is_compatible(expected_argument, actual_argument)
+                for expected_argument, actual_argument in zip(expected_arguments, actual_arguments)
+            )
         # Function pointer / callback compatibility
         if (exp_base.startswith('fn(') or exp_base.startswith('fn->') or exp_base.startswith('function')) and (act_base.startswith('fn(') or act_base.startswith('fn->') or act_base.startswith('function')):
             exp_ret = exp_base.split('->')[-1].strip() if '->' in exp_base else 'any'
@@ -141,21 +176,65 @@ class TypeChecker:
 
         # 1st Pass: Register all Structs & Functions
         for stmt in self.ast.statements:
-            if isinstance(stmt, StructDefNode):
+            if isinstance(stmt, ImportNode) and stmt.ecosystem is not None:
+                binding = stmt.binding if isinstance(stmt.binding, ForeignModuleBinding) else None
+                module_type = (
+                    binding.module_type
+                    if binding is not None
+                    else f"foreign-module::{stmt.ecosystem}::{stmt.path}"
+                )
+                self.declare(stmt.alias, module_type)
+                if binding is not None:
+                    self.foreign_modules[module_type] = binding
+                    for type_name, type_binding in binding.types.items():
+                        self.foreign_types[type_name] = dict(type_binding.methods)
+            elif isinstance(stmt, StructDefNode):
                 fields = {}
                 for f in stmt.fields:
                     f_type = f.type_annot.name if f.type_annot else 'any'
                     fields[f.name] = f_type
                 self.struct_defs[stmt.name] = fields
                 self.declare(stmt.name, stmt.name)
+            elif isinstance(stmt, EnumDefNode):
+                self.declare(stmt.name, stmt.name)
+                self.generic_type_params.update(stmt.generic_params)
+                for member in stmt.members:
+                    if not member.is_variant:
+                        continue
+                    if member.name in self.enum_variants:
+                        previous = self.enum_variants[member.name]["enum"]
+                        DiagnosticEmitter.emit_error(
+                            self.filepath, self.source, stmt.line, stmt.col,
+                            "E2033", f"Duplicate enum variant constructor '{member.name}'",
+                            note=f"The name is already used by enum '{previous}'.",
+                            help_msg="Variant constructor names must be unique within a module.",
+                        )
+                    params = [
+                        (f"payload_{index}", str(payload_type))
+                        for index, payload_type in enumerate(member.payload_types)
+                    ]
+                    definition = {
+                        "enum": stmt.name,
+                        "generic_params": tuple(stmt.generic_params),
+                        "payload_types": tuple(str(item) for item in member.payload_types),
+                        "ret": stmt.name,
+                        "public_ret": stmt.name,
+                        "params": params,
+                        "is_enum_variant": True,
+                    }
+                    self.enum_variants[member.name] = definition
+                    self.func_defs[member.name] = definition
+                    self.declare(member.name, f"fn->{stmt.name}")
             elif isinstance(stmt, FunctionDefNode):
                 ret_t = str(stmt.return_type) if stmt.return_type else 'any'
                 params = [(p.name, str(p.type_annot) if p.type_annot else 'any') for p in stmt.params]
+                defaults = [p.default_val for p in stmt.params]
                 public_ret = f'Task<{ret_t}>' if stmt.is_async else ret_t
                 self.func_defs[stmt.name] = {
                     'ret': ret_t,
                     'public_ret': public_ret,
                     'params': params,
+                    'defaults': defaults,
                     'is_async': stmt.is_async,
                 }
                 self.declare(stmt.name, f'fn->{public_ret}')
@@ -206,7 +285,7 @@ class TypeChecker:
         if not node:
             return
 
-        if isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode)):
+        if isinstance(node, (NativeIncludeNode, NativeLinkNode, NativeRawNode, NativeUseNode, ExternFnDeclNode, ImportNode)):
             return
 
         if isinstance(node, VarDeclNode):
@@ -229,6 +308,47 @@ class TypeChecker:
             else:
                 self.declare(node.name, val_type)
                 node.inferred_type = val_type
+
+        elif isinstance(node, DestructureDeclNode):
+            self.visit(node.expr)
+            value_type = self.infer_type(node.expr)
+            binding_types: List[str] = []
+            if node.pattern_kind == "array":
+                base, arguments = _generic_type_parts(value_type)
+                if value_type != "any" and base != "Array":
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2048", "Array destructuring requires an Array value",
+                        expected="Array<T>", found=value_type,
+                    )
+                element_type = arguments[0] if arguments else "any"
+                binding_types = [element_type] * len(node.names)
+            else:
+                fields = self.struct_defs.get(node.struct_name)
+                if fields is None:
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2049", f"Unknown struct destructuring pattern '{node.struct_name}'",
+                        expected="declared struct", found=node.struct_name,
+                    )
+                if value_type != "any" and value_type != node.struct_name:
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2049", "Struct destructuring value has the wrong type",
+                        expected=node.struct_name, found=value_type,
+                    )
+                field_items = list((fields or {}).items())
+                if len(node.names) != len(field_items):
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, node.line, node.col,
+                        "E2050", f"Struct pattern '{node.struct_name}' has the wrong number of bindings",
+                        expected=str(len(field_items)), found=str(len(node.names)),
+                    )
+                binding_types = [field_type for _, field_type in field_items]
+
+            for name, binding_type in zip(node.names, binding_types):
+                if name != "_":
+                    self.declare(name, binding_type)
 
         elif isinstance(node, AssignNode):
             val_type = self.infer_type(node.expr)
@@ -278,9 +398,65 @@ class TypeChecker:
         elif isinstance(node, ThrowNode):
             self.visit(node.expr)
 
+        elif isinstance(node, YieldNode):
+            value_type = self.infer_type(node.expr)
+            owner_name, owner_arguments = _generic_type_parts(self.current_return_type or "")
+            if self.current_return_type is None:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2045", "yield is only valid inside an iterator function",
+                    help_msg="Place yield inside a function returning Iterator<T>.",
+                )
+            elif owner_name != "Iterator" or len(owner_arguments) != 1:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2046", "A function using yield must return Iterator<T>",
+                    expected="Iterator<T>", found=self.current_return_type,
+                )
+            elif not self.is_compatible(owner_arguments[0], value_type):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2047", "Yielded value has the wrong iterator element type",
+                    expected=owner_arguments[0], found=value_type,
+                )
+            self.visit(node.expr)
+
         elif isinstance(node, AwaitNode):
             self.visit(node.expr)
             self.infer_type(node)
+
+        elif isinstance(node, ResultPropagateNode):
+            operand_type = self.infer_type(node.expr)
+            operand_name, operand_arguments = _generic_type_parts(operand_type)
+            return_name, return_arguments = _generic_type_parts(self.current_return_type or "")
+            if self.current_return_type is None:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2036", "Result propagation is only valid inside a function",
+                    help_msg="Move '?' into a function that returns Result<T, E>.",
+                )
+            elif operand_name != "Result" or len(operand_arguments) != 2:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2037", "The '?' operand must have type Result<T, E>",
+                    expected="Result<T, E>", found=operand_type,
+                    help_msg="Use '?' only on an expression that can return an error.",
+                )
+            elif return_name != "Result" or len(return_arguments) != 2:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2038", "A function using '?' must return Result<T, E>",
+                    expected="Result<T, E>", found=self.current_return_type,
+                    help_msg="Change the function return type or handle the error with match.",
+                )
+            elif not self.is_compatible(return_arguments[1], operand_arguments[1]):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2039", "Propagated Result error type is incompatible",
+                    expected=return_arguments[1], found=operand_arguments[1],
+                    help_msg="Map the error to the function's declared Result error type.",
+                )
+            self.visit(node.expr)
 
         elif isinstance(node, StructDefNode):
             pass
@@ -328,7 +504,8 @@ class TypeChecker:
             self.enter_scope()
             if node.collection_expr:
                 c_type = self.infer_type(node.collection_expr)
-                elem_type = c_type.replace('Array<', '').replace('>', '') if 'Array<' in c_type else 'any'
+                collection_name, collection_arguments = _generic_type_parts(c_type)
+                elem_type = collection_arguments[0] if collection_name in ('Array', 'Iterator') and len(collection_arguments) == 1 else ('string' if c_type == 'string' else 'any')
                 self.declare(node.var_name, elem_type)
             else:
                 self.declare(node.var_name, 'int')
@@ -336,10 +513,12 @@ class TypeChecker:
             self.exit_scope()
 
         elif isinstance(node, MatchNode):
-            self.infer_type(node.expr)
-            for pat, stmt in node.cases:
+            subject_type = self.infer_type(node.expr)
+            for pat, statements in node.cases:
                 self.enter_scope()
-                self.visit(stmt)
+                self._declare_pattern_bindings(pat, subject_type)
+                for statement in statements:
+                    self.visit(statement)
                 self.exit_scope()
 
         elif isinstance(node, TryCatchNode):
@@ -369,6 +548,8 @@ class TypeChecker:
             self.visit(node.index_expr)
 
         elif isinstance(node, FunctionCallNode):
+            if isinstance(node.callee, str) and node.callee in ("map", "filter", "fold"):
+                self._infer_collection_builtin(node)
             if node.callee in ('peek', 'memdump') and not self.is_inside_unsafe:
                 DiagnosticEmitter.emit_error(
                     self.filepath, self.source, node.line, node.col,
@@ -378,16 +559,29 @@ class TypeChecker:
                     help_msg='Wrap raw pointer dereferencing and memory inspections inside \'unsafe { ... }\'.'
                 )
             
+            foreign_callable = self._foreign_callable(node)
+            if foreign_callable is not None:
+                self._check_foreign_arguments(node, foreign_callable)
             # Check argument types if function is known
-            if node.callee in self.func_defs:
+            elif node.callee in self.func_defs:
                 param_specs = self.func_defs[node.callee]['params']
+                defaults = self.func_defs[node.callee].get('defaults') or []
+                # Resolve omitted trailing arguments by appending their default
+                # value expressions so downstream lowering and code generation
+                # always observe a fully-saturated call.
+                while len(node.args) < len(param_specs):
+                    index = len(node.args)
+                    default = defaults[index] if index < len(defaults) else None
+                    if default is None:
+                        break
+                    node.args.append(default)
                 if len(node.args) != len(param_specs):
                     DiagnosticEmitter.emit_error(
                         self.filepath, self.source, node.line, node.col,
                         "E2007", f"Function '{node.callee}' expected {len(param_specs)} arguments, but got {len(node.args)}",
                         expected=f"{len(param_specs)} arguments",
                         found=f"{len(node.args)} arguments",
-                        help_msg=f"Provide exactly {len(param_specs)} arguments to '{node.callee}()'."
+                        help_msg=f"Provide an argument for every parameter without a default value in '{node.callee}()'."
                     )
                 for idx, arg in enumerate(node.args):
                     if idx < len(param_specs):
@@ -527,6 +721,12 @@ class TypeChecker:
             inferred = operand_type[5:-1]
             node.inferred_type = inferred
             return inferred
+        if isinstance(node, ResultPropagateNode):
+            operand_type = self.infer_type(node.expr)
+            name, arguments = _generic_type_parts(operand_type)
+            inferred = arguments[0] if name == "Result" and len(arguments) == 2 else "any"
+            node.inferred_type = inferred
+            return inferred
         if isinstance(node, ConditionalExprNode):
             self._require_bool_condition(node.condition, "if expression")
             branch_types = [self.infer_type(node.then_expr)]
@@ -609,13 +809,36 @@ class TypeChecker:
             node.inferred_type = inferred
             return inferred
         if isinstance(node, FunctionCallNode):
-            if node.callee in self.struct_defs:
+            collection_result = self._infer_collection_builtin(node)
+            if collection_result is not None:
+                node.inferred_type = collection_result
+                return collection_result
+            foreign_callable = self._foreign_callable(node)
+            if foreign_callable is not None:
+                inferred = foreign_callable.returns
+            elif node.callee in self.enum_variants:
+                variant = self.enum_variants[node.callee]
+                substitutions = {}
+                for payload_type, argument in zip(variant["payload_types"], node.args):
+                    if payload_type in variant["generic_params"]:
+                        substitutions[payload_type] = self.infer_type(argument)
+                generic_params = variant["generic_params"]
+                if generic_params:
+                    arguments = ", ".join(substitutions.get(name, "any") for name in generic_params)
+                    inferred = f'{variant["enum"]}<{arguments}>'
+                else:
+                    inferred = variant["enum"]
+            elif node.callee in self.struct_defs:
                 inferred = node.callee
             elif node.callee in self.func_defs:
                 inferred = self.func_defs[node.callee].get(
                     'public_ret',
                     self.func_defs[node.callee]['ret'],
                 )
+            elif node.callee == "Ok" and node.args:
+                inferred = f"Result<{self.infer_type(node.args[0])}, any>"
+            elif node.callee == "Err" and node.args:
+                inferred = f"Result<any, {self.infer_type(node.args[0])}>"
             elif node.callee in self.builtins:
                 inferred = self.builtins[node.callee]
             else:
@@ -632,3 +855,161 @@ class TypeChecker:
             return 'any'
         node.inferred_type = 'any'
         return 'any'
+
+    def _infer_lambda_with_types(self, node: LambdaNode, parameter_types: tuple[str, ...]) -> str:
+        if len(node.params) != len(parameter_types):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                "E2042", "Collection callback has the wrong parameter count",
+                expected=str(len(parameter_types)), found=str(len(node.params)),
+                help_msg="Match the callback parameters required by map/filter/fold.",
+            )
+        self.enter_scope()
+        try:
+            for name, value_type in zip(node.params, parameter_types):
+                self.declare(name, value_type)
+            result = self.infer_type(node.body)
+        finally:
+            self.exit_scope()
+        node.inferred_param_types = list(parameter_types)
+        node.inferred_type = f"fn({', '.join(parameter_types)}) -> {result}"
+        return result
+
+    def _infer_collection_builtin(self, node: FunctionCallNode) -> Optional[str]:
+        if not isinstance(node.callee, str) or node.callee not in ("map", "filter", "fold"):
+            return None
+        expected_count = 3 if node.callee == "fold" else 2
+        if len(node.args) != expected_count:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                "E2041", f"'{node.callee}' has the wrong argument count",
+                expected=str(expected_count), found=str(len(node.args)),
+                help_msg="Use map(items, transform), filter(items, predicate), or fold(items, initial, reducer).",
+            )
+        collection_type = self.infer_type(node.args[0])
+        collection_name, collection_arguments = _generic_type_parts(collection_type)
+        if collection_name != "Array" or len(collection_arguments) != 1:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.args[0].line, node.args[0].col,
+                "E2040", f"'{node.callee}' requires Array<T>",
+                expected="Array<T>", found=collection_type,
+                help_msg="Pass an array as the first argument.",
+            )
+        element_type = collection_arguments[0]
+        callback_index = 2 if node.callee == "fold" else 1
+        callback = node.args[callback_index]
+        if not isinstance(callback, LambdaNode):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, callback.line, callback.col,
+                "E2042", "Collection callback must be a lambda expression",
+                expected="lambda", found=type(callback).__name__,
+                help_msg="Use `item => expression` or `(acc, item) => expression`.",
+            )
+        if node.callee == "map":
+            mapped_type = self._infer_lambda_with_types(callback, (element_type,))
+            return f"Array<{mapped_type}>"
+        if node.callee == "filter":
+            predicate_type = self._infer_lambda_with_types(callback, (element_type,))
+            if not self.is_compatible("bool", predicate_type):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, callback.line, callback.col,
+                    "E2043", "filter predicate must return bool",
+                    expected="bool", found=predicate_type,
+                )
+            return collection_type
+        accumulator_type = self.infer_type(node.args[1])
+        reduced_type = self._infer_lambda_with_types(callback, (accumulator_type, element_type))
+        if not self.is_compatible(accumulator_type, reduced_type):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, callback.line, callback.col,
+                "E2044", "fold reducer must return the accumulator type",
+                expected=accumulator_type, found=reduced_type,
+            )
+        return accumulator_type
+
+    def _foreign_callable(self, node: FunctionCallNode) -> Optional[ForeignCallableBinding]:
+        if not isinstance(node.callee, MemberAccessNode):
+            return None
+        receiver_type = self.infer_type(node.callee.obj)
+        module = self.foreign_modules.get(receiver_type)
+        if module is not None:
+            binding = module.functions.get(node.callee.member)
+            if binding is None:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2030", f"Unknown foreign function '{node.callee.member}'",
+                    note=f"The binding manifest for '{module.module}' does not declare this function.",
+                    help_msg="Add an accurate entry to nyx.bindings.json or fix the function name.",
+                )
+            return binding
+        methods = self.foreign_types.get(receiver_type)
+        if methods is not None:
+            binding = methods.get(node.callee.member)
+            if binding is None:
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, node.line, node.col,
+                    "E2030", f"Unknown foreign method '{node.callee.member}'",
+                    note=f"The binding manifest for type '{receiver_type}' does not declare this method.",
+                    help_msg="Add an accurate method entry to nyx.bindings.json or fix the method name.",
+                )
+            return binding
+        return None
+
+    def _check_foreign_arguments(
+        self,
+        node: FunctionCallNode,
+        binding: ForeignCallableBinding,
+    ) -> None:
+        if len(node.args) != len(binding.params):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, node.line, node.col,
+                "E2031", "Foreign call argument count mismatch",
+                expected=f"{len(binding.params)} arguments",
+                found=f"{len(node.args)} arguments",
+                help_msg="Call the foreign API with the signature declared in its binding manifest.",
+            )
+        for index, (argument, expected) in enumerate(zip(node.args, binding.params), 1):
+            actual = self.infer_type(argument)
+            if not self.is_compatible(expected, actual):
+                DiagnosticEmitter.emit_error(
+                    self.filepath, self.source, argument.line, argument.col,
+                    "E2032", f"Foreign argument {index} has the wrong type",
+                    expected=expected,
+                    found=actual,
+                    help_msg="Match the argument type declared in the foreign binding manifest.",
+                )
+
+    def _declare_pattern_bindings(self, pattern: ASTNode, subject_type: str) -> None:
+        if isinstance(pattern, IdentifierNode):
+            if pattern.name != "_":
+                self.declare(pattern.name, subject_type)
+            return
+        if not isinstance(pattern, FunctionCallNode) or pattern.callee not in self.enum_variants:
+            return
+        variant = self.enum_variants[pattern.callee]
+        subject_base = subject_type.split("<", 1)[0]
+        if subject_base != variant["enum"]:
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, pattern.line, pattern.col,
+                "E2034", f"Variant '{pattern.callee}' does not belong to matched type '{subject_type}'",
+                expected=variant["enum"], found=subject_type,
+                help_msg="Use a variant constructor from the enum being matched.",
+            )
+        generic_values = []
+        if "<" in subject_type and subject_type.endswith(">"):
+            generic_values = [item.strip() for item in subject_type.split("<", 1)[1][:-1].split(",")]
+        substitutions = {
+            name: generic_values[index]
+            for index, name in enumerate(variant["generic_params"])
+            if index < len(generic_values)
+        }
+        if len(pattern.args) != len(variant["payload_types"]):
+            DiagnosticEmitter.emit_error(
+                self.filepath, self.source, pattern.line, pattern.col,
+                "E2035", f"Variant pattern '{pattern.callee}' has the wrong payload count",
+                expected=str(len(variant["payload_types"])), found=str(len(pattern.args)),
+                help_msg="Bind every payload declared by the enum variant.",
+            )
+        for argument, payload_type in zip(pattern.args, variant["payload_types"]):
+            if isinstance(argument, IdentifierNode) and argument.name != "_":
+                self.declare(argument.name, substitutions.get(payload_type, payload_type))

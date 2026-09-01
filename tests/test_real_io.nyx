@@ -8,7 +8,7 @@ fn main() {
     var test_file = "temp_nyx_data.txt";
     var payload = "{\"name\":\"nyx_language\",\"version\":3,\"status\":\"active\"}";
     
-    var write_ok = write_string(test_file, payload);
+    var write_ok = write_string(test_file, payload).unwrap();
     guard write_ok else {
         print("[ERROR] Failed to write test file!");
         return;
@@ -20,20 +20,20 @@ fn main() {
     print($"[2] File exists check: {exists_ok}");
     
     // 3. Read Content from disk
-    var read_content = read_to_string(test_file);
+    var read_content = read_to_string(test_file).unwrap();
     print($"[3] Read file content: {read_content}");
     
     // 4. Parse JSON keys from disk data
-    var parsed_name = get_string(read_content, "name");
-    var parsed_version = get_int(read_content, "version");
-    var parsed_status = get_string(read_content, "status");
+    var parsed_name = get_string(read_content, "name").unwrap();
+    var parsed_version = get_int(read_content, "version").unwrap();
+    var parsed_status = get_string(read_content, "status").unwrap();
     
     print($"[4] Extracted JSON Name: {parsed_name}");
     print($"[5] Extracted JSON Version: {parsed_version}");
     print($"[6] Extracted JSON Status: {parsed_status}");
     
     // 5. Cleanup file
-    var delete_ok = remove_file(test_file);
+    var delete_ok = remove_file(test_file).unwrap();
     print($"[7] Cleaned up temp file: {delete_ok}");
     
     print("[SUCCESS] Real File I/O and JSON Parsing 100% Verified!");

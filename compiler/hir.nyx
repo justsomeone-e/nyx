@@ -154,6 +154,15 @@ impl HIRNode {
         return result + "]"
     }
 
+    fn node_types_json(self, values: Array<HIRNode>) -> string {
+        var result = "["
+        for i in 0..len(values)-1 {
+            if i > 0 { result = result + "," }
+            result = result + values[i].type_info.to_json()
+        }
+        return result + "]"
+    }
+
     fn optional_node_json(self, values: Array<HIRNode>) -> string {
         if len(values) == 0 { return "null" }
         return values[0].to_json()
@@ -214,6 +223,11 @@ impl HIRNode {
         if self.kind == "IRAwait" {
             return "{\"expr\":" + self.first[0].to_json() +
                 ",\"node\":\"IRAwait\",\"span\":" + span_json +
+                ",\"type\":" + type_json + "}"
+        }
+        if self.kind == "IRResultPropagate" {
+            return "{\"expr\":" + self.first[0].to_json() +
+                ",\"node\":\"IRResultPropagate\",\"span\":" + span_json +
                 ",\"type\":" + type_json + "}"
         }
         if self.kind == "IRCall" {
@@ -403,11 +417,14 @@ impl HIRNode {
                 ",\"symbol\":" + hir_json_quote(self.symbol) + "}"
         }
         if self.kind == "IREnumMember" {
-            return "{\"name\":" + hir_json_quote(self.name) +
-                ",\"node\":\"IREnumMember\",\"value\":" + self.optional_node_json(self.first) + "}"
+            return "{\"is_variant\":" + to_string(self.flag_a) +
+                ",\"name\":" + hir_json_quote(self.name) +
+                ",\"node\":\"IREnumMember\",\"payload_types\":" + self.node_types_json(self.second) +
+                ",\"value\":" + self.optional_node_json(self.first) + "}"
         }
         if self.kind == "IREnum" {
-            return "{\"members\":" + self.nodes_json(self.first) +
+            return "{\"generic_params\":" + self.strings_json(self.strings) +
+                ",\"members\":" + self.nodes_json(self.first) +
                 ",\"name\":" + hir_json_quote(self.name) +
                 ",\"node\":\"IREnum\",\"span\":" + span_json +
                 ",\"symbol\":" + hir_json_quote(self.symbol) + "}"
@@ -424,6 +441,13 @@ impl HIRNode {
             return "{\"kind\":" + hir_json_quote(self.name) +
                 ",\"node\":\"IRNativeDirective\",\"origin_module\":" + hir_json_quote(self.aux_name) +
                 ",\"span\":" + span_json + ",\"value\":" + hir_json_quote(self.value) + "}"
+        }
+        if self.kind == "IRForeignImport" {
+            return "{\"alias\":" + hir_json_quote(self.name) +
+                ",\"ecosystem\":" + hir_json_quote(self.op) +
+                ",\"module\":" + hir_json_quote(self.value) +
+                ",\"node\":\"IRForeignImport\",\"source\":" + hir_json_quote(self.aux_name) +
+                ",\"span\":" + span_json + ",\"symbol\":" + hir_json_quote(self.symbol) + "}"
         }
         return "null"
     }

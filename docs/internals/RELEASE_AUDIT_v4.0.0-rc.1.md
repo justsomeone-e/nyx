@@ -1,32 +1,31 @@
 # Nyx v4.0.0-rc.1 Local Candidate Audit
 
-Date: 2026-08-30
-Current version: `4.0.0-dev.1`
-Intended next tag: `v4.0.0-rc.1`
+Date: 2026-09-02
+Current version: `4.0.0-rc.1`
+Release tag: `v4.0.0-rc.1`
 
 ## Decision
 
-The current Windows working-tree candidate passes the targeted compiler, HIR,
-bundle, self-host, installer, VS Code, and embedded contract checks. The full
-unified harness is not green yet: its native-library capability contract
-currently stops at the `native/gpio` expectation. This is a WIP review
-candidate, not an RC1 sign-off. Publication remains on hold until the same
-commit passes the retained Windows, Linux x64, macOS x64, and macOS arm64
-matrix and two clean-checkout release audits.
+The reviewed Windows candidate passes the complete unified framework, including
+the compiler, typed HIR, backends, bundle, self-host, installer, VS Code/LSP,
+interop, fuzz, and 138-point regression gates. Product Owner approval promotes
+this commit to RC1. The tagged GitHub workflow remains authoritative for the
+Linux verification job, four native platform artifacts, checksums, SBOM, and
+provenance.
 
 ## Verified local evidence
 
 | Gate | Result | Evidence |
 | :-- | :--: | :-- |
-| Unified framework | WIP | Full harness stops at the `native/gpio` capability expectation; targeted gates remain passing |
-| Regression battery | REVIEWED | Prior retained evidence: 138/138; current unified harness is not green |
+| Unified framework | PASS | Complete local framework finished with `ALL TEST SUITES PASSED` |
+| Regression battery | PASS | 138/138, zero failures |
 | Native self-host | PASS | Nyx-authored frontend, native stage 2, and byte-identical stage-3 C++ |
-| Typed HIR | PASS | 162 programs, 21 stdlib modules, 182-case Nyx/Python HIR byte parity |
+| Typed HIR | PASS | 162 programs, 17 stdlib modules, 194-case Nyx/Python HIR byte parity |
 | `cpp` HIR runtime | PASS | 162 emitted and 138 native runtime cases |
 | `js` HIR runtime | PASS | 162 executed, 138 runtime cases, 10 deterministic fixtures |
 | `python` HIR runtime | PASS | 162 compiled, 138 runtime cases, 10 deterministic fixtures |
 | `rust` HIR emission | PASS | 159 supported corpus programs passed Rust 2021 metadata/borrow checking; exception, spawn, and channel fixtures rejected with E3001; 8/8 focused Rust cases |
-| Language freeze | PASS | 46 keywords, editor parity, embedded controls, traits, Task, exception, i64, and strict-bool contracts |
+| Language surface | PASS | 44 keywords, exact editor parity, traits, Task, exception, i64, and strict-bool contracts |
 | Numeric semantics | PASS | Signed i64, IEEE binary64, and canonical scalar text on three stable backends |
 | Bundle ABI v1 | PASS | Typed lowering, UTF-8, isolated instances, and 100,000-allocation stress |
 | Capability model | PASS | Target aliases, target rejection, stdlib gates, and six-module parity |
@@ -74,21 +73,16 @@ tagged workflow itself completes.
 - README architecture and release claims now match the typed-HIR and native
   self-host implementation without removing the animated assets.
 
-## Remaining RC1 blockers
+## Tagged workflow evidence
 
-- [ ] Complete the canonical `cpp/js/python/rust/wasm/react/asm` target-ID
-      migration, remove the pre-Nyx compatibility surface, and pass the unified
-      regression suite with no stale-brand tokens.
-- [ ] Freeze one reviewed commit and run the clean Windows/Linux/macOS matrix.
-- [ ] Complete the release audit twice from clean checkouts of that commit.
-- [ ] Change the single version source and all generated package surfaces to
-      exactly `4.0.0-rc.1` only after the matrix is green.
-- [ ] Produce and retain checksums, SPDX SBOM, and provenance from the tagged
-      hosted workflow.
-- [ ] Approve the RC1 tag and publish the candidate artifacts.
-- [x] Normalize official CubeIDE linker scripts for LLVM LLD and validate the
-      official STM32Cube/CMSIS provider matrix across all 21 registered pack
-      boards (25/25 total Nucleo profiles emit ELF/HEX/BIN).
+- [x] Canonical `cpp/js/python/rust/wasm/react/asm` target IDs and removal of the
+      retired microcontroller surface.
+- [x] Complete local unified regression framework.
+- [x] Single version source and generated package surfaces set to
+      `4.0.0-rc.1`.
+- [x] Product Owner approval for the RC1 tag.
+- [ ] Hosted Linux verification and four-platform native artifact matrix.
+- [ ] Published checksums, SPDX SBOM, provenance, source archives, and VSIX.
 
 ## Stable blockers after RC1
 

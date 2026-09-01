@@ -39,12 +39,26 @@ inline std::string _nyx_base64_decode(const std::string& in) {
     }
     return out;
 }
+
+inline NyxResult<std::string, std::string> _nyx_base64_decode_result(const std::string& in) {
+    if (in.size() % 4 != 0) return {false, {}, "invalid base64 length"};
+    bool padding = false;
+    size_t padding_count = 0;
+    for (unsigned char c : in) {
+        if (c == '=') { padding = true; padding_count++; continue; }
+        if (padding || _nyx_b64_chars.find(static_cast<char>(c)) == std::string::npos) {
+            return {false, {}, "invalid base64 character or padding"};
+        }
+    }
+    if (padding_count > 2) return {false, {}, "invalid base64 padding"};
+    return {true, _nyx_base64_decode(in), {}};
+}
 }
 
 fn base64_encode(data: string) -> string {
     return _nyx_base64_encode(data);
 }
 
-fn base64_decode(data: string) -> string {
-    return _nyx_base64_decode(data);
+fn base64_decode(data: string) -> Result<string, string> {
+    return _nyx_base64_decode_result(data);
 }

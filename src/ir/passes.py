@@ -10,6 +10,7 @@ from .model import (
     IRArray,
     IRAssert,
     IRAwait,
+    IRResultPropagate,
     IRBinary,
     IRBreak,
     IRCall,
@@ -21,6 +22,7 @@ from .model import (
     IRExpr,
     IRExprStatement,
     IRExternFunction,
+    IRForeignImport,
     IRFor,
     IRFunction,
     IRGuard,
@@ -46,6 +48,7 @@ from .model import (
     IRStruct,
     IRTestBlock,
     IRThrow,
+    IRYield,
     IRTrait,
     IRTryCatch,
     IRTypeAlias,
@@ -116,6 +119,8 @@ class HIRTransformer:
                     IREnumMember(
                         member.name,
                         self.transform_expr(member.value) if member.value is not None else None,
+                        member.payload_types,
+                        member.is_variant,
                     )
                     for member in node.members
                 ),
@@ -125,7 +130,7 @@ class HIRTransformer:
                 node,
                 params=tuple(self.transform_parameter(parameter) for parameter in node.params),
             )
-        if isinstance(node, (IRTypeAlias, IRNativeDirective)):
+        if isinstance(node, (IRTypeAlias, IRNativeDirective, IRForeignImport)):
             return node
         if isinstance(node, IRStatement):
             return self.transform_statement(node)
@@ -149,6 +154,8 @@ class HIRTransformer:
         if isinstance(node, IRReturn):
             return replace(node, expr=self.transform_expr(node.expr) if node.expr is not None else None)
         if isinstance(node, IRThrow):
+            return replace(node, expr=self.transform_expr(node.expr))
+        if isinstance(node, IRYield):
             return replace(node, expr=self.transform_expr(node.expr))
         if isinstance(node, IRIf):
             return replace(
@@ -216,6 +223,8 @@ class HIRTransformer:
         if isinstance(node, IRUnary):
             return replace(node, expr=self.transform_expr(node.expr))
         if isinstance(node, IRAwait):
+            return replace(node, expr=self.transform_expr(node.expr))
+        if isinstance(node, IRResultPropagate):
             return replace(node, expr=self.transform_expr(node.expr))
         if isinstance(node, IRCall):
             return replace(

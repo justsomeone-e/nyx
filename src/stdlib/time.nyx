@@ -22,4 +22,8 @@ inline void _nyx_time_sleep_ms(int64_t ms) {
 
 fn now_ms() -> int { return _nyx_time_now_ms(); }
 fn now_us() -> int { return _nyx_time_now_us(); }
-fn sleep_ms(ms: int) { _nyx_time_sleep_ms(ms); }
+fn sleep_ms(ms: int) -> Result<bool, string> {
+    if ms < 0 { return Err("sleep duration must not be negative") }
+    _nyx_time_sleep_ms(ms)
+    return Ok(true)
+}

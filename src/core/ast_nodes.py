@@ -41,6 +41,15 @@ class VarDeclNode(ASTNode):
         self.expr = expr
         self.is_const = is_const
 
+class DestructureDeclNode(ASTNode):
+    def __init__(self, pattern_kind: str, names: List[str], expr: ASTNode, struct_name: str = "", is_const: bool = False, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.pattern_kind = pattern_kind
+        self.names = names
+        self.expr = expr
+        self.struct_name = struct_name
+        self.is_const = is_const
+
 class AssignNode(ASTNode):
     def __init__(self, target: ASTNode, expr: ASTNode, line: int = 1, col: int = 1):
         super().__init__(line, col)
@@ -85,6 +94,11 @@ class UnaryOpNode(ASTNode):
         self.expr = expr
 
 class AwaitNode(ASTNode):
+    def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+
+class ResultPropagateNode(ASTNode):
     def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
         super().__init__(line, col)
         self.expr = expr
@@ -139,11 +153,20 @@ class TypeAliasNode(ASTNode):
         self.name = name
         self.actual_type = actual_type
 
+class EnumMember:
+    def __init__(self, name: str, payload_types: Optional[List[TypeNode]] = None, value: Optional[ASTNode] = None, is_variant: bool = False):
+        self.name = name
+        self.payload_types = payload_types or []
+        self.value = value
+        self.is_variant = is_variant
+
+
 class EnumDefNode(ASTNode):
-    def __init__(self, name: str, members: List[Any], line: int = 1, col: int = 1):
+    def __init__(self, name: str, members: List[EnumMember], generic_params: Optional[List[str]] = None, line: int = 1, col: int = 1):
         super().__init__(line, col)
         self.name = name
         self.members = members
+        self.generic_params = generic_params or []
 
 class UnsafeBlockNode(ASTNode):
     def __init__(self, body: List[ASTNode], line: int = 1, col: int = 1):
@@ -251,6 +274,11 @@ class ThrowNode(ASTNode):
         super().__init__(line, col)
         self.expr = expr
 
+class YieldNode(ASTNode):
+    def __init__(self, expr: ASTNode, line: int = 1, col: int = 1):
+        super().__init__(line, col)
+        self.expr = expr
+
 class BreakNode(ASTNode): pass
 class ContinueNode(ASTNode): pass
 
@@ -272,11 +300,14 @@ class FunctionCallNode(ASTNode):
         self.args = args
 
 class ImportNode(ASTNode):
-    def __init__(self, path: str, alias: Optional[str] = None, symbols: Optional[List[str]] = None, line: int = 1, col: int = 1):
+    def __init__(self, path: str, alias: Optional[str] = None, symbols: Optional[List[str]] = None, line: int = 1, col: int = 1, ecosystem: Optional[str] = None, source: Optional[str] = None, binding: Any = None):
         super().__init__(line, col)
         self.path = path
         self.alias = alias
         self.symbols = symbols or []
+        self.ecosystem = ecosystem
+        self.source = source
+        self.binding = binding
 
 class NativeIncludeNode(ASTNode):
     def __init__(self, header: str, line: int = 1, col: int = 1):

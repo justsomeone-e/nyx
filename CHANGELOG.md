@@ -4,6 +4,35 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [4.0.0-rc.1] - 2026-09-02
+
+### Release candidate
+
+* Promoted the compiler-focused v4 line to its first public release candidate,
+  **Samsara**. This is an evaluation and soak release; `v4.0.0 Nirvana` remains
+  the future stable milestone.
+* Completed default-argument lowering in both frontends and the Nyx-authored
+  HIR path, including omitted trailing arguments and required-argument
+  diagnostics.
+* Added flat array and struct destructuring declarations with single RHS
+  evaluation, checked cardinality diagnostics, const preservation, and exact
+  Python/Nyx HIR parity.
+* Hardened destructuring lowering against user-identifier collisions and made
+  top-level bounds failures deterministic across C++, JavaScript, and Python.
+* Expanded typed standard-library, collection, fallible-result, and foreign
+  binding test coverage; unsupported target behavior remains behind explicit
+  capability gates rather than silently approximated.
+* Updated the native compiler banner, VS Code package, documentation, and
+  pinned installer instructions to one version source: `4.0.0-rc.1`.
+
+### Validation
+
+* The unified local test framework passed completely: self-host, 194-case HIR
+  parity, backend runtime/compile gates, installer/LSP/fuzz checks, and the
+  138-point regression battery.
+* The tagged GitHub workflow is the source of release-asset checksums, SBOM,
+  provenance, platform-native binaries, and the packaged VS Code extension.
+
 ## [4.0.0-dev.2] - 2026-08-31
 
 ### Scope reset: microcontroller support removed

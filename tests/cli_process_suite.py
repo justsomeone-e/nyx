@@ -11,6 +11,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 from src.codegen.cpp_toolchain import CppToolchain
+from src.cli import get_entry_file, get_target_from_args
 
 
 def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
@@ -27,6 +28,31 @@ def _run_cli(*args: str) -> subprocess.CompletedProcess[str]:
 def run_cli_process_suite() -> bool:
     print("[*] Running CLI Process Exit-Code Tests...")
     with tempfile.TemporaryDirectory(prefix="nyx_cli_exit_") as temp_dir:
+        directive_path = os.path.join(temp_dir, "directive.nyx")
+        with open(directive_path, "w", encoding="utf-8") as source_file:
+            source_file.write(
+                '#target js\nimport js "node:os" as os\nprint(os.platform())\n'
+            )
+        plain_path = os.path.join(temp_dir, "plain.nyx")
+        with open(plain_path, "w", encoding="utf-8") as source_file:
+            source_file.write(
+                'import cpp "std::filesystem" from "<filesystem>" as fs\n'
+                'print(fs.current_path().string())\n'
+            )
+
+        assert get_target_from_args("python", directive_path, []) == "js"
+        assert get_target_from_args("python", directive_path, ["-t", "rust"]) == "rust"
+        assert get_target_from_args("python", directive_path, ["--target=python"]) == "python"
+        assert get_target_from_args("python", plain_path, []) == "python"
+        assert get_target_from_args(None, plain_path, []) == "cpp"
+        assert get_entry_file("missing.nyx", ["-t", "js", plain_path]) == plain_path
+        assert get_entry_file("missing.nyx", ["--target=js", plain_path]) == plain_path
+
+        directive_check = _run_cli("check", directive_path)
+        assert directive_check.returncode == 0, directive_check.stdout + directive_check.stderr
+        native_default_check = _run_cli("check", plain_path)
+        assert native_default_check.returncode == 0, native_default_check.stdout + native_default_check.stderr
+
         source_path = os.path.join(temp_dir, "runtime_failure.nyx")
         with open(source_path, "w", encoding="utf-8") as source_file:
             source_file.write(

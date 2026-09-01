@@ -18,6 +18,7 @@ from src.ir.model import (
     IRArray,
     IRAssert,
     IRAwait,
+    IRResultPropagate,
     IRBinary,
     IRBreak,
     IRCall,
@@ -28,6 +29,7 @@ from src.ir.model import (
     IRExpr,
     IRExprStatement,
     IRExternFunction,
+    IRForeignImport,
     IRFor,
     IRFunction,
     IRGuard,
@@ -50,6 +52,7 @@ from src.ir.model import (
     IRStruct,
     IRTestBlock,
     IRThrow,
+    IRYield,
     IRTrait,
     IRTryCatch,
     IRTypeAlias,
@@ -105,6 +108,45 @@ class Result:
     def __repr__(self):
         name = "Ok" if self.is_ok else "Err"
         return f"{name}({self.value!r})"
+
+
+class _NyxResultPropagation(Exception):
+    def __init__(self, error):
+        super().__init__()
+        self.error = error
+
+
+def _nyx_propagate(result):
+    if not isinstance(result, Result):
+        raise TypeError("Nyx '?' operand is not a Result")
+    if not result.is_ok:
+        raise _NyxResultPropagation(result.error)
+    return result.value
+
+
+def _nyx_map(items, transform):
+    return [transform(item) for item in items]
+
+
+def _nyx_filter(items, predicate):
+    return [item for item in items if predicate(item)]
+
+
+def _nyx_fold(items, initial, reducer):
+    accumulator = initial
+    for item in items:
+        accumulator = reducer(accumulator, item)
+    return accumulator
+
+
+class NyxEnumValue:
+    def __init__(self, enum_name, variant_name, payload):
+        self.enum_name = enum_name
+        self.variant_name = variant_name
+        self.payload = payload
+
+    def __repr__(self):
+        return f"{self.enum_name}::{self.variant_name}"
 
 
 class _NyxTask:
@@ -219,6 +261,12 @@ def to_int(value):
 def _nyx_require_bool(value):
     if type(value) is not bool:
         raise TypeError("Nyx condition must have type bool")
+    return value
+
+
+def _nyx_destructure_check(value, minimum, message):
+    if len(value) < minimum:
+        raise RuntimeError(str(message))
     return value
 
 
@@ -458,6 +506,12 @@ _nyx_time_sleep_ms = lambda milliseconds: _nyx_time.sleep(milliseconds / 1_000.0
 _nyx_base64_encode = lambda value: _nyx_base64.b64encode(value.encode("utf-8")).decode("ascii")
 _nyx_base64_decode = lambda value: _nyx_base64.b64decode(value.encode("ascii")).decode("utf-8")
 
+def _nyx_base64_decode_result(value):
+    try:
+        return Ok(_nyx_base64.b64decode(value.encode("ascii"), validate=True).decode("utf-8"))
+    except (ValueError, UnicodeError):
+        return Err("invalid base64 encoding")
+
 
 def _nyx_hash_fnv1a_64_hex(value):
     result = 0xCBF29CE484222325
@@ -504,6 +558,40 @@ def _nyx_fs_remove_file(path):
         return False
 
 
+def _nyx_fs_read_to_string_result(path):
+    try:
+        with open(path, "r", encoding="utf-8") as handle:
+            return Ok(handle.read())
+    except OSError as error:
+        return Err(f"cannot read file '{path}': {error}")
+
+
+def _nyx_fs_write_string_result(path, content):
+    try:
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        return Ok(True)
+    except OSError as error:
+        return Err(f"cannot write file '{path}': {error}")
+
+
+def _nyx_fs_append_string_result(path, content):
+    try:
+        with open(path, "a", encoding="utf-8") as handle:
+            handle.write(content)
+        return Ok(True)
+    except OSError as error:
+        return Err(f"cannot append file '{path}': {error}")
+
+
+def _nyx_fs_remove_file_result(path):
+    try:
+        _nyx_os.remove(path)
+        return Ok(True)
+    except OSError as error:
+        return Err(f"cannot remove file '{path}': {error}")
+
+
 def _nyx_json_get_string(document, key):
     marker = f'"{key}":'
     start = document.find(marker)
@@ -534,6 +622,30 @@ def _nyx_json_get_int(document, key):
         return _nyx_i64(int(document[start:end]))
     except ValueError:
         return 0
+
+def _nyx_json_get_string_result(document, key):
+    marker = f'"{key}":'; start = document.find(marker)
+    if start < 0: return Err(f"JSON field not found: {key}")
+    start += len(marker)
+    while start < len(document) and document[start] in " \t": start += 1
+    if start >= len(document) or document[start] != '"': return Err(f"JSON field is not a string: {key}")
+    end = document.find('"', start + 1)
+    return Err(f"unterminated JSON string field: {key}") if end < 0 else Ok(document[start + 1:end])
+
+def _nyx_json_get_int_result(document, key):
+    marker = f'"{key}":'; start = document.find(marker)
+    if start < 0: return Err(f"JSON field not found: {key}")
+    start += len(marker)
+    while start < len(document) and document[start] in " \t": start += 1
+    end = start + (1 if start < len(document) and document[start] == "-" else 0)
+    while end < len(document) and document[end].isdigit(): end += 1
+    if end == start or (end == start + 1 and document[start] == "-"): return Err(f"JSON field is not an integer: {key}")
+    try:
+        value = int(document[start:end])
+        if value < -(1 << 63) or value > (1 << 63) - 1: return Err(f"JSON integer is out of range: {key}")
+        return Ok(_nyx_i64(value))
+    except ValueError:
+        return Err(f"JSON field is not an integer: {key}")
 '''
 
 
@@ -556,6 +668,11 @@ class HIRPythonEmitter:
             item.name: item for item in module.items if isinstance(item, IRStruct)
         }
         self.methods = {}
+        self.enum_variants = {
+            f"enum::{item.name}::variant::{member.name}": (item, member)
+            for item in module.items if isinstance(item, IREnum)
+            for member in item.members if member.is_variant
+        }
         self.current_return_type: IRType | None = None
         self.counter = 0
         for item in module.items:
@@ -568,13 +685,24 @@ class HIRPythonEmitter:
     def emit(self) -> str:
         lines = _PYTHON_RUNTIME.splitlines()
         lines.append("")
+        for item in self.module.items:
+            if isinstance(item, IRForeignImport):
+                if item.ecosystem != "python":
+                    raise PythonEmissionError(
+                        f"Python target cannot consume '{item.ecosystem}' foreign import '{item.module}'"
+                    )
+                if not re.fullmatch(r"[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*", item.module):
+                    raise PythonEmissionError(f"Invalid Python module path '{item.module}'")
+                lines.append(f"import {item.module} as {self._symbol(item.symbol, item.alias)}")
+        if any(isinstance(item, IRForeignImport) for item in self.module.items):
+            lines.append("")
 
         declarations: List[IRNode] = []
         statements: List[IRStatement] = []
         for item in self.module.items:
             if isinstance(item, IRStatement):
                 statements.append(item)
-            elif isinstance(item, (IRImpl, IRNativeDirective)):
+            elif isinstance(item, (IRImpl, IRNativeDirective, IRForeignImport)):
                 continue
             else:
                 declarations.append(item)
@@ -631,17 +759,38 @@ class HIRPythonEmitter:
         for item in self.module.items:
             if isinstance(
                 item,
-                (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction),
+                (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction, IRForeignImport),
             ):
-                self.symbol_names[item.symbol] = self._identifier(item.name)
+                preferred = item.alias if isinstance(item, IRForeignImport) else item.name
+                self.symbol_names[item.symbol] = self._identifier(preferred)
             elif isinstance(item, IRVarDecl):
                 self.symbol_names[item.symbol] = self._identifier(item.name)
+            if isinstance(item, IREnum):
+                for member in item.members:
+                    if member.is_variant:
+                        self.symbol_names[f"enum::{item.name}::variant::{member.name}"] = self._identifier(member.name)
 
     def _emit_declaration(self, node: IRNode) -> List[str]:
         if isinstance(node, IRTypeAlias):
             return [f"{self._symbol(node.symbol, node.name)} = {self._type_name(node.actual_type)}"]
         if isinstance(node, IREnum):
             name = self._symbol(node.symbol, node.name)
+            if any(member.is_variant for member in node.members):
+                lines = [f"{name} = NyxEnumValue"]
+                for member in node.members:
+                    if not member.is_variant:
+                        raise PythonEmissionError(
+                            f"Payload enum '{node.name}' cannot mix discriminant member '{member.name}'"
+                        )
+                    params = [f"_nyx_payload_{index}" for index in range(len(member.payload_types))]
+                    constructor = self._symbol(
+                        f"enum::{node.name}::variant::{member.name}", member.name
+                    )
+                    lines.extend((
+                        f"def {constructor}({', '.join(params)}):",
+                        f"    return NyxEnumValue({node.name!r}, {member.name!r}, [{', '.join(params)}])",
+                    ))
+                return lines
             lines = [f"class {name}:"]
             if not node.members:
                 lines.append("    pass")
@@ -735,6 +884,12 @@ class HIRPythonEmitter:
         try:
             if abstract:
                 lines.append(f"{prefix}    raise NotImplementedError({repr(node.name)})")
+            elif node.return_type.name == "Result" and len(node.return_type.arguments) == 2:
+                caught = self._temporary("propagated")
+                lines.append(f"{prefix}    try:")
+                lines.extend(self._emit_block(node.body, indent + 2))
+                lines.append(f"{prefix}    except _NyxResultPropagation as {caught}:")
+                lines.append(f"{prefix}        return Err({caught}.error)")
             else:
                 lines.extend(self._emit_block(node.body, indent + 1))
         finally:
@@ -790,6 +945,8 @@ class HIRPythonEmitter:
             ]
         if isinstance(node, IRThrow):
             return [f"{prefix}raise RuntimeError(to_string({self._expr(node.expr)}))"]
+        if isinstance(node, IRYield):
+            return [f"{prefix}yield {self._expr(node.expr)}"]
         if isinstance(node, IRIf):
             lines = [f"{prefix}if {self._condition(node.condition)}:"]
             lines.extend(self._emit_block(node.then_branch, indent + 1))
@@ -869,7 +1026,22 @@ class HIRPythonEmitter:
             )
             binding = isinstance(pattern, IRReference) and pattern.name != "_"
             payload = None
-            if isinstance(pattern, IRCall) and pattern.callee in ("Ok", "Err"):
+            variant = self.enum_variants.get(pattern.callee_symbol) if isinstance(pattern, IRCall) else None
+            payload_bindings = []
+            if variant is not None:
+                enum_node, member = variant
+                condition = (
+                    f"isinstance({value}, NyxEnumValue) and "
+                    f"{value}.enum_name == {enum_node.name!r} and "
+                    f"{value}.variant_name == {member.name!r}"
+                )
+                for index, argument in enumerate(pattern.args):
+                    if isinstance(argument, IRReference) and argument.name != "_":
+                        payload_bindings.append(
+                            f"{prefix}    {self._symbol(argument.symbol, argument.name)} = "
+                            f"{value}.payload[{index}]"
+                        )
+            elif isinstance(pattern, IRCall) and pattern.callee in ("Ok", "Err"):
                 expected = "True" if pattern.callee == "Ok" else "False"
                 condition = f"isinstance({value}, Result) and {value}.is_ok is {expected}"
                 if pattern.args and isinstance(pattern.args[0], IRReference):
@@ -893,6 +1065,7 @@ class HIRPythonEmitter:
                 lines.append(f"{prefix}    {binding_name} = {value}")
             if payload is not None:
                 lines.append(f"{prefix}    {payload} = {value}.value")
+            lines.extend(payload_bindings)
             lines.extend(self._emit_block(case.body, indent + 1))
             emitted_condition = True
             if wildcard or binding:
@@ -953,6 +1126,8 @@ class HIRPythonEmitter:
             return f"({operator}{operand})"
         if isinstance(node, IRAwait):
             return f"(await {self._expr(node.expr)})"
+        if isinstance(node, IRResultPropagate):
+            return f"_nyx_propagate({self._expr(node.expr)})"
         if isinstance(node, IRCall):
             expected_types = self._call_parameter_types(node)
             args = ", ".join(
@@ -969,7 +1144,15 @@ class HIRPythonEmitter:
                 if node.callee == "len" and not node.args:
                     return f"_nyx_i64(len({receiver}))"
                 return f"{receiver}.{self._identifier(node.callee)}({args})"
-            callee = self._symbol(node.callee_symbol, node.callee)
+            collection_builtins = {
+                "map": "_nyx_map",
+                "filter": "_nyx_filter",
+                "fold": "_nyx_fold",
+            }
+            if node.callee_symbol.startswith("builtin::") and node.callee in collection_builtins:
+                callee = collection_builtins[node.callee]
+            else:
+                callee = self._symbol(node.callee_symbol, node.callee)
             if node.callee_symbol == "builtin::len":
                 return f"_nyx_i64(len({args}))"
             return f"{callee}({args})"

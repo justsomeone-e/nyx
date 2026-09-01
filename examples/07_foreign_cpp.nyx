@@ -1,0 +1,9 @@
+#target cpp
+
+import cpp "std::filesystem" from "<filesystem>" as fs
+
+fn main() {
+    var path = fs.current_path()
+    print("C++ filesystem current path:", path.string())
+    print("Current directory name:", path.filename().string())
+}

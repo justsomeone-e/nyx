@@ -139,6 +139,7 @@ class UniversalCodeGen:
 
         lines.extend([
             "#ifdef _WIN32",
+            "#include <winsock2.h>",
             "#include <windows.h>",
             "#endif"
         ])
@@ -165,6 +166,15 @@ class UniversalCodeGen:
                 lines.append(f"using namespace {u_clean};")
 
         lines.append("using namespace std;\n")
+        lines.extend([
+            "inline void _nyx_pause_if_standalone_console() {",
+            "#ifdef _WIN32",
+            "    DWORD process_ids[2] = {};",
+            "    if (GetConsoleProcessList(process_ids, 2) == 1) { cout << \"\\nPress Enter to close...\" << flush; string ignored; getline(cin, ignored); }",
+            "#endif",
+            "}",
+            "",
+        ])
 
         # Emit helpers ONLY if used
         helper_lines = []
@@ -453,6 +463,8 @@ class UniversalCodeGen:
             return "/* expr */"
 
         declared_cpp_vars = set()
+        struct_dtor_defs = []
+        struct_ctor_defs = []
 
         def emit_stmt(node: ASTNode, indent: int = 1) -> List[str]:
             sp = "    " * indent
@@ -484,10 +496,13 @@ class UniversalCodeGen:
                 ctor_params = ", ".join([f"{struct_field_type(f)} {f.name}" for f in node.fields])
                 ctor_inits = ", ".join([f"{f.name}({f.name})" for f in node.fields])
                 default_inits = ", ".join([f"{f.name}()" for f in node.fields])
-                ctor_body = f"    {node.name}() : {default_inits} {{}}\n    {node.name}({ctor_params}) : {ctor_inits} {{}}\n" if node.fields else ""
+                ctor_body = f"    {node.name}() : {default_inits} {{}}\n    {node.name}({ctor_params});\n" if node.fields else ""
+                if node.fields:
+                    struct_ctor_defs.append(f"{node.name}::{node.name}({ctor_params}) : {ctor_inits} {{}}")
                 
                 # Check for RAII destructor and methods declared in ImplBlockNode
                 impl_methods_decls = []
+                has_custom_destructor = False
                 for imp in [s for s in self.ast.statements if isinstance(s, ImplBlockNode) and s.target_type == node.name]:
                     for m in imp.methods:
                         m_params = [p for p in m.params if p.name not in ("self", "this")]
@@ -497,6 +512,14 @@ class UniversalCodeGen:
                         impl_methods_decls.append(f"    {m_ret_t} {m.name}({m_params_s});")
                         if m.name in ("drop", "destroy", "cleanup", "dispose"):
                             impl_methods_decls.append(f"    ~{node.name}() {{ this->{m.name}(); }}")
+                            has_custom_destructor = True
+
+                # Declare the destructor inline and define it after all structs so
+                # mutually-recursive struct fields (e.g. std::vector<T> where T is
+                # declared later) remain valid.
+                if not has_custom_destructor and not node.generic_params:
+                    impl_methods_decls.append(f"    ~{node.name}();")
+                    struct_dtor_defs.append(f"{node.name}::~{node.name}() = default;")
 
                 methods_block = "\n".join(impl_methods_decls)
                 if methods_block:
@@ -517,7 +540,12 @@ class UniversalCodeGen:
                     for s in m.body: res.extend(emit_stmt(s, indent + 1))
                     res.append("}\n")
             elif isinstance(node, EnumDefNode):
-                members_s = ", ".join([f"{m[0]} = {emit_expr(m[1])}" if m[1] else m[0] for m in node.members])
+                if any(member.is_variant for member in node.members):
+                    raise ValueError("payload enums require the canonical typed-HIR backend")
+                members_s = ", ".join(
+                    f"{member.name} = {emit_expr(member.value)}" if member.value else member.name
+                    for member in node.members
+                )
                 res.append(f"enum class {node.name} {{ {members_s} }};\n")
             elif isinstance(node, UnsafeBlockNode):
                 res.append(f"{sp}// --- BEGIN UNSAFE BLOCK ---")
@@ -608,6 +636,11 @@ class UniversalCodeGen:
                 struct_and_type_decls.extend(emit_stmt(s, 0))
         if struct_and_type_decls:
             lines.extend(struct_and_type_decls)
+        if struct_ctor_defs:
+            lines.extend(struct_ctor_defs)
+        if struct_dtor_defs:
+            lines.extend(struct_dtor_defs)
+        if struct_and_type_decls or struct_dtor_defs:
             lines.append("")
 
         # 2. Forward declarations for functions with explicit return types
@@ -648,6 +681,7 @@ class UniversalCodeGen:
         lines.append("    cout << boolalpha;")
         lines.append("    cout << setprecision(17);")
         lines.extend(main_stmts)
+        lines.append("    _nyx_pause_if_standalone_console();")
         lines.append("    return 0;")
         lines.append("}")
         return "\n".join(lines)
@@ -1023,10 +1057,12 @@ class UniversalCodeGen:
                     res.append(f"{sp}setattr({node.target_type}, '{m.name}', _{node.target_type}_{m.name})")
                 return res
             if isinstance(node, EnumDefNode):
+                if any(member.is_variant for member in node.members):
+                    raise ValueError("payload enums require the canonical typed-HIR backend")
                 res = [f"{sp}class {node.name}:"]
-                for m in node.members:
-                    v_str = emit_py_expr(m[1]) if m[1] else f'"{m[0]}"'
-                    res.append(f"{sp}    {m[0]} = {v_str}")
+                for member in node.members:
+                    v_str = emit_py_expr(member.value) if member.value else f'"{member.name}"'
+                    res.append(f"{sp}    {member.name} = {v_str}")
                 return res
             if isinstance(node, FunctionDefNode):
                 prefix = "async def " if node.is_async else "def "

@@ -16,8 +16,8 @@ if _root_dir not in sys.path:
 from src.core.lexer import Lexer as PyLexer
 from src.core.parser import Parser as PyParser
 from src.core.ast_nodes import (
-    ProgramNode, VarDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
-    NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, FunctionCallNode,
+    ProgramNode, VarDeclNode, DestructureDeclNode, AssignNode, NumberNode, StringNode, BooleanNode,
+    NullNode, IdentifierNode, BinaryOpNode, UnaryOpNode, AwaitNode, ResultPropagateNode, FunctionCallNode,
     FunctionDefNode, StructDefNode, ImplBlockNode, TraitDefNode, IfNode, WhileNode,
     ForNode, MatchNode, MatchExprNode, UnsafeBlockNode, SpawnNode, ReturnNode, ThrowNode, BreakNode, ContinueNode,
     NativeIncludeNode, NativeLinkNode, NativeUseNode, NativeRawNode, ExternFnDeclNode,
@@ -37,6 +37,14 @@ def py_ast_to_canonical(node) -> str:
         const_s = " const=true" if node.is_const else ""
         type_s = f" type='{t}'" if t else ""
         return f"(VarDecl name='{node.name}'{type_s}{const_s} body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, DestructureDeclNode):
+        name_s = f" name='{node.struct_name}'" if node.struct_name else ""
+        const_s = " const=true" if node.is_const else ""
+        bindings = " ".join(f"(Identifier name='{name}')" for name in node.names)
+        return (
+            f"(DestructureDecl{name_s} val='{node.pattern_kind}'{const_s} "
+            f"body=[{bindings} {py_ast_to_canonical(node.expr)}])"
+        )
     if isinstance(node, AssignNode):
         return f"(Assign op='=' body=[{py_ast_to_canonical(node.target)} {py_ast_to_canonical(node.expr)}])"
     if isinstance(node, NumberNode):
@@ -55,6 +63,8 @@ def py_ast_to_canonical(node) -> str:
         return f"(UnaryOp op='{node.op}' body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, AwaitNode):
         return f"(Await body=[{py_ast_to_canonical(node.expr)}])"
+    if isinstance(node, ResultPropagateNode):
+        return f"(ResultPropagate body=[{py_ast_to_canonical(node.expr)}])"
     if isinstance(node, NullCoalesceNode):
         return f"(NullCoalesce op='??' body=[{py_ast_to_canonical(node.left)} {py_ast_to_canonical(node.right)}])"
     if isinstance(node, ConditionalExprNode):
@@ -110,13 +120,19 @@ def py_ast_to_canonical(node) -> str:
         return f"(TypeAlias name='{node.name}' type='{node.actual_type}')"
     if isinstance(node, EnumDefNode):
         members = []
-        for name, value in node.members:
-            value_attr = f" body=[{py_ast_to_canonical(value)}]" if value else ""
-            members.append(f"(EnumMember name='{name}'{value_attr})")
-        return f"(EnumDef name='{node.name}' body=[{' '.join(members)}])"
+        for member in node.members:
+            value_attr = f" body=[{py_ast_to_canonical(member.value)}]" if member.value else ""
+            payload_attr = ""
+            if member.is_variant:
+                payload_attr = " params=[" + ", ".join(str(item) for item in member.payload_types) + "]"
+            members.append(f"(EnumMember name='{member.name}'{payload_attr}{value_attr})")
+        generics_attr = " params=[" + ", ".join(node.generic_params) + "]" if node.generic_params else ""
+        return f"(EnumDef name='{node.name}'{generics_attr} body=[{' '.join(members)}])"
     if isinstance(node, ImportNode):
         name_attr = f" name='{node.alias}'" if node.alias else ""
-        return f"(Import{name_attr} val='{node.path}')"
+        ecosystem_attr = f" op='{node.ecosystem}'" if node.ecosystem else ""
+        source_attr = f" type='{node.source}'" if node.source else ""
+        return f"(Import{name_attr} val='{node.path}'{ecosystem_attr}{source_attr})"
     if isinstance(node, IfNode):
         then_b = " ".join(py_ast_to_canonical(s) for s in node.then_branch)
         elif_b = ""
@@ -239,6 +255,8 @@ def run_bootstrap_parser_test() -> bool:
         ("match_expression", 'fn status(code: int) -> string = match code { 200 => "ok", 404 => "missing", _ => "other" };'),
         ("match_expression_braced_arms", "fn sign(x: int) -> int = match x { -1 => { -1 }, 0 => { 0 }, _ => { 1 } };"),
         ("struct_definition", "struct Point { x: int, y: int }"),
+        ("array_destructuring", "let [left, right] = [20, 22];"),
+        ("struct_destructuring", "struct Point { x: int, y: int } let Point(x, y) = Point(3, 4);"),
         ("impl_and_methods", "impl Point { fn dist(self) -> int { return self.x + self.y; } }"),
         ("if_else_branches", "if a > 10 { print(\"Large\"); } else { print(\"Small\"); }"),
         ("if_elif_else_branches", "if a > 10 { print(\"Large\"); } elif a == 10 { print(\"Equal\"); } else { print(\"Small\"); }"),
@@ -257,15 +275,19 @@ def run_bootstrap_parser_test() -> bool:
         ("pipeline_call", "var x = 5 |> clamp(0, 10);"),
         ("lambda_single", "var twice = x => x * 2;"),
         ("lambda_empty", "var answer = () => 42;"),
+        ("lambda_multi", "var add = (left, right) => left + right;"),
         ("generic_channel_and_input", "var ch = channel<int>(); var name = input();"),
         ("unary_pointer_bit_not_and_plus", "var value = *ptr; var inverted = ~mask; var positive = +1;"),
         ("signed_i64_min_literals", "let decimal: int = -9223372036854775808; let hex: int = -0x8000000000000000;"),
         ("async_generic_with_doc", "/// identity docs\nasync fn identity<T>(value: T) -> T { return value; }"),
         ("async_await", "async fn compute() -> int { return 42; } async fn run() -> int { return await compute(); }"),
+        ("result_propagation", "fn read() -> Result<int, string> { return Ok(1) } fn run() -> Result<int, string> { var value = read()?; return Ok(value) }"),
         ("generic_struct_with_doc", "/// box docs\nstruct Box<T> { value: T }"),
         ("type_alias_and_enum", "type UserID = int; enum Color { Red, Green = 5, Blue }"),
+        ("payload_enum", "enum Result<T, E> { Ok(T), Err(E) } enum Event { Tick(), Point(int, int) }"),
         ("trait_impl_target", "trait Show { fn show(self) { return; } } impl Show for Item { fn show(self) { return; } }"),
         ("imports", "import \"std/math\"; import \"./item\" as item; import { add, sub } from \"./ops\";"),
+        ("foreign_imports", 'import cpp "std::filesystem" from "<filesystem>" as fs; import js "node:os" as os; import python "platform" as platform;'),
         ("test_and_assert", "test \"math works\" { assert(1 + 1 == 2, \"bad math\"); }"),
         ("try_catch", "try { print(\"work\"); } catch err { print(err); }"),
         ("throw_and_catch", "fn fail() { throw \"boom\"; } try { fail(); } catch err { print(err); }"),

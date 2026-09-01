@@ -112,17 +112,18 @@ def parse_nyx_toml():
                         config["output_type"] = line.split("=")[1].strip().strip('"').strip("'")
     return config
 
-def get_target_from_args(default_target="cpp", entry_file=None):
-    # 1. Check CLI flag
-    if "--target" in sys.argv:
-        idx = sys.argv.index("--target")
-        if idx + 1 < len(sys.argv):
-            return normalize_backend_name(sys.argv[idx + 1])
-            
-    # 2. Check in-file #target directive
+def get_target_from_args(default_target="cpp", entry_file=None, arguments=None):
+    """Resolve CLI > source directive > manifest/default, then canonicalize."""
+    args = list(sys.argv[2:] if arguments is None else arguments)
+    for index, argument in enumerate(args):
+        if argument.startswith("--target="):
+            return normalize_backend_name(argument.split("=", 1)[1])
+        if argument in ("--target", "-t") and index + 1 < len(args):
+            return normalize_backend_name(args[index + 1])
+
     if entry_file and os.path.exists(entry_file):
         try:
-            with open(entry_file, "r", encoding="utf-8") as f:
+            with open(entry_file, "r", encoding="utf-8-sig") as f:
                 for _ in range(15):
                     line = f.readline()
                     if not line: break
@@ -136,16 +137,26 @@ def get_target_from_args(default_target="cpp", entry_file=None):
 
     return normalize_backend_name(default_target)
 
-def get_entry_file(default_entry="src/main.nyx"):
-    target_names = set(BACKENDS)
-    for backend in BACKENDS.values():
-        target_names.update(backend.aliases)
-    args = [
-        argument for argument in sys.argv[2:]
-        if not argument.startswith("--") and argument.lower() not in target_names
-    ]
-    if args and args[0].lower().endswith(".nyx"):
-        return args[0]
+def get_entry_file(default_entry="src/main.nyx", arguments=None):
+    args = list(sys.argv[2:] if arguments is None else arguments)
+    value_options = {"--target", "-t", "--output", "-o"}
+    positional = []
+    skip_next = False
+    for argument in args:
+        if skip_next:
+            skip_next = False
+            continue
+        if argument in value_options:
+            skip_next = True
+            continue
+        if argument.startswith("--target=") or argument.startswith("--output="):
+            continue
+        if argument.startswith("-"):
+            continue
+        positional.append(argument)
+    for argument in positional:
+        if argument.lower().endswith(".nyx"):
+            return argument
     if os.path.exists(default_entry):
         return default_entry
     if os.path.exists("src/lib.nyx"):
@@ -179,6 +190,55 @@ def get_option_value(*names, default=None):
             return sys.argv[index + 1]
     return default
 
+
+class _CanonicalArtifactAdapter:
+    """Keep CLI output handling small while all semantics come from NyxCompiler."""
+
+    def __init__(self, content: str, link_libraries: List[str]):
+        self.content = content
+        self.link_libraries = link_libraries
+
+    def get_link_libraries(self) -> List[str]:
+        return list(self.link_libraries)
+
+    def gen_cpp(self) -> str:
+        return self.content
+
+    def gen_js(self) -> str:
+        return self.content
+
+    def gen_python(self) -> str:
+        return self.content
+
+    def gen_rust(self) -> str:
+        return self.content
+
+    def gen_react(self) -> str:
+        return self.content
+
+    def gen_wasm(self) -> str:
+        return self.content
+
+
+def _compile_canonical_artifact(entry_file: str, target: str) -> Optional[_CanonicalArtifactAdapter]:
+    from src.api import NyxCompiler
+    from src.ir import IRNativeDirective
+
+    result = NyxCompiler(os.path.dirname(os.path.abspath(entry_file))).compile_file(
+        entry_file,
+        target=target,
+    )
+    if not result.success or result.artifact is None:
+        for diagnostic in result.diagnostics:
+            print(diagnostic.rendered)
+        return None
+    links = [
+        item.value
+        for item in (result.hir.items if result.hir is not None else ())
+        if isinstance(item, IRNativeDirective) and item.kind == "link"
+    ]
+    return _CanonicalArtifactAdapter(result.artifact.content, links)
+
 def cmd_check(entry_file, target=None) -> int:
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File not found '{entry_file}'\033[0m")
@@ -211,20 +271,9 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
     base_name = os.path.splitext(os.path.basename(entry_file))[0]
     
     print(f"\033[96m[*] Building [{target}] ({output_type}):\033[0m {entry_file} -> {build_dir}")
-    with open(entry_file, "r", encoding="utf-8") as f:
-        code = f.read()
-
-    from src.core.module_loader import ModuleLoader
-    loader = ModuleLoader(
-        base_dir=os.path.dirname(os.path.abspath(entry_file)),
-        target=target,
-    )
-    ast = loader.load_program(entry_file, code)
-    if target:
-        ast.target = target
-    TypeChecker(ast, entry_file, code).check()
-    
-    codegen = UniversalCodeGen(ast)
+    codegen = _compile_canonical_artifact(entry_file, target)
+    if codegen is None:
+        return 1
     
     if target == "cpp":
         cpp_code = codegen.gen_cpp()
@@ -351,14 +400,9 @@ def cmd_run(entry_file, target) -> int:
     os.makedirs(build_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(entry_file))[0]
 
-    with open(entry_file, "r", encoding="utf-8") as f:
-        code = f.read()
-
-    from src.core.module_loader import ModuleLoader
-    loader = ModuleLoader(base_dir=os.path.dirname(os.path.abspath(entry_file)), target=target)
-    ast = loader.load_program(entry_file, code)
-    TypeChecker(ast, entry_file, code).check()
-    codegen = UniversalCodeGen(ast)
+    codegen = _compile_canonical_artifact(entry_file, target)
+    if codegen is None:
+        return 1
 
     if target == "asm":
         cpp_code = codegen.gen_cpp()
@@ -1098,7 +1142,7 @@ def main():
         sys.exit(PackageManager.init(name, force="--force" in sys.argv))
     elif cmd == "check":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))
-        target = get_option_value("--target", "-t", default=config.get("target"))
+        target = get_target_from_args(config.get("target", "cpp"), entry_file=entry)
         sys.exit(cmd_check(entry, target=target))
     elif cmd == "build":
         entry = get_entry_file(config.get("entry", "src/main.nyx"))

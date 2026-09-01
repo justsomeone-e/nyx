@@ -62,7 +62,11 @@ def run_bootstrap_typechecker_test() -> bool:
         ("valid_optional_types", "var opt1: string? = null; var opt2: string? = \"active\";"),
         ("valid_struct_field_access", "struct Point { x: int, y: int }\nvar p: Point = Point(10, 20); var px: int = p.x;"),
         ("valid_async_await", "async fn compute() -> int { return 42; } async fn run() -> int { let task: Task<int> = compute(); return await task; }"),
-        ("valid_i64_min_literals", "let decimal: int = -9223372036854775808; let hex: int = -0x8000000000000000; let positive: int = +1;")
+        ("valid_i64_min_literals", "let decimal: int = -9223372036854775808; let hex: int = -0x8000000000000000; let positive: int = +1;"),
+        ("valid_default_argument_decl", "fn greet(name: string = \"world\") { print(name); }"),
+        ("valid_default_argument_call", "fn greet(name: string = \"world\") { print(name); } fn main() { greet(); }"),
+        ("valid_array_destructuring", "let [left, right] = [20, 22]; var total: int = left + right;"),
+        ("valid_struct_destructuring", "struct Point { x: int, y: int } let Point(x, y) = Point(3, 4); var total: int = x + y;")
     ]
 
     all_passed = True
@@ -149,7 +153,10 @@ main()
         ("conditional_expression_type_mismatch", "fn bad(flag: bool) -> int = if flag { 1 } else { \"no\" };"),
         ("match_expression_missing_fallback", "fn bad(x: int) -> int = match x { 1 => 10 };"),
         ("match_expression_nonfinal_fallback", "fn bad(x: int) -> int = match x { _ => 0, 1 => 10 };"),
-        ("match_expression_type_mismatch", "fn bad(x: int) -> int = match x { 1 => 10, _ => \"no\" };")
+        ("match_expression_type_mismatch", "fn bad(x: int) -> int = match x { 1 => 10, _ => \"no\" };"),
+        ("missing_required_argument", "fn f(a: int, b: int = 2) { print(a, b); } fn main() { f(); }"),
+        ("array_destructuring_non_array", "let [a, b] = 42;"),
+        ("struct_destructuring_wrong_arity", "struct Point { x: int, y: int } let Point(x) = Point(1, 2);")
     ]
 
     for name, src in invalid_cases:

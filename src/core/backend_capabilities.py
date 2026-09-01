@@ -73,7 +73,7 @@ BACKENDS: Dict[str, BackendSpec] = {
     "cpp": BackendSpec(
         "cpp", "C++20 Native", "native", "executable/library", "stable",
         ("c++", "native", "desktop"),
-        NATIVE_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
+        NATIVE_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "collection_combinators", "exceptions", "iterator_yield", "payload_enums", "result_propagation"}),
     ),
     "asm": BackendSpec(
         "asm", "x86_64 Assembly", "native", "assembly", "beta",
@@ -82,12 +82,12 @@ BACKENDS: Dict[str, BackendSpec] = {
     "js": BackendSpec(
         "js", "Node.js ES2022", "hosted", "javascript", "stable",
         ("node", "nodejs"),
-        DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
+        DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "collection_combinators", "exceptions", "iterator_yield", "payload_enums", "result_propagation"}),
     ),
     "python": BackendSpec(
         "python", "Python 3", "hosted", "python", "stable",
         ("py", "python3"),
-        DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "exceptions"}),
+        DYNAMIC_FEATURES | V4_NUMERIC_FEATURES | HIR_V1_FEATURES | frozenset({"async_tasks", "collection_combinators", "exceptions", "iterator_yield", "payload_enums", "result_propagation"}),
     ),
     "rust": BackendSpec(
         "rust", "Rust 2021", "native", "rust", "beta",
@@ -117,12 +117,27 @@ PARITY_HOSTS = frozenset({"cpp", "asm", "js", "python"})
 DYNAMIC_HOSTS = frozenset({"cpp", "asm", "js", "python", "rust"})
 MEMORY_TARGETS = CPP_HOSTS
 
+FOREIGN_ECOSYSTEM_TARGETS: Dict[str, FrozenSet[str]] = {
+    "cpp": frozenset({"cpp"}),
+    "js": frozenset({"js"}),
+    "python": frozenset({"python"}),
+}
+
+PENDING_FOREIGN_ECOSYSTEMS = frozenset({"rust", "wasm"})
+
+
+def foreign_import_targets(ecosystem: str) -> FrozenSet[str]:
+    return FOREIGN_ECOSYSTEM_TARGETS.get(ecosystem.strip().lower(), frozenset())
+
 
 STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     "encoding": StdlibContract("encoding", PARITY_HOSTS),
     "fs": StdlibContract("fs", PARITY_HOSTS),
     "hash": StdlibContract("hash", PARITY_HOSTS),
-    "json_lite": StdlibContract("json_lite", PARITY_HOSTS),
+    "json_lite": StdlibContract(
+        "json_lite", PARITY_HOSTS, "stable",
+        "Flat top-level string/integer field extraction only; not a general JSON parser.",
+    ),
     "json": StdlibContract("json", PARITY_HOSTS, "deprecated", "Use std/json_lite."),
     "math": StdlibContract("math", PARITY_HOSTS),
     "time": StdlibContract("time", PARITY_HOSTS),
@@ -133,6 +148,10 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     "os": StdlibContract("os", CPP_HOSTS),
     "platform": StdlibContract("platform", CPP_HOSTS),
     "process": StdlibContract("process", CPP_HOSTS),
+    "system": StdlibContract(
+        "system", CPP_HOSTS, "experimental",
+        "Hosted OS inspection through the native platform ABI.",
+    ),
     "thread": StdlibContract("thread", CPP_HOSTS),
     "memory": StdlibContract("memory", MEMORY_TARGETS),
 }

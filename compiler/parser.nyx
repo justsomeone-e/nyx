@@ -11,7 +11,9 @@ struct Token {
 
 struct FunctionParam {
     name: string,
-    type_annot: string
+    type_annot: string,
+    default_val: string,
+    default_expr: Array<ASTNode>
 }
 
 struct ASTNode {
@@ -41,7 +43,21 @@ impl ASTNode {
         if self.is_const { res = res + " const=true" }
         if self.is_async { res = res + " async=true" }
         
-        if len(self.params) > 0 {
+        if self.kind == "EnumDef" and len(self.generic_args) > 0 {
+            res = res + " params=["
+            for i in 0..len(self.generic_args)-1 {
+                if i > 0 { res = res + ", " }
+                res = res + self.generic_args[i]
+            }
+            res = res + "]"
+        } elif self.kind == "EnumMember" and self.is_safe {
+            res = res + " params=["
+            for i in 0..len(self.params)-1 {
+                if i > 0 { res = res + ", " }
+                res = res + self.params[i].type_annot
+            }
+            res = res + "]"
+        } elif len(self.params) > 0 {
             res = res + " params=["
             for i in 0..len(self.params)-1 {
                 if i > 0 { res = res + ", " }
@@ -339,7 +355,7 @@ impl Parser {
             if self.match_type("FAT_ARROW") {
                 var body = self.parse_expr(0)
                 return ASTNode("Lambda", "", "", "", "", false, false, false, false,
-                    [FunctionParam(name, "")], [], [body], tok.line, tok.col)
+                    [FunctionParam(name, "", "", [])], [], [body], tok.line, tok.col)
             }
             return ASTNode("Identifier", name, "", "", "", false, false, false, false, [], [], [], tok.line, tok.col)
         }
@@ -376,7 +392,29 @@ impl Parser {
                     [], [], [], tok.line, tok.col)
             }
             var expr = self.parse_expr(0)
+            if self.current().type_name == "COMMA" {
+                var lambda_params: Array<FunctionParam> = []
+                if expr.kind != "Identifier" {
+                    self.has_error = true
+                    self.error_msg = "Lambda parameters must be identifiers"
+                } else {
+                    lambda_params.push(FunctionParam(expr.name, "", "", []))
+                }
+                while self.match_type("COMMA") {
+                    lambda_params.push(FunctionParam(self.expect("IDENT").value, "", "", []))
+                }
+                self.expect("RPAREN")
+                self.expect("FAT_ARROW")
+                var body = self.parse_expr(0)
+                return ASTNode("Lambda", "", "", "", "", false, false, false, false,
+                    lambda_params, [], [body], tok.line, tok.col)
+            }
             self.expect("RPAREN")
+            if expr.kind == "Identifier" and self.match_type("FAT_ARROW") {
+                var body = self.parse_expr(0)
+                return ASTNode("Lambda", "", "", "", "", false, false, false, false,
+                    [FunctionParam(expr.name, "", "", [])], [], [body], tok.line, tok.col)
+            }
             return expr
         }
 
@@ -441,6 +479,10 @@ impl Parser {
                     }
                 }
                 node = ASTNode("FunctionCall", node.name, "", "", "", false, false, false, false, [], [], args, node.line, node.col)
+            } elif self.current().type_name == "QUESTION" {
+                var question = self.advance()
+                node = ASTNode("ResultPropagate", "", "", "", "", false, false, false,
+                    false, [], [], [node], question.line, question.col)
             } else {
                 break
             }
@@ -585,6 +627,14 @@ impl Parser {
         // graph driver. HIR lowering skips them after resolution.
         if tok.type_name == "IMPORT" or tok.type_name == "USE" {
             self.advance()
+            var ecosystem = ""
+            var import_source = ""
+            if self.current().type_name == "IDENT" and
+                (self.current().value == "cpp" or self.current().value == "js" or
+                 self.current().value == "python" or self.current().value == "rust" or
+                 self.current().value == "wasm") {
+                ecosystem = self.advance().value
+            }
             var symbols: Array<string> = []
             if self.match_type("LBRACE") {
                 while self.current().type_name != "RBRACE" and self.current().type_name != "EOF" {
@@ -595,10 +645,18 @@ impl Parser {
                 self.expect("FROM")
             }
             var path_tok = self.expect("STRING")
+            if ecosystem != "" and self.match_type("FROM") {
+                import_source = self.expect("STRING").value
+            }
             var alias = ""
             if self.match_type("AS") { alias = self.expect("IDENT").value }
+            if ecosystem != "" and alias == "" {
+                self.has_error = true
+                self.error_msg = "Foreign imports require an explicit alias at line " +
+                    to_string(tok.line) + ":" + to_string(tok.col)
+            }
             self.match_type("SEMICOLON")
-            return ASTNode("Import", alias, path_tok.value, "", "", false, false, false,
+            return ASTNode("Import", alias, path_tok.value, ecosystem, import_source, false, false, false,
                 false, [], symbols, [], tok.line, tok.col)
         }
 
@@ -617,7 +675,50 @@ impl Parser {
         if tok.type_name == "VAR" or tok.type_name == "LET" or tok.type_name == "CONST" {
             var is_const = (tok.type_name == "LET" or tok.type_name == "CONST")
             self.advance()
+
+            if self.match_type("LBRACKET") {
+                var bindings: Array<ASTNode> = []
+                if self.current().type_name == "RBRACKET" {
+                    self.has_error = true
+                    self.error_msg = "Array destructuring requires at least one binding"
+                }
+                while self.current().type_name != "RBRACKET" and self.current().type_name != "EOF" {
+                    var binding = self.expect("IDENT")
+                    bindings.push(ASTNode("Identifier", binding.value, "", "", "", false,
+                        false, false, false, [], [], [], binding.line, binding.col))
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("RBRACKET")
+                self.expect("ASSIGN")
+                var init_expr = self.parse_expr(0)
+                bindings.push(init_expr)
+                self.match_type("SEMICOLON")
+                return ASTNode("DestructureDecl", "", "array", "", "", is_const,
+                    false, false, false, [], [], bindings, tok.line, tok.col)
+            }
+
             var name = self.expect("IDENT").value
+            if self.match_type("LPAREN") {
+                var bindings: Array<ASTNode> = []
+                if self.current().type_name == "RPAREN" {
+                    self.has_error = true
+                    self.error_msg = "Struct destructuring requires at least one binding"
+                }
+                while self.current().type_name != "RPAREN" and self.current().type_name != "EOF" {
+                    var binding = self.expect("IDENT")
+                    bindings.push(ASTNode("Identifier", binding.value, "", "", "", false,
+                        false, false, false, [], [], [], binding.line, binding.col))
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("RPAREN")
+                self.expect("ASSIGN")
+                var init_expr = self.parse_expr(0)
+                bindings.push(init_expr)
+                self.match_type("SEMICOLON")
+                return ASTNode("DestructureDecl", name, "struct", "", "", is_const,
+                    false, false, false, [], [], bindings, tok.line, tok.col)
+            }
+
             var type_annot = ""
             if self.match_type("COLON") {
                 type_annot = self.parse_type()
@@ -650,6 +751,14 @@ impl Parser {
         if tok.type_name == "ENUM" {
             self.advance()
             var enum_name = self.expect("IDENT").value
+            var generic_params: Array<string> = []
+            if self.match_type("LT") {
+                while self.current().type_name != "GT" and self.current().type_name != "EOF" {
+                    generic_params.push(self.expect("IDENT").value)
+                    if not self.match_type("COMMA") { break }
+                }
+                self.expect("GT")
+            }
             var members: Array<ASTNode> = []
             if self.match_type("LBRACE") {
                 var closed = false
@@ -659,10 +768,27 @@ impl Parser {
                     if self.current().type_name == "RBRACE" { continue }
                     var member_tok = self.expect("IDENT")
                     var member_values: Array<ASTNode> = []
-                    if self.match_type("ASSIGN") { member_values.push(self.parse_expr(0)) }
+                    var payload_types: Array<FunctionParam> = []
+                    var is_variant = false
+                    if self.match_type("LPAREN") {
+                        is_variant = true
+                        if not self.match_type("RPAREN") {
+                            while true {
+                                payload_types.push(FunctionParam("", self.parse_type(), "", []))
+                                if self.match_type("RPAREN") { break }
+                                self.expect("COMMA")
+                            }
+                        }
+                    } elif self.match_type("ASSIGN") {
+                        member_values.push(self.parse_expr(0))
+                    }
                     members.push(ASTNode("EnumMember", member_tok.value, "", "", "", false,
-                        false, false, false, [], [], member_values, member_tok.line, member_tok.col))
-                    self.match_type("COMMA")
+                        false, is_variant, false, payload_types, [], member_values, member_tok.line, member_tok.col))
+                    if not self.match_type("COMMA") and self.current().type_name != "RBRACE" {
+                        self.has_error = true
+                        self.error_msg = "Expected ',' between enum members at line " +
+                            to_string(self.current().line) + ":" + to_string(self.current().col)
+                    }
                 }
                 if not closed {
                     self.has_error = true
@@ -670,7 +796,7 @@ impl Parser {
                 }
             }
             return ASTNode("EnumDef", enum_name, "", "", "", false, false, false,
-                false, [], [], members, tok.line, tok.col)
+                false, [], generic_params, members, tok.line, tok.col)
         }
 
         // Function definition
@@ -702,7 +828,14 @@ impl Parser {
                     if self.match_type("COLON") {
                         ptype = self.parse_type()
                     }
-                    params.push(FunctionParam(pname, ptype))
+                    var default_val = ""
+                    var default_expr: Array<ASTNode> = []
+                    if self.match_type("ASSIGN") {
+                        var expr = self.parse_expr(0)
+                        default_val = "1"
+                        default_expr = [expr]
+                    }
+                    params.push(FunctionParam(pname, ptype, default_val, default_expr))
                     if self.match_type("COMMA") { continue }
                     self.expect("RPAREN")
                     break
@@ -755,7 +888,7 @@ impl Parser {
                     var fname = self.expect_name().value
                     var ftype = ""
                     if self.match_type("COLON") { ftype = self.parse_type() }
-                    fields.push(FunctionParam(fname, ftype))
+                    fields.push(FunctionParam(fname, ftype, "", []))
                     while self.match_type("COMMA") or self.match_type("SEMICOLON") { }
                 }
                 if not closed {
@@ -767,7 +900,7 @@ impl Parser {
                     var fname = self.expect_name().value
                     var ftype = ""
                     if self.match_type("COLON") { ftype = self.parse_type() }
-                    fields.push(FunctionParam(fname, ftype))
+                    fields.push(FunctionParam(fname, ftype, "", []))
                 }
             }
             return ASTNode("StructDef", name, self.last_doc_comment, "", "", false, false,
@@ -816,7 +949,7 @@ impl Parser {
                     var pname = self.expect("IDENT").value
                     var ptype = ""
                     if self.match_type("COLON") { ptype = self.parse_type() }
-                    params.push(FunctionParam(pname, ptype))
+                    params.push(FunctionParam(pname, ptype, "", []))
                     if self.match_type("COMMA") { continue }
                     self.expect("RPAREN")
                     break

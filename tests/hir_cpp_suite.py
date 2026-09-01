@@ -122,6 +122,8 @@ def _run_stage1_smoke() -> None:
 def _run_cli_args_smoke() -> None:
     source = "fn main() { var values: Array<string> = args(); print(values[1]); }"
     generated = _emit(source, "<hir-cli-args-smoke>")
+    assert "GetConsoleProcessList(process_ids, 2) == 1" in generated
+    assert "    _nyx_pause_if_standalone_console();\n    return 0;" in generated
     with tempfile.TemporaryDirectory(prefix="nyx_hir_cpp_args_") as directory:
         cpp_path = os.path.join(directory, "args.cpp")
         executable = os.path.join(directory, "args.exe")

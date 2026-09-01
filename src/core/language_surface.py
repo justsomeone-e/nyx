@@ -15,7 +15,7 @@ STABLE_KEYWORD_GROUPS = {
     ),
     "control-flow": (
         "if", "elif", "else", "for", "in", "loop", "while", "match",
-        "try", "catch", "throw", "return", "break", "continue", "await",
+        "try", "catch", "throw", "yield", "return", "break", "continue", "await",
     ),
     "scope-and-safety": ("defer", "guard", "unsafe"),
     "concurrency": ("spawn", "async"),
@@ -44,13 +44,13 @@ LEGACY_KEYWORD_ALIASES = {}
 BUILTIN_NAMES = (
     "print", "input", "addr", "peek", "memdump", "channel", "Ok", "Err",
     "len", "args", "to_string", "to_int", "contains",
-    "is_number", "delay_ms",
+    "is_number", "delay_ms", "map", "filter", "fold",
 )
 
 TYPE_NAMES = (
     "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64",
     "float", "f32", "f64", "bool", "string", "char", "uintptr", "void", "any",
-    "Array", "Option", "Result", "Channel", "Task",
+    "Array", "Iterator", "Option", "Result", "Channel", "Task",
 )
 
 KEYWORD_TOKEN_TYPES = {
@@ -88,6 +88,7 @@ KEYWORD_TOKEN_TYPES = {
     "try": TokenType.TRY,
     "catch": TokenType.CATCH,
     "throw": TokenType.THROW,
+    "yield": TokenType.YIELD,
     "use": TokenType.USE,
     "import": TokenType.IMPORT,
     "from": TokenType.FROM,

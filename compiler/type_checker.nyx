@@ -16,7 +16,8 @@ struct StructFieldInfo {
 struct FunctionSignature {
     name: string,
     param_types: Array<string>,
-    return_type: string
+    return_type: string,
+    defaults: Array<string>
 }
 
 struct Scope {
@@ -122,8 +123,8 @@ impl TypeChecker {
         return ""
     }
 
-    fn register_function(self, name: string, ptypes: Array<string>, ret: string) {
-        self.functions.push(FunctionSignature(name, ptypes, ret))
+    fn register_function(self, name: string, ptypes: Array<string>, ret: string, defaults: Array<string>) {
+        self.functions.push(FunctionSignature(name, ptypes, ret, defaults))
         self.register_symbol(name, ret)
     }
 
@@ -133,7 +134,7 @@ impl TypeChecker {
                 return self.functions[i]
             }
         }
-        return FunctionSignature("", [], "")
+        return FunctionSignature("", [], "", [])
     }
 
     fn register_struct_field(self, sname: string, fname: string, ftype: string) {
@@ -145,6 +146,36 @@ impl TypeChecker {
             if self.struct_fields[i].struct_name == sname and self.struct_fields[i].field_name == fname {
                 return self.struct_fields[i].field_type
             }
+        }
+        return ""
+    }
+
+    fn struct_field_count(self, sname: string) -> int {
+        var count = 0
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == sname { count = count + 1 }
+        }
+        return count
+    }
+
+    fn struct_field_type_at(self, sname: string, field_index: int) -> string {
+        var current = 0
+        for i in 0..len(self.struct_fields)-1 {
+            if self.struct_fields[i].struct_name == sname {
+                if current == field_index { return self.struct_fields[i].field_type }
+                current = current + 1
+            }
+        }
+        return "any"
+    }
+
+    fn array_element_type(self, type_name: string) -> string {
+        if len(type_name) > 7 and type_name[0] == "A" and type_name[1] == "r" and
+            type_name[2] == "r" and type_name[3] == "a" and type_name[4] == "y" and
+            type_name[5] == "<" and type_name[len(type_name)-1] == ">" {
+            var result = ""
+            for i in 6..len(type_name)-2 { result = result + type_name[i] }
+            return result
         }
         return ""
     }
@@ -249,9 +280,20 @@ impl TypeChecker {
             
             var fn_sig = self.lookup_function(node.name)
             if fn_sig.name != "" {
-                if len(node.children) != len(fn_sig.param_types) {
+                var provided = len(node.children)
+                var total = len(fn_sig.param_types)
+                var missing_defaults_ok = true
+                var idx = provided
+                while idx < total {
+                    if idx >= len(fn_sig.defaults) or fn_sig.defaults[idx] == "" {
+                        missing_defaults_ok = false
+                        break
+                    }
+                    idx = idx + 1
+                }
+                if provided > total or not missing_defaults_ok {
                     self.has_error = true
-                    self.error_msg = "Function '" + node.name + "' expected " + to_string(len(fn_sig.param_types)) + " arguments but got " + to_string(len(node.children))
+                    self.error_msg = "Function '" + node.name + "' expected " + to_string(total) + " arguments but got " + to_string(provided)
                 } else {
                     for i in 0..len(node.children)-1 {
                         var arg_t = self.infer_type(node.children[i])
@@ -415,6 +457,55 @@ impl TypeChecker {
             return
         }
 
+        if node.kind == "DestructureDecl" {
+            if len(node.children) < 2 {
+                self.has_error = true
+                self.error_msg = "Destructuring requires bindings and an initializer"
+                return
+            }
+            var initializer_type = self.infer_type(node.children[len(node.children)-1])
+            var binding_count = len(node.children) - 1
+            if node.value == "array" {
+                var element_type = self.array_element_type(initializer_type)
+                if initializer_type != "any" and element_type == "" {
+                    self.has_error = true
+                    self.error_msg = "E2048: array destructuring requires Array<T>, found " + initializer_type
+                    return
+                }
+                if element_type == "" { element_type = "any" }
+                for i in 0..binding_count-1 {
+                    if node.children[i].name != "_" {
+                        self.register_symbol(node.children[i].name, element_type)
+                    }
+                }
+                return
+            }
+
+            var field_count = self.struct_field_count(node.name)
+            if field_count == 0 {
+                self.has_error = true
+                self.error_msg = "E2049: unknown struct destructuring pattern '" + node.name + "'"
+                return
+            }
+            if initializer_type != "any" and initializer_type != node.name {
+                self.has_error = true
+                self.error_msg = "E2049: struct destructuring expected " + node.name + " but found " + initializer_type
+                return
+            }
+            if binding_count != field_count {
+                self.has_error = true
+                self.error_msg = "E2050: struct pattern '" + node.name + "' expected " +
+                    to_string(field_count) + " bindings but got " + to_string(binding_count)
+                return
+            }
+            for i in 0..binding_count-1 {
+                if node.children[i].name != "_" {
+                    self.register_symbol(node.children[i].name, self.struct_field_type_at(node.name, i))
+                }
+            }
+            return
+        }
+
         if node.kind == "Assign" {
             if len(node.children) >= 2 {
                 var target_t = self.infer_type(node.children[0])
@@ -436,14 +527,16 @@ impl TypeChecker {
 
         if node.kind == "FunctionDef" {
             var param_types: Array<string> = []
+            var defaults: Array<string> = []
             for i in 0..len(node.params)-1 {
                 var param_type = node.params[i].type_annot
                 if param_type == "" { param_type = "any" }
                 param_types.push(param_type)
+                defaults.push(node.params[i].default_val)
             }
             var public_return_type = node.type_name
             if node.is_async { public_return_type = "Task<" + node.type_name + ">" }
-            self.register_function(node.name, param_types, public_return_type)
+            self.register_function(node.name, param_types, public_return_type, defaults)
 
             var prev_ret = self.current_fn_return_type
             var prev_async = self.current_fn_is_async

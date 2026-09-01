@@ -22,6 +22,7 @@
     "try",
     "catch",
     "throw",
+    "yield",
     "return",
     "break",
     "continue",
@@ -61,7 +62,10 @@
     "to_int",
     "contains",
     "is_number",
-    "delay_ms"
+    "delay_ms",
+    "map",
+    "filter",
+    "fold"
   ],
   "typeNames": [
     "int",
@@ -83,6 +87,7 @@
     "void",
     "any",
     "Array",
+    "Iterator",
     "Option",
     "Result",
     "Channel",
@@ -163,6 +168,21 @@
       "label": "delay_ms",
       "detail": "fn delay_ms(milliseconds: int) -> void",
       "documentation": "Suspends or delays for the requested milliseconds."
+    },
+    {
+      "label": "map",
+      "detail": "fn map<T, U>(items: Array<T>, transform: fn(T) -> U) -> Array<U>",
+      "documentation": "Transforms each array element in order."
+    },
+    {
+      "label": "filter",
+      "detail": "fn filter<T>(items: Array<T>, predicate: fn(T) -> bool) -> Array<T>",
+      "documentation": "Keeps array elements whose predicate is true."
+    },
+    {
+      "label": "fold",
+      "detail": "fn fold<T, A>(items: Array<T>, initial: A, reducer: fn(A, T) -> A) -> A",
+      "documentation": "Reduces an array from left to right."
     }
   ],
   "stdlibModules": [
@@ -232,7 +252,7 @@
     {
       "name": "std/json_lite",
       "detail": "Nyx stdlib · stable",
-      "documentation": "Standard library module std/json_lite.",
+      "documentation": "Flat top-level string/integer field extraction only; not a general JSON parser.",
       "targets": [
         "asm",
         "cpp",
@@ -309,6 +329,15 @@
       ]
     },
     {
+      "name": "std/system",
+      "detail": "Nyx stdlib · experimental",
+      "documentation": "Hosted OS inspection through the native platform ABI.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
       "name": "std/thread",
       "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/thread.",
@@ -346,7 +375,7 @@
     {
       "label": "base64_decode",
       "kind": "function",
-      "detail": "fn base64_decode(data: string) -> string",
+      "detail": "fn base64_decode(data: string) -> Result<string, string>",
       "module": "std/encoding",
       "documentation": "Declared by std/encoding.",
       "targets": [
@@ -381,7 +410,7 @@
     {
       "label": "read_to_string",
       "kind": "function",
-      "detail": "fn read_to_string(path: string) -> string",
+      "detail": "fn read_to_string(path: string) -> Result<string, string>",
       "module": "std/fs",
       "documentation": "Declared by std/fs.",
       "targets": [
@@ -394,7 +423,7 @@
     {
       "label": "write_string",
       "kind": "function",
-      "detail": "fn write_string(path: string, content: string) -> bool",
+      "detail": "fn write_string(path: string, content: string) -> Result<bool, string>",
       "module": "std/fs",
       "documentation": "Declared by std/fs.",
       "targets": [
@@ -407,7 +436,7 @@
     {
       "label": "append_string",
       "kind": "function",
-      "detail": "fn append_string(path: string, content: string) -> bool",
+      "detail": "fn append_string(path: string, content: string) -> Result<bool, string>",
       "module": "std/fs",
       "documentation": "Declared by std/fs.",
       "targets": [
@@ -433,7 +462,7 @@
     {
       "label": "remove_file",
       "kind": "function",
-      "detail": "fn remove_file(path: string) -> bool",
+      "detail": "fn remove_file(path: string) -> Result<bool, string>",
       "module": "std/fs",
       "documentation": "Declared by std/fs.",
       "targets": [
@@ -572,7 +601,7 @@
     {
       "label": "get_string",
       "kind": "function",
-      "detail": "fn get_string(json_str: string, key: string) -> string",
+      "detail": "fn get_string(json_str: string, key: string) -> Result<string, string>",
       "module": "std/json_lite",
       "documentation": "Declared by std/json_lite.",
       "targets": [
@@ -585,7 +614,7 @@
     {
       "label": "get_int",
       "kind": "function",
-      "detail": "fn get_int(json_str: string, key: string) -> int",
+      "detail": "fn get_int(json_str: string, key: string) -> Result<int, string>",
       "module": "std/json_lite",
       "documentation": "Declared by std/json_lite.",
       "targets": [
@@ -839,7 +868,7 @@
     {
       "label": "tcp_connect",
       "kind": "function",
-      "detail": "fn tcp_connect(host: string, port: int) -> int",
+      "detail": "fn tcp_connect(host: string, port: int) -> Result<int, string>",
       "module": "std/net",
       "documentation": "Declared by std/net.",
       "targets": [
@@ -850,7 +879,7 @@
     {
       "label": "tcp_send",
       "kind": "function",
-      "detail": "fn tcp_send(sock: int, data: string) -> bool",
+      "detail": "fn tcp_send(sock: int, data: string) -> Result<bool, string>",
       "module": "std/net",
       "documentation": "Declared by std/net.",
       "targets": [
@@ -861,7 +890,7 @@
     {
       "label": "tcp_recv",
       "kind": "function",
-      "detail": "fn tcp_recv(sock: int, max_bytes: int) -> string",
+      "detail": "fn tcp_recv(sock: int, max_bytes: int) -> Result<string, string>",
       "module": "std/net",
       "documentation": "Declared by std/net.",
       "targets": [
@@ -872,7 +901,7 @@
     {
       "label": "tcp_close",
       "kind": "function",
-      "detail": "fn tcp_close(sock: int) -> void",
+      "detail": "fn tcp_close(sock: int) -> Result<bool, string>",
       "module": "std/net",
       "documentation": "Declared by std/net.",
       "targets": [
@@ -971,7 +1000,7 @@
     {
       "label": "exec_cmd",
       "kind": "function",
-      "detail": "fn exec_cmd(command: string) -> int",
+      "detail": "fn exec_cmd(command: string) -> Result<int, string>",
       "module": "std/process",
       "documentation": "Declared by std/process.",
       "targets": [
@@ -1044,6 +1073,94 @@
         "js",
         "python",
         "rust"
+      ]
+    },
+    {
+      "label": "os_name",
+      "kind": "function",
+      "detail": "fn os_name() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "arch_name",
+      "kind": "function",
+      "detail": "fn arch_name() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "user_name",
+      "kind": "function",
+      "detail": "fn user_name() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "home_directory",
+      "kind": "function",
+      "detail": "fn home_directory() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "working_directory",
+      "kind": "function",
+      "detail": "fn working_directory() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "host_name",
+      "kind": "function",
+      "detail": "fn host_name() -> string",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "logical_cpu_threads",
+      "kind": "function",
+      "detail": "fn logical_cpu_threads() -> int",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "total_memory_mb",
+      "kind": "function",
+      "detail": "fn total_memory_mb() -> int",
+      "module": "std/system",
+      "documentation": "Declared by std/system.",
+      "targets": [
+        "asm",
+        "cpp"
       ]
     },
     {
@@ -1141,7 +1258,7 @@
     {
       "label": "sleep_ms",
       "kind": "function",
-      "detail": "fn sleep_ms(ms: int) -> void",
+      "detail": "fn sleep_ms(ms: int) -> Result<bool, string>",
       "module": "std/time",
       "documentation": "Declared by std/time.",
       "targets": [

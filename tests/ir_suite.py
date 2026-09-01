@@ -161,12 +161,48 @@ def _run_nyx_authored_hir_parity() -> int:
             "type UserID = int; enum Color { Red, Green = 5, Blue } const default_id: int = 7\n",
         ),
         (
+            "payload_enum",
+            'enum Outcome<T, E> { Success(T), Failure(E) }\nfn run() { var result = Success(42); match result { Success(value) => print(value), Failure(error) => print(error) } }\n',
+        ),
+        (
+            "result_propagation",
+            'fn read() -> Result<int, string> { return Ok(1) }\nfn run() -> Result<int, string> { var value = read()?; return Ok(value) }\n',
+        ),
+        (
             "pipeline",
             "fn increment(value: int) -> int { return value + 1 } fn run() -> int { return 41 |> increment }\n",
         ),
         (
             "lambda_and_call",
             "fn apply() -> int { var twice = x => x * 2; return twice(21) }\n",
+        ),
+        (
+            "default_arguments",
+            'fn greet(name: string = "world") -> string { return name }\nfn run() -> string { return greet() }\n',
+        ),
+        (
+            "array_destructuring",
+            "fn run() -> int { let [left, right] = [20, 22]; return left + right }\n",
+        ),
+        (
+            "struct_destructuring",
+            "struct Point { x: int, y: int } fn run() -> int { let Point(x, y) = Point(3, 4); return x + y }\n",
+        ),
+        (
+            "destructuring_temp_collision_before",
+            "let nyx_internal_destructure_2 = 5; let [left, right] = [20, 22]; fn run() -> int { return nyx_internal_destructure_2 + left + right }\n",
+        ),
+        (
+            "destructuring_temp_collision_after",
+            "let [left, right] = [20, 22]; let nyx_internal_destructure_1 = 5; fn run() -> int { return nyx_internal_destructure_1 + left + right }\n",
+        ),
+        (
+            "destructuring_temp_collision_nested",
+            "fn run() -> int { let nyx$internal$destructure$2 = 5; let [left, right] = [20, 22]; return nyx$internal$destructure$2 + left + right }\n",
+        ),
+        (
+            "collection_combinators",
+            "fn run() -> int { var items = [1, 2, 3, 4]; var doubled = map(items, item => item * 2); var selected = filter(doubled, item => item > 4); return fold(selected, 0, (total, item) => total + item) }\n",
         ),
         (
             "safe_member_and_coalesce",
@@ -195,6 +231,10 @@ def _run_nyx_authored_hir_parity() -> int:
         (
             "native_and_extern",
             '#native include <cstdio>\n#native link "user32.lib"\nextern "C" fn puts(value: string) -> int;\n',
+        ),
+        (
+            "foreign_import",
+            'import cpp "std::filesystem" from "<filesystem>" as fs\nfn current() { print(fs.current_path().string()) }\n',
         ),
         (
             "bitwise_precedence",
@@ -238,7 +278,7 @@ def _run_nyx_authored_hir_parity() -> int:
                 f"    if parser_{index}.has_error {{",
                 f"        print(\"@@HIR_ERROR@@parse:\" + parser_{index}.error_msg)",
                 "    } else {",
-                f"        var lowerer_{index} = HIRLowerer({json.dumps(source_name)}, \"cpp\", [], [], 0, \"module\", false, \"\")",
+                f"        var lowerer_{index} = HIRLowerer({json.dumps(source_name)}, \"cpp\", [], [], [], [], 0, \"module\", false, \"\")",
                 f"        var hir_{index} = lowerer_{index}.lower_program(ast_{index})",
                 f"        if lowerer_{index}.has_error {{ print(\"@@HIR_ERROR@@lower:\" + lowerer_{index}.error_msg) }}",
                 f"        else {{ print(hir_{index}.to_json()) }}",

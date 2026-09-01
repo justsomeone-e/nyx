@@ -1,6 +1,7 @@
 # Nyx v4 Syntax and Semantic Contract
 
-Status: `v4.0.0-dev.2` (`Maya`) development contract.
+Status: `v4.0.0-rc.1` (`Samsara`) release-candidate contract. The surface is
+under RC soak and is not yet a stable compatibility promise.
 
 This file defines the compatibility boundary for Nyx source. The readable
 examples live in [`../LANGUAGE_REFERENCE.md`](../LANGUAGE_REFERENCE.md). The
@@ -34,6 +35,13 @@ item             = function | struct | trait | implementation | enum
                  | type_alias | extern_function | import | native_directive
                  | test_block ;
 
+import           = "import" string [ "as" identifier ]
+                 | "import" "{" identifier { "," identifier } "}"
+                   "from" string
+                 | "import" ecosystem string [ "from" string ]
+                   "as" identifier ;
+ecosystem        = "cpp" | "js" | "python" | "rust" | "wasm" ;
+
 function         = [ "async" ] "fn" identifier [ generic_parameters ]
                    "(" [ parameters ] ")" [ "->" type ]
                    ( block | "=" expression [ ";" ] ) ;
@@ -44,6 +52,10 @@ struct           = "struct" identifier [ generic_parameters ]
 trait            = "trait" identifier "{" { trait_method } "}" ;
 implementation   = "impl" identifier [ "for" identifier ]
                    "{" { function } "}" ;
+enum             = "enum" identifier [ generic_parameters ] "{"
+                   enum_member { "," enum_member } [ "," ] "}" ;
+enum_member      = identifier [ "(" [ type { "," type } ] ")"
+                   | "=" expression ] ;
 
 statement        = declaration | assignment | expression
                  | if_statement | for_statement | while_statement
@@ -77,7 +89,18 @@ pipeline         = null_coalesce { "|>" call_target } ;
 null_coalesce    = logical_or { "??" logical_or } ;
 unary            = ( "!" | "not" | "-" | "+" | "~" | "await" ) unary
                  | postfix ;
-postfix          = primary { call | member | safe_member | index } ;
+postfix          = primary { call | member | safe_member | index | "?" } ;
+```
+
+Foreign imports require an explicit alias. In the current development
+contract, `cpp`, `js`, and `python` are executable integrations; `rust` and
+`wasm` spellings are reserved and produce `E1413` until package resolution and
+ABI lowering exist. A C++ import also requires its header:
+
+```nyx
+import cpp "std::filesystem" from "<filesystem>" as fs
+import js "node:os" as os
+import python "platform" as platform
 ```
 
 Operator precedence, from tightest to loosest, is postfix, unary,
@@ -92,6 +115,11 @@ logical AND/OR, null coalescing, then pipeline.
   object graph or a C++-style const receiver.
 - `set x = value` and `x = value` have the same assignment semantics. `set` is
   the preferred explicit spelling.
+- `let [a, b] = array` destructures an `Array<T>` after one evaluation and uses
+  checked bounds behavior. `_` discards a position.
+- `let Point(x, y) = point` destructures every struct field positionally in
+  declaration order. The pattern type, initializer type, and arity must match.
+- Nested, tuple, and `..rest` destructuring are reserved for later contracts.
 - HIR verification, rather than target-language syntax, enforces rebinding.
 - Trait methods are bodyless signatures. Trait implementations must name a
   declared trait and struct, provide `self` first, and exactly match every
@@ -142,11 +170,23 @@ logical AND/OR, null coalescing, then pipeline.
   if-expression. Its subject is evaluated exactly once before pattern
   comparisons, including calls and other side-effecting expressions.
 - Statement `match` remains the pattern-binding form for `Ok(value)`,
-  `Err(error)`, and other action-oriented arms.
+  `Err(error)`, payload enum variants such as `Point(x, y)`, and unit variants
+  such as `Tick()`.
+- Payload enum constructor names are module-level and must be unique. Their
+  generic arguments are inferred from payload values or may be fixed by a
+  variable/function type annotation. C++, JavaScript, and Python implement
+  payload enums; other targets reject them before emission through the
+  capability registry.
 - `guard condition else { ... }` executes its else body when the condition is
   false; that body is expected to leave the guarded path.
 - `defer expression` executes once when its lexical scope exits, including an
   exit caused by return or a propagated exception.
+- Postfix `expr?` accepts only `Result<T, E>`. On `Ok(value)` it evaluates to
+  `value`; on `Err(error)` it returns that error from the nearest enclosing
+  `Result<U, E>` function. The operand is evaluated exactly once, the outer
+  error type must accept the propagated error, and using `?` outside such a
+  function is a compile-time error. C++, JavaScript, and Python implement this
+  contract; other targets reject it through the capability registry.
 
 ## 5. Task contract
 

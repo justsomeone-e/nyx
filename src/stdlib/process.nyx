@@ -5,8 +5,10 @@
 extern "C" fn system(cmd: string) -> int
 extern "C" fn exit(code: int) -> void
 
-fn exec_cmd(command: string) -> int {
-    return system(command)
+fn exec_cmd(command: string) -> Result<int, string> {
+    var code = system(command)
+    if code == -1 { return Err("failed to start command processor") }
+    return Ok(code)
 }
 
 fn exit_process(code: int) -> void {

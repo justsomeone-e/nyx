@@ -94,3 +94,12 @@ never reports a fake network installation.
 * `nyx version`: Displays compiler version and detected host toolchains.
 * `nyx doctor`: Reports actionable C++20, Node.js, Rust, and Python availability.
 * `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract.
+## Target selection
+
+`#target` is optional. Without an override Nyx uses the native C++20 target.
+Target selection has one deterministic precedence order:
+
+1. `--target <name>`, `--target=<name>`, or `-t <name>`
+2. the source file's `#target <name>` directive
+3. `nyx.toml`'s configured target
+4. the native `cpp` default

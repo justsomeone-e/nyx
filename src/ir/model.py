@@ -59,6 +59,11 @@ class IRAwait(IRExpr):
 
 
 @dataclass(frozen=True, slots=True)
+class IRResultPropagate(IRExpr):
+    expr: IRExpr
+
+
+@dataclass(frozen=True, slots=True)
 class IRCall(IRExpr):
     callee: str
     callee_symbol: str
@@ -147,6 +152,11 @@ class IRReturn(IRStatement):
 
 @dataclass(frozen=True, slots=True)
 class IRThrow(IRStatement):
+    expr: IRExpr
+
+
+@dataclass(frozen=True, slots=True)
+class IRYield(IRStatement):
     expr: IRExpr
 
 
@@ -295,6 +305,8 @@ class IRTypeAlias(IRNode):
 class IREnumMember:
     name: str
     value: Optional[IRExpr]
+    payload_types: Tuple[IRType, ...] = ()
+    is_variant: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -302,6 +314,7 @@ class IREnum(IRNode):
     name: str
     symbol: str
     members: Tuple[IREnumMember, ...]
+    generic_params: Tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -319,6 +332,15 @@ class IRNativeDirective(IRNode):
     kind: str
     value: str
     origin_module: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class IRForeignImport(IRNode):
+    ecosystem: str
+    module: str
+    alias: str
+    symbol: str
+    source: str = ""
 
 
 @dataclass(frozen=True, slots=True)

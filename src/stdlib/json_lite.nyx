@@ -1,5 +1,6 @@
 // nyx Standard Library - std/json_lite
-// High-Speed Flat Key-Value JSON Field Extractor
+// Flat top-level string/integer field extractor. This is intentionally not a
+// general JSON parser and does not implement nesting or escape decoding.
 
 #native include "string"
 
@@ -34,12 +35,37 @@ inline int64_t _nyx_json_get_int(const std::string& json_str, const std::string&
     }
     return 0;
 }
+
+inline NyxResult<std::string, std::string> _nyx_json_get_string_result(const std::string& json_str, const std::string& key) {
+    std::string pattern = "\"" + key + "\":";
+    size_t pos = json_str.find(pattern);
+    if (pos == std::string::npos) return {false, {}, "JSON field not found: " + key};
+    pos += pattern.size();
+    while (pos < json_str.size() && (json_str[pos] == ' ' || json_str[pos] == '\t')) pos++;
+    if (pos >= json_str.size() || json_str[pos] != '"') return {false, {}, "JSON field is not a string: " + key};
+    size_t end = json_str.find('"', pos + 1);
+    if (end == std::string::npos) return {false, {}, "unterminated JSON string field: " + key};
+    return {true, json_str.substr(pos + 1, end - pos - 1), {}};
 }
 
-fn get_string(json_str: string, key: string) -> string {
-    return _nyx_json_get_string(json_str, key);
+inline NyxResult<int64_t, std::string> _nyx_json_get_int_result(const std::string& json_str, const std::string& key) {
+    std::string pattern = "\"" + key + "\":";
+    size_t pos = json_str.find(pattern);
+    if (pos == std::string::npos) return {false, 0, "JSON field not found: " + key};
+    pos += pattern.size();
+    while (pos < json_str.size() && (json_str[pos] == ' ' || json_str[pos] == '\t')) pos++;
+    size_t end = pos + ((pos < json_str.size() && json_str[pos] == '-') ? 1 : 0);
+    while (end < json_str.size() && std::isdigit(static_cast<unsigned char>(json_str[end]))) end++;
+    if (end == pos || (end == pos + 1 && json_str[pos] == '-')) return {false, 0, "JSON field is not an integer: " + key};
+    try { return {true, std::stoll(json_str.substr(pos, end - pos)), {}}; }
+    catch (...) { return {false, 0, "JSON integer is out of range: " + key}; }
+}
 }
 
-fn get_int(json_str: string, key: string) -> int {
-    return _nyx_json_get_int(json_str, key);
+fn get_string(json_str: string, key: string) -> Result<string, string> {
+    return _nyx_json_get_string_result(json_str, key);
+}
+
+fn get_int(json_str: string, key: string) -> Result<int, string> {
+    return _nyx_json_get_int_result(json_str, key);
 }

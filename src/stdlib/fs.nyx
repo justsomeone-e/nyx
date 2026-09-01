@@ -6,26 +6,29 @@
 #native include "string"
 
 #native raw {
-inline std::string _nyx_fs_read_to_string(const std::string& path) {
+inline NyxResult<std::string, std::string> _nyx_fs_read_to_string_result(const std::string& path) {
     std::ifstream file(path);
-    if (!file.is_open()) return "";
+    if (!file.is_open()) return {false, {}, "cannot open file for reading: " + path};
     std::stringstream buffer;
     buffer << file.rdbuf();
-    return buffer.str();
+    if (file.bad()) return {false, {}, "failed while reading file: " + path};
+    return {true, buffer.str(), {}};
 }
 
-inline bool _nyx_fs_write_string(const std::string& path, const std::string& content) {
+inline NyxResult<bool, std::string> _nyx_fs_write_string_result(const std::string& path, const std::string& content) {
     std::ofstream file(path);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) return {false, false, "cannot open file for writing: " + path};
     file << content;
-    return true;
+    if (!file.good()) return {false, false, "failed while writing file: " + path};
+    return {true, true, {}};
 }
 
-inline bool _nyx_fs_append_string(const std::string& path, const std::string& content) {
+inline NyxResult<bool, std::string> _nyx_fs_append_string_result(const std::string& path, const std::string& content) {
     std::ofstream file(path, std::ios::app);
-    if (!file.is_open()) return false;
+    if (!file.is_open()) return {false, false, "cannot open file for appending: " + path};
     file << content;
-    return true;
+    if (!file.good()) return {false, false, "failed while appending file: " + path};
+    return {true, true, {}};
 }
 
 inline bool _nyx_fs_exists(const std::string& path) {
@@ -33,27 +36,28 @@ inline bool _nyx_fs_exists(const std::string& path) {
     return file.good();
 }
 
-inline bool _nyx_fs_remove_file(const std::string& path) {
-    return std::remove(path.c_str()) == 0;
+inline NyxResult<bool, std::string> _nyx_fs_remove_file_result(const std::string& path) {
+    if (std::remove(path.c_str()) != 0) return {false, false, "cannot remove file: " + path};
+    return {true, true, {}};
 }
 }
 
-fn read_to_string(path: string) -> string {
-    return _nyx_fs_read_to_string(path);
+fn read_to_string(path: string) -> Result<string, string> {
+    return _nyx_fs_read_to_string_result(path);
 }
 
-fn write_string(path: string, content: string) -> bool {
-    return _nyx_fs_write_string(path, content);
+fn write_string(path: string, content: string) -> Result<bool, string> {
+    return _nyx_fs_write_string_result(path, content);
 }
 
-fn append_string(path: string, content: string) -> bool {
-    return _nyx_fs_append_string(path, content);
+fn append_string(path: string, content: string) -> Result<bool, string> {
+    return _nyx_fs_append_string_result(path, content);
 }
 
 fn exists(path: string) -> bool {
     return _nyx_fs_exists(path);
 }
 
-fn remove_file(path: string) -> bool {
-    return _nyx_fs_remove_file(path);
+fn remove_file(path: string) -> Result<bool, string> {
+    return _nyx_fs_remove_file_result(path);
 }

@@ -22,7 +22,7 @@ fn main() {
     // 2. Encoding (Base64)
     var msg = "Nyx Parity Verification 2026";
     var b64 = base64_encode(msg);
-    var dec = base64_decode(b64);
+    var dec = base64_decode(b64).unwrap();
     print($"[ENCODING] Base64: {b64} -> Decoded: {dec}");
     guard msg == dec else {
         print("[FAIL] Base64 mismatch!");
@@ -59,7 +59,7 @@ fn main() {
 
     // 5. Time
     var t0 = now_ms();
-    sleep_ms(25);
+    sleep_ms(25).unwrap();
     var t1 = now_ms();
     var diff = t1 - t0;
     print($"[TIME] Elapsed: {diff}ms (Expected >= 20ms)");
@@ -67,17 +67,17 @@ fn main() {
 
     // 6. JSON Lite
     var json_doc = "{\"name\":\"nyx_polyglot\",\"version\":3,\"build\":2026}";
-    var j_name = get_string(json_doc, "name");
-    var j_ver = get_int(json_doc, "version");
+    var j_name = get_string(json_doc, "name").unwrap();
+    var j_ver = get_int(json_doc, "version").unwrap();
     print($"[JSON_LITE] Extracted name={j_name}, version={j_ver}");
     guard j_name == "nyx_polyglot" and j_ver == 3 else { print("[FAIL] JSON Lite mismatch!"); return; }
 
     // 7. Filesystem
     var temp_f = "parity_temp.txt";
-    var w_ok = write_string(temp_f, "Parity Data Content");
+    var w_ok = write_string(temp_f, "Parity Data Content").unwrap();
     var f_exists = exists(temp_f);
-    var f_content = read_to_string(temp_f);
-    var r_ok = remove_file(temp_f);
+    var f_content = read_to_string(temp_f).unwrap();
+    var r_ok = remove_file(temp_f).unwrap();
     print($"[FS] Write={w_ok}, Exists={f_exists}, Content='{f_content}', Remove={r_ok}");
     guard w_ok and f_exists and f_content == "Parity Data Content" and r_ok else {
         print("[FAIL] Filesystem parity mismatch!");

@@ -19,6 +19,22 @@ set attempts = attempts + 1
 other value reachable through the binding. `set target = value` is the explicit
 assignment form; `target = value` remains equivalent for source compatibility.
 
+Array and positional struct destructuring declarations bind several names while
+evaluating the initializer exactly once:
+
+```nyx
+let [left, right] = read_pair()
+
+struct Point { x: int, y: int }
+let Point(x, y) = Point(10, 20)
+let [first, _] = values       // `_` discards one position
+```
+
+An array pattern requires an `Array<T>`; insufficient input fails through a
+checked bounds path. A struct pattern must name a declared struct and provide
+one position for every field in declaration order. Nested and `..rest` patterns
+are not part of this first contract.
+
 ```nyx
 struct Counter { value: int }
 
@@ -110,6 +126,28 @@ Parameters and return values are typed. A missing return annotation means
 context. `= expression` is an expression-bodied function and behaves as one
 implicit `return`. A value-producing `if` requires an `else`; each arm contains
 one expression and every arm must have a compatible result type.
+
+A parameter may declare a default value with `= expression`. An omitted trailing
+argument is filled with that default value at the call site, so the default is
+re-evaluated on every call. Only trailing parameters may be omitted; a required
+parameter before an omitted one is an arity error.
+
+```nyx
+fn greet(name: string = "world", times: int = 1) {
+    var count: int = 0
+    while count < times {
+        print("hi", name)
+        set count = count + 1
+    }
+}
+
+greet()                 // name = "world", times = 1
+greet("nyx")            // name = "nyx",  times = 1
+greet("nyx", 3)         // name = "nyx",  times = 3
+```
+
+A default value whose type does not match its declared parameter type is a
+compile-time error, as is omitting a parameter that has no default.
 
 ## 4. Async tasks
 

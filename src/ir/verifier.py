@@ -12,6 +12,7 @@ from .model import (
     IRArray,
     IRAssert,
     IRAwait,
+    IRResultPropagate,
     IRBinary,
     IRBreak,
     IRCall,
@@ -22,6 +23,7 @@ from .model import (
     IRExpr,
     IRExprStatement,
     IRExternFunction,
+    IRForeignImport,
     IRFor,
     IRFunction,
     IRGuard,
@@ -45,6 +47,7 @@ from .model import (
     IRStruct,
     IRTestBlock,
     IRThrow,
+    IRYield,
     IRTrait,
     IRTryCatch,
     IRTypeAlias,
@@ -105,6 +108,7 @@ class IRVerifier:
         self._checked_spans: Set[int] = set()
         self._checked_types: Set[IRType] = set()
         self._inside_async = False
+        self._current_return_type: Optional[IRType] = None
 
     def verify(self) -> IRModule:
         module_span = SourceSpan(self.module.source_name or "<unknown>", 1, 1)
@@ -335,6 +339,20 @@ class IRVerifier:
             for member in node.members:
                 if member.value is not None:
                     self._collect_expr(member.value)
+                if member.is_variant:
+                    symbol = f"enum::{node.name}::variant::{member.name}"
+                    parameters = tuple(
+                        IRParameter(
+                            f"payload_{index}",
+                            f"{symbol}::param::{index}",
+                            ANY if payload_type.name in node.generic_params else payload_type,
+                        )
+                        for index, payload_type in enumerate(member.payload_types)
+                    )
+                    self._define_callable(
+                        symbol, member.name, "enum-variant", parameters,
+                        IRType(node.name), node.span, False,
+                    )
         elif isinstance(node, IRExternFunction):
             self._define_callable(
                 node.symbol,
@@ -348,6 +366,11 @@ class IRVerifier:
             self._collect_parameters(node.params, "parameter")
         elif isinstance(node, IRNativeDirective):
             return
+        elif isinstance(node, IRForeignImport):
+            self._define(
+                node.symbol,
+                _Definition(node.alias, "foreign-module", IRType(f"foreign::{node.ecosystem}"), node.span),
+            )
         elif isinstance(node, IRStatement):
             self._collect_statement(node)
         else:
@@ -384,6 +407,8 @@ class IRVerifier:
                 self._collect_expr(node.expr)
         elif isinstance(node, IRThrow):
             self._collect_expr(node.expr)
+        elif isinstance(node, IRYield):
+            self._collect_expr(node.expr)
         elif isinstance(node, IRIf):
             self._collect_expr(node.condition)
             self._collect_block(node.then_branch)
@@ -399,7 +424,7 @@ class IRVerifier:
             item_type = INT
             if node.collection_expr is not None:
                 collection_type = node.collection_expr.type
-                if collection_type.name == "Array" and collection_type.arguments:
+                if collection_type.name in ("Array", "Iterator") and collection_type.arguments:
                     item_type = collection_type.arguments[0]
                 elif collection_type == STRING:
                     item_type = STRING
@@ -459,6 +484,8 @@ class IRVerifier:
         elif isinstance(expr, IRUnary):
             self._collect_expr(expr.expr)
         elif isinstance(expr, IRAwait):
+            self._collect_expr(expr.expr)
+        elif isinstance(expr, IRResultPropagate):
             self._collect_expr(expr.expr)
         elif isinstance(expr, IRCall):
             if expr.receiver is not None:
@@ -546,8 +573,13 @@ class IRVerifier:
     def _predeclared_module_symbols(self) -> Set[str]:
         result: Set[str] = set()
         for item in self.module.items:
-            if isinstance(item, (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction)):
+            if isinstance(item, (IRFunction, IRStruct, IRTrait, IRTypeAlias, IREnum, IRExternFunction, IRForeignImport)):
                 result.add(item.symbol)
+            if isinstance(item, IREnum):
+                result.update(
+                    f"enum::{item.name}::variant::{member.name}"
+                    for member in item.members if member.is_variant
+                )
         return result
 
     def _visit_top_level(self, node: IRNode, active: Set[str]) -> None:
@@ -568,11 +600,18 @@ class IRVerifier:
         elif isinstance(node, IRTypeAlias):
             self._check_type(node.actual_type, node.span)
         elif isinstance(node, IREnum):
+            generic_params = set(node.generic_params)
             for member in node.members:
                 if not member.name:
                     self._issue("HIR0009", "Enum member name must not be empty", node.span)
                 if member.value is not None:
                     self._visit_expr(member.value, active)
+                if member.is_variant and member.value is not None:
+                    self._issue("HIR0009", "Payload enum variant cannot also have a discriminant", node.span)
+                for payload_type in member.payload_types:
+                    self._check_type(payload_type, node.span)
+                    if payload_type.name in generic_params:
+                        continue
         elif isinstance(node, IRExternFunction):
             self._check_type(node.return_type, node.span)
             parameter_active = set(active)
@@ -582,12 +621,19 @@ class IRVerifier:
         elif isinstance(node, IRNativeDirective):
             if node.kind not in ("include", "link", "raw", "use"):
                 self._issue("HIR0009", f"Unknown native directive kind '{node.kind}'", node.span)
+        elif isinstance(node, IRForeignImport):
+            if node.ecosystem not in ("cpp", "js", "python", "rust", "wasm"):
+                self._issue("HIR0009", f"Unknown foreign ecosystem '{node.ecosystem}'", node.span)
+            if not node.module or not node.alias or not node.symbol:
+                self._issue("HIR0009", "Foreign import requires module, alias, and symbol", node.span)
         elif isinstance(node, IRStatement):
             self._visit_statement(node, active, loop_depth=0, return_type=None)
 
     def _visit_function(self, node: IRFunction, active: Set[str]) -> None:
         previous_async = self._inside_async
+        previous_return_type = self._current_return_type
         self._inside_async = node.is_async
+        self._current_return_type = node.return_type
         try:
             self._check_type(node.return_type, node.span)
             local_active = set(active)
@@ -598,6 +644,7 @@ class IRVerifier:
             if (
                 self.require_definite_returns
                 and node.return_type not in (ANY, VOID)
+                and node.return_type.name != "Iterator"
                 and not self._block_definitely_returns(node.body)
             ):
                 self._issue(
@@ -607,6 +654,7 @@ class IRVerifier:
                 )
         finally:
             self._inside_async = previous_async
+            self._current_return_type = previous_return_type
 
     def _visit_trait_method(self, node: IRFunction, active: Set[str]) -> None:
         """Validate a trait signature without treating it as an implementation."""
@@ -686,6 +734,12 @@ class IRVerifier:
                     self._expect_compatible(return_type, node.expr.type, node.span, "Return value")
         elif isinstance(node, IRThrow):
             self._visit_expr(node.expr, active)
+        elif isinstance(node, IRYield):
+            self._visit_expr(node.expr, active)
+            if return_type is None or return_type.name != "Iterator" or len(return_type.arguments) != 1:
+                self._issue("HIR0021", "yield requires an Iterator<T> function", node.span)
+            else:
+                self._expect_compatible(return_type.arguments[0], node.expr.type, node.span, "Yield value")
         elif isinstance(node, IRIf):
             self._visit_condition(node.condition, active, "if")
             self._visit_block(node.then_branch, active, loop_depth=loop_depth, return_type=return_type)
@@ -710,7 +764,7 @@ class IRVerifier:
             if node.collection_expr is not None:
                 self._visit_expr(node.collection_expr, active)
                 collection_type = node.collection_expr.type
-                if collection_type.name == "Array" and collection_type.arguments:
+                if collection_type.name in ("Array", "Iterator") and collection_type.arguments:
                     item_type = collection_type.arguments[0]
                 elif collection_type not in (ANY, STRING):
                     self._issue("HIR0006", f"Type '{collection_type}' is not iterable", node.collection_expr.span)
@@ -823,6 +877,18 @@ class IRVerifier:
                     expr.span,
                     "Await result",
                 )
+        elif isinstance(expr, IRResultPropagate):
+            self._visit_expr(expr.expr, active)
+            operand = expr.expr.type
+            owner = self._current_return_type
+            if operand.name != "Result" or len(operand.arguments) != 2:
+                self._issue("HIR0006", f"'?' operand must be Result<T, E>, found '{operand}'", expr.span)
+            else:
+                self._expect_compatible(operand.arguments[0], expr.type, expr.span, "Result propagation value")
+            if owner is None or owner.name != "Result" or len(owner.arguments) != 2:
+                self._issue("HIR0007", "Result propagation requires a Result-returning function", expr.span)
+            elif operand.name == "Result" and len(operand.arguments) == 2:
+                self._expect_compatible(owner.arguments[1], operand.arguments[1], expr.span, "Result propagation error")
         elif isinstance(expr, IRCall):
             if expr.receiver is not None:
                 self._visit_expr(expr.receiver, active)
@@ -837,7 +903,7 @@ class IRVerifier:
             self._visit_expr(expr.obj, active)
             self._visit_expr(expr.index, active)
             self._expect_compatible(INT, expr.index.type, expr.index.span, "Index")
-            if expr.obj.type.name not in ("Array", "string", "any"):
+            if expr.obj.type.name not in ("Array", "Iterator", "string", "any"):
                 self._issue("HIR0006", f"Type '{expr.obj.type}' cannot be indexed", expr.obj.span)
         elif isinstance(expr, IRArray):
             element_type = expr.type.arguments[0] if expr.type.name == "Array" and expr.type.arguments else ANY

@@ -68,10 +68,12 @@ def run_toolchain_cli_suite() -> bool:
 
         source_path = root / "format_contract.nyx"
         source_path.write_text(
+            'import cpp "std::filesystem" from "<filesystem>" as fs\n'
             'fn main(){\n'
             'var url="https://nyx.dev/a?x=1"// preserve a=b and { braces }\n'
             'if true{\n'
             'print(url)\n'
+            'print(fs.current_path().string())\n'
             '}\n'
             '}\n',
             encoding="utf-8",
@@ -82,6 +84,7 @@ def run_toolchain_cli_suite() -> bool:
         first_format = source_path.read_text(encoding="utf-8")
         assert first_format != original
         assert '"https://nyx.dev/a?x=1"' in first_format
+        assert 'import cpp "std::filesystem" from "<filesystem>" as fs' in first_format
         assert "// preserve a=b and { braces }" in first_format
         assert "    var url = " in first_format and "        print(url)" in first_format
         second_format = _run(directory, "fmt", str(source_path))

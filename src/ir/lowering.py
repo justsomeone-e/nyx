@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 from src.core import ast_nodes as ast
 
@@ -13,6 +13,7 @@ from .model import (
     IRArray,
     IRAssert,
     IRAwait,
+    IRResultPropagate,
     IRBinary,
     IRBreak,
     IRCall,
@@ -24,6 +25,7 @@ from .model import (
     IRExpr,
     IRExprStatement,
     IRExternFunction,
+    IRForeignImport,
     IRFor,
     IRFunction,
     IRGuard,
@@ -49,6 +51,7 @@ from .model import (
     IRStruct,
     IRTestBlock,
     IRThrow,
+    IRYield,
     IRTrait,
     IRTryCatch,
     IRTypeAlias,
@@ -124,16 +127,24 @@ class HIRLowerer:
         self.current_owner = "module"
         self.function_symbols: Dict[str, _Symbol] = {}
         self.struct_fields: Dict[str, Dict[str, IRType]] = {}
+        self.enum_variants: Dict[str, Tuple[str, Tuple[str, ...], Tuple[IRType, ...]]] = {}
+        self.reserved_names: Set[str] = set()
 
     def lower(self) -> IRModule:
+        self._reserve_user_names(self.program)
         self._declare_builtins()
         # Builtins live in a parent lexical frame so ordinary Nyx declarations
         # can shadow names such as ``len`` without becoming duplicate symbols.
         self.scopes.push()
         try:
             self._predeclare_top_level()
-            items = tuple(self._lower_top_level(item) for item in self.program.statements)
-            return IRModule(self.source_name, self.program.target, items)
+            items: List[IRNode] = []
+            for item in self.program.statements:
+                if isinstance(item, ast.DestructureDeclNode):
+                    items.extend(self._lower_destructure(item))
+                else:
+                    items.append(self._lower_top_level(item))
+            return IRModule(self.source_name, self.program.target, tuple(items))
         finally:
             self.scopes.pop()
 
@@ -173,11 +184,38 @@ class HIRLowerer:
                 symbol = _Symbol(node.name, f"type::alias::{node.name}", from_type_node(node.actual_type), "alias")
             elif isinstance(node, ast.EnumDefNode):
                 symbol = _Symbol(node.name, f"type::enum::{node.name}", IRType(node.name), "enum")
+            elif isinstance(node, ast.ImportNode) and node.ecosystem is not None:
+                symbol = _Symbol(
+                    node.alias,
+                    f"foreign::{node.ecosystem}::{node.alias}",
+                    IRType(f"foreign::{node.ecosystem}"),
+                    "foreign-module",
+                )
             else:
                 continue
             self.scopes.declare(symbol, span)
             if symbol.kind in ("function", "extern"):
                 self.function_symbols[node.name] = symbol
+            if isinstance(node, ast.EnumDefNode):
+                for member in node.members:
+                    if not member.is_variant:
+                        continue
+                    variant_symbol = _Symbol(
+                        member.name,
+                        f"enum::{node.name}::variant::{member.name}",
+                        function_type(
+                            (from_type_node(item) for item in member.payload_types),
+                            IRType(node.name),
+                        ),
+                        "enum-variant",
+                    )
+                    self.scopes.declare(variant_symbol, span)
+                    self.function_symbols[member.name] = variant_symbol
+                    self.enum_variants[variant_symbol.identity] = (
+                        node.name,
+                        tuple(node.generic_params),
+                        tuple(from_type_node(item) for item in member.payload_types),
+                    )
 
     def _lower_top_level(self, node: ast.ASTNode) -> IRNode:
         if isinstance(node, ast.FunctionDefNode):
@@ -208,10 +246,18 @@ class HIRLowerer:
         if isinstance(node, ast.EnumDefNode):
             symbol = self._require_symbol(node.name, node)
             members = tuple(
-                IREnumMember(name, self._lower_expr(value) if value is not None else None)
-                for name, value in node.members
+                IREnumMember(
+                    member.name,
+                    self._lower_expr(member.value) if member.value is not None else None,
+                    tuple(from_type_node(item) for item in member.payload_types),
+                    member.is_variant,
+                )
+                for member in node.members
             )
-            return IREnum(self._span(node), node.name, symbol.identity, members)
+            return IREnum(
+                self._span(node), node.name, symbol.identity, members,
+                tuple(node.generic_params),
+            )
         if isinstance(node, ast.ExternFnDeclNode):
             symbol = self._require_symbol(node.name, node)
             params = tuple(
@@ -230,6 +276,16 @@ class HIRLowerer:
             return self._native(node, "raw", node.raw)
         if isinstance(node, ast.NativeUseNode):
             return self._native(node, "use", node.target)
+        if isinstance(node, ast.ImportNode) and node.ecosystem is not None:
+            symbol = self._require_symbol(node.alias, node)
+            return IRForeignImport(
+                self._span(node),
+                node.ecosystem,
+                node.path,
+                node.alias,
+                symbol.identity,
+                node.source or "",
+            )
         statement = self._lower_statement(node)
         return statement
 
@@ -278,10 +334,68 @@ class HIRLowerer:
         if create_scope:
             self.scopes.push()
         try:
-            return tuple(self._lower_statement(statement) for statement in statements)
+            lowered: List[IRStatement] = []
+            for statement in statements:
+                if isinstance(statement, ast.DestructureDeclNode):
+                    lowered.extend(self._lower_destructure(statement))
+                else:
+                    lowered.append(self._lower_statement(statement))
+            return tuple(lowered)
         finally:
             if create_scope:
                 self.scopes.pop()
+
+    def _lower_destructure(self, node: ast.DestructureDeclNode) -> Tuple[IRStatement, ...]:
+        span = self._span(node)
+        source_expr = self._lower_expr(node.expr)
+        if node.pattern_kind == "array":
+            message = f"Array destructuring requires at least {len(node.names)} elements"
+            source_expr = IRCall(
+                span,
+                source_expr.type,
+                "_nyx_destructure_check",
+                "intrinsic::_nyx_destructure_check",
+                (
+                    source_expr,
+                    IRLiteral(span, INT, len(node.names)),
+                    IRLiteral(span, STRING, message),
+                ),
+            )
+        temp_symbol = self._next_internal_symbol("destructure", source_expr.type)
+        temp_name = temp_symbol.name
+        self.scopes.declare(temp_symbol, span)
+        declarations: List[IRStatement] = [
+            IRVarDecl(span, temp_name, temp_symbol.identity, source_expr.type, source_expr, True)
+        ]
+        source_ref = IRReference(span, source_expr.type, temp_name, temp_symbol.identity)
+
+        if node.pattern_kind == "array":
+            element_type = source_expr.type.arguments[0] if source_expr.type.name == "Array" and source_expr.type.arguments else ANY
+            extracted = tuple(
+                IRIndexAccess(span, element_type, source_ref, IRLiteral(span, INT, index))
+                for index in range(len(node.names))
+            )
+            binding_types = (element_type,) * len(node.names)
+        else:
+            fields = tuple(self.struct_fields.get(node.struct_name, {}).items())
+            if len(fields) != len(node.names):
+                raise IRLoweringError(
+                    f"Struct pattern '{node.struct_name}' expected {len(fields)} bindings but got {len(node.names)}",
+                    span,
+                )
+            extracted = tuple(
+                IRMemberAccess(span, field_type, source_ref, field_name)
+                for field_name, field_type in fields
+            )
+            binding_types = tuple(field_type for _, field_type in fields)
+
+        for name, value_type, expr in zip(node.names, binding_types, extracted):
+            if name == "_":
+                continue
+            symbol = _Symbol(name, self._next_symbol(name), value_type, "variable")
+            self.scopes.declare(symbol, span)
+            declarations.append(IRVarDecl(span, name, symbol.identity, value_type, expr, node.is_const))
+        return tuple(declarations)
 
     def _lower_statement(self, node: ast.ASTNode) -> IRStatement:
         span = self._span(node)
@@ -316,7 +430,7 @@ class HIRLowerer:
             end = self._lower_expr(node.end_expr) if node.end_expr is not None else None
             collection = self._lower_expr(node.collection_expr) if node.collection_expr is not None else None
             item_type = INT
-            if collection is not None and collection.type.name == "Array" and collection.type.arguments:
+            if collection is not None and collection.type.name in ("Array", "Iterator") and collection.type.arguments:
                 item_type = collection.type.arguments[0]
             self.scopes.push()
             try:
@@ -332,6 +446,8 @@ class HIRLowerer:
             return IRContinue(span)
         if isinstance(node, ast.ThrowNode):
             return IRThrow(span, self._lower_expr(node.expr))
+        if isinstance(node, ast.YieldNode):
+            return IRYield(span, self._lower_expr(node.expr))
         if isinstance(node, ast.DeferNode):
             return IRDefer(span, self._lower_expr(node.expr))
         if isinstance(node, ast.GuardNode):
@@ -355,22 +471,23 @@ class HIRLowerer:
                 self.scopes.pop()
             return IRTryCatch(span, try_body, node.err_name, error_symbol.identity, catch_body)
         if isinstance(node, ast.MatchNode):
+            subject = self._lower_expr(node.expr)
             cases: List[IRMatchCase] = []
             for pattern, body_node in node.cases:
                 self.scopes.push()
                 try:
-                    lowered_pattern = self._lower_pattern(pattern)
+                    lowered_pattern = self._lower_pattern(pattern, subject.type)
                     body_nodes = body_node if isinstance(body_node, list) else [body_node]
                     body = self._lower_block(body_nodes, create_scope=False)
                 finally:
                     self.scopes.pop()
                 cases.append(IRMatchCase(lowered_pattern, body))
-            return IRMatch(span, self._lower_expr(node.expr), tuple(cases))
+            return IRMatch(span, subject, tuple(cases))
         if self._is_expression(node):
             return IRExprStatement(span, self._lower_expr(node))
         raise IRLoweringError(f"Unsupported statement node '{type(node).__name__}'", span)
 
-    def _lower_pattern(self, node: ast.ASTNode) -> IRExpr:
+    def _lower_pattern(self, node: ast.ASTNode, subject_type: IRType = ANY) -> IRExpr:
         if isinstance(node, ast.IdentifierNode):
             if node.name == "_":
                 return IRReference(self._span(node), ANY, "_", "pattern::_")
@@ -378,14 +495,36 @@ class HIRLowerer:
             self.scopes.declare(symbol, self._span(node))
             return IRReference(self._span(node), ANY, node.name, symbol.identity)
         if isinstance(node, ast.FunctionCallNode):
-            args = tuple(self._lower_pattern(argument) for argument in node.args)
             symbol = self.scopes.resolve(node.callee)
+            parameter_types: Tuple[IRType, ...] = ()
+            if symbol is not None and symbol.identity in self.enum_variants:
+                enum_name, generic_params, declared_payloads = self.enum_variants[symbol.identity]
+                substitutions = {
+                    name: subject_type.arguments[index]
+                    for index, name in enumerate(generic_params)
+                    if subject_type.name == enum_name and index < len(subject_type.arguments)
+                }
+                parameter_types = tuple(
+                    substitutions.get(payload.name, payload)
+                    for payload in declared_payloads
+                )
+            args = []
+            for index, argument in enumerate(node.args):
+                expected = parameter_types[index] if index < len(parameter_types) else ANY
+                if isinstance(argument, ast.IdentifierNode) and argument.name != "_":
+                    binding = _Symbol(
+                        argument.name, self._next_symbol(argument.name), expected, "pattern-binding"
+                    )
+                    self.scopes.declare(binding, self._span(argument))
+                    args.append(IRReference(self._span(argument), expected, argument.name, binding.identity))
+                else:
+                    args.append(self._lower_pattern(argument, expected))
             return IRCall(
                 self._span(node),
                 self._call_result_type(symbol),
                 node.callee,
                 symbol.identity if symbol else f"pattern-constructor::{node.callee}",
-                args,
+                tuple(args),
             )
         return self._lower_expr(node)
 
@@ -420,6 +559,10 @@ class HIRLowerer:
             expr = self._lower_expr(node.expr)
             result_type = expr.type.arguments[0] if expr.type.name == "Task" and expr.type.arguments else ANY
             return IRAwait(span, result_type, expr)
+        if isinstance(node, ast.ResultPropagateNode):
+            expr = self._lower_expr(node.expr)
+            result_type = expr.type.arguments[0] if expr.type.name == "Result" and len(expr.type.arguments) == 2 else ANY
+            return IRResultPropagate(span, result_type, expr)
         if isinstance(node, ast.FunctionCallNode):
             args = tuple(self._lower_expr(argument) for argument in node.args)
             if isinstance(node.callee, ast.MemberAccessNode):
@@ -442,7 +585,25 @@ class HIRLowerer:
             symbol = self.scopes.resolve(node.callee)
             if symbol is None:
                 raise IRLoweringError(f"Unresolved function or constructor '{node.callee}'", span)
-            return IRCall(span, self._call_result_type(symbol), node.callee, symbol.identity, args)
+            result_type = self._call_result_type(symbol)
+            if symbol.identity in ("builtin::map", "builtin::filter", "builtin::fold"):
+                result_type = from_inferred_name(getattr(node, "inferred_type", None), result_type)
+            variant = self.enum_variants.get(symbol.identity)
+            if variant is not None:
+                enum_name, generic_params, payload_types = variant
+                substitutions: Dict[str, IRType] = {}
+                for payload_type, argument in zip(payload_types, args):
+                    if payload_type.name in generic_params:
+                        substitutions[payload_type.name] = argument.type
+                result_type = IRType(
+                    enum_name,
+                    tuple(substitutions.get(name, ANY) for name in generic_params),
+                )
+            elif symbol.identity == "builtin::Ok" and args:
+                result_type = IRType("Result", (args[0].type, ANY))
+            elif symbol.identity == "builtin::Err" and args:
+                result_type = IRType("Result", (ANY, args[0].type))
+            return IRCall(span, result_type, node.callee, symbol.identity, args)
         if isinstance(node, ast.MemberAccessNode):
             obj = self._lower_expr(node.obj)
             value_type = self.struct_fields.get(obj.type.name, {}).get(node.member, ANY)
@@ -509,10 +670,15 @@ class HIRLowerer:
             self.scopes.push()
             try:
                 params: List[IRParameter] = []
+                inferred_parameters = tuple(
+                    from_inferred_name(value, ANY)
+                    for value in getattr(node, "inferred_param_types", ())
+                )
                 for index, name in enumerate(node.params):
                     symbol_id = f"{lambda_identity}::param::{index}::{name}"
-                    self.scopes.declare(_Symbol(name, symbol_id, ANY, "lambda-param"), span)
-                    params.append(IRParameter(name, symbol_id, ANY))
+                    value_type = inferred_parameters[index] if index < len(inferred_parameters) else ANY
+                    self.scopes.declare(_Symbol(name, symbol_id, value_type, "lambda-param"), span)
+                    params.append(IRParameter(name, symbol_id, value_type))
                 body = self._lower_expr(node.body)
             finally:
                 self.scopes.pop()
@@ -576,7 +742,7 @@ class HIRLowerer:
         return isinstance(node, (
             ast.NumberNode, ast.StringNode, ast.BooleanNode, ast.NullNode,
             ast.IdentifierNode, ast.BinaryOpNode, ast.UnaryOpNode,
-            ast.AwaitNode,
+            ast.AwaitNode, ast.ResultPropagateNode,
             ast.FunctionCallNode, ast.MemberAccessNode, ast.IndexAccessNode,
             ast.ArrayNode, ast.NullCoalesceNode, ast.LambdaNode,
             ast.ConditionalExprNode, ast.MatchExprNode,
@@ -591,6 +757,40 @@ class HIRLowerer:
     def _next_symbol(self, name: str) -> str:
         self.counter += 1
         return f"{self.current_owner}::local::{self.counter}::{name}"
+
+    def _next_internal_symbol(self, purpose: str, value_type: IRType) -> _Symbol:
+        while True:
+            self.counter += 1
+            name = f"nyx_internal_{purpose}_{self.counter}"
+            if name in self.reserved_names:
+                continue
+            self._reserve_name(name)
+            identity = f"{self.current_owner}::local::{self.counter}::{name}"
+            return _Symbol(name, identity, value_type, "temporary")
+
+    def _reserve_name(self, name: str) -> None:
+        if name and name != "_":
+            self.reserved_names.add(name)
+            # '$' is legal in Nyx but is sanitized to '_' by native emitters.
+            self.reserved_names.add(name.replace("$", "_"))
+
+    def _reserve_user_names(self, value: object) -> None:
+        if isinstance(value, ast.DestructureDeclNode):
+            for name in value.names:
+                self._reserve_name(name)
+        if isinstance(value, ast.FunctionParam) and value.name:
+            self._reserve_name(value.name)
+        if isinstance(value, ast.ASTNode):
+            for attribute in ("name", "var_name", "err_name", "alias"):
+                name = getattr(value, attribute, "")
+                if isinstance(name, str) and name and name != "_":
+                    self._reserve_name(name)
+        if isinstance(value, (ast.ASTNode, ast.FunctionParam, ast.EnumMember)):
+            for item in vars(value).values():
+                self._reserve_user_names(item)
+        elif isinstance(value, (tuple, list)):
+            for item in value:
+                self._reserve_user_names(item)
 
     def _span(self, node: object) -> SourceSpan:
         return SourceSpan(

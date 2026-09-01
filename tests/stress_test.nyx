@@ -6,15 +6,15 @@ import "std/json_lite"
 
 fn test_json() -> bool {
     var j = "{\"key\": 42, \"val\": \"hello\"}"
-    var k = get_int(j, "key")
-    var v = get_string(j, "val")
+    var k = get_int(j, "key").unwrap()
+    var v = get_string(j, "val").unwrap()
     return (k == 42) && (v == "hello")
 }
 
 fn test_fs() -> bool {
-    write_string("stress_temp.txt", "123")
-    var content = read_to_string("stress_temp.txt")
-    remove_file("stress_temp.txt")
+    write_string("stress_temp.txt", "123").unwrap()
+    var content = read_to_string("stress_temp.txt").unwrap()
+    remove_file("stress_temp.txt").unwrap()
     return content == "123"
 }
 
