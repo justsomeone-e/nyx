@@ -4,10 +4,9 @@
 # language percentage.  The real implementation languages stay detectable.
 
 # Nyx source extension
+*.nyx linguist-language=Nix
 *.nyx linguist-detectable=true
-*.nyx linguist-language=Nyx
 *.nyx linguist-vendored=false
-*.nyx linguist-documentation=false
 
 # Compiler, tooling, and backend sources
 *.py linguist-language=Python -linguist-vendored
