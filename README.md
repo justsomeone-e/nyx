@@ -25,7 +25,7 @@
   <p align="center">
     <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--dev.2-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
     <a href="docs/TODO.md"><img src="https://img.shields.io/badge/STATUS-ACTIVE%20DEVELOPMENT-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Active development"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-MIT-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
+    <a href="LICENSE.md"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
@@ -693,9 +693,9 @@ For larger architectural changes, discuss the intended design before implementin
 
 ## `14` — License
 
-nyx is licensed under the **MIT License**.
+nyx is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
 
-See [`LICENSE`](LICENSE) for the complete license text.
+See [`LICENSE.md`](LICENSE.md) for the complete license text.
 
 ---
 
