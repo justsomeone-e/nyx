@@ -22,12 +22,12 @@
     </a>
   </p>
 
-  <p align="center">
-    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
+<p align="center">
+    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
     <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/STATUS-RELEASE%20CANDIDATE-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Release candidate"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-AGPL-3.0%20%2B%20OUTPUT%20EXCEPTION-0E1318?style=for-the-badge&labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
-    <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
-  </p>
+    <a href="https://github.com"><img src="https://img.shields.io/badge/LICENSE-AGPL-3.0%20%2B%20OUTPUT%20EXCEPTION-0E1318?style=for-the-badge&labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
+    <a href="https://github.com/justsomeone-e/nyx"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
+</p>
 
   <p><strong>v4 path: MAYA (DEV) → SAMSARA (RC1) → BODHI (RC2) → MOKSHA (FINAL RC) → NIRVANA (STABLE)</strong></p>
 
