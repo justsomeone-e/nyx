@@ -39,6 +39,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang build-essential
 
+      - name: Ensure Windows LLVM toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
+            choco install llvm --no-progress -y
+          }
+
       - name: Execute Full Universal Test Suite
         run: |
           python -u tests/run_all_tests.py

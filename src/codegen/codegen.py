@@ -169,6 +169,8 @@ class UniversalCodeGen:
         lines.extend([
             "inline void _nyx_pause_if_standalone_console() {",
             "#ifdef _WIN32",
+            "    if (getenv(\"CI\") || getenv(\"GITHUB_ACTIONS\") || getenv(\"NYX_NO_PAUSE\")) return;",
+            "    if (!_isatty(_fileno(stdin)) || !_isatty(_fileno(stdout))) return;",
             "    DWORD process_ids[2] = {};",
             "    if (GetConsoleProcessList(process_ids, 2) == 1) { cout << \"\\nPress Enter to close...\" << flush; string ignored; getline(cin, ignored); }",
             "#endif",
