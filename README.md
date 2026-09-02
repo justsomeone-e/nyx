@@ -28,7 +28,6 @@
     <a href="#backends"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
   </p>
 
-
   <p><strong>v4 path: MAYA (DEV) → SAMSARA (RC1) → BODHI (RC2) → MOKSHA (FINAL RC) → NIRVANA (STABLE)</strong></p>
 
   <p align="center">
