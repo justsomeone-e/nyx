@@ -4,7 +4,7 @@
 # language percentage.  The real implementation languages stay detectable.
 
 # Nyx source extension
-*.nyx linguist-language=Nix
+*.nyx linguist-language=C++
 *.nyx linguist-detectable=true
 *.nyx linguist-vendored=false
 repo/**/*.nyx linguist-language=Nix
