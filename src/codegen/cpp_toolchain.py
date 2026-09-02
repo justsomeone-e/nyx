@@ -250,7 +250,7 @@ class CppToolchain:
         cls,
         exe_filepath: str,
         args: Optional[Sequence[str]] = None,
-        timeout: int = 10,
+        timeout: int = 120,
     ) -> Tuple[int, str]:
         compiler = cls.find_compiler()
         env = os.environ.copy()

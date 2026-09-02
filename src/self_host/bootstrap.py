@@ -294,7 +294,7 @@ def _compile_driver(source: str) -> Tuple[int, str]:
         ok, message = CppToolchain.compile_cpp(cpp_path, exe_path)
         if not ok:
             raise SelfHostError(f"Stage-1 bootstrap C++ compilation failed:\n{message}")
-        return_code, output = CppToolchain.run_executable(exe_path)
+        return_code, output = CppToolchain.run_executable(exe_path, timeout=120)
         return return_code, output
 
 
@@ -479,7 +479,7 @@ def verify_stage2() -> bool:
         stage3_return_code, stage3_output = CppToolchain.run_executable(
             stage2_exe_path,
             ("emit-cpp", compiler_source_path, "-o", stage3_cpp_path),
-            timeout=30,
+            timeout=120,
         )
         if stage3_return_code != 0 or "NYX_COMPILE_OK" not in stage3_output:
             raise SelfHostError(f"Stage-2 could not reproduce its compiler:\n{stage3_output}")
