@@ -728,13 +728,22 @@ impl HIRCodeGen {
         }
         self.emit_line("struct " + struct_name + bases + " {")
         self.indent_level = self.indent_level + 1
+        var default_initializers = ""
         for i in 0..len(node.first)-1 {
             var field = node.first[i]
-            self.emit_line(self.map_type(field.type_info) + " " + self.identifier(field.name) + "{};")
+            var field_name = self.identifier(field.name)
+            self.emit_line(self.map_type(field.type_info) + " " + field_name + ";")
+            if default_initializers != "" { default_initializers = default_initializers + ", " }
+            default_initializers = default_initializers + field_name + "()"
         }
         self.emit_line(struct_name + "();")
-        self.struct_out_of_line = self.struct_out_of_line +
-            struct_name + "::" + struct_name + "() = default;\n"
+        if default_initializers == "" {
+            self.struct_out_of_line = self.struct_out_of_line +
+                struct_name + "::" + struct_name + "() {}\n"
+        } else {
+            self.struct_out_of_line = self.struct_out_of_line +
+                struct_name + "::" + struct_name + "() : " + default_initializers + " {}\n"
+        }
         if len(node.first) > 0 {
             var params = ""
             var initializers = ""

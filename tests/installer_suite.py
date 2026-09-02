@@ -23,7 +23,8 @@ def _wsl_path(path: str) -> str:
     drive, tail = os.path.splitdrive(os.path.abspath(path))
     if not drive:
         return path.replace("\\", "/")
-    return f"/mnt/{drive[0].lower()}/{tail.lstrip('\\/').replace('\\', '/')}"
+    normalized_tail = tail.lstrip("\\/").replace("\\", "/")
+    return f"/mnt/{drive[0].lower()}/{normalized_tail}"
 
 
 def _run(command, *, cwd=ROOT_DIR, env=None, timeout=240):

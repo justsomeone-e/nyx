@@ -87,8 +87,9 @@ struct ASTNode { params: Array<FunctionParam> }
     recursive_ast = Parser(Lexer(recursive_src).tokenize(), recursive_src).parse()
     recursive_cpp = UniversalCodeGen(recursive_ast).gen_cpp()
     assert "FunctionParam();" in recursive_cpp
-    assert "FunctionParam::FunctionParam()" in recursive_cpp
-    assert "FunctionParam() :" not in recursive_cpp
+    assert "std::vector<ASTNode> defaults;" in recursive_cpp
+    assert "std::vector<ASTNode> defaults{};" not in recursive_cpp
+    assert "FunctionParam::FunctionParam() : defaults() {}" in recursive_cpp
 
     coalesce_src = "var present = 100 ?? 42\nvar missing = null ?? 42\n"
     coalesce_ast = Parser(Lexer(coalesce_src).tokenize(), coalesce_src).parse()

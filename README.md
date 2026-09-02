@@ -585,7 +585,7 @@ installers, packaging, fuzzing, and negative diagnostics.
 ║  Nyx/Python canonical HIR byte parity         ──► 194 cases PASS    ║
 ║  Stable backend runtime parity                ──► 3 × 138 PASS      ║
 ║  Deterministic backend fixtures               ──► 3 × 10 PASS       ║
-║  Standard-library HIR coverage                ──► 21 modules PASS   ║
+║  Standard-library HIR coverage                ──► 17 modules PASS   ║
 ║  Bundle ABI isolated + allocation stress      ──► 100,000 PASS      ║
 ║  Native self-host reproducibility             ──► stage 1/2/3 PASS ║
 ║  Deterministic fuzz engine                    ──► 530 / 530 PASS    ║

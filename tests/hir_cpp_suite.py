@@ -144,7 +144,9 @@ def _run_recursive_struct_constructor_contract() -> None:
     )
     generated = _emit(source, "<hir-recursive-structs>")
     assert "FunctionParam();" in generated
-    assert "FunctionParam::FunctionParam() = default;" in generated
+    assert "std::vector<ASTNode> defaults;" in generated
+    assert "std::vector<ASTNode> defaults{};" not in generated
+    assert "FunctionParam::FunctionParam() : defaults() {}" in generated
     assert not any(
         line.strip() == "FunctionParam() = default;"
         for line in generated.splitlines()

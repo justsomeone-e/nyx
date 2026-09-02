@@ -1514,15 +1514,21 @@ class HIRCppEmitter:
                     f"Cannot infer native type for field '{node.name}.{field.name}'; add a Nyx annotation"
                 )
             field_types[field.name] = value_type
+            initializer = "{}" if node.generic_params else ""
             lines.append(
-                f"    {self._cpp_type(value_type, role='field')} {self._identifier(field.name)}{{}};"
+                f"    {self._cpp_type(value_type, role='field')} "
+                f"{self._identifier(field.name)}{initializer};"
             )
 
         if node.generic_params:
             lines.append(f"    {name}() = default;")
         else:
             lines.append(f"    {name}();")
-            self._struct_constructors.append(f"{name}::{name}() = default;")
+            default_initializers = ", ".join(
+                f"{self._identifier(field.name)}()" for field in node.fields
+            )
+            initializer_list = f" : {default_initializers}" if default_initializers else ""
+            self._struct_constructors.append(f"{name}::{name}(){initializer_list} {{}}")
         if node.fields:
             parameters = []
             definition_parameters = []

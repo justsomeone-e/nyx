@@ -392,7 +392,11 @@ def verify_stage2() -> bool:
         raise SelfHostError(
             "Stage-2 emitted an inline default constructor for a recursive struct"
         )
-    if "FunctionParam::FunctionParam() = default;" not in stage2_cpp:
+    if "std::vector<ASTNode> default_expr{};" in stage2_cpp:
+        raise SelfHostError(
+            "Stage-2 emitted an inline initializer for a recursive struct field"
+        )
+    if "FunctionParam::FunctionParam() :" not in stage2_cpp:
         raise SelfHostError("Stage-2 omitted the out-of-line recursive struct constructor")
 
     with tempfile.TemporaryDirectory(prefix="nyx_stage2_verify_") as temp_dir:
