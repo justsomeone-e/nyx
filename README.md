@@ -69,7 +69,21 @@ Nyx is **not** a thin syntactic sugar over C, a grab-bag of transpiler macros, o
 
 ## `02` — Language Tour
 
-Nyx syntax eliminates structural ceremony while sharpening control-flow clarity.
+Nyx scales seamlessly from zero-ceremony top-level scripts to high-assurance systems architecture without mode switching or dialect forks.
+
+### Zero-Ceremony Scripting
+
+For quick automation, pipelines, or algorithm prototyping, no `fn main()` or boilerplate wrapper is required. Top-level statements execute sequentially:
+
+```nyx
+#target cpp
+
+let base_freq: int = 5000
+let multiplier: int = 2
+
+// Direct top-level execution with pipelines
+base_freq * multiplier |> print
+```
 
 ### Functional Ergonomics & Value Semantics
 
@@ -155,7 +169,9 @@ async fn main() {
 }
 ```
 
-Core v4 features: `let`/`var`/`const`, explicit `set`, `guard ... else`, `defer`, `match`, `if`/`elif`/`else`, `for` ranges, `while`, `loop`, `try`/`catch`/`throw`, `async`/`await`, `Task<T>`, pipelines (`|>`), structs, traits, implementations, null-safe navigation, string interpolation, and explicit `unsafe` boundaries. Complete grammar specification: [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md).
+Core v4 features: `let`/`var`/`const`, explicit `set`, `guard ... else`, `defer`, `match`, `if`/`elif`/`else`, `for` ranges, `while`, `loop`, `try`/`catch`/`throw`, `async`/`await`, `Task<T>`, pipelines (`|>`), structs, traits, implementations, in-file test blocks (`test "name" { assert(...) }`), null-safe navigation, string interpolation, and explicit `unsafe` boundaries. Complete grammar specification: [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md).
+
+> **Runnable Examples**: Check out the [`examples/`](examples/) directory for ready-to-run programs covering math scripts, DSP pipelines, null-safety, in-file test suites, memory inspectors, and foreign C++/Node.js/Python bindings.
 
 ---
 
