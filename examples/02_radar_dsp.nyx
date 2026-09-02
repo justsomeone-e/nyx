@@ -1,11 +1,13 @@
 #target cpp
 
 var base_freq: int = 5000
-var target: string = "24K SAF ALTIN"
+var target_signal: string = "Channel-A High Gain"
 
-print("========================================")
-print("🎯 HEDEF:", target)
-print("⚡ FREKANS:", base_freq, "Hz")
-print("========================================")
+fn amplify(freq: int) -> int = freq * 2
 
-base_freq |> print
+print("Signal Target:", target_signal)
+print("Base Frequency:", base_freq, "Hz")
+
+// Forward pipeline transformation
+let amplified = base_freq |> amplify
+print("Amplified Frequency:", amplified, "Hz")

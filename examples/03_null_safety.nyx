@@ -1,8 +1,22 @@
 #target cpp
 
 struct User {
-    name: string
+    name: string,
+    role: string
 }
 
-var user: User? = null
-print("Kullanıcı:", user?.name ?? "Bilinmeyen Kullanıcı")
+fn main() {
+    var current_user: User? = null
+
+    // Safe navigation (?.) and null coalescing (??)
+    let display_name = current_user?.name ?? "Anonymous Guest"
+    let display_role = current_user?.role ?? "Guest"
+
+    print("User Profile:", display_name)
+    print("Access Level:", display_role)
+
+    // Initialized user test
+    var active_user: User? = User("Alice", "Engineer")
+    print("Verified User:", active_user?.name ?? "Unknown")
+    print("Verified Role:", active_user?.role ?? "Standard")
+}
