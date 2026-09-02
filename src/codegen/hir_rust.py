@@ -838,7 +838,8 @@ class HIRRustEmitter:
             value_type = self.inference.type_of_symbol(node.symbol, node.type)
             if node.symbol in self.globals:
                 name = self._symbol(node.symbol, node.name)
-                return f"{{ {name}.lock().unwrap().clone() }}"
+                val = self._temporary("val")
+                return f"{{ let {val} = {name}.lock().unwrap().clone(); {val} }}"
             name = self._symbol(node.symbol, node.name)
             return name if self._is_copy_type(value_type) else f"{name}.clone()"
         if isinstance(node, IRBinary):
