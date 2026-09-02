@@ -67,6 +67,8 @@ def run_release_packaging_suite() -> bool:
             assert member_names == sorted(member_names, key=lambda value: value.encode("utf-8"))
             assert all(name.startswith(prefix) and "\\" not in name for name in member_names)
             assert prefix + "README.md" in member_names
+            assert prefix + "LICENSE" in member_names
+            assert prefix + "NYX-OUTPUT-EXCEPTION" in member_names
             assert len({member.date_time for member in members}) == 1
 
         with tarfile.open(first / names[1], "r:gz") as archive:
@@ -75,6 +77,8 @@ def run_release_packaging_suite() -> bool:
             assert member_names == sorted(member_names, key=lambda value: value.encode("utf-8"))
             assert all(name.startswith(prefix) and "\\" not in name for name in member_names)
             assert prefix + "compiler/main.nyx" in member_names
+            assert prefix + "LICENSE" in member_names
+            assert prefix + "NYX-OUTPUT-EXCEPTION" in member_names
             assert all(member.uid == 0 and member.gid == 0 for member in members)
             assert len({member.mtime for member in members}) == 1
 

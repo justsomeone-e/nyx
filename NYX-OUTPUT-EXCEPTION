@@ -1,0 +1,55 @@
+NYX OUTPUT AND STANDARD LIBRARY EXCEPTION
+Version 1.0, 2 September 2026
+
+This Exception is an additional permission under section 7 of the GNU
+Affero General Public License, version 3 ("AGPLv3"). It is granted by the
+copyright holders of Nyx for the material to which they hold copyright.
+
+0. Definitions
+
+"Nyx Toolchain" means the Nyx compiler, transpilers, build tools, language
+server, and their source code.
+
+"User Program" means a program written by a Nyx user that is not itself a
+copy, modification, or derivative of the Nyx Toolchain.
+
+"Output" means source code, object code, executable code, libraries,
+WebAssembly modules, JavaScript modules, declarations, or other artifacts
+produced by the Nyx Toolchain from a User Program.
+
+"Runtime Components" means portions of the Nyx standard library or runtime
+support that the Nyx Toolchain copies, emits, links, or otherwise incorporates
+into Output solely to implement or support the User Program.
+
+1. Grant of Additional Permission
+
+Notwithstanding the conditions of AGPLv3, you may use, reproduce, modify,
+link, combine, and convey Output containing Runtime Components under terms of
+your choice, including proprietary or permissive terms such as the MIT
+License. Neither a User Program nor its Output becomes subject to AGPLv3
+solely because the Nyx Toolchain processed it or because Runtime Components
+were incorporated into that Output.
+
+2. Limits of This Exception
+
+This Exception does not apply to the Nyx Toolchain itself, to modifications
+of the Nyx Toolchain, or to the Nyx standard library or runtime when they are
+distributed separately from Output. Those materials remain governed by
+AGPLv3.
+
+This Exception does not permit Output to be used as a disguised copy or
+substitute distribution of the Nyx Toolchain, standard library, runtime,
+language server, SDK, or build tools. Material copied from Nyx beyond the
+Runtime Components needed to implement or support the User Program remains
+subject to AGPLv3.
+
+3. Names and Trademarks
+
+This Exception grants no permission to use Nyx names, logos, or trademarks
+to imply endorsement, affiliation, or that a modified distribution is an
+official Nyx release.
+
+4. Third-Party Material
+
+This Exception does not alter the license terms of third-party material.
+Third-party components remain governed by their respective licenses.

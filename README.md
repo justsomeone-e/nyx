@@ -25,7 +25,7 @@
   <p align="center">
     <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Version"></a>
     <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/STATUS-RELEASE%20CANDIDATE-0E1318?style=for-the-badge&logoColor=00F0FF&labelColor=05070A" alt="Release candidate"></a>
-    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0-0E1318?style=for-the-badge&labelColor=05070A" alt="License"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0%20%2B%20OUTPUT%20EXCEPTION-0E1318?style=for-the-badge&labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
@@ -693,9 +693,21 @@ For larger architectural changes, discuss the intended design before implementin
 
 ## `14` — License
 
-nyx is licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+The Nyx compiler, toolchain, and standalone standard-library sources are
+licensed under the **GNU Affero General Public License v3.0 (AGPL-3.0)**.
+Redistributed or modified Nyx tooling must continue to satisfy the AGPL; it
+cannot be relicensed as a closed-source product.
 
-See [`LICENSE`](LICENSE) for the complete license text.
+The separate **[Nyx Output and Standard Library Exception](NYX-OUTPUT-EXCEPTION)**
+keeps applications built with Nyx independent: generated C++20, JavaScript,
+WebAssembly, binaries, and other artifacts may be distributed under terms of
+the developer's choice, including MIT or proprietary terms. The same
+permission covers Nyx runtime or standard-library portions incorporated into
+those generated artifacts. It does not cover standalone redistribution of the
+compiler, runtime, or standard library.
+
+See [`LICENSE`](LICENSE) for the complete AGPLv3 text and
+[`NYX-OUTPUT-EXCEPTION`](NYX-OUTPUT-EXCEPTION) for the additional permission.
 
 ---
 

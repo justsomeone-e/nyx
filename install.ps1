@@ -105,8 +105,11 @@ try {
         }
         Write-Host "[*] Installing source and compiler support files..." -ForegroundColor Cyan
         Copy-Item -Path (Join-Path $SourceRoot "src\*") -Destination $SrcDir -Recurse -Force
-        if (Test-Path -LiteralPath (Join-Path $SourceRoot "VERSION") -PathType Leaf) {
-            Copy-Item -LiteralPath (Join-Path $SourceRoot "VERSION") -Destination (Join-Path $InstallDir "VERSION") -Force
+        foreach ($legalFileName in @("VERSION", "LICENSE", "NYX-OUTPUT-EXCEPTION")) {
+            $legalFile = Join-Path $SourceRoot $legalFileName
+            if (Test-Path -LiteralPath $legalFile -PathType Leaf) {
+                Copy-Item -LiteralPath $legalFile -Destination (Join-Path $InstallDir $legalFileName) -Force
+            }
         }
         if (Test-Path -LiteralPath (Join-Path $SourceRoot "compiler") -PathType Container) {
             Copy-Item -Path (Join-Path $SourceRoot "compiler\*") -Destination $CompilerDir -Recurse -Force
