@@ -20,9 +20,9 @@ class CppToolchain:
         import tempfile
         compiler_name = os.path.basename(compiler_path).lower()
         temp_dir = tempfile.gettempdir()
-        probe_cpp = os.path.join(temp_dir, "he_probe.cpp")
+        probe_cpp = os.path.join(temp_dir, f"he_probe_{os.getpid()}.cpp")
         exe_ext = ".exe" if os.name == 'nt' else ""
-        probe_exe = os.path.join(temp_dir, f"he_probe{exe_ext}")
+        probe_exe = os.path.join(temp_dir, f"he_probe_{os.getpid()}{exe_ext}")
         
         with open(probe_cpp, "w", encoding="utf-8") as f:
             f.write("#include <iostream>\n#include <string>\nint main(){ std::cout << 42 << std::endl; return 0; }\n")
@@ -30,15 +30,15 @@ class CppToolchain:
         try:
             if "cl" in compiler_name and "clang" not in compiler_name:
                 cmd = [compiler_path, "/std:c++20", "/EHsc", probe_cpp, f"/Fe:{probe_exe}"]
-                res = subprocess.run(cmd, capture_output=True, timeout=8)
+                res = subprocess.run(cmd, capture_output=True, timeout=30)
             else:
                 static_flag = ["-static"] if sys.platform != 'darwin' else []
                 cmd = [compiler_path, "-std=c++20"] + static_flag + [probe_cpp, "-o", probe_exe]
-                res = subprocess.run(cmd, capture_output=True, timeout=8)
+                res = subprocess.run(cmd, capture_output=True, timeout=30)
                 if res.returncode != 0:
                     # Fallback without -static (works for MSVC Clang and systems lacking static libc)
                     cmd = [compiler_path, "-std=c++20", probe_cpp, "-o", probe_exe]
-                    res = subprocess.run(cmd, capture_output=True, timeout=8)
+                    res = subprocess.run(cmd, capture_output=True, timeout=30)
                 
             if res.returncode != 0:
                 return False
@@ -46,7 +46,7 @@ class CppToolchain:
             if os.path.exists(probe_exe):
                 bin_dir = os.path.dirname(compiler_path)
                 env = {**os.environ, 'PATH': bin_dir + os.pathsep + os.environ.get('PATH', '')}
-                run_res = subprocess.run([probe_exe], capture_output=True, text=True, env=env, timeout=5)
+                run_res = subprocess.run([probe_exe], capture_output=True, text=True, env=env, timeout=15)
                 return run_res.returncode == 0 and "42" in run_res.stdout
             return False
         except Exception:

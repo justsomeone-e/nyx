@@ -1,27 +1,78 @@
 #target cpp
 
 #native include <cstdlib>
+#native include <string>
 
-fn os_name() -> string {
-    return "windows"
+#native raw {
+inline const char* _nyx_platform_os_name() {
+#if defined(_WIN32)
+    return "windows";
+#elif defined(__APPLE__)
+    return "macos";
+#elif defined(__linux__)
+    return "linux";
+#else
+    return "unknown";
+#endif
 }
 
-fn arch() -> string {
-    return "x86_64"
+inline const char* _nyx_platform_arch() {
+#if defined(_M_X64) || defined(__x86_64__)
+    return "x86_64";
+#elif defined(_M_ARM64) || defined(__aarch64__)
+    return "arm64";
+#elif defined(_M_IX86) || defined(__i386__)
+    return "x86";
+#elif defined(_M_ARM) || defined(__arm__)
+    return "arm";
+#else
+    return "unknown";
+#endif
 }
 
-fn is_windows() -> bool {
-    return true
+inline bool _nyx_platform_is_windows() {
+#if defined(_WIN32)
+    return true;
+#else
+    return false;
+#endif
 }
 
-fn is_linux() -> bool {
-    return false
+inline bool _nyx_platform_is_linux() {
+#if defined(__linux__)
+    return true;
+#else
+    return false;
+#endif
 }
 
-fn path_separator() -> string {
-    return "\\"
+inline const char* _nyx_platform_path_separator() {
+#if defined(_WIN32)
+    return "\\";
+#else
+    return "/";
+#endif
 }
 
-fn line_ending() -> string {
-    return "\r\n"
+inline const char* _nyx_platform_line_ending() {
+#if defined(_WIN32)
+    return "\r\n";
+#else
+    return "\n";
+#endif
 }
+}
+
+extern "C++" fn _nyx_platform_os_name() -> string
+extern "C++" fn _nyx_platform_arch() -> string
+extern "C++" fn _nyx_platform_is_windows() -> bool
+extern "C++" fn _nyx_platform_is_linux() -> bool
+extern "C++" fn _nyx_platform_path_separator() -> string
+extern "C++" fn _nyx_platform_line_ending() -> string
+
+fn os_name() -> string = _nyx_platform_os_name()
+fn arch() -> string = _nyx_platform_arch()
+fn is_windows() -> bool = _nyx_platform_is_windows()
+fn is_linux() -> bool = _nyx_platform_is_linux()
+fn path_separator() -> string = _nyx_platform_path_separator()
+fn line_ending() -> string = _nyx_platform_line_ending()
