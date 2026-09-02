@@ -1,11 +1,11 @@
 > [!IMPORTANT]
 > ## Nyx v4.0.0-rc.1 is available
 >
-> `v4.0.0-rc.1` is the first public release candidate for the compiler-focused
-> v4 line. It keeps the Maya scope reset: microcontroller/freestanding firmware
-> is outside the active codebase, while compiler correctness, self-hosting,
-> native/WASM backends, language ergonomics, and tooling are under RC soak.
-> This is not the `v4.0.0 Nirvana` stable release.
+> **Samsara** is the first public release candidate for Nyx v4. It validates
+> compiler correctness, reproducible self-hosting, native/WASM backends,
+> language ergonomics, installers, and editor tooling. Microcontroller firmware
+> support is outside the v4 scope. This is an RC, not the final **Nirvana**
+> stable release.
 
 <div align="center">
 
@@ -29,7 +29,7 @@
     <a href="#"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
   </p>
 
-  <p><strong>v4 release line: MAYA → SAMSARA → NIRVANA · RC1</strong></p>
+  <p><strong>v4 path: MAYA (DEV) → SAMSARA (RC1) → BODHI (RC2) → MOKSHA (FINAL RC) → NIRVANA (STABLE)</strong></p>
 
   <p align="center">
     <a href="#overview">OVERVIEW</a> •
@@ -84,13 +84,11 @@ after its compiler and compatibility gates pass.
 | :-- | :-- | :-- | :-- | :-- |
 | `v2.x` | — | — | Initial multi-target compiler, standard library, and CLI foundation | Historical |
 | `v3.x` | — | — | Bundle ABI, Unicode/byte correctness, parity testing, and native interop | Historical |
-| `v4.0.0-dev.1` | **Maya** | Illusion / appearance | Preserved development snapshot and starting point for the resumed v4 line | Historical snapshot |
-| `v4.0.0-dev.2` | **Maya** | Scope reset | Microcontroller removal; compiler, syntax ergonomics, native/WASM, self-hosting, and LSP focus | Historical development release |
-| `v4.0.0-beta.*` | Nocturne | Night piece | v4 integration and stabilization cycle | Planned after development gates |
-| `v4.0.0-rc.1` | **Samsara** | Cycle of existence | Release-candidate compatibility and soak testing | **Current release candidate** |
-| `v4.0.0-rc.2` | Bodhi | Awakening | Intended follow-up RC fixes only | Not scheduled |
-| `v4.0.0-rc.3` | Moksha | Liberation | Intended final RC verification only | Not scheduled |
-| `v4.0.0` | Nirvana | Final release / release from the cycle | Intended v4 stable promotion | Not scheduled |
+| `v4.0.0-dev.1`–`dev.2` | **Maya** | Illusion / appearance | Scope reset, firmware removal, compiler/HIR expansion, syntax ergonomics, native/WASM, self-hosting, and LSP work | Historical development line |
+| `v4.0.0-rc.1` | **Samsara** | Cycle of existence | Cross-platform release-candidate validation and compatibility soak | **Current release candidate** |
+| `v4.0.0-rc.2` | **Bodhi** | Awakening | Focused corrections discovered during RC1 testing | Only if required |
+| `v4.0.0-rc.3` | **Moksha** | Liberation | Final release-gate verification without new feature work | Only if required |
+| `v4.0.0` | **Nirvana** | Release from the cycle | Stable v4 language, compiler, tooling, and compatibility baseline | Planned after RC gates |
 | `v5.0.0` | Aether | Upper sky / pure medium | New major language work, portable C/LLVM direction, and an independent reference frontend | Future target |
 | `v6.0.0` | Eclipse | Obscuring and transition | Direct native code generation and broader optimization/tooling contracts | Future target |
 | `v7.0.0` | Apotheosis | Highest development | Additional service and managed-runtime targets with explicit concurrency mappings | Future target |
@@ -272,7 +270,7 @@ nyx/
 ├── vscode-extension/ # Local VSIX, LSP client, commands, syntax, snippets, icons
 ├── tests/             # Runtime, parity, negative, fuzz, ABI, and release gates
 ├── tools/             # Deterministic packaging and release utilities
-├── docs/              # Frozen specs, roadmaps, compatibility and internals
+├── docs/              # Versioned specs, roadmaps, compatibility and internals
 ├── assets/            # Logos and preserved animated README visuals
 ├── install.ps1        # Native-first Windows installer
 ├── install.sh         # Native-first Linux/macOS installer
@@ -515,7 +513,7 @@ async fn main() {
 }
 ```
 
-Core v4 includes `var`/`let`/`const`, explicit `set`, `if`/`elif`/`else`, `for`, `while`, `loop`, `break`, `continue`, `guard`, `defer`, `match`, `try`/`catch`/`throw`, `async`/`await`, interpolation, null-safe access, pipelines, structs, traits, implementations, tests, modules, and explicit `unsafe` boundaries. The exact grammar is frozen in [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md).
+Core v4 includes `var`/`let`/`const`, explicit `set`, `if`/`elif`/`else`, `for`, `while`, `loop`, `break`, `continue`, `guard`, `defer`, `match`, `try`/`catch`/`throw`, `async`/`await`, interpolation, null-safe access, pipelines, structs, traits, implementations, tests, modules, and explicit `unsafe` boundaries. The RC1 grammar contract is specified in [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md).
 
 ---
 
@@ -572,10 +570,10 @@ The release gate checks accepted/rejected corpus parity, byte-identical HIR, sta
 
 ## `10` — Verification & Conformance
 
-The frozen Maya snapshot is not qualified by a single happy-path build. The
-unified framework covers syntax, semantics, HIR, native execution, hosted
-parity, Bundle ABI, self-hosting, LSP/editor contracts, installers, packaging,
-fuzzing, and negative diagnostics.
+Samsara RC1 is qualified by the unified verification framework rather than a
+single happy-path build. The gates cover syntax, semantics, HIR, native
+execution, hosted parity, Bundle ABI, self-hosting, LSP/editor contracts,
+installers, packaging, fuzzing, and negative diagnostics.
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -584,7 +582,7 @@ fuzzing, and negative diagnostics.
 ║                                                                      ║
 ║  Edge-case regression                         ──► 138 / 138 PASS    ║
 ║  HIR corpus emission                          ──► 162 programs PASS ║
-║  Nyx/Python canonical HIR byte parity         ──► 182 cases PASS    ║
+║  Nyx/Python canonical HIR byte parity         ──► 194 cases PASS    ║
 ║  Stable backend runtime parity                ──► 3 × 138 PASS      ║
 ║  Deterministic backend fixtures               ──► 3 × 10 PASS       ║
 ║  Standard-library HIR coverage                ──► 21 modules PASS   ║
@@ -600,18 +598,18 @@ fuzzing, and negative diagnostics.
 
 ### Backend maturity matrix
 
-| Target | Language semantics | HIR | Maya role |
+| Target | Language semantics | HIR | RC1 status |
 | :-- | :--: | :--: | :-- |
-| **`cpp`** | frozen v4 | authoritative | frozen native contract |
-| **`js`** | frozen v4 | authoritative | frozen hosted contract |
-| **`python`** | frozen v4 | authoritative | frozen parity/reference contract |
-| **`wasm`** | explicit `wasm32` subset | authoritative | beta ABI |
-| **`rust`** | narrower Rust 2021 contract | authoritative | beta; runtime/cross-platform gates pending |
-| **`react`** | wrapper/tooling contract | N/A | beta tooling |
-| **`asm`** | native subset | via C++ | beta |
+| **`cpp`** | v4 RC contract | authoritative | native release candidate |
+| **`js`** | v4 RC contract | authoritative | hosted release candidate |
+| **`python`** | v4 RC contract | authoritative | parity/reference target |
+| **`wasm`** | explicit `wasm32` subset | authoritative | ABI v1 candidate |
+| **`rust`** | narrower Rust 2021 contract | authoritative | preview; additional runtime gates pending |
+| **`react`** | wrapper/tooling contract | N/A | preview tooling |
+| **`asm`** | native subset | via C++ | preview |
 
-The figures above are local evidence for the frozen Maya snapshot. They are not
-a claim that this development release is an RC or stable promotion.
+These results qualify Samsara as an RC1 candidate. Nirvana stable promotion
+still requires the RC compatibility and release gates to remain green.
 
 ### Release integrity
 
@@ -651,13 +649,13 @@ See [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) for the diagnostic catalog.
 | :-- | :-- |
 | [`GETTING_STARTED.md`](GETTING_STARTED.md) | First project and compiler workflow |
 | [`INSTALLATION.md`](INSTALLATION.md) | Host and native toolchain setup |
-| [`LANGUAGE_REFERENCE.md`](LANGUAGE_REFERENCE.md) | Frozen v4 language semantics |
+| [`LANGUAGE_REFERENCE.md`](LANGUAGE_REFERENCE.md) | Versioned v4 language semantics |
 | [`docs/SYNTAX_SPEC.md`](docs/SYNTAX_SPEC.md) | Grammar, type, Task, exception, and HIR contract |
 | [`CLI_REFERENCE.md`](CLI_REFERENCE.md) | CLI command reference |
 | [`ERROR_REFERENCE.md`](ERROR_REFERENCE.md) | Structured diagnostic catalog |
 | [`docs/internals/ROADMAP_AND_BACKEND_GATES.md`](docs/internals/ROADMAP_AND_BACKEND_GATES.md) | v4 decision record, backend gates, and future target order |
 | [`docs/TODO.md`](docs/TODO.md) | Historical and maintenance checklist |
-| [`CHANGELOG.md`](CHANGELOG.md) | Release history and frozen snapshot changes |
+| [`CHANGELOG.md`](CHANGELOG.md) | Release history and version changes |
 
 ---
 
