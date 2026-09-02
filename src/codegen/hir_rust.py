@@ -77,7 +77,7 @@ class RustEmissionError(ValueError):
 _RUST_RUNTIME = r'''
 use std::fmt::Debug;
 use std::io::{self, Write};
-use std::sync::{Arc, LazyLock, Mutex, RwLock};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::time::Duration;
 
@@ -619,8 +619,8 @@ class HIRRustEmitter:
         name = self._symbol(node.symbol, node.name)
         value = self._expr_as(node.expr, value_type)
         return [
-            f"static {name}: LazyLock<RwLock<{self._rust_type(value_type)}>> =",
-            f"    LazyLock::new(|| RwLock::new({value}));",
+            f"static {name}: LazyLock<Mutex<{self._rust_type(value_type)}>> =",
+            f"    LazyLock::new(|| Mutex::new({value}));",
         ]
 
     def _emit_block(
@@ -747,7 +747,7 @@ class HIRRustEmitter:
             value_name = self._temporary("value")
             return [
                 f"{prefix}let {value_name}: {self._rust_type(target_type)} = {value};",
-                f"{prefix}*{name}.write().unwrap() = {value_name};",
+                f"{prefix}*{name}.lock().unwrap() = {value_name};",
             ]
         root = self._root_reference(node.target)
         if root is not None and root.symbol in self.globals:
@@ -758,7 +758,7 @@ class HIRRustEmitter:
             return [
                 f"{prefix}let {value_name}: {self._rust_type(target_type)} = {value};",
                 f"{prefix}{{",
-                f"{prefix}    let mut {guard} = {global_name}.write().unwrap();",
+                f"{prefix}    let mut {guard} = {global_name}.lock().unwrap();",
                 f"{prefix}    {target} = {value_name};",
                 f"{prefix}}}",
             ]
@@ -838,7 +838,7 @@ class HIRRustEmitter:
             value_type = self.inference.type_of_symbol(node.symbol, node.type)
             if node.symbol in self.globals:
                 name = self._symbol(node.symbol, node.name)
-                return f"{name}.read().unwrap().clone()"
+                return f"{{ {name}.lock().unwrap().clone() }}"
             name = self._symbol(node.symbol, node.name)
             return name if self._is_copy_type(value_type) else f"{name}.clone()"
         if isinstance(node, IRBinary):
@@ -1144,7 +1144,7 @@ class HIRRustEmitter:
             if global_guard is not None and node.symbol == global_guard[0]:
                 return f"(*{global_guard[1]})"
             if node.symbol in self.globals:
-                return f"(*{self._symbol(node.symbol, node.name)}.read().unwrap())"
+                return f"(*{self._symbol(node.symbol, node.name)}.lock().unwrap())"
             return self._symbol(node.symbol, node.name)
         if isinstance(node, IRMemberAccess):
             return f"{self._lvalue(node.obj, global_guard=global_guard)}.{self._identifier(node.member)}"
