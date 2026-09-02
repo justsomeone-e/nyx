@@ -136,6 +136,21 @@ def _run_cli_args_smoke() -> None:
         assert output.strip() == "nyx-arg", output
 
 
+def _run_recursive_struct_constructor_contract() -> None:
+    source = (
+        "struct FunctionParam { defaults: Array<ASTNode> } "
+        "struct ASTNode { params: Array<FunctionParam> } "
+        "fn main() { print(42) }"
+    )
+    generated = _emit(source, "<hir-recursive-structs>")
+    assert "FunctionParam();" in generated
+    assert "FunctionParam::FunctionParam() = default;" in generated
+    assert not any(
+        line.strip() == "FunctionParam() = default;"
+        for line in generated.splitlines()
+    )
+
+
 def run_hir_cpp_suite() -> bool:
     print("=" * 70)
     print("NYX HIR-AUTHORITATIVE C++20 NATIVE BACKEND")
@@ -146,6 +161,7 @@ def run_hir_cpp_suite() -> bool:
     runtime_count = _run_native_battery()
     _run_stage1_smoke()
     _run_cli_args_smoke()
+    _run_recursive_struct_constructor_contract()
     print(
         f"[PASS] {corpus_count} emitted, {runtime_count} native runtime cases, "
         "Nyx-authored stage1 frontend and argv runtime compiled and executed"

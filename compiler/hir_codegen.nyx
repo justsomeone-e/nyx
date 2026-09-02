@@ -732,7 +732,9 @@ impl HIRCodeGen {
             var field = node.first[i]
             self.emit_line(self.map_type(field.type_info) + " " + self.identifier(field.name) + "{};")
         }
-        self.emit_line(struct_name + "() = default;")
+        self.emit_line(struct_name + "();")
+        self.struct_out_of_line = self.struct_out_of_line +
+            struct_name + "::" + struct_name + "() = default;\n"
         if len(node.first) > 0 {
             var params = ""
             var initializers = ""

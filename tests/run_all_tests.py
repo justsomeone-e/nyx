@@ -81,6 +81,15 @@ fn is_adult(u: User) -> bool { return u.age >= 18 }
     assert 'User(' in cpp
     assert 'bool is_adult(' in cpp
 
+    recursive_src = """struct FunctionParam { defaults: Array<ASTNode> }
+struct ASTNode { params: Array<FunctionParam> }
+"""
+    recursive_ast = Parser(Lexer(recursive_src).tokenize(), recursive_src).parse()
+    recursive_cpp = UniversalCodeGen(recursive_ast).gen_cpp()
+    assert "FunctionParam();" in recursive_cpp
+    assert "FunctionParam::FunctionParam()" in recursive_cpp
+    assert "FunctionParam() :" not in recursive_cpp
+
     coalesce_src = "var present = 100 ?? 42\nvar missing = null ?? 42\n"
     coalesce_ast = Parser(Lexer(coalesce_src).tokenize(), coalesce_src).parse()
     TypeChecker(coalesce_ast, '<coalesce>', coalesce_src).check()

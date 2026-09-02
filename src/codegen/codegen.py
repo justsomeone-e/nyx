@@ -496,9 +496,25 @@ class UniversalCodeGen:
                 ctor_params = ", ".join([f"{struct_field_type(f)} {f.name}" for f in node.fields])
                 ctor_inits = ", ".join([f"{f.name}({f.name})" for f in node.fields])
                 default_inits = ", ".join([f"{f.name}()" for f in node.fields])
-                ctor_body = f"    {node.name}() : {default_inits} {{}}\n    {node.name}({ctor_params});\n" if node.fields else ""
+                ctor_body = ""
                 if node.fields:
-                    struct_ctor_defs.append(f"{node.name}::{node.name}({ctor_params}) : {ctor_inits} {{}}")
+                    if node.generic_params:
+                        ctor_body = (
+                            f"    {node.name}() : {default_inits} {{}}\n"
+                            f"    {node.name}({ctor_params}) : {ctor_inits} {{}}\n"
+                        )
+                    else:
+                        # Keep every constructor out-of-line until all structs
+                        # are complete. libstdc++ rejects an inline default
+                        # constructor for fields such as vector<ASTNode> when
+                        # ASTNode is only forward-declared at this point.
+                        ctor_body = f"    {node.name}();\n    {node.name}({ctor_params});\n"
+                        struct_ctor_defs.append(
+                            f"{node.name}::{node.name}() : {default_inits} {{}}"
+                        )
+                        struct_ctor_defs.append(
+                            f"{node.name}::{node.name}({ctor_params}) : {ctor_inits} {{}}"
+                        )
                 
                 # Check for RAII destructor and methods declared in ImplBlockNode
                 impl_methods_decls = []

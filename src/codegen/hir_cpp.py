@@ -1518,7 +1518,11 @@ class HIRCppEmitter:
                 f"    {self._cpp_type(value_type, role='field')} {self._identifier(field.name)}{{}};"
             )
 
-        lines.append(f"    {name}() = default;")
+        if node.generic_params:
+            lines.append(f"    {name}() = default;")
+        else:
+            lines.append(f"    {name}();")
+            self._struct_constructors.append(f"{name}::{name}() = default;")
         if node.fields:
             parameters = []
             definition_parameters = []

@@ -385,6 +385,15 @@ def verify_stage2() -> bool:
             f"Stage-1 self-compilation exited with code {compiler_return_code}"
         )
     stage2_cpp = _extract_generated(compiler_output)
+    if any(
+        line.strip() == "FunctionParam() = default;"
+        for line in stage2_cpp.splitlines()
+    ):
+        raise SelfHostError(
+            "Stage-2 emitted an inline default constructor for a recursive struct"
+        )
+    if "FunctionParam::FunctionParam() = default;" not in stage2_cpp:
+        raise SelfHostError("Stage-2 omitted the out-of-line recursive struct constructor")
 
     with tempfile.TemporaryDirectory(prefix="nyx_stage2_verify_") as temp_dir:
         stage2_cpp_path = os.path.join(temp_dir, "nyx_stage2.cpp")
