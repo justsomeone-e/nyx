@@ -1,55 +1,30 @@
-<div align="center">
+# Nyx
 
-  <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/nyx-mark-dark.png?v=4.0.0-rc1" width="220" alt="nyx mark"/>
-  </a>
-  <br/>
-  <a href="https://github.com/justsomeone-e/nyx">
-    <img src="assets/logo.svg?v=4.0.0-rc1" width="560" alt="nyx logotype"/>
-  </a>
+<p align="left">
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0--rc.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+  <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/status-release%20candidate-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
+  <a href="NYX-OUTPUT-EXCEPTION"><img src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20output%20exception-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
+  <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
+</p>
 
-  <p align="center">
-    <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=High-level+expressivity.+Zero+machine-abstraction+leaks.;One+Language.+Verified+HIR+v1.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics.">
-      <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=High-level+expressivity.+Zero+machine-abstraction+leaks.;One+Language.+Verified+HIR+v1.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics." alt="Typing SVG" />
-    </a>
-  </p>
+**Nyx is a compiled, statically typed systems programming language engineered to make high-level code effortlessly expressive without hiding the machine underneath it.**
 
-  <p align="center">
-    <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
-    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/STATUS-RELEASE%20CANDIDATE-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
-    <a href="NYX-OUTPUT-EXCEPTION"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0%20%2B%20OUTPUT%20EXCEPTION-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
-    <a href="#backends"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
-  </p>
-
-  <p><strong>v4 path: MAYA (DEV) → SAMSARA (RC1) → BODHI (RC2) → MOKSHA (FINAL RC) → NIRVANA (STABLE)</strong></p>
-
-  <p align="center">
-    <a href="#manifesto">MANIFESTO</a> •
-    <a href="#language-tour">LANGUAGE TOUR</a> •
-    <a href="#architecture">ARCHITECTURE</a> •
-    <a href="#targets">TARGETS</a> •
-    <a href="#bundle-abi">BUNDLE ABI</a> •
-    <a href="#verification">VERIFICATION</a> •
-    <a href="#install">INSTALL</a> •
-    <a href="#tooling">TOOLING</a> •
-    <a href="#docs">DOCS</a>
-  </p>
-
-</div>
-
----
+A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> ### Nyx v4.0.0-rc.1 is live — Codename Samsara
-> **Samsara** represents the first production-grade release candidate for Nyx v4. It proves rigorous compiler correctness, reproducible native self-hosting, C++20 and WebAssembly ABI v1 code generation, language ergonomics, multi-platform installers, and language server tooling.
-> 
-> *Microcontroller platform firmware has been explicitly decoupled from the v4 scope to guarantee an uncompromising, mathematically verified semantic core.*
+> **Nyx v4.0.0-rc.1 "Samsara"** is the active release candidate. It validates compiler correctness, reproducible native self-hosting without Python runtime dependency, C++20/WASM targets, language ergonomics, and language server tooling. Microcontroller firmware has been decoupled to focus on an uncompromising semantic core.
 
----
-
-<div align="center">
-  <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
-</div>
+<p align="left">
+  <a href="#manifesto">MANIFESTO</a> •
+  <a href="#language-tour">LANGUAGE TOUR</a> •
+  <a href="#architecture">ARCHITECTURE</a> •
+  <a href="#targets">TARGETS</a> •
+  <a href="#bundle-abi">BUNDLE ABI</a> •
+  <a href="#verification">VERIFICATION</a> •
+  <a href="#install">INSTALL</a> •
+  <a href="#tooling">TOOLING</a> •
+  <a href="#docs">DOCS</a>
+</p>
 
 ---
 
@@ -576,8 +551,6 @@ See [`LICENSE`](LICENSE) and [`NYX-OUTPUT-EXCEPTION`](NYX-OUTPUT-EXCEPTION) for 
 
 ---
 
-<div align="center">
-  <img src="assets/footer_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx systems footer banner"/>
-  <br/><br/>
+<p align="center">
   <sub>Designed for performance. Engineered for correctness. Built for the modern machine.</sub>
-</div>
+</p>
