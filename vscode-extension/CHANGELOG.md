@@ -3,8 +3,11 @@
 ## 4.0.0-rc.1
 
 - Align the extension package with the Nyx v4.0.0-rc.1 release candidate.
-- Keep compiler-derived language-surface metadata and Nyx tooling links in the
-  packaged extension.
+- Added full syntax highlighting for string interpolation (`$"..."` with `{expression}` blocks).
+- Added syntax grammar coverage for `yield`, boolean operators (`and`, `or`, `not`), and `Iterator`.
+- Added new snippets for `trait` definitions, `impl Trait for Struct`, and `async fn`.
+- Synced and verified `language-surface.json` compiler metadata catalog.
+- Bundled official release candidate VSIX package (`nyx-language-support-4.0.0-rc.1.vsix`).
 
 ## 4.0.0-dev.2
 

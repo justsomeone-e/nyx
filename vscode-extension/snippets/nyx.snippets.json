@@ -190,5 +190,34 @@
       "}"
     ],
     "description": "In-file automated unit test block"
+  },
+  "Trait Definition": {
+    "prefix": "trait",
+    "body": [
+      "trait ${1:Name} {",
+      "\tfn ${2:method}(self${3:, params}) -> ${4:type}",
+      "}"
+    ],
+    "description": "Trait interface definition"
+  },
+  "Trait Implementation": {
+    "prefix": "impl for",
+    "body": [
+      "impl ${1:TraitName} for ${2:StructName} {",
+      "\tfn ${3:method}(self${4:, params}) -> ${5:type} {",
+      "\t\t${0:// body}",
+      "\t}",
+      "}"
+    ],
+    "description": "Trait implementation block"
+  },
+  "Async Function": {
+    "prefix": "async fn",
+    "body": [
+      "async fn ${1:name}(${2:params}) -> ${3:type} {",
+      "\t${0:// body}",
+      "}"
+    ],
+    "description": "Asynchronous function returning a Task<T>"
   }
 }
