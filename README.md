@@ -20,13 +20,13 @@
     <a href="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=One+Language.+Verified+HIR.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics.">
       <img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&weight=700&size=20&duration=3000&pause=1200&color=00F0FF&center=true&vCenter=true&width=760&lines=One+Language.+Verified+HIR.+Multiple+Targets.;Native+nyxc+%7C+C%2B%2B20+%7C+Node.js+%7C+Python+%7C+WASM.;Reproducible+Self-Hosting+Without+a+Python+Runtime.;Deterministic+i64%2C+binary64%2C+UTF-8%2C+and+Diagnostics." alt="Typing SVG" />
     </a>
-    
-<p align="center">
-    <a href="https://github.com"><img src="https://shields.io" alt="Version"></a>
-    <a href="https://github.com"><img src="https://shields.io" alt="Release candidate"></a>
-    <a href="https://github.com"><img src="https://shields.io" alt="AGPL-3.0 with Nyx Output Exception"></a>
-    <a href="https://github.com"><img src="https://shields.io_|_WIN_|_MACOS-0E1318?style=for-the-badge&labelColor=05070A" alt="Platforms"></a>
-</p>
+
+  <p align="center">
+ <a href="VERSION"><img src="https://img.shields.io/badge/VERSION-4.0.0--rc.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+    <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/STATUS-RELEASE%20CANDIDATE-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
+    <a href="NYX-OUTPUT-EXCEPTION"><img src="https://img.shields.io/badge/LICENSE-AGPL--3.0%20%2B%20OUTPUT%20EXCEPTION-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="AGPL-3.0 with Nyx Output Exception"></a>
+    <a href="#backends"><img src="https://img.shields.io/badge/PLATFORMS-LINUX%20%7C%20WIN%20%7C%20MACOS-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
+  </p>
 
 
   <p><strong>v4 path: MAYA (DEV) → SAMSARA (RC1) → BODHI (RC2) → MOKSHA (FINAL RC) → NIRVANA (STABLE)</strong></p>
