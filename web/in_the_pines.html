@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IN THE PINES — Typography Video & Retro Text RPG</title>
+    <title>IN THE PINES — Live Animated ASCII Psychological Horror</title>
     <style>
         :root {
-            --bg-color: #050709;
-            --text-color: #c4cbd4;
-            --accent-color: #8b9bb4;
-            --crimson: #a33838;
-            --cold-blue: #4a758c;
-            --amber: #d99b43;
-            --tape-green: #3d8c5d;
+            --bg: #040507;
+            --panel-bg: #080b10;
+            --border: #18202c;
+            --text-bright: #e2e8f0;
+            --text-dim: #94a3b8;
+            --text-ghost: #475569;
+            --amber-lantern: #f59e0b;
+            --cold-blue: #38bdf8;
+            --frost-white: #f8fafc;
+            --crimson: #ef4444;
         }
 
         * {
@@ -23,27 +26,26 @@
         }
 
         body {
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--bg);
+            color: var(--text-bright);
             font-family: 'Courier New', Courier, monospace;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow-x: hidden;
-            position: relative;
-            padding: 20px 0;
+            padding: 24px 0;
         }
 
-        /* CRT Scanline & Dark Vignette Effect */
+        /* Subtle Nostalgic CRT Scanlines & Breathing Vignette */
         body::before {
             content: " ";
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.42) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.38) 50%);
             z-index: 99;
-            background-size: 100% 3px, 3px 100%;
+            background-size: 100% 3px;
             pointer-events: none;
         }
 
@@ -52,18 +54,18 @@
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: radial-gradient(circle, transparent 55%, rgba(0,0,0,0.92) 100%);
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.94) 100%);
             z-index: 100;
             pointer-events: none;
         }
 
         .game-wrapper {
-            width: 980px;
-            max-width: 96vw;
-            background: #090c12;
-            border: 1px solid #1c2430;
+            width: 960px;
+            max-width: 95vw;
+            background: var(--panel-bg);
+            border: 1px solid var(--border);
             border-radius: 8px;
-            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95), 0 0 25px rgba(74, 117, 140, 0.15);
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.98), 0 0 30px rgba(56, 189, 248, 0.08);
             padding: 24px;
             display: flex;
             flex-direction: column;
@@ -72,232 +74,127 @@
             z-index: 10;
         }
 
+        /* Header */
         .game-header {
-            border-bottom: 2px solid #141b24;
+            border-bottom: 2px solid #111822;
             padding-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
 
-        .title-area h1 {
-            font-size: 1.45rem;
-            letter-spacing: 3px;
-            color: #e6edf3;
+        .title-block h1 {
+            font-size: 1.5rem;
+            letter-spacing: 4px;
+            color: #f1f5f9;
             text-transform: uppercase;
         }
 
-        .title-area p {
+        .title-block p {
             font-size: 0.8rem;
             color: var(--cold-blue);
             font-style: italic;
             margin-top: 3px;
+            letter-spacing: 1px;
         }
 
-        .stats-bar {
+        .vitals-bar {
             display: flex;
-            gap: 16px;
-            font-size: 0.85rem;
-            background: #0f141c;
-            padding: 8px 14px;
+            gap: 14px;
+            background: #0d131c;
+            padding: 8px 16px;
             border-radius: 4px;
-            border: 1px solid #202836;
+            border: 1px solid #1a2330;
+            font-size: 0.82rem;
         }
 
-        .stat-item {
+        .vital-item {
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .stat-val { font-weight: bold; }
-        .stat-temp { color: var(--cold-blue); }
-        .stat-sanity { color: var(--amber); }
-        .stat-clues { color: var(--tape-green); }
+        .vital-val { font-weight: bold; }
+        .val-temp { color: var(--cold-blue); }
+        .val-sanity { color: var(--amber-lantern); }
+        .val-pulse { color: #f43f5e; }
+        .val-clues { color: #10b981; }
 
-        /* ========================================= */
-        /* RETRO ASCII/TYPOGRAPHY CRT MONITOR        */
-        /* ========================================= */
-        .ascii-monitor {
-            background: #000;
-            border: 2px solid #1a222d;
+        /* ================================================= */
+        /* LIVE ANIMATED ASCII VIEWPORT (CINEMATIC CANVAS)   */
+        /* ================================================= */
+        .viewport-container {
+            background: #020305;
+            border: 2px solid #151d27;
             border-radius: 6px;
             overflow: hidden;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.95);
+            position: relative;
             display: flex;
             flex-direction: column;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.9), 0 0 15px rgba(0,0,0,0.7);
-            position: relative;
         }
 
-        .monitor-header {
-            background: #111720;
-            padding: 6px 12px;
-            font-size: 0.75rem;
-            color: #8b949e;
+        .viewport-header {
+            background: #0b1017;
+            padding: 6px 14px;
+            font-size: 0.74rem;
+            color: var(--text-dim);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid #1a222d;
-        }
-
-        .monitor-canvas-container {
-            width: 100%;
-            height: 320px;
-            background: #020305;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        #ascii-canvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-
-        #raw-video {
-            display: none;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        /* Monitor Controls */
-        .monitor-controls {
-            background: #0c1017;
-            padding: 8px 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            border-top: 1px solid #18202b;
-            font-size: 0.78rem;
-        }
-
-        .custom-word-box {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .word-input {
-            background: #05070a;
-            border: 1px solid #2c3848;
-            color: #58a6ff;
-            font-family: inherit;
-            font-size: 0.78rem;
-            font-weight: bold;
-            padding: 4px 8px;
-            border-radius: 4px;
-            width: 110px;
+            border-bottom: 1px solid #141c26;
             letter-spacing: 1px;
-            text-transform: uppercase;
         }
 
-        .word-input:focus {
-            outline: none;
-            border-color: #58a6ff;
-            box-shadow: 0 0 6px rgba(88, 166, 255, 0.4);
+        #ascii-screen {
+            width: 100%;
+            height: 310px;
+            display: block;
+            background: #020305;
         }
 
-        .file-upload-btn {
-            background: #18202c;
-            border: 1px dashed #344254;
-            color: #79c0ff;
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: 0.2s;
-        }
-
-        .file-upload-btn:hover {
-            background: #233144;
-            border-color: #79c0ff;
-            color: #fff;
-        }
-
-        .mode-btn {
-            background: #151b24;
-            border: 1px solid #263342;
-            color: #8b949e;
-            padding: 4px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-            font-family: inherit;
-            font-size: 0.73rem;
-            transition: 0.2s;
-        }
-
-        .mode-btn:hover, .mode-btn.active {
-            background: #233244;
-            color: #58a6ff;
-            border-color: #58a6ff;
-        }
-
-        /* Tape Deck & Atmosphere Bar */
-        .tape-panel {
-            background: #0c1017;
-            border: 1px solid #1c2430;
+        /* Ambient Tape & Wind Panel */
+        .tape-deck-bar {
+            background: #090e15;
+            border: 1px solid #16202c;
             border-radius: 4px;
             padding: 10px 14px;
-            font-size: 0.82rem;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .tape-top-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
+            font-size: 0.8rem;
         }
 
-        .tape-status {
+        .tape-info {
             display: flex;
             align-items: center;
-            gap: 8px;
-            color: #8b949e;
+            gap: 10px;
         }
 
         .tape-led {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #30363d;
-            box-shadow: 0 0 0 rgba(0,0,0,0);
-            transition: 0.3s;
+            background: #2d3748;
+            transition: all 0.3s;
         }
 
-        .tape-led.active {
-            background: #52a378;
-            box-shadow: 0 0 8px #52a378;
+        .tape-led.playing {
+            background: #10b981;
+            box-shadow: 0 0 10px #10b981;
         }
 
-        .audio-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .audio-btn {
-            background: #151c26;
-            border: 1px solid #273444;
-            color: #c4cbd4;
+        .deck-btn {
+            background: #131b26;
+            border: 1px solid #243142;
+            color: var(--text-bright);
             padding: 6px 12px;
             font-family: inherit;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
@@ -306,373 +203,265 @@
             gap: 6px;
         }
 
-        .audio-btn:hover {
-            background: #212c3b;
-            color: #fff;
+        .deck-btn:hover {
+            background: #1e2a3b;
             border-color: var(--cold-blue);
+            color: #fff;
         }
 
-        .vol-slider {
+        .deck-slider {
             width: 65px;
             height: 4px;
             accent-color: var(--cold-blue);
             cursor: pointer;
         }
 
-        /* Seek / Progress Bar */
-        .tape-track-bar {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.75rem;
-            color: #57606a;
-        }
-
-        .progress-bar {
-            flex: 1;
-            height: 4px;
-            background: #131922;
-            border-radius: 2px;
-            position: relative;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .progress-fill {
-            height: 100%;
-            width: 0%;
-            background: var(--cold-blue);
-            transition: width 0.25s linear;
-        }
-
-        .inventory-panel {
-            background: #080b0f;
-            border: 1px dashed #1c2430;
-            padding: 8px 12px;
-            font-size: 0.8rem;
-            color: #8b949e;
+        /* Guitar & Inventory Row */
+        .interactive-strip {
+            background: #06090e;
+            border: 1px dashed #1a2330;
+            padding: 9px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 10px;
+            font-size: 0.8rem;
         }
 
-        .inv-items {
-            color: #d1d7e0;
-            font-weight: bold;
-        }
-
-        .guitar-widget {
+        .chord-cluster {
             display: flex;
-            gap: 5px;
             align-items: center;
+            gap: 6px;
         }
 
-        .chord-btn {
-            background: #121822;
-            border: 1px solid #233040;
-            color: #79c0ff;
-            padding: 3px 7px;
-            font-size: 0.74rem;
+        .chord-tag {
+            background: #101721;
+            border: 1px solid #253346;
+            color: var(--cold-blue);
+            padding: 4px 9px;
             font-family: inherit;
+            font-size: 0.76rem;
             border-radius: 3px;
             cursor: pointer;
+            transition: all 0.15s;
         }
 
-        .chord-btn:hover {
-            background: #1c2736;
+        .chord-tag:hover {
+            background: #1b283a;
             color: #fff;
+            transform: translateY(-2px);
         }
 
-        /* Screen & Story */
-        .screen-container {
-            min-height: 220px;
-            background: #040608;
-            border: 1px solid #151b24;
+        /* Narrative & Psychological Dual Text Area */
+        .narrative-box {
+            min-height: 180px;
+            background: #030508;
+            border: 1px solid #131a24;
             border-radius: 6px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            position: relative;
-        }
-
-        .location-tag {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--cold-blue);
-            margin-bottom: 10px;
-            display: flex;
-            justify-content: space-between;
+            gap: 14px;
         }
 
         .story-text {
             font-size: 1.02rem;
-            line-height: 1.6;
-            color: #d1d7e0;
+            line-height: 1.65;
+            color: #cbd5e1;
             white-space: pre-wrap;
-            min-height: 100px;
         }
 
-        .log-box {
-            margin-top: 12px;
+        /* Milk-style Subconscious Inner Stream */
+        .subconscious-stream {
+            border-top: 1px solid #101722;
             padding-top: 10px;
-            border-top: 1px solid #131922;
             font-size: 0.86rem;
-            color: var(--amber);
+            color: #64748b;
             font-style: italic;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
         }
 
-        .choices-container {
+        .subconscious-tag {
+            color: var(--amber-lantern);
+            font-style: normal;
+            font-weight: bold;
+            font-size: 0.76rem;
+            letter-spacing: 1px;
+        }
+
+        /* Choices */
+        .choices-stack {
             display: flex;
             flex-direction: column;
             gap: 9px;
-            margin-top: 4px;
         }
 
-        .choice-btn {
-            background: #0e131b;
-            border: 1px solid #1e2634;
+        .choice-item {
+            background: #0a0f16;
+            border: 1px solid #18222f;
             border-left: 3px solid var(--cold-blue);
-            color: #e6edf3;
+            color: var(--text-bright);
             padding: 12px 16px;
             font-family: inherit;
-            font-size: 0.93rem;
+            font-size: 0.94rem;
             text-align: left;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.15s ease;
+            transition: all 0.2s ease;
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
-        .choice-btn:hover {
-            background: #17202d;
-            border-color: #6e7681;
-            border-left-color: var(--amber);
-            transform: translateX(4px);
+        .choice-item:hover {
+            background: #141c28;
+            border-color: #475569;
+            border-left-color: var(--amber-lantern);
+            transform: translateX(5px);
+            color: #fff;
         }
 
-        .key-hint {
-            font-size: 0.75rem;
-            background: #040608;
-            border: 1px solid #273240;
-            padding: 2px 6px;
+        .choice-hint {
+            font-size: 0.74rem;
+            background: #030508;
+            border: 1px solid #273444;
+            padding: 2px 7px;
             border-radius: 3px;
-            color: #8b949e;
+            color: var(--text-dim);
         }
 
-        .footer-note {
+        .footer-bar {
             display: flex;
             justify-content: space-between;
-            font-size: 0.75rem;
-            color: #484f58;
-            margin-top: 4px;
+            font-size: 0.74rem;
+            color: var(--text-ghost);
+            margin-top: 2px;
         }
     </style>
 </head>
 <body>
 
     <div class="game-wrapper">
-        <!-- Header -->
+        <!-- Header & Stats -->
         <div class="game-header">
-            <div class="title-area">
+            <div class="title-block">
                 <h1>IN THE PINES</h1>
                 <p>"Where the sun don't ever shine..."</p>
             </div>
-            <div class="stats-bar">
-                <div class="stat-item">
-                    <span>BODY TEMP:</span>
-                    <span id="temp-val" class="stat-val stat-temp">37°C</span>
+            <div class="vitals-bar">
+                <div class="vital-item">
+                    <span>TEMP:</span>
+                    <span id="stat-temp" class="vital-val val-temp">37°C</span>
                 </div>
-                <div class="stat-item">
+                <div class="vital-item">
                     <span>SANITY:</span>
-                    <span id="sanity-val" class="stat-val stat-sanity">100%</span>
+                    <span id="stat-sanity" class="vital-val val-sanity">100%</span>
                 </div>
-                <div class="stat-item">
+                <div class="vital-item">
+                    <span>PULSE:</span>
+                    <span id="stat-pulse" class="vital-val val-pulse">78 BPM</span>
+                </div>
+                <div class="vital-item">
                     <span>CLUES:</span>
-                    <span id="clues-val" class="stat-val stat-clues">0/4</span>
+                    <span id="stat-clues" class="vital-val val-clues">0/4</span>
                 </div>
             </div>
         </div>
 
-        <!-- ============================================== -->
-        <!-- RETRO CRT MONITOR: TYPOGRAPHY VIDEO SCANNER    -->
-        <!-- ============================================== -->
-        <div class="ascii-monitor">
-            <div class="monitor-header">
-                <span>🔴 CRT MONITOR: HIGH DEFINITION TYPOGRAPHY RENDERER</span>
-                <span id="audio-mode-label" style="color:var(--tape-green)">AUDIO: NATIVE LO-FI CASSETTE & PINE WIND</span>
+        <!-- ============================================= -->
+        <!-- LIVE ANIMATED ASCII PROCEDURAL VIEWPORT      -->
+        <!-- ============================================= -->
+        <div class="viewport-container">
+            <div class="viewport-header">
+                <span id="location-header">🌲 CROSSROADS IN THE PINES (03:17 AM)</span>
+                <span id="weather-label" style="color:var(--cold-blue)">WEATHER: BITTER FROST & MIST</span>
             </div>
-            <div class="monitor-canvas-container" id="drop-zone">
-                <canvas id="ascii-canvas"></canvas>
-                <video id="raw-video" playsinline></video>
+            <canvas id="ascii-screen"></canvas>
+        </div>
+
+        <!-- Ambient Tape Deck & Audio Player -->
+        <div class="tape-deck-bar">
+            <div class="tape-info">
+                <div id="tape-indicator" class="tape-led"></div>
+                <span id="tape-status-text" style="color:var(--text-dim);">CASSETTE DECK: STANDBY</span>
+                <span style="color:var(--text-ghost); font-size:0.75rem;">(Uncut MTV Unplugged Master & Pine Wind)</span>
             </div>
-            <div class="monitor-controls">
-                <div class="custom-word-box">
-                    <span style="color:#79c0ff; font-weight:bold;">WORD:</span>
-                    <input type="text" id="custom-word" class="word-input" value="KURT" oninput="updateCustomWord(this.value)">
-                </div>
-
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <span>SHARPNESS:</span>
-                    <button id="res-normal" class="mode-btn" onclick="setResolution('normal')">STANDARD</button>
-                    <button id="res-hd" class="mode-btn active" onclick="setResolution('hd')">HD CRISP</button>
-                    <button id="res-ultra" class="mode-btn" onclick="setResolution('ultra')">ULTRA DETAIL</button>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <label class="file-upload-btn">
-                        📁 SELECT MP4 OR DRAG & DROP
-                        <input type="file" id="video-file-input" accept="video/mp4,video/*" style="display:none" onchange="handleFileSelect(event)">
-                    </label>
-                    <span id="video-filename" style="color:#8b949e; font-size:0.72rem;">Searching for video.mp4...</span>
-                </div>
-
-                <div style="display:flex; align-items:center; gap:5px;">
-                    <span>FILTER:</span>
-                    <button id="mode-color" class="mode-btn active" onclick="setRenderMode('color')">RGB COLOR</button>
-                    <button id="mode-green" class="mode-btn" onclick="setRenderMode('green')">GREEN CRT</button>
-                    <button id="mode-amber" class="mode-btn" onclick="setRenderMode('amber')">AMBER</button>
-                    <button id="mode-raw" class="mode-btn" onclick="setRenderMode('raw')">ORIGINAL</button>
-                </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button id="tape-toggle-btn" class="deck-btn" onclick="toggleTape()">
+                    <span id="tape-icon">▶</span>
+                    <span id="tape-btn-text">START ATMOSPHERE</span>
+                </button>
+                <button class="deck-btn" style="font-size:0.72rem;" onclick="jumpClimax()">
+                    🔥 CLIMAX / SCREAM
+                </button>
+                <span style="font-size:0.75rem; color:var(--text-dim);">VOL:</span>
+                <input type="range" class="deck-slider" min="0" max="1" step="0.05" value="0.55" oninput="setMasterVolume(this.value)">
             </div>
         </div>
 
-        <!-- Retro Tape Player (Native Video Audio + Lo-Fi Filter + Pine Wind) -->
-        <div class="tape-panel">
-            <div class="tape-top-row">
-                <div class="tape-status">
-                    <div id="tape-led" class="tape-led"></div>
-                    <span id="tape-label">CASSETTE DECK: STANDBY</span>
-                    <span style="color:#57606a; font-size:0.75rem;">(Kurt Cobain - Where Did You Sleep Last Night / Uncut)</span>
-                </div>
-                <div class="audio-controls">
-                    <button id="tape-btn" class="audio-btn" onclick="togglePlayback()">
-                        <span id="tape-icon">▶</span>
-                        <span id="tape-btn-text">START ATMOSPHERE</span>
-                    </button>
-                    <button class="audio-btn" style="font-size:0.72rem;" onclick="jumpToClimax()">
-                        🔥 CLIMAX / SCREAM
-                    </button>
-                    <span style="font-size:0.75rem; color:#8b949e;">VOL:</span>
-                    <input type="range" id="vol-slider" class="vol-slider" min="0" max="1" step="0.05" value="0.55" oninput="setMasterVolume(this.value)">
-                </div>
-            </div>
-            <div class="tape-track-bar">
-                <span id="curr-time">00:00</span>
-                <div class="progress-bar" onclick="seekAudio(event)">
-                    <div id="progress-fill" class="progress-fill"></div>
-                </div>
-                <span id="total-time">04:23 [SEAMLESS LOOP]</span>
-            </div>
-        </div>
-
-        <!-- Inventory & Interactive Guitar -->
-        <div class="inventory-panel">
+        <!-- Inventory & Interactive Nylon Guitar -->
+        <div class="interactive-strip">
             <div>
-                INVENTORY: <span id="inv-display" class="inv-items">Vintage Acoustic Guitar, Lighter</span>
+                INVENTORY: <span id="inv-list" style="color:#f1f5f9; font-weight:bold;">Acoustic Guitar, Lighter</span>
             </div>
-            <div class="guitar-widget">
-                <span style="font-size:0.75rem; color:#8b949e;">STRUM GUITAR:</span>
-                <button class="chord-btn" onclick="playChord('E')">E</button>
-                <button class="chord-btn" onclick="playChord('Em')">Em</button>
-                <button class="chord-btn" onclick="playChord('A')">A</button>
-                <button class="chord-btn" onclick="playChord('G')">G</button>
-                <button class="chord-btn" onclick="playChord('Bm')">Bm</button>
+            <div class="chord-cluster">
+                <span style="font-size:0.74rem; color:var(--text-dim);">STRUM GUITAR:</span>
+                <button class="chord-tag" onclick="strumAcoustic('E')">E</button>
+                <button class="chord-tag" onclick="strumAcoustic('Em')">Em</button>
+                <button class="chord-tag" onclick="strumAcoustic('A')">A</button>
+                <button class="chord-tag" onclick="strumAcoustic('G')">G</button>
+                <button class="chord-tag" onclick="strumAcoustic('Bm')">Bm</button>
             </div>
         </div>
 
-        <!-- Main Narrative Screen -->
-        <div class="screen-container">
-            <div class="location-tag">
-                <span id="loc-name">CROSSROADS IN THE PINES</span>
-                <span id="loc-time">03:17 AM DEAD OF NIGHT</span>
+        <!-- Narrative & Psychological Monologue Box -->
+        <div class="narrative-box">
+            <div id="story-content" class="story-text"></div>
+            <div class="subconscious-stream">
+                <span class="subconscious-tag">[INNER VOICE]</span>
+                <span id="inner-thought">"I shouldn't be out here so late. Why does the mist feel like it's holding its breath?"</span>
             </div>
-            <div id="story-display" class="story-text"></div>
-            <div id="log-display" class="log-box">Freezing wind howls through the towering pine needles...</div>
         </div>
 
-        <!-- Choices Area -->
-        <div id="choices-area" class="choices-container">
-            <!-- Injected choices -->
-        </div>
+        <!-- Choices -->
+        <div id="choices-container" class="choices-stack"></div>
 
         <!-- Footer -->
-        <div class="footer-note">
-            <span>Press [1, 2, 3] or click buttons to choose.</span>
-            <span>Inspired by Kurt Cobain (1993 MTV Unplugged) & Cry of Fear</span>
+        <div class="footer-bar">
+            <span>Keys [1, 2, 3] to navigate • [Space] to strum guitar • [T] to toggle cassette</span>
+            <span>Dedicated to Kurt Cobain (1993 MTV Unplugged) & Milk Outside A Bag Of Milk</span>
         </div>
     </div>
 
-    <!-- Fallback Audio when no video is loaded -->
+    <!-- Hidden Audio Source (MTV Unplugged Uncut Master) -->
     <audio id="nirvana-audio" preload="auto" crossorigin="anonymous">
         <source src="https://archive.org/download/NirvanaUnpluggedLiveUSA/12%20-%20Where%20Did%20You%20Sleep%20Last%20Night.mp3" type="audio/mpeg">
         <source src="https://p.scdn.co/mp3-preview/80b267c313117482050242cd0acbccf180da798c" type="audio/mpeg">
     </audio>
 
     <script>
-        // Full uncut timing: 0:50.5 acoustic intro to 313.5s final chord decay
-        const VIDEO_SYNC_START = 50.5;
-        let VIDEO_SYNC_END = 313.5;
+        // ==============================================================
+        // AUDIO & SYNTHESIZER ENGINE (Cassette Filter, Wind, Guitar)
+        // ==============================================================
+        const AUDIO_START = 5.2;
+        const AUDIO_END = 264.2;
 
         let audioCtx = null;
-        let isPlaying = false;
+        let isAudioPlaying = false;
         let masterGain = null;
         let windGain = null;
+        let windFilter = null;
         let musicFilter = null;
-        let videoAudioConnected = false;
+        let musicGain = null;
+        let audioSourceNode = null;
 
-        let renderMode = 'color';
-        let hasCustomVideo = false;
-
-        let customWord = "KURT";
-        let flowOffset = 0;
-
-        let COLS = 160;
-        let ROWS = 56;
-        let fontSize = 9;
-
-        const videoElem = document.getElementById('raw-video');
         const audioElem = document.getElementById('nirvana-audio');
-        const canvas = document.getElementById('ascii-canvas');
-        const ctx = canvas.getContext('2d');
 
-        const procCanvas = document.createElement('canvas');
-        const procCtx = procCanvas.getContext('2d', { willReadFrequently: true });
-
-        function setResolution(level) {
-            document.querySelectorAll('#res-normal, #res-hd, #res-ultra').forEach(b => b.classList.remove('active'));
-            document.getElementById(`res-${level}`).classList.add('active');
-
-            if (level === 'normal') {
-                COLS = 110;
-                ROWS = 40;
-                fontSize = 11;
-            } else if (level === 'hd') {
-                COLS = 165;
-                ROWS = 58;
-                fontSize = 8.5;
-            } else if (level === 'ultra') {
-                COLS = 220;
-                ROWS = 76;
-                fontSize = 6.5;
-            }
-
-            procCanvas.width = COLS;
-            procCanvas.height = ROWS;
-        }
-
-        setResolution('hd');
-
-        function updateCustomWord(val) {
-            customWord = val.trim().toUpperCase() || "KURT";
-        }
-
-        function initAudioEngine() {
+        function initAudio() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -680,19 +469,17 @@
                 masterGain.gain.setValueAtTime(0.55, audioCtx.currentTime);
                 masterGain.connect(audioCtx.destination);
 
-                // Chilly Pine Wind Drone
+                // 1. Procedural Pine Wind Drone
                 const bufferSize = audioCtx.sampleRate * 2;
-                const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
-                const output = noiseBuffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    output[i] = Math.random() * 2 - 1;
-                }
+                const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const out = noiseBuf.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) out[i] = Math.random() * 2 - 1;
 
-                const whiteNoise = audioCtx.createBufferSource();
-                whiteNoise.buffer = noiseBuffer;
-                whiteNoise.loop = true;
+                const noiseSrc = audioCtx.createBufferSource();
+                noiseSrc.buffer = noiseBuf;
+                noiseSrc.loop = true;
 
-                const windFilter = audioCtx.createBiquadFilter();
+                windFilter = audioCtx.createBiquadFilter();
                 windFilter.type = 'bandpass';
                 windFilter.frequency.value = 320;
                 windFilter.Q.value = 2.2;
@@ -700,329 +487,94 @@
                 windGain = audioCtx.createGain();
                 windGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
 
-                whiteNoise.connect(windFilter);
+                noiseSrc.connect(windFilter);
                 windFilter.connect(windGain);
                 windGain.connect(masterGain);
-                whiteNoise.start(0);
+                noiseSrc.start(0);
 
+                // Organic Wind Gust Swells
                 setInterval(() => {
-                    if (isPlaying && windFilter) {
-                        const freq = 240 + Math.random() * 210;
-                        windFilter.frequency.setTargetAtTime(freq, audioCtx.currentTime, 1.8);
+                    if (isAudioPlaying && windFilter) {
+                        const targetFreq = 220 + Math.random() * 240;
+                        windFilter.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 1.8);
                     }
-                }, 2600);
+                }, 2800);
 
-                // Vintage Cassette Tape Filter
+                // 2. Warm Magnetic Cassette Low-Pass Filter (1380Hz)
                 musicFilter = audioCtx.createBiquadFilter();
                 musicFilter.type = 'lowpass';
-                musicFilter.frequency.setValueAtTime(1450, audioCtx.currentTime);
-                musicFilter.Q.setValueAtTime(1.1, audioCtx.currentTime);
+                musicFilter.frequency.setValueAtTime(1380, audioCtx.currentTime);
+                musicFilter.Q.setValueAtTime(1.15, audioCtx.currentTime);
 
-                const musicGain = audioCtx.createGain();
-                musicGain.gain.setValueAtTime(0.85, audioCtx.currentTime);
-
-                musicFilter.connect(musicGain);
-                musicGain.connect(masterGain);
-
-                connectVideoAudio();
+                musicGain = audioCtx.createGain();
+                musicGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
 
                 try {
-                    const audioSourceNode = audioCtx.createMediaElementSource(audioElem);
+                    audioSourceNode = audioCtx.createMediaElementSource(audioElem);
                     audioSourceNode.connect(musicFilter);
+                    musicFilter.connect(musicGain);
+                    musicGain.connect(masterGain);
                 } catch (e) {}
 
-                videoElem.addEventListener('timeupdate', () => {
-                    let trueEnd = VIDEO_SYNC_END;
-                    if (videoElem.duration && videoElem.duration > 200) {
-                        trueEnd = Math.min(VIDEO_SYNC_END, videoElem.duration - 2.0);
-                    }
-                    if (videoElem.currentTime >= trueEnd) {
-                        videoElem.currentTime = VIDEO_SYNC_START;
-                    }
-                    updateProgressUI();
-                });
-
+                // Seamless loop handler
                 audioElem.addEventListener('timeupdate', () => {
-                    if (audioElem.currentTime >= 268.0) {
-                        audioElem.currentTime = 5.2;
+                    if (audioElem.currentTime >= AUDIO_END) {
+                        audioElem.currentTime = AUDIO_START;
                     }
-                    if (!hasCustomVideo) updateProgressUI();
                 });
             }
 
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function connectVideoAudio() {
-            if (videoAudioConnected || !audioCtx) return;
-            try {
-                const videoSourceNode = audioCtx.createMediaElementSource(videoElem);
-                videoSourceNode.connect(musicFilter);
-                videoAudioConnected = true;
-                document.getElementById('audio-mode-label').innerText = "AUDIO: NATIVE LO-FI CASSETTE & PINE WIND";
-            } catch (e) {
-                document.getElementById('audio-mode-label').innerText = "AUDIO: VIDEO & PINE WIND ACTIVE";
-            }
-        }
-
-        function updateProgressUI() {
-            let cur = 0;
-            let maxDuration = (videoElem.duration && videoElem.duration > 200) ? Math.min(VIDEO_SYNC_END, videoElem.duration - 2.0) : VIDEO_SYNC_END;
-            let total = maxDuration - VIDEO_SYNC_START;
-
-            if (hasCustomVideo) {
-                cur = Math.max(0, videoElem.currentTime - VIDEO_SYNC_START);
-            } else {
-                cur = Math.max(0, audioElem.currentTime - 5.2);
-            }
-
-            const pct = Math.min(100, Math.max(0, (cur / total) * 100));
-            document.getElementById('progress-fill').style.width = pct + '%';
-
-            const m = Math.floor(cur / 60);
-            const s = Math.floor(cur % 60);
-            document.getElementById('curr-time').innerText = `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
-        }
-
-        function seekAudio(e) {
-            const bar = e.currentTarget;
-            const rect = bar.getBoundingClientRect();
-            const ratio = (e.clientX - rect.left) / rect.width;
-            let maxDuration = (videoElem.duration && videoElem.duration > 200) ? Math.min(VIDEO_SYNC_END, videoElem.duration - 2.0) : VIDEO_SYNC_END;
-
-            if (hasCustomVideo) {
-                videoElem.currentTime = VIDEO_SYNC_START + (ratio * (maxDuration - VIDEO_SYNC_START));
-            } else {
-                audioElem.currentTime = 5.2 + (ratio * (268.0 - 5.2));
-            }
-        }
-
-        function jumpToClimax() {
-            initAudioEngine();
-            if (hasCustomVideo) {
-                videoElem.currentTime = 255.0;
-            } else {
-                audioElem.currentTime = 210.0;
-            }
-            if (!isPlaying) togglePlayback();
-            setLog("Tape fast-forwarded to the legendary climax: 'In the pines, in the pines...'");
-        }
-
-        function togglePlayback() {
-            initAudioEngine();
-            connectVideoAudio();
-
-            const led = document.getElementById('tape-led');
-            const label = document.getElementById('tape-label');
-            const btnIcon = document.getElementById('tape-icon');
+        function toggleTape() {
+            initAudio();
+            const led = document.getElementById('tape-indicator');
+            const statusText = document.getElementById('tape-status-text');
             const btnText = document.getElementById('tape-btn-text');
+            const btnIcon = document.getElementById('tape-icon');
 
-            if (isPlaying) {
-                videoElem.pause();
+            if (isAudioPlaying) {
                 audioElem.pause();
                 if (windGain) windGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
-                isPlaying = false;
-                led.classList.remove('active');
-                label.innerText = "CASSETTE DECK: PAUSED";
-                btnIcon.innerText = "▶";
+                if (musicGain) musicGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
+                isAudioPlaying = false;
+                led.classList.remove('playing');
+                statusText.innerText = "CASSETTE DECK: PAUSED";
                 btnText.innerText = "START ATMOSPHERE";
-                setLog("Playback paused. Silence falls over the pines.");
+                btnIcon.innerText = "▶";
+                setInnerVoice("Silence falls again. The cold feels heavier when the music stops.");
             } else {
-                let maxDuration = (videoElem.duration && videoElem.duration > 200) ? Math.min(VIDEO_SYNC_END, videoElem.duration - 2.0) : VIDEO_SYNC_END;
-
-                if (hasCustomVideo) {
-                    if (videoElem.currentTime < VIDEO_SYNC_START || videoElem.currentTime >= maxDuration) {
-                        videoElem.currentTime = VIDEO_SYNC_START;
-                    }
-                    videoElem.play().catch(() => {});
-                    audioElem.pause();
-                } else {
-                    if (audioElem.currentTime < 5.2 || audioElem.currentTime >= 268.0) {
-                        audioElem.currentTime = 5.2;
-                    }
-                    audioElem.play().catch(() => {});
+                if (audioElem.currentTime < AUDIO_START || audioElem.currentTime >= AUDIO_END) {
+                    audioElem.currentTime = AUDIO_START;
                 }
-
+                audioElem.play().catch(() => {});
                 if (windGain) windGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.5);
-                isPlaying = true;
-                led.classList.add('active');
-                label.innerText = "CASSETTE DECK: PLAYING (Full Concert & Pine Wind)";
-                btnIcon.innerText = "⏸";
+                if (musicGain) musicGain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.5);
+                isAudioPlaying = true;
+                led.classList.add('playing');
+                statusText.innerText = "CASSETTE DECK: PLAYING (Lo-Fi Unplugged Tape)";
                 btnText.innerText = "PAUSE AUDIO";
-                setLog("Kurt Cobain is on stage... The full acoustic song and cold pine wind fill the forest.");
+                btnIcon.innerText = "⏸";
+                setInnerVoice("The magnetic tape rolls... Kurt's voice fills the empty space between the pines.");
             }
+        }
+
+        function jumpClimax() {
+            initAudio();
+            audioElem.currentTime = 214.0;
+            if (!isAudioPlaying) toggleTape();
+            setInnerVoice("'In the pines, in the pines... where the sun don't ever shine...'");
         }
 
         function setMasterVolume(val) {
             if (masterGain && audioCtx) {
                 masterGain.gain.setTargetAtTime(parseFloat(val), audioCtx.currentTime, 0.1);
             }
-            if (videoElem) {
-                videoElem.volume = parseFloat(val);
-            }
         }
 
-        function setRenderMode(mode) {
-            renderMode = mode;
-            document.querySelectorAll('#mode-color, #mode-green, #mode-amber, #mode-raw').forEach(b => b.classList.remove('active'));
-            const activeBtn = document.getElementById(`mode-${mode}`);
-            if (activeBtn) activeBtn.classList.add('active');
-
-            if (mode === 'raw') {
-                canvas.style.display = 'none';
-                videoElem.style.display = 'block';
-            } else {
-                canvas.style.display = 'block';
-                videoElem.style.display = 'none';
-            }
-        }
-
-        let animFrameCounter = 0;
-
-        function renderProceduralTypography() {
-            animFrameCounter++;
-            flowOffset = (animFrameCounter * 0.15) % customWord.length;
-
-            ctx.fillStyle = "#020305";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const charW = canvas.width / COLS;
-            const charH = canvas.height / ROWS;
-            ctx.font = `bold ${fontSize}px "Courier New", monospace`;
-
-            for (let y = 0; y < ROWS; y++) {
-                for (let x = 0; x < COLS; x++) {
-                    const noise = Math.sin(x * 0.08 + animFrameCounter * 0.03) * Math.cos(y * 0.12 - animFrameCounter * 0.02);
-                    const val = Math.max(0, Math.min(1, 0.45 + noise * 0.3));
-
-                    const wordIdx = Math.floor(x + y * 2 + flowOffset) % customWord.length;
-                    const ch = customWord[wordIdx >= 0 ? wordIdx : (wordIdx + customWord.length) % customWord.length];
-
-                    if (val < 0.15) continue;
-
-                    if (renderMode === 'green') {
-                        ctx.fillStyle = `rgb(30, ${Math.floor(val * 240 + 15)}, 50)`;
-                    } else if (renderMode === 'amber') {
-                        ctx.fillStyle = `rgb(${Math.floor(val * 240 + 20)}, ${Math.floor(val * 160 + 10)}, 20)`;
-                    } else {
-                        const r = Math.floor(val * 160 + (x < 70 ? 50 : 20));
-                        const g = Math.floor(val * 180 + 30);
-                        const b = Math.floor(val * 220 + (x >= 70 ? 60 : 30));
-                        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-                    }
-
-                    ctx.fillText(ch, x * charW, y * charH + (charH * 0.8));
-                }
-            }
-        }
-
-        function renderVideoTypography() {
-            if (videoElem.paused || videoElem.ended) return;
-
-            animFrameCounter++;
-            flowOffset = (animFrameCounter * 0.22) % customWord.length;
-
-            procCtx.drawImage(videoElem, 0, 0, COLS, ROWS);
-            const imgData = procCtx.getImageData(0, 0, COLS, ROWS);
-            const pixels = imgData.data;
-
-            ctx.fillStyle = "#020305";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            const charW = canvas.width / COLS;
-            const charH = canvas.height / ROWS;
-            ctx.font = `bold ${fontSize}px "Courier New", monospace`;
-
-            for (let y = 0; y < ROWS; y++) {
-                for (let x = 0; x < COLS; x++) {
-                    const idx = (y * COLS + x) * 4;
-                    let r = pixels[idx];
-                    let g = pixels[idx + 1];
-                    let b = pixels[idx + 2];
-
-                    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-                    if (lum < 0.05) continue;
-
-                    const boost = Math.pow(lum, 0.75);
-                    r = Math.min(255, Math.floor(r * (1 + boost * 0.3)));
-                    g = Math.min(255, Math.floor(g * (1 + boost * 0.3)));
-                    b = Math.min(255, Math.floor(b * (1 + boost * 0.3)));
-
-                    const wordIdx = Math.floor(x + flowOffset) % customWord.length;
-                    const ch = customWord[wordIdx >= 0 ? wordIdx : (wordIdx + customWord.length) % customWord.length];
-
-                    if (renderMode === 'green') {
-                        ctx.fillStyle = `rgb(30, ${Math.floor(lum * 255)}, 50)`;
-                    } else if (renderMode === 'amber') {
-                        ctx.fillStyle = `rgb(${Math.floor(lum * 255)}, ${Math.floor(lum * 175)}, 25)`;
-                    } else {
-                        ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
-                    }
-
-                    ctx.fillText(ch, x * charW, y * charH + (charH * 0.8));
-                }
-            }
-        }
-
-        function animationLoop() {
-            if (hasCustomVideo && !videoElem.paused && renderMode !== 'raw') {
-                renderVideoTypography();
-            } else if (!hasCustomVideo && renderMode !== 'raw') {
-                renderProceduralTypography();
-            }
-            requestAnimationFrame(animationLoop);
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (file) loadVideoFile(file);
-        }
-
-        function loadVideoFile(file) {
-            const url = URL.createObjectURL(file);
-            videoElem.src = url;
-            videoElem.currentTime = VIDEO_SYNC_START;
-            hasCustomVideo = true;
-
-            document.getElementById('video-filename').innerText = `Loaded: ${file.name} (0:50.5 Synced)`;
-            setLog(`"${file.name}" loaded! Live typography renderer and audio synced.`);
-
-            connectVideoAudio();
-
-            if (isPlaying) {
-                videoElem.play().catch(() => {});
-                audioElem.pause();
-            }
-        }
-
-        const dropZone = document.getElementById('drop-zone');
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.style.borderColor = "var(--amber)"; });
-        dropZone.addEventListener('dragleave', () => { dropZone.style.borderColor = "#1a222d"; });
-        dropZone.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropZone.style.borderColor = "#1a222d";
-            if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                loadVideoFile(e.dataTransfer.files[0]);
-            }
-        });
-
-        function checkLocalVideoFile() {
-            const probe = document.createElement('video');
-            probe.src = "video.mp4";
-            probe.onloadedmetadata = () => {
-                videoElem.src = "video.mp4";
-                videoElem.currentTime = VIDEO_SYNC_START;
-                hasCustomVideo = true;
-                document.getElementById('video-filename').innerText = "video.mp4 detected! (0:50.5 Synced)";
-                setLog("Local 'video.mp4' connected and locked to 0:50.5s!");
-                connectVideoAudio();
-            };
-        }
-
-        // Acoustic Guitar Plucking Synthesizer
-        const chordFrequencies = {
+        // Realistic Acoustic Nylon Chord Synthesizer + Ripple Trigger
+        const chordPitches = {
             'E':  [82.4, 123.4, 164.8, 207.6, 246.9, 329.6],
             'Em': [82.4, 123.4, 164.8, 196.0, 246.9, 329.6],
             'A':  [110.0, 164.8, 220.0, 277.1, 329.6],
@@ -1030,9 +582,9 @@
             'Bm': [123.4, 185.0, 246.9, 293.6, 370.0]
         };
 
-        function playChord(chordName) {
-            initAudioEngine();
-            const freqs = chordFrequencies[chordName] || chordFrequencies['Em'];
+        function strumAcoustic(chordName) {
+            initAudio();
+            const freqs = chordPitches[chordName] || chordPitches['Em'];
             const now = audioCtx.currentTime;
 
             freqs.forEach((freq, idx) => {
@@ -1042,326 +594,594 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(freq, now + idx * 0.038);
 
-                gain.gain.setValueAtTime(0.14, now + idx * 0.038);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.038 + 2.4);
+                gain.gain.setValueAtTime(0.18, now + idx * 0.038);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.038 + 2.5);
 
                 osc.connect(gain);
                 gain.connect(masterGain);
 
                 osc.start(now + idx * 0.038);
-                osc.stop(now + idx * 0.038 + 2.5);
+                osc.stop(now + idx * 0.038 + 2.6);
             });
 
-            if (state.sanity < 100) {
-                state.sanity = Math.min(100, state.sanity + 5);
-                updateStats();
-            }
-            setLog(`A melancholic ${chordName} chord echoed from your guitar... (+5 Sanity)`);
+            // Trigger Visual Acoustic Shockwave in Canvas!
+            triggerAcousticRipple();
+
+            // Calming Psychological Effect
+            state.sanity = Math.min(100, state.sanity + 12);
+            state.pulse = Math.max(68, state.pulse - 8);
+            updateVitalsUI();
+            setInnerVoice(`You plucked ${chordName} on your guitar... The acoustic resonance calms your racing heart.`);
         }
 
-        // ==========================================
-        // GAME STATE & NARRATIVE ENGINE
-        // ==========================================
+        // Snowy Footstep Sound Synthesis
+        function playFootstep() {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(140, now);
+            osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+            osc.connect(gain);
+            gain.connect(masterGain);
+            osc.start(now);
+            osc.stop(now + 0.13);
+        }
+
+        // ==============================================================
+        // 60 FPS LIVE ANIMATED ASCII PROCEDURAL CANVAS RENDERER
+        // ==============================================================
+        const canvas = document.getElementById('ascii-screen');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 110;
+        const ROWS = 36;
+        let animClock = 0;
+        let currentSceneId = 'crossroads';
+
+        // Acoustic shockwave circle state
+        let rippleRadius = 0;
+        let isRippling = false;
+
+        function triggerAcousticRipple() {
+            rippleRadius = 1;
+            isRippling = true;
+        }
+
+        // Particle weather engine (Drifting Snow Flurries & Cold Frost)
+        const particles = [];
+        for (let i = 0; i < 55; i++) {
+            particles.push({
+                x: Math.random() * COLS,
+                y: Math.random() * ROWS,
+                speedX: -0.2 - Math.random() * 0.4,
+                speedY: 0.1 + Math.random() * 0.25,
+                char: ['.', '*', '\'', '·'][Math.floor(Math.random() * 4)],
+                alpha: 0.2 + Math.random() * 0.7
+            });
+        }
+
+        function updateWeather() {
+            particles.forEach(p => {
+                p.x += p.speedX;
+                p.y += p.speedY;
+                if (p.x < 0) p.x = COLS;
+                if (p.y > ROWS) p.y = 0;
+            });
+        }
+
+        // Scene ASCII Geometry Renderers
+        function renderSceneGeometry(scene) {
+            animClock += 0.04;
+            updateWeather();
+
+            ctx.fillStyle = "#020305";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const charW = canvas.width / COLS;
+            const charH = canvas.height / ROWS;
+            ctx.font = 'bold 10px "Courier New", monospace';
+
+            // 1. Render Background Mountain Silhouettes & Deep Fog
+            for (let y = 0; y < ROWS; y++) {
+                for (let x = 0; x < COLS; x++) {
+                    let ch = ' ';
+                    let color = 'rgba(71, 85, 105, 0.15)';
+
+                    // Acoustic shockwave distortion
+                    let distFromCenter = Math.hypot(x - COLS / 2, y - ROWS / 2);
+                    if (isRippling && Math.abs(distFromCenter - rippleRadius) < 2.5) {
+                        ctx.fillStyle = "#38bdf8";
+                        ctx.fillText('~', x * charW, y * charH);
+                        continue;
+                    }
+
+                    if (scene === 'crossroads') {
+                        // Swaying Towering Pines on Left and Right + Road Signpost
+                        const swayLeft = Math.sin(animClock + y * 0.2) * 1.5;
+                        const swayRight = Math.sin(animClock + 1.2 + y * 0.2) * 1.5;
+
+                        // Left Pine Clump
+                        if (x < 28 + swayLeft && y > 6) {
+                            if ((x + y) % 3 === 0) { ch = '#'; color = '#334155'; }
+                            else if ((x + y) % 2 === 0) { ch = '/'; color = '#475569'; }
+                            else { ch = '\\'; color = '#1e293b'; }
+                        }
+                        // Right Pine Clump
+                        else if (x > 82 + swayRight && y > 6) {
+                            if ((x + y) % 3 === 0) { ch = '#'; color = '#334155'; }
+                            else if ((x + y) % 2 === 0) { ch = '\\'; color = '#475569'; }
+                            else { ch = '/'; color = '#1e293b'; }
+                        }
+                        // Road Fork Path & Signpost
+                        else if (y > 22 && Math.abs(x - 55) < (y - 20) * 1.1) {
+                            ch = (x + y) % 4 === 0 ? '=' : '.';
+                            color = '#1e293b';
+                        }
+                        // Signpost in center
+                        else if (x === 55 && y >= 14 && y <= 22) {
+                            ch = '|';
+                            color = '#94a3b8';
+                        } else if (Math.abs(x - 55) <= 5 && y === 15) {
+                            ch = '-';
+                            color = '#e2e8f0';
+                        }
+                    }
+
+                    else if (scene === 'cabin') {
+                        // Abandoned Log Cabin with shattered window and hearth
+                        // Roof
+                        if (y >= 8 && y <= 14 && Math.abs(x - 55) < (15 - (y - 8)) * 2.2) {
+                            ch = '/';
+                            color = '#475569';
+                        }
+                        // Walls
+                        else if (y > 14 && y < 30 && x > 28 && x < 82) {
+                            if (y === 22 && x > 48 && x < 62) {
+                                // Table / Hearth
+                                ch = '=';
+                                color = '#64748b';
+                            } else if (x === 38 || x === 72) {
+                                ch = '|';
+                                color = '#334155';
+                            } else {
+                                ch = (x + y) % 2 === 0 ? '#' : '=';
+                                color = '#1e293b';
+                            }
+
+                            // If lantern is found: Dynamic Warm Amber Lantern Glow Radiance!
+                            if (state.has_lantern) {
+                                const distToLantern = Math.hypot(x - 55, y - 20);
+                                const flicker = Math.sin(animClock * 6) * 0.15;
+                                if (distToLantern < 18) {
+                                    const lum = Math.max(0, 1 - (distToLantern / (18 + flicker)));
+                                    color = `rgba(245, 158, 11, ${lum.toFixed(2)})`;
+                                    if (distToLantern < 3) ch = '*';
+                                }
+                            }
+                        }
+                    }
+
+                    else if (scene === 'tracks') {
+                        // Vanishing Railroad Tracks & Giant Locomotive Drive Wheel
+                        // Perspective converging rails
+                        const railDist = (ROWS - y) * 1.8;
+                        if (y > 10 && (Math.abs(x - 55) === Math.floor(railDist) || Math.abs(x - 55) === Math.floor(railDist) - 1)) {
+                            ch = '|';
+                            color = '#64748b';
+                        } else if (y > 10 && (y % 3 === 0) && Math.abs(x - 55) < railDist) {
+                            ch = '=';
+                            color = '#334155';
+                        }
+                        // Giant Rusted Driving Wheel on the right
+                        const distToWheel = Math.hypot((x - 76) * 0.7, y - 20);
+                        if (distToWheel < 7.5 && distToWheel > 4.5) {
+                            ch = '@';
+                            color = '#e2e8f0';
+                        } else if (distToWheel <= 4.5 && distToWheel > 2.0) {
+                            ch = (x + y) % 2 === 0 ? 'X' : '+';
+                            color = '#94a3b8';
+                        }
+                    }
+
+                    else if (scene === 'pines_deep') {
+                        // Deep dense labyrinth of pines with creeping fog
+                        const windShift = Math.sin(animClock * 1.5 + x * 0.1) * 2;
+                        if ((x % 8 === 0 || x % 8 === 1) && y > 4) {
+                            ch = '|';
+                            color = '#1e293b';
+                        } else if (y < 22 && Math.sin(x * 0.3 + y * 0.4 + windShift) > 0.3) {
+                            ch = '#';
+                            color = '#334155';
+                        }
+                    }
+
+                    else if (scene === 'clearing') {
+                        // Gravestone under pale dawn sky with glowing particles
+                        if (y >= 14 && y <= 24 && Math.abs(x - 55) < 7) {
+                            if (y === 14) ch = '_';
+                            else if (Math.abs(x - 55) === 6) ch = '|';
+                            else if (y === 18 && Math.abs(x - 55) < 3) ch = '+'; // Cross on stone
+                            else ch = '=';
+                            color = '#e2e8f0';
+                        } else if (y > 24) {
+                            ch = (x + y) % 3 === 0 ? '_' : '.';
+                            color = '#334155';
+                        }
+                    }
+
+                    if (ch !== ' ') {
+                        ctx.fillStyle = color;
+                        ctx.fillText(ch, x * charW, y * charH);
+                    }
+                }
+            }
+
+            // 2. Render Drifting Weather Flurries (Snow & Frost Embers)
+            particles.forEach(p => {
+                ctx.fillStyle = `rgba(248, 250, 252, ${p.alpha})`;
+                ctx.fillText(p.char, p.x * charW, p.y * charH);
+            });
+
+            // Expand ripple wave
+            if (isRippling) {
+                rippleRadius += 1.8;
+                if (rippleRadius > 70) isRippling = false;
+            }
+
+            requestAnimationFrame(() => renderSceneGeometry(currentSceneId));
+        }
+
+        // ==============================================================
+        // GAME STATE & MILK-STYLE PSYCHOLOGICAL NARRATIVE
+        // ==============================================================
         const state = {
             temp: 37,
             sanity: 100,
+            pulse: 78,
             clues: 0,
             has_lantern: false,
             has_knife: false,
             has_hairpin: false,
             has_journal: false,
             knows_wheel: false,
-            heard_whisper: false,
-            currentLoc: 'crossroads',
             gameOver: false
         };
 
-        function updateStats() {
-            document.getElementById('temp-val').innerText = `${state.temp}°C`;
-            document.getElementById('sanity-val').innerText = `${state.sanity}%`;
-            document.getElementById('clues-val').innerText = `${state.clues}/4`;
+        function updateVitalsUI() {
+            document.getElementById('stat-temp').innerText = `${state.temp}°C`;
+            document.getElementById('stat-sanity').innerText = `${state.sanity}%`;
+            document.getElementById('stat-pulse').innerText = `${state.pulse} BPM`;
+            document.getElementById('stat-clues').innerText = `${state.clues}/4`;
 
-            let inv = ["Vintage Acoustic Guitar", "Lighter"];
-            if (state.has_lantern) inv.push("Kerosene Lantern");
-            if (state.has_knife) inv.push("Hunting Knife");
-            if (state.has_hairpin) inv.push("Bloodstained Hairpin");
-            if (state.has_journal) inv.push("Torn Journal Page");
-            document.getElementById('inv-display').innerText = inv.join(", ");
+            let inv = ["Acoustic Guitar", "Lighter"];
+            if (state.has_lantern) inv.push("Lantern");
+            if (state.has_knife) inv.push("Knife");
+            if (state.has_hairpin) inv.push("Blood Hairpin");
+            if (state.has_journal) inv.push("Torn Journal");
+            document.getElementById('inv-list').innerText = inv.join(", ");
         }
 
-        function setLog(msg) {
-            document.getElementById('log-display').innerText = msg;
+        function setInnerVoice(thought) {
+            document.getElementById('inner-thought').innerText = `"${thought}"`;
         }
 
-        const scenes = {
+        // Story Scenes
+        const narrativeNodes = {
             crossroads: {
-                name: "CROSSROADS IN THE PINES",
-                time: "03:17 AM DEAD OF NIGHT",
-                text: "Thick freezing fog pierces the black night on this desolate mountain road.\n\nA nylon-string guitar is slung over your shoulder. Your fingertips ache from the biting frost. Deep from within the towering pine trees, the wind carries a haunting, ragged whisper:\n\n'My girl, my girl... Tell me where did you sleep last night?'\n\nThe road branches in three directions.",
+                title: "🌲 CROSSROADS IN THE PINES (03:17 AM)",
+                sceneId: "crossroads",
+                story: "The mountain pass is buried in bone-chilling mist.\n\nYour nylon-string acoustic guitar hangs cold across your back. Frost bites into your knuckles.\n\nDeep from within the timber, a familiar ragged vocal carries across the wind:\n'My girl, my girl... Tell me where did you sleep last night?'\n\nThe road splits into the dark.",
+                thought: "I know this song. Why does it feel like I left a piece of myself out here years ago?",
                 choices: [
                     {
-                        text: "Walk down the left trail into the foggy depths of the Pine Forest",
+                        text: "Follow the left winding path into the deep Pine Forest",
+                        hint: "[1]",
                         action: () => {
                             state.temp -= 2;
-                            state.sanity -= 5;
-                            goTo('pines_deep', "Freezing winds whip through the branches as you step into the deep forest.");
+                            state.sanity -= 6;
+                            state.pulse = 98;
+                            playFootstep();
+                            loadScene('pines_deep', "Freezing needles brush your jacket as the trees close in behind you.");
                         }
                     },
                     {
-                        text: "Approach the dark, abandoned Log Cabin by the woods",
+                        text: "Approach the dark, decayed Log Cabin by the tree line",
+                        hint: "[2]",
                         action: () => {
-                            goTo('cabin', "You ascended the creaking wooden porch steps to the cabin door.");
+                            playFootstep();
+                            loadScene('cabin', "The wooden porch groans under your weight.");
                         }
                     },
                     {
-                        text: "Descend toward the Cold, Abandoned Train Tracks",
+                        text: "Descend the slope toward the Cold Train Tracks",
+                        hint: "[3]",
                         action: () => {
-                            goTo('tracks', "Rusted rails lie half-buried in dead pine needles.");
+                            playFootstep();
+                            loadScene('tracks', "You stepped onto the frozen ballast gravel along the rusted rails.");
                         }
                     }
                 ]
             },
 
             cabin: {
-                name: "ABANDONED LOG CABIN",
-                time: "03:22 AM",
-                text: "Rotting timber walls reek of damp wood. A freezing gust sneaks through the shattered window.\n\nAn overturned glass rests on the table, and a torn hunter's jacket hangs from the wall. The hearth is filled with long-cold ashes.",
+                title: "🏚️ ABANDONED LOG CABIN",
+                sceneId: "cabin",
+                story: "Rotting cedar timber smells of old wet charcoal and decades of rain.\n\nA cold draught cuts through the cracked window. On the rough-hewn table lies an overturned tin cup, and a torn canvas coat hangs limp against the wall.",
+                thought: "Someone was here. They left in a hurry... or they never left at all.",
                 choices: [
                     {
                         text: "Search the table drawers and cupboards",
+                        hint: "[1]",
                         action: () => {
                             if (!state.has_lantern) {
                                 state.has_lantern = true;
                                 state.has_knife = true;
                                 state.clues += 1;
-                                setLog("Inside a drawer you found a working Kerosene Lantern and a sharp Hunting Knife! (+1 Clue)");
+                                state.pulse = 88;
+                                updateVitalsUI();
+                                setInnerVoice("A heavy brass lantern and an oiled hunting knife. The wick sparks! Golden light spreads across the room.");
                             } else {
-                                setLog("The drawers are completely empty now.");
+                                setInnerVoice("The cupboards are stripped bare.");
                             }
-                            updateStats();
                         }
                     },
                     {
-                        text: "Inspect the pockets of the hanging jacket",
+                        text: "Reach into the deep pockets of the hanging coat",
+                        hint: "[2]",
                         action: () => {
                             if (!state.has_hairpin) {
                                 state.has_hairpin = true;
                                 state.clues += 1;
                                 state.sanity -= 10;
-                                setLog("Inside the pocket you uncovered a silver Hairpin encrusted with dried blood! (-10 Sanity, +1 Clue)");
+                                state.pulse = 125;
+                                updateVitalsUI();
+                                setInnerVoice("My fingers closed around a tarnished silver hairpin... caked in dried dark blood. (-10 Sanity)");
                             } else {
-                                setLog("Nothing else remains in the jacket pockets.");
+                                setInnerVoice("Nothing else inside the frayed coat.");
                             }
-                            updateStats();
                         }
                     },
                     {
-                        text: "Leave the cabin and return to the Crossroads",
-                        action: () => goTo('crossroads', "You pulled the cabin door shut behind you.")
+                        text: "Step back outside to the Crossroads",
+                        hint: "[3]",
+                        action: () => {
+                            playFootstep();
+                            loadScene('crossroads', "You pulled the creaking door shut behind you.");
+                        }
                     }
                 ]
             },
 
             tracks: {
-                name: "COLD TRAIN TRACKS",
-                time: "03:29 AM",
-                text: "Rusted iron tracks where no train has officially run since 1986.\n\nThe fog is so thick you can barely see two paces ahead. Where the rails converge sits the enormous rusted drive wheel of an old freight locomotive.\n\nThe lyric chills your spine:\n'Her head was found in a driving wheel, but her body never was found...'",
+                title: "🚂 COLD TRAIN TRACKS",
+                sceneId: "tracks",
+                story: "Iron tracks where no engine has breathed steam since the winter of 1986.\n\nThe fog is so dense you cannot see five paces ahead. Emerging from the gloom sits the colossal rusted drive wheel of a freight locomotive.\n\n'Her head was found in a driving wheel, but her body never was found...'",
+                thought: "The steel radiates a deep, unnatural cold. It feels like touching dry ice.",
                 choices: [
                     {
-                        text: "Inspect the locomotive's giant drive wheel and the rails",
+                        text: "Inspect the locomotive's giant drive wheel closely",
+                        hint: "[1]",
                         action: () => {
                             if (state.has_lantern) {
                                 if (!state.knows_wheel) {
                                     state.knows_wheel = true;
                                     state.clues += 1;
                                     state.sanity -= 15;
-                                    setLog("In the warm lantern glow, you notice initials scratched into the drive wheel beside strands of hair! (-15 Sanity, +1 Clue)");
+                                    state.pulse = 142;
+                                    updateVitalsUI();
+                                    setInnerVoice("In the lantern beam... initials etched into the hub, with blonde strands of hair clamped into the iron bolts! (-15 Sanity)");
                                 } else {
-                                    setLog("The gouges on the iron wheel look eerily fresh.");
+                                    setInnerVoice("The gouges on the drive wheel seem to hum when I look at them.");
                                 }
                             } else {
                                 state.temp -= 4;
                                 state.sanity -= 10;
-                                setLog("You reached out in the dark. Your skin froze against the freezing iron! You can't see anything without a light. (-4°C, -10 Sanity)");
+                                state.pulse = 130;
+                                updateVitalsUI();
+                                setInnerVoice("I blindly reached out in the dark—the freezing iron stuck to my bare skin! I can't see anything without a light. (-4°C, -10 Sanity)");
                             }
-                            updateStats();
                         }
                     },
                     {
-                        text: "Walk into the pitch-black tunnel entrance at the end of the tracks",
+                        text: "Follow the tracks into the dark tunnel leading to the Hidden Vale",
+                        hint: "[2]",
                         action: () => {
                             if (state.clues >= 3) {
-                                goTo('clearing', "Passing through the tunnel, you emerged into the deep valley where the sun don't ever shine...");
+                                playFootstep();
+                                loadScene('clearing', "Passing through the tunnel, you emerged into the sacred clearing where the sun don't ever shine...");
                             } else {
                                 state.sanity -= 10;
-                                setLog("A shrieking wind and spectral horn blast echo from the tunnel. You dare not enter without more clues! (-10 Sanity)");
-                                updateStats();
+                                state.pulse = 135;
+                                updateVitalsUI();
+                                setInnerVoice("A shrieking phantom horn blasts from the black tunnel mouth! I am not ready... I need to find more clues first.");
                             }
                         }
                     },
                     {
-                        text: "Climb back up to the Crossroads",
-                        action: () => goTo('crossroads', "You climbed the embankment back up to the road.")
+                        text: "Climb the gravel embankment back to the Crossroads",
+                        hint: "[3]",
+                        action: () => {
+                            playFootstep();
+                            loadScene('crossroads', "You scrambled back up to the road fork.");
+                        }
                     }
                 ]
             },
 
             pines_deep: {
-                name: "DEEP PINES: WHERE THE SUN DON'T EVER SHINE",
-                time: "03:35 AM",
-                text: "The trees grow so dense that even the cold stars have vanished from the sky.\n\nThe frost cuts like razor blades. On a mossy stump, you spot the scorched ashes of a dead campfire and a torn page from a notebook.\n\n'I would shiver the whole night through...'",
+                title: "🌲 DEEP PINES: WHERE THE SUN DON'T EVER SHINE",
+                sceneId: "pines_deep",
+                story: "The trees grow so suffocatingly tall that the night sky ceases to exist.\n\nThe wind whistles through the bark like teeth. Beside a mossy stump rests the blackened cinders of a campfire and a rain-soaked paper leaf.\n\n'I would shiver the whole night through...'",
+                thought: "It's so quiet here you can hear your own blood pumping through your temples.",
                 choices: [
                     {
                         text: "Read the torn notebook page on the stump",
+                        hint: "[1]",
                         action: () => {
                             if (!state.has_journal) {
                                 state.has_journal = true;
                                 state.clues += 1;
-                                setLog("The note reads: 'I shouldn't have boarded the train. They buried me under the pines, but the locomotive took my head...' (+1 Clue)");
+                                updateVitalsUI();
+                                setInnerVoice("The trembling handwriting reads: 'They buried me beneath the pines, but the engine took my head...' (+1 Clue)");
                             } else {
-                                setLog("You already tucked the page into your pocket.");
+                                setInnerVoice("You already placed the torn note into your pocket.");
                             }
-                            updateStats();
                         }
                     },
                     {
-                        text: "Take out your guitar and play 'Where Did You Sleep Last Night' into the cold",
+                        text: "Sit on the frozen log and play 'Where Did You Sleep Last Night'",
+                        hint: "[2]",
                         action: () => {
-                            playChord('Em');
-                            setTimeout(() => playChord('A'), 300);
-                            setTimeout(() => playChord('G'), 600);
-                            setTimeout(() => playChord('Bm'), 900);
-                            state.sanity = Math.min(100, state.sanity + 20);
-                            state.heard_whisper = true;
-                            setLog("The nylon chords ring through the timber. In the distance, a weeping whisper thanks you... (+20 Sanity)");
-                            updateStats();
+                            strumAcoustic('Em');
+                            setTimeout(() => strumAcoustic('A'), 350);
+                            setTimeout(() => strumAcoustic('G'), 700);
+                            setTimeout(() => strumAcoustic('Bm'), 1050);
+                            state.sanity = Math.min(100, state.sanity + 25);
+                            state.pulse = 74;
+                            updateVitalsUI();
+                            setInnerVoice("The nylon strings ring out through the timber. A soft, weeping whisper drifts on the wind: 'Thank you for playing...' (+25 Sanity)");
                         }
                     },
                     {
-                        text: "Follow the trail back to the Crossroads",
-                        action: () => goTo('crossroads', "You retraced your steps back out of the dense woods.")
+                        text: "Retrace your path back to the Crossroads",
+                        hint: "[3]",
+                        action: () => {
+                            playFootstep();
+                            loadScene('crossroads', "You stepped back onto the mountain road.");
+                        }
                     }
                 ]
             },
 
             clearing: {
-                name: "FINAL DESTINATION: THE HIDDEN VALE",
-                time: "03:45 AM",
-                text: "You emerged past the dark tunnel into a secluded, mist-shrouded valley.\n\nIn the center stands a solitary gravestone beside a rusted bronze train bell.\n\nAll the threads weave together:\n- The girl who vanished in the winter of 1986,\n- The hair caught in the driving wheel,\n- And the endless, weeping melody that called you here tonight...",
+                title: "🕯️ THE FINAL CLEARING: RESTING PLACE",
+                sceneId: "clearing",
+                story: "You stepped through the dark tunnel into a secluded, quiet hollow.\n\nIn the center, bathed in cold starlight, stands a solitary gravestone beside a weathered bronze train bell.\n\nThe puzzle clicks into place:\n- The girl who vanished in 1986,\n- The hair locked in the drive wheel,\n- And this song that refused to let you sleep...",
+                thought: "This is where it ends. The loop is waiting for a final decision.",
                 choices: [
                     {
-                        text: "[ENDING 1] Play the final acoustic verse and release her soul",
+                        text: "[ENDING 1] Kneel and play the final acoustic chords to release her soul",
+                        hint: "[1]",
                         action: () => triggerEnding('melancholic')
                     },
                     {
-                        text: "[ENDING 2] Ring the bronze train bell and summon the phantom locomotive",
+                        text: "[ENDING 2] Ring the bronze bell and summon the phantom locomotive",
+                        hint: "[2]",
                         action: () => triggerEnding('locomotive')
                     },
                     {
-                        text: "[ENDING 3] Leave everything behind and run toward the first light of dawn",
+                        text: "[ENDING 3] Turn back and run toward the first light of dawn",
+                        hint: "[3]",
                         action: () => triggerEnding('escape')
                     }
                 ]
             }
         };
 
-        function goTo(sceneKey, message) {
-            state.currentLoc = sceneKey;
-            const sc = scenes[sceneKey];
-            document.getElementById('loc-name').innerText = sc.name;
-            document.getElementById('loc-time').innerText = sc.time;
-            document.getElementById('story-display').innerText = sc.text;
-            if (message) setLog(message);
-            renderChoices(sc.choices);
-            checkVitals();
+        function loadScene(nodeKey, transitionLog) {
+            const node = narrativeNodes[nodeKey];
+            currentSceneId = node.sceneId;
+            document.getElementById('location-header').innerText = node.title;
+            document.getElementById('story-content').innerText = node.story;
+            if (transitionLog) setInnerVoice(transitionLog);
+            else setInnerVoice(node.thought);
+
+            renderChoicesUI(node.choices);
+            checkVitalsLoop();
         }
 
-        function renderChoices(choices) {
-            const area = document.getElementById('choices-area');
-            area.innerHTML = '';
-            choices.forEach((ch, idx) => {
+        function renderChoicesUI(choices) {
+            const container = document.getElementById('choices-container');
+            container.innerHTML = '';
+            choices.forEach(ch => {
                 const btn = document.createElement('button');
-                btn.className = 'choice-btn';
-                btn.innerHTML = `
-                    <span>${ch.text}</span>
-                    <span class="key-hint">[${idx + 1}]</span>
-                `;
+                btn.className = 'choice-item';
+                btn.innerHTML = `<span>${ch.text}</span><span class="choice-hint">${ch.hint}</span>`;
                 btn.onclick = ch.action;
-                area.appendChild(btn);
+                container.appendChild(btn);
             });
         }
 
-        function checkVitals() {
-            if (state.temp <= 28) {
-                triggerEnding('freeze');
-            } else if (state.sanity <= 0) {
-                triggerEnding('insanity');
-            }
+        function checkVitalsLoop() {
+            if (state.temp <= 28) triggerEnding('freeze');
+            else if (state.sanity <= 0) triggerEnding('insanity');
         }
 
-        function triggerEnding(type) {
+        function triggerEnding(endingType) {
             state.gameOver = true;
-            const story = document.getElementById('story-display');
-            const choices = document.getElementById('choices-area');
-            choices.innerHTML = `<button class="choice-btn" onclick="location.reload()"><span>[REPLAY] Play the Song from the Beginning</span><span class="key-hint">[R]</span></button>`;
+            const story = document.getElementById('story-content');
+            const choices = document.getElementById('choices-container');
+            choices.innerHTML = `<button class="choice-item" onclick="location.reload()"><span>[REPLAY] Play the Song from the Beginning</span><span class="choice-hint">[R]</span></button>`;
 
-            if (type === 'freeze') {
-                document.getElementById('loc-name').innerText = "DEATH BY HYPOTHERMIA";
-                story.innerText = ">>> I WOULD SHIVER THE WHOLE NIGHT THROUGH <<<\n\nYour core body temperature dropped below 28°C. Your stiffened fingers can no longer grip the guitar strings.\n\nYou collapsed into the bed of pine needles. The cold no longer hurts; it wraps around you like a gentle, eternal slumber.\n\nWhen morning came, only a frozen silhouette and an unstrung guitar were found under the pines...";
-                setLog("Game Over: The frozen mountain claimed another soul.");
-            } else if (type === 'insanity') {
-                document.getElementById('loc-name').innerText = "LOSS OF SANITY";
-                story.innerText = ">>> LOST WHERE THE SUN DON'T EVER SHINE <<<\n\nThe whispers grew into a deafening chorus inside your skull.\n\nYou can no longer tell whether you are hearing your own voice or hers. Casting your guitar aside, you ran screaming into the labyrinth of pines.\n\nNo one ever walked out of that valley again...";
-                setLog("Game Over: Your mind was consumed by the dark.");
-            } else if (type === 'melancholic') {
-                document.getElementById('loc-name').innerText = "SECRET ENDING: FAREWELL IN THE PINES";
-                playChord('Em');
-                setTimeout(() => playChord('A'), 400);
-                setTimeout(() => playChord('G'), 800);
-                setTimeout(() => playChord('Bm'), 1200);
+            if (endingType === 'freeze') {
+                document.getElementById('location-header').innerText = "💀 DEATH BY HYPOTHERMIA";
+                story.innerText = ">>> I WOULD SHIVER THE WHOLE NIGHT THROUGH <<<\n\nYour core body temperature plummeted below 28°C. Your stiffened fingers can no longer grip the guitar frets.\n\nYou collapsed into the soft carpet of frozen pine needles. The cold no longer hurts; it wraps around you like a gentle, eternal slumber.\n\nWhen morning came, only a frozen silhouette and an unstrung guitar were found under the pines...";
+                setInnerVoice("Everything is so warm now. The music finally faded.");
+            } else if (endingType === 'insanity') {
+                document.getElementById('location-header').innerText = "🌑 LOSS OF SANITY";
+                story.innerText = ">>> LOST WHERE THE SUN DON'T EVER SHINE <<<\n\nThe whispers grew into a deafening roar inside your skull.\n\nYou can no longer tell whether you are hearing your own voice or hers. Casting your guitar aside, you ran screaming into the labyrinth of pines.\n\nNo one ever walked out of that valley again...";
+                setInnerVoice("I can't hear myself think anymore. The pines took everything.");
+            } else if (endingType === 'melancholic') {
+                document.getElementById('location-header').innerText = "✨ SECRET ENDING: FAREWELL IN THE PINES";
+                strumAcoustic('Em');
+                setTimeout(() => strumAcoustic('A'), 400);
+                setTimeout(() => strumAcoustic('G'), 800);
+                setTimeout(() => strumAcoustic('Bm'), 1200);
                 story.innerText = ">>> 'WHERE DID YOU SLEEP LAST NIGHT?' <<<\n\nYou knelt beside the mossy stone. Even as your fingertips bled, you played the chords until the final ringing note.\n\nAt the last acoustic strum, the thick mountain mist gently lifted. For the first time in decades, pale amber sunlight filtered through the pine needles.\n\nA final whisper drifted on the breeze: 'I'm not cold anymore...'\n\nJust like Kurt Cobain's legendary closing gasp, you took a deep breath. The song was complete, and peace settled over the pines.";
-                setLog("CONGRATULATIONS: You unlocked the true melancholic secret ending.");
-            } else if (type === 'locomotive') {
-                document.getElementById('loc-name').innerText = "TRAGIC ENDING: THE CALL OF THE TRACKS";
+                setInnerVoice("The sun broke through. She is at peace, and so are you.");
+            } else if (endingType === 'locomotive') {
+                document.getElementById('location-header').innerText = "🚂 TRAGIC ENDING: THE CALL OF THE TRACKS";
                 story.innerText = ">>> HER HEAD WAS FOUND IN A DRIVING WHEEL <<<\n\nYou struck the bronze bell. Through the wall of fog, the spectral headlights of a 1986 locomotive illuminated the valley.\n\nThe train halted upon the ghost tracks. The heavy carriage doors slid open, inviting you in.\n\nYou stepped aboard. The clock froze at 03:17 AM forever. You are now an eternal passenger on the lost train...";
-                setLog("Game Over: You joined the endless loop of the phantom rails.");
-            } else if (type === 'escape') {
-                document.getElementById('loc-name').innerText = "NORMAL ENDING: SURVIVAL";
-                story.innerText = ">>> ESCAPE INTO THE DAWN <<<\n\nYou slung your guitar across your back and sprinted with all your strength toward the highway.\n\nAs the dawn broke, you glanced back to see dark storm clouds hanging heavy over the pines. No one will ever believe your story, but you survived.";
-                setLog("You survived the night, though the mystery of the pines remains unsolved.");
+                setInnerVoice("The whistle blows. We are going nowhere, forever.");
+            } else if (endingType === 'escape') {
+                document.getElementById('location-header').innerText = "🌅 NORMAL ENDING: SURVIVAL";
+                story.innerText = ">>> ESCAPE INTO THE DAWN <<<\n\nYou slung your guitar across your back and sprinted with all your remaining breath toward the highway.\n\nAs the dawn broke, you glanced back to see dark storm clouds hanging heavy over the pines. No one will ever believe your story, but you survived.";
+                setInnerVoice("You made it out alive. But every winter night, the melody will haunt you.");
             }
         }
 
-        // Keyboard controls
+        // Global Keyboard Controls
         window.addEventListener('keydown', (e) => {
             if (state.gameOver) {
                 if (e.key === 'r' || e.key === 'R') location.reload();
                 return;
             }
             if (e.key === '1') {
-                const btns = document.querySelectorAll('.choice-btn');
+                const btns = document.querySelectorAll('.choice-item');
                 if (btns[0]) btns[0].click();
             } else if (e.key === '2') {
-                const btns = document.querySelectorAll('.choice-btn');
+                const btns = document.querySelectorAll('.choice-item');
                 if (btns[1]) btns[1].click();
             } else if (e.key === '3') {
-                const btns = document.querySelectorAll('.choice-btn');
+                const btns = document.querySelectorAll('.choice-item');
                 if (btns[2]) btns[2].click();
+            } else if (e.key === ' ') {
+                e.preventDefault();
+                strumAcoustic('Em');
+            } else if (e.key === 't' || e.key === 'T') {
+                toggleTape();
             }
         });
 
-        function resizeCanvas() {
+        // Resize Canvas dynamically
+        function handleResize() {
             canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = canvas.parentElement.clientHeight;
+            canvas.height = 310;
         }
 
         window.onload = () => {
-            resizeCanvas();
-            window.addEventListener('resize', resizeCanvas);
-            goTo('crossroads');
-            updateStats();
-            checkLocalVideoFile();
-            animationLoop();
+            handleResize();
+            window.addEventListener('resize', handleResize);
+            loadScene('crossroads');
+            updateVitalsUI();
+            renderSceneGeometry('crossroads');
         };
     </script>
 </body>
