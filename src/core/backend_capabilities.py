@@ -152,6 +152,10 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
         "system", CPP_HOSTS, "experimental",
         "Hosted OS inspection through the native platform ABI.",
     ),
+    "terminal": StdlibContract(
+        "terminal", CPP_HOSTS, "experimental",
+        "Terminal, cursor control, screen clearing, and keyboard input.",
+    ),
     "thread": StdlibContract("thread", CPP_HOSTS),
     "memory": StdlibContract("memory", MEMORY_TARGETS),
 }

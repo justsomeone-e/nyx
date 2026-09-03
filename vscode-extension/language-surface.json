@@ -188,7 +188,7 @@
   "stdlibModules": [
     {
       "name": "std/encoding",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/encoding.",
       "targets": [
         "asm",
@@ -199,7 +199,7 @@
     },
     {
       "name": "std/env",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/env.",
       "targets": [
         "asm",
@@ -208,7 +208,7 @@
     },
     {
       "name": "std/fs",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/fs.",
       "targets": [
         "asm",
@@ -219,7 +219,7 @@
     },
     {
       "name": "std/hash",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/hash.",
       "targets": [
         "asm",
@@ -230,7 +230,7 @@
     },
     {
       "name": "std/io",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/io.",
       "targets": [
         "asm",
@@ -240,7 +240,7 @@
     },
     {
       "name": "std/json",
-      "detail": "Nyx stdlib · deprecated",
+      "detail": "Nyx stdlib \u00b7 deprecated",
       "documentation": "Use std/json_lite.",
       "targets": [
         "asm",
@@ -251,7 +251,7 @@
     },
     {
       "name": "std/json_lite",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Flat top-level string/integer field extraction only; not a general JSON parser.",
       "targets": [
         "asm",
@@ -262,7 +262,7 @@
     },
     {
       "name": "std/math",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/math.",
       "targets": [
         "asm",
@@ -273,7 +273,7 @@
     },
     {
       "name": "std/memory",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/memory.",
       "targets": [
         "asm",
@@ -282,7 +282,7 @@
     },
     {
       "name": "std/net",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/net.",
       "targets": [
         "asm",
@@ -291,7 +291,7 @@
     },
     {
       "name": "std/os",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/os.",
       "targets": [
         "asm",
@@ -300,7 +300,7 @@
     },
     {
       "name": "std/platform",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/platform.",
       "targets": [
         "asm",
@@ -309,7 +309,7 @@
     },
     {
       "name": "std/process",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/process.",
       "targets": [
         "asm",
@@ -318,7 +318,7 @@
     },
     {
       "name": "std/str",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/str.",
       "targets": [
         "asm",
@@ -330,7 +330,7 @@
     },
     {
       "name": "std/system",
-      "detail": "Nyx stdlib · experimental",
+      "detail": "Nyx stdlib \u00b7 experimental",
       "documentation": "Hosted OS inspection through the native platform ABI.",
       "targets": [
         "asm",
@@ -338,8 +338,17 @@
       ]
     },
     {
+      "name": "std/terminal",
+      "detail": "Nyx stdlib \u00b7 experimental",
+      "documentation": "Terminal, cursor control, screen clearing, and keyboard input.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
       "name": "std/thread",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/thread.",
       "targets": [
         "asm",
@@ -348,7 +357,7 @@
     },
     {
       "name": "std/time",
-      "detail": "Nyx stdlib · stable",
+      "detail": "Nyx stdlib \u00b7 stable",
       "documentation": "Standard library module std/time.",
       "targets": [
         "asm",
@@ -1164,6 +1173,72 @@
       ]
     },
     {
+      "label": "clear_screen",
+      "kind": "function",
+      "detail": "fn clear_screen() -> void",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "cursor_reset",
+      "kind": "function",
+      "detail": "fn cursor_reset() -> void",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "cursor_move",
+      "kind": "function",
+      "detail": "fn cursor_move(col: int, row: int) -> void",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "set_cursor_visible",
+      "kind": "function",
+      "detail": "fn set_cursor_visible(visible: bool) -> void",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "key_available",
+      "kind": "function",
+      "detail": "fn key_available() -> bool",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
+      "label": "read_key",
+      "kind": "function",
+      "detail": "fn read_key() -> int",
+      "module": "std/terminal",
+      "documentation": "Declared by std/terminal.",
+      "targets": [
+        "asm",
+        "cpp"
+      ]
+    },
+    {
       "label": "mutex_create",
       "kind": "function",
       "detail": "fn mutex_create() -> int",
@@ -1273,37 +1348,37 @@
     {
       "name": "asm",
       "detail": "x86_64 Assembly",
-      "documentation": "assembly · beta"
+      "documentation": "assembly \u00b7 beta"
     },
     {
       "name": "cpp",
       "detail": "C++20 Native",
-      "documentation": "executable/library · stable"
+      "documentation": "executable/library \u00b7 stable"
     },
     {
       "name": "js",
       "detail": "Node.js ES2022",
-      "documentation": "javascript · stable"
+      "documentation": "javascript \u00b7 stable"
     },
     {
       "name": "python",
       "detail": "Python 3",
-      "documentation": "python · stable"
+      "documentation": "python \u00b7 stable"
     },
     {
       "name": "react",
       "detail": "React 19 TSX",
-      "documentation": "tsx · beta"
+      "documentation": "tsx \u00b7 beta"
     },
     {
       "name": "rust",
       "detail": "Rust 2021",
-      "documentation": "rust · beta"
+      "documentation": "rust \u00b7 beta"
     },
     {
       "name": "wasm",
       "detail": "WebAssembly",
-      "documentation": "wat/wasm · beta"
+      "documentation": "wat/wasm \u00b7 beta"
     }
   ],
   "boards": []

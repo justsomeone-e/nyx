@@ -1,42 +1,17 @@
 #target cpp
 
-#native include <windows.h>
-#native include <conio.h>
-
-#native raw {
-extern "C" void reset_cursor_pos() {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    COORD coord = {0, 0};
-    SetConsoleCursorPosition(hOut, coord);
-}
-extern "C" void set_cursor_visibility(int visible) {
-    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    CONSOLE_CURSOR_INFO cursorInfo;
-    GetConsoleCursorInfo(hOut, &cursorInfo);
-    cursorInfo.bVisible = visible ? TRUE : FALSE;
-    SetConsoleCursorInfo(hOut, &cursorInfo);
-}
-extern "C" void clear_screen_once() {
-    system("cls");
-}
-}
-
-extern "C" fn reset_cursor_pos() -> void;
-extern "C" fn set_cursor_visibility(visible: i32) -> void;
-extern "C" fn clear_screen_once() -> void;
-extern "C" fn _kbhit() -> i32;
-extern "C" fn _getch() -> i32;
+import "std/terminal"
 
 // =======================================================
 // Nyx Arcade: BALANCED FLICKER-FREE Pong Game
-// Solid paddle collision, fair CPU AI, clean 70ms pace
+// Uses standard library `std/terminal` (Zero #native raw!)
 // Controls: 'W' = Up, 'S' = Down, 'Q' = Quit
 // First to 3 points wins!
 // =======================================================
 
 fn main() {
-    clear_screen_once()
-    set_cursor_visibility(0)
+    clear_screen()
+    set_cursor_visible(false)
 
     let width: int = 36
     let height: int = 14
@@ -65,9 +40,9 @@ fn main() {
     delay_ms(1200)
 
     while playing {
-        // 1. Instant non-blocking keyboard input
-        if _kbhit() != 0 {
-            let key: i32 = _getch()
+        // 1. Instant non-blocking keyboard input via std/terminal
+        if key_available() {
+            let key: int = read_key()
             // 'w' or 'W'
             if (key == 119 or key == 87) and p1_y > 1 {
                 p1_y = p1_y - 1
@@ -154,8 +129,8 @@ fn main() {
                 playing = false
             }
 
-            // 7. IN-PLACE BUFFER DRAW
-            reset_cursor_pos()
+            // 7. IN-PLACE BUFFER DRAW via std/terminal
+            cursor_reset()
 
             print("==========================================")
             print("        NYX RETRO ARCADE PONG (LIVE)      ")
@@ -190,7 +165,7 @@ fn main() {
         }
     }
 
-    set_cursor_visibility(1)
+    set_cursor_visible(true)
     print("")
     print("==========================================")
     print("MATCH FINISHED: " + status_msg)
