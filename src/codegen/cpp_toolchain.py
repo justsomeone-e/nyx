@@ -60,9 +60,29 @@ class CppToolchain:
                 except: pass
 
     @classmethod
+    def _disk_cache_path(cls) -> str:
+        home = os.environ.get("USERPROFILE") or os.environ.get("HOME") or tempfile.gettempdir()
+        cache_dir = os.path.join(home, ".nyx")
+        if os.path.exists(cache_dir):
+            return os.path.join(cache_dir, "cxx_cache.txt")
+        return os.path.join(tempfile.gettempdir(), "nyx_cxx_cache.txt")
+
+    @classmethod
     def find_compiler(cls) -> Optional[str]:
         if cls._cached_compiler and os.path.exists(cls._cached_compiler):
             return cls._cached_compiler
+
+        cache_file = cls._disk_cache_path()
+        if os.path.exists(cache_file):
+            try:
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    cached = f.read().strip()
+                if cached and os.path.isfile(cached):
+                    cls._cached_compiler = cached
+                    return cached
+            except Exception:
+                pass
+
         candidates = []
 
         # Explicit configuration wins and is validated by the same compile/run
@@ -107,6 +127,11 @@ class CppToolchain:
         for cand in candidates:
             if cls.test_compiler_capabilities(cand):
                 cls._cached_compiler = cand
+                try:
+                    with open(cache_file, "w", encoding="utf-8") as f:
+                        f.write(cand)
+                except Exception:
+                    pass
                 return cand
                 
         return None
@@ -250,7 +275,8 @@ class CppToolchain:
         cls,
         exe_filepath: str,
         args: Optional[Sequence[str]] = None,
-        timeout: int = 120,
+        timeout: Optional[int] = None,
+        capture_output: bool = True,
     ) -> Tuple[int, str]:
         compiler = cls.find_compiler()
         env = os.environ.copy()
@@ -259,8 +285,12 @@ class CppToolchain:
             env['PATH'] = bin_dir + os.pathsep + env.get('PATH', '')
         try:
             command = [exe_filepath, *(str(arg) for arg in (args or ()))]
-            res = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', errors='replace', env=env, timeout=timeout)
-            return res.returncode, res.stdout or res.stderr
+            if capture_output:
+                res = subprocess.run(command, capture_output=True, text=True, encoding='utf-8', errors='replace', env=env, timeout=timeout or 120)
+                return res.returncode, res.stdout or res.stderr
+            else:
+                res = subprocess.run(command, env=env)
+                return res.returncode, ""
         except subprocess.TimeoutExpired:
             return -1, f"Execution timed out ({timeout}s limit)"
         except Exception as e:

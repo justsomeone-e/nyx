@@ -462,7 +462,7 @@ def cmd_run(entry_file, target) -> int:
             print(f"\033[96m[*] Transpiled C++20 Source:\033[0m {out_cpp}")
             print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
             print("\033[90m--------------------------------------------------\033[0m")
-            ret_code, out_str = CppToolchain.run_executable(out_exe)
+            ret_code, out_str = CppToolchain.run_executable(out_exe, capture_output=False)
             if out_str:
                 print(out_str.rstrip())
             print("\033[90m--------------------------------------------------\033[0m")

@@ -1,79 +1,68 @@
 #target cpp
 
+#native include <conio.h>
+extern "C" fn _kbhit() -> i32;
+extern "C" fn _getch() -> i32;
+
 // =======================================================
-// Nyx Arcade: Interactive Pong Game
-// You (Left Paddle '[') vs CPU (Right Paddle ']')
-// Controls: 'w' = Up, 's' = Down, Enter = Stay, 'q' = Quit
+// Nyx Arcade: LIVE Real-Time Pong Game
+// Real-time keyboard input (NO ENTER NEEDED!)
+// Controls: 'w' = Up, 's' = Down, 'q' = Quit
+// First to 3 points wins!
 // =======================================================
 
 fn main() {
-    let width: int = 24
-    let height: int = 9
+    let width: int = 30
+    let height: int = 12
 
-    var ball_x: int = 12
-    var ball_y: int = 4
+    var ball_x: int = 15
+    var ball_y: int = 6
     var dx: int = 1
     var dy: int = 1
 
-    var p1_y: int = 3
-    var p2_y: int = 3
+    var p1_y: int = 4
+    var p2_y: int = 4
 
     var score_p1: int = 0
     var score_p2: int = 0
     let winning_score: int = 3
 
     var playing: bool = true
+    var status_msg: string = "Game started! Use W/S to move."
 
     print("========================================")
-    print("      NYX INTERACTIVE PONG ARCADE       ")
+    print("      NYX REAL-TIME PONG ARCADE         ")
     print("========================================")
-    print("Controls: 'w' = Up, 's' = Down, Enter = Stay, 'q' = Quit")
-    print("First to 3 points wins against the CPU!")
-    print("")
+    print("Controls: Press 'W' for UP, 'S' for DOWN (No Enter!)")
+    print("Press 'Q' to quit anytime.")
+    print("Starting in 2 seconds...")
+    delay_ms(2000)
 
     while playing {
-        // Render Pong Field
-        print($"Score: [YOU] {score_p1}  -  {score_p2} [CPU]")
-        print("+------------------------+")
-
-        for y in 1..height-2 {
-            var row: string = "|"
-            for x in 1..width-2 {
-                if x == ball_x and y == ball_y {
-                    row = row + "O"
-                } elif x == 2 and (y == p1_y or y == p1_y + 1) {
-                    row = row + "["
-                } elif x == width - 3 and (y == p2_y or y == p2_y + 1) {
-                    row = row + "]"
-                } elif x == 12 {
-                    row = row + ":"
-                } else {
-                    row = row + " "
-                }
+        // 1. Non-blocking Keyboard Input (NO ENTER NEEDED!)
+        if _kbhit() != 0 {
+            let key: i32 = _getch()
+            // 'w' or 'W'
+            if (key == 119 or key == 87) and p1_y > 1 {
+                p1_y = p1_y - 1
             }
-            row = row + "|"
-            print(row)
-        }
-        print("+------------------------+")
-
-        // Player Input
-        let move: string = input("Your move (w/s/enter/q): ")
-
-        if move == "q" or move == "Q" {
-            print("Game aborted by player.")
-            playing = false
-        } elif (move == "w" or move == "W") and p1_y > 1 {
-            p1_y = p1_y - 1
-        } elif (move == "s" or move == "S") and p1_y < height - 3 {
-            p1_y = p1_y + 1
+            // 's' or 'S'
+            elif (key == 115 or key == 83) and p1_y < height - 4 {
+                p1_y = p1_y + 1
+            }
+            // 'q' or 'Q'
+            elif key == 113 or key == 81 {
+                playing = false
+                status_msg = "Game exited by player."
+            }
         }
 
         if playing {
-            // Ball physics
+            // 2. Ball Physics Update
             ball_x = ball_x + dx
             ball_y = ball_y + dy
 
-            // Top / Bottom wall bounce
+            // Wall Bounces (Top & Bottom)
             if ball_y <= 1 {
                 ball_y = 1
                 dy = 1
@@ -83,50 +72,86 @@ fn main() {
                 dy = -1
             }
 
-            // CPU Paddle AI
-            if p2_y < ball_y and p2_y < height - 3 {
+            // 3. CPU Paddle AI (tracks the ball with small delay)
+            if p2_y + 1 < ball_y and p2_y < height - 4 {
                 p2_y = p2_y + 1
-            } elif p2_y > ball_y and p2_y > 1 {
+            } elif p2_y + 1 > ball_y and p2_y > 1 {
                 p2_y = p2_y - 1
             }
 
-            // Paddle Collisions
-            if ball_x <= 2 and (ball_y == p1_y or ball_y == p1_y + 1) {
+            // 4. Paddle Collisions
+            // Player paddle (Left: x = 2, length = 3)
+            if ball_x <= 2 and ball_y >= p1_y and ball_y <= p1_y + 2 {
                 ball_x = 3
                 dx = 1
-                print(">> NICE HIT! You returned the ball!")
+                status_msg = "NICE HIT! You returned the ball!"
             }
-            if ball_x >= width - 3 and (ball_y == p2_y or ball_y == p2_y + 1) {
+
+            // CPU paddle (Right: x = width - 3, length = 3)
+            if ball_x >= width - 3 and ball_y >= p2_y and ball_y <= p2_y + 2 {
                 ball_x = width - 4
                 dx = -1
             }
 
-            // Scoring check
+            // 5. Scoring
             if ball_x <= 0 {
                 score_p2 = score_p2 + 1
-                print(">> GOAL FOR CPU! Point lost.")
-                ball_x = 12
-                ball_y = 4
+                status_msg = "POINT FOR CPU! Keep your guard up!"
+                ball_x = 15
+                ball_y = 6
                 dx = 1
+                delay_ms(300)
             }
             if ball_x >= width - 1 {
                 score_p1 = score_p1 + 1
-                print(">> GOOOAL! You scored against CPU!")
-                ball_x = 12
-                ball_y = 4
+                status_msg = "GOAL! You scored against CPU!"
+                ball_x = 15
+                ball_y = 6
                 dx = -1
+                delay_ms(300)
             }
 
-            // Check match winner
+            // 6. Check Win Condition
             if score_p1 >= winning_score {
-                print("")
-                print("🏆 CONGRATULATIONS! YOU DEFEATED THE CPU! 🏆")
+                status_msg = "VICTORY! You defeated the CPU!"
                 playing = false
             } elif score_p2 >= winning_score {
-                print("")
-                print("💀 GAME OVER! CPU wins this match! 💀")
+                status_msg = "DEFEAT! CPU took the match!"
                 playing = false
             }
+
+            // 7. Render Screen in-place (ANSI position)
+            print("")
+            print($"Score: [YOU] {score_p1}   vs   {score_p2} [CPU]  |  {status_msg}")
+            print("+----------------------------+")
+
+            for y in 1..height-2 {
+                var row: string = "|"
+                for x in 1..width-2 {
+                    if x == ball_x and y == ball_y {
+                        row = row + "O"
+                    } elif x == 2 and y >= p1_y and y <= p1_y + 2 {
+                        row = row + "["
+                    } elif x == width - 3 and y >= p2_y and y <= p2_y + 2 {
+                        row = row + "]"
+                    } elif x == 15 {
+                        row = row + ":"
+                    } else {
+                        row = row + " "
+                    }
+                }
+                row = row + "|"
+                print(row)
+            }
+            print("+----------------------------+")
+
+            // Smooth 20 FPS game tick
+            delay_ms(50)
         }
     }
+
+    print("")
+    print("========================================")
+    print("FINAL RESULT: " + status_msg)
+    print("========================================")
 }
