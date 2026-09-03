@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IN THE PINES — Live Animated ASCII Psychological Horror</title>
+    <title>IN THE PINES — Ultimate Interactive Live ASCII Horror</title>
     <style>
         :root {
             --bg: #030406;
@@ -17,6 +17,7 @@
             --frost-white: #f8fafc;
             --crimson: #ef4444;
             --cassette-border: #243447;
+            --gold-lyrics: #fde047;
         }
 
         * {
@@ -38,7 +39,7 @@
             padding: 20px 0;
         }
 
-        /* Nostalgic CRT Scanlines & Breathing Vignette */
+        /* Subtle Nostalgic CRT Scanlines & Breathing Vignette */
         body::before {
             content: " ";
             display: block;
@@ -61,8 +62,8 @@
         }
 
         .game-wrapper {
-            width: 960px;
-            max-width: 95vw;
+            width: 980px;
+            max-width: 96vw;
             background: var(--panel-bg);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -149,15 +150,46 @@
             letter-spacing: 1px;
         }
 
+        .wasd-prompt {
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 0.72rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
         #ascii-screen {
             width: 100%;
-            height: 280px;
+            height: 290px;
             display: block;
             background: #020305;
         }
 
+        /* LIVE SYNCHRONIZED LYRICS HUD */
+        .lyrics-hud-bar {
+            background: #05080c;
+            border-top: 1px solid #141d28;
+            padding: 8px 14px;
+            text-align: center;
+            font-size: 0.88rem;
+            letter-spacing: 1px;
+            color: #64748b;
+            min-height: 38px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+
+        .lyrics-hud-bar.active {
+            color: var(--gold-lyrics);
+            text-shadow: 0 0 12px rgba(253, 224, 71, 0.4);
+            font-weight: bold;
+        }
+
         /* ================================================= */
-        /* ANIMATED RETRO ASCII CASSETTE DECK (TAPE PLAYER)  */
+        /* ANIMATED RETRO ASCII CASSETTE DECK PANEL          */
         /* ================================================= */
         .tape-deck-panel {
             background: #06090e;
@@ -171,13 +203,13 @@
         }
 
         .tape-ascii-box {
-            font-size: 0.73rem;
+            font-size: 0.72rem;
             line-height: 1.25;
             color: #7dd3fc;
             background: #030508;
             border: 1px solid #141f2c;
             border-radius: 4px;
-            padding: 6px 10px;
+            padding: 5px 10px;
             overflow-x: auto;
             text-align: center;
         }
@@ -234,41 +266,66 @@
             cursor: pointer;
         }
 
-        /* Guitar & Inventory Row */
-        .interactive-strip {
+        /* ================================================= */
+        /* INTERACTIVE SYLLABLE-BY-SYLLABLE GUITAR PROGRESSION */
+        /* ================================================= */
+        .guitar-syllable-panel {
             background: #05080c;
-            border: 1px dashed #16202c;
-            padding: 8px 14px;
+            border: 1px solid #172433;
+            border-radius: 5px;
+            padding: 9px 14px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 10px;
-            font-size: 0.8rem;
-        }
-
-        .chord-cluster {
-            display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 6px;
         }
 
-        .chord-tag {
+        .guitar-header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.76rem;
+            color: var(--text-dim);
+        }
+
+        .syllable-steps-row {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+
+        .syllable-btn {
             background: #0d141d;
             border: 1px solid #1f2c3d;
             color: var(--cold-blue);
-            padding: 4px 9px;
+            padding: 6px 11px;
             font-family: inherit;
-            font-size: 0.76rem;
-            border-radius: 3px;
+            font-size: 0.8rem;
+            border-radius: 4px;
             cursor: pointer;
             transition: all 0.15s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 76px;
         }
 
-        .chord-tag:hover {
+        .syllable-btn:hover {
             background: #182536;
             color: #fff;
             transform: translateY(-2px);
+            border-color: var(--amber-lantern);
+        }
+
+        .syllable-chord {
+            font-size: 0.72rem;
+            font-weight: bold;
+            color: var(--amber-lantern);
+        }
+
+        .syllable-lyric {
+            font-size: 0.78rem;
+            color: #f1f5f9;
         }
 
         /* Narrative & Psychological Dual Text Area */
@@ -396,9 +453,14 @@
         <div class="viewport-container">
             <div class="viewport-header">
                 <span id="location-header">🌲 CROSSROADS IN THE PINES (03:17 AM)</span>
-                <span id="weather-label" style="color:var(--cold-blue)">WEATHER: BITTER FROST & HOWLING GALE</span>
+                <span class="wasd-prompt">[W / A / S / D] WALK & LOOK AROUND</span>
+                <span id="weather-label" style="color:var(--cold-blue)">BITTER FROST & GALE</span>
             </div>
             <canvas id="ascii-screen"></canvas>
+            <!-- Live Synchronized Karaoke Lyrics HUD -->
+            <div id="lyrics-display" class="lyrics-hud-bar">
+                ♫ "Where did you sleep last night? In the pines..." ♫
+            </div>
         </div>
 
         <!-- ============================================= -->
@@ -420,7 +482,7 @@
                     <span id="tape-btn-text">START ATMOSPHERE & MUSIC</span>
                 </button>
                 <button class="deck-btn" style="font-size:0.75rem;" onclick="jumpClimax()">
-                    🔥 CLIMAX SCREAM
+                    🔥 CLIMAX SCREAM (04:14)
                 </button>
 
                 <div class="timeline-container">
@@ -436,18 +498,43 @@
             </div>
         </div>
 
-        <!-- Inventory & Interactive Nylon Guitar -->
-        <div class="interactive-strip">
-            <div>
-                INVENTORY: <span id="inv-list" style="color:#f1f5f9; font-weight:bold;">Acoustic Guitar, Lighter</span>
+        <!-- ============================================= -->
+        <!-- SYLLABLE-BY-SYLLABLE ACOUSTIC STRUM ENGINE    -->
+        <!-- ============================================= -->
+        <div class="guitar-syllable-panel">
+            <div class="guitar-header-row">
+                <span>INTERACTIVE NYLON GUITAR (STRUM BY SYLLABLES WITH SPACE / CLICK):</span>
+                <span>INVENTORY: <strong id="inv-list" style="color:#f1f5f9;">Acoustic Guitar, Lighter</strong></span>
             </div>
-            <div class="chord-cluster">
-                <span style="font-size:0.74rem; color:var(--text-dim);">STRUM GUITAR:</span>
-                <button class="chord-tag" onclick="strumAcoustic('E')">E</button>
-                <button class="chord-tag" onclick="strumAcoustic('Em')">Em</button>
-                <button class="chord-tag" onclick="strumAcoustic('A')">A</button>
-                <button class="chord-tag" onclick="strumAcoustic('G')">G</button>
-                <button class="chord-tag" onclick="strumAcoustic('Bm')">Bm</button>
+            <div class="syllable-steps-row">
+                <button class="syllable-btn" onclick="playSyllableChord(0)">
+                    <span class="syllable-chord">[E]</span>
+                    <span class="syllable-lyric">"My..."</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(1)">
+                    <span class="syllable-chord">[Em]</span>
+                    <span class="syllable-lyric">"Girl..."</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(2)">
+                    <span class="syllable-chord">[A]</span>
+                    <span class="syllable-lyric">"Don't..."</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(3)">
+                    <span class="syllable-chord">[G]</span>
+                    <span class="syllable-lyric">"Lie to me"</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(4)">
+                    <span class="syllable-chord">[B]</span>
+                    <span class="syllable-lyric">"Tell me"</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(5)">
+                    <span class="syllable-chord">[Em]</span>
+                    <span class="syllable-lyric">"Where did you"</span>
+                </button>
+                <button class="syllable-btn" onclick="playSyllableChord(6)">
+                    <span class="syllable-chord">[Em]</span>
+                    <span class="syllable-lyric">"Sleep last night"</span>
+                </button>
             </div>
         </div>
 
@@ -460,7 +547,7 @@ Your nylon-string acoustic guitar hangs cold across your back. Frost bites into 
 Deep from within the timber, a familiar ragged vocal carries across the wind:
 'My girl, my girl... Tell me where did you sleep last night?'
 
-The road splits into the dark.</div>
+Use [W, A, S, D] to physically walk and turn inside the ASCII viewport, or choose your path below:</div>
             <div class="subconscious-stream">
                 <span class="subconscious-tag">[INNER VOICE]</span>
                 <span id="inner-thought">"I shouldn't be out here so late. Why does the mist feel like it's holding its breath?"</span>
@@ -472,12 +559,12 @@ The road splits into the dark.</div>
 
         <!-- Footer -->
         <div class="footer-bar">
-            <span>Keys [1, 2, 3] to navigate • [Space] to strum guitar • [T] to toggle cassette</span>
+            <span>[W, A, S, D] to Walk & Look • [1, 2, 3] Choices • [Space] Strum Syllable • [T] Toggle Cassette</span>
             <span>Dedicated to Kurt Cobain (1993 MTV Unplugged) & Milk Outside A Bag Of Milk</span>
         </div>
     </div>
 
-    <!-- Nirvana Uncut Audio Element (Direct playback guarantee without CORS silencing) -->
+    <!-- Nirvana Uncut Master Audio -->
     <audio id="nirvana-audio" preload="auto">
         <source src="https://archive.org/download/NirvanaUnpluggedLiveUSA/12%20-%20Where%20Did%20You%20Sleep%20Last%20Night.mp3" type="audio/mpeg">
         <source src="https://p.scdn.co/mp3-preview/80b267c313117482050242cd0acbccf180da798c" type="audio/mpeg">
@@ -485,7 +572,61 @@ The road splits into the dark.</div>
 
     <script>
         // ==============================================================
-        // AUDIO ENGINE: RICH HOWLING BLIZZARD WIND & SEAMLESS NIRVANA
+        // 1. SYNCHRONIZED KARAOKE-STYLE MTV UNPLUGGED LYRICS TABLE
+        // ==============================================================
+        const LYRICS_TIMESTAMPS = [
+            { t: 0, text: "♫ [03:17 AM] (Cold mountain wind howls through the pines...) ♫" },
+            { t: 50.5, text: "♫ 'My girl, my girl, don't lie to me...' ♫" },
+            { t: 65.0, text: "♫ 'Tell me where did you sleep last night?' ♫" },
+            { t: 78.0, text: "♫ 'In the pines, in the pines, where the sun don't ever shine...' ♫" },
+            { t: 93.0, text: "♫ 'I would shiver the whole night through...' ♫" },
+            { t: 109.0, text: "♫ 'My girl, my girl, where will you go?' ♫" },
+            { t: 125.0, text: "♫ 'I'm going where the cold wind blows...' ♫" },
+            { t: 140.0, text: "♫ 'In the pines, in the pines, where the sun don't ever shine...' ♫" },
+            { t: 154.0, text: "♫ 'I would shiver the whole night through...' ♫" },
+            { t: 168.0, text: "♫ 'Her husband, was a hard-working man...' ♫" },
+            { t: 182.0, text: "♫ 'Just about a mile from here...' ♫" },
+            { t: 196.0, text: "♫ 'His head was found in a driving wheel...' ♫" },
+            { t: 210.0, text: "♫ 'But his body never was found...' ♫" },
+            { t: 226.0, text: "♫ 'My girl, my girl, don't lie to me...' ♫" },
+            { t: 238.0, text: "♫ 'Tell me where did you sleep last night?' ♫" },
+            { t: 254.0, text: "🔥 'MY GIRL, MY GIRL! WHERE WILL YOU GO?!' 🔥" },
+            { t: 268.0, text: "🔥 'I'M GOING WHERE THE COLD WIND BLOWS!' 🔥" },
+            { t: 284.0, text: "🔥 'IN THE PINES! IN THE PINES! WHERE THE SUN DON'T EVER SHINE!' 🔥" },
+            { t: 298.0, text: "🔥 'MY GIRL! MY GIRL!' (Kurt gasps for breath...) 🔥" },
+            { t: 308.0, text: "♫ 'I would shiver... the whole night through...' (Final acoustic decay) ♫" },
+            { t: 313.5, text: "♫ (Applause echoes into silence...) ♫" }
+        ];
+
+        function checkLyricsSync(currentTime) {
+            const display = document.getElementById('lyrics-display');
+            let matched = LYRICS_TIMESTAMPS[0].text;
+            let isClimax = false;
+
+            for (let i = 0; i < LYRICS_TIMESTAMPS.length; i++) {
+                if (currentTime >= LYRICS_TIMESTAMPS[i].t) {
+                    matched = LYRICS_TIMESTAMPS[i].text;
+                    if (LYRICS_TIMESTAMPS[i].t >= 254.0 && LYRICS_TIMESTAMPS[i].t <= 308.0) {
+                        isClimax = true;
+                    }
+                }
+            }
+
+            display.innerText = matched;
+            if (isClimax) {
+                display.classList.add('active');
+                display.style.color = "#ef4444";
+            } else if (isPlaying) {
+                display.classList.add('active');
+                display.style.color = "var(--gold-lyrics)";
+            } else {
+                display.classList.remove('active');
+                display.style.color = "#64748b";
+            }
+        }
+
+        // ==============================================================
+        // 2. AUDIO ENGINE & HOWLING BLIZZARD
         // ==============================================================
         const AUDIO_START = 5.2;
         const AUDIO_END = 313.5;
@@ -507,9 +648,7 @@ The road splits into the dark.</div>
                 masterGain.gain.setValueAtTime(0.65, audioCtx.currentTime);
                 masterGain.connect(audioCtx.destination);
 
-                // 1. DUAL-LAYER PROCEDURAL BLIZZARD WIND ENGINE
-                // Layer A: Low sub-bass mountain rumble
-                // Layer B: Resonant whistling pine tree gale
+                // Dual-Layer Blizzard Gale
                 const bufferSize = audioCtx.sampleRate * 2;
                 const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const out = noiseBuf.getChannelData(0);
@@ -519,19 +658,17 @@ The road splits into the dark.</div>
                 whiteNoise.buffer = noiseBuf;
                 whiteNoise.loop = true;
 
-                // Rumble Filter (Lowpass at 140Hz)
                 windFilter1 = audioCtx.createBiquadFilter();
                 windFilter1.type = 'lowpass';
                 windFilter1.frequency.value = 140;
 
-                // Whistling Gale Filter (Bandpass at 360Hz with high resonance Q=3.8)
                 windFilter2 = audioCtx.createBiquadFilter();
                 windFilter2.type = 'bandpass';
                 windFilter2.frequency.value = 360;
                 windFilter2.Q.value = 3.8;
 
                 windGain = audioCtx.createGain();
-                windGain.gain.setValueAtTime(0.22, audioCtx.currentTime); // Crisp, audible atmospheric wind
+                windGain.gain.setValueAtTime(0.24, audioCtx.currentTime);
 
                 whiteNoise.connect(windFilter1);
                 whiteNoise.connect(windFilter2);
@@ -540,7 +677,6 @@ The road splits into the dark.</div>
                 windGain.connect(masterGain);
                 whiteNoise.start(0);
 
-                // Organic Wind Swells
                 setInterval(() => {
                     if (isPlaying && windFilter2) {
                         const targetFreq = 260 + Math.random() * 280;
@@ -548,15 +684,14 @@ The road splits into the dark.</div>
                     }
                 }, 2400);
 
-                // 2. Direct Audio Volume setup
                 audioElem.volume = 0.65;
 
-                // Seamless loop at 313.5s
                 audioElem.addEventListener('timeupdate', () => {
                     if (audioElem.currentTime >= AUDIO_END) {
                         audioElem.currentTime = AUDIO_START;
                     }
                     updateTapeUI();
+                    checkLyricsSync(audioElem.currentTime);
                 });
             }
 
@@ -617,7 +752,7 @@ The road splits into the dark.</div>
                     audioElem.currentTime = AUDIO_START;
                 }
                 audioElem.play().catch(() => {});
-                if (windGain) windGain.gain.setTargetAtTime(0.22, audioCtx.currentTime, 0.5);
+                if (windGain) windGain.gain.setTargetAtTime(0.24, audioCtx.currentTime, 0.5);
                 isPlaying = true;
                 btn.classList.add('playing');
                 btnText.innerText = "PAUSE ATMOSPHERE";
@@ -634,7 +769,7 @@ The road splits into the dark.</div>
 
         function jumpClimax() {
             initAudioEngine();
-            audioElem.currentTime = 254.0; // The famous build-up and climax screams
+            audioElem.currentTime = 254.0;
             if (!isPlaying) togglePlayback();
             setInnerVoice("'MY GIRL, MY GIRL! WHERE DID YOU SLEEP LAST NIGHT?!'");
         }
@@ -646,43 +781,54 @@ The road splits into the dark.</div>
             if (audioElem) audioElem.volume = parseFloat(val);
         }
 
-        // Acoustic Nylon Chord Synthesizer + Ripple Trigger
-        const chordPitches = {
-            'E':  [82.4, 123.4, 164.8, 207.6, 246.9, 329.6],
-            'Em': [82.4, 123.4, 164.8, 196.0, 246.9, 329.6],
-            'A':  [110.0, 164.8, 220.0, 277.1, 329.6],
-            'G':  [98.0, 123.4, 146.8, 196.0, 246.9, 392.0],
-            'Bm': [123.4, 185.0, 246.9, 293.6, 370.0]
-        };
+        // ==============================================================
+        // 3. SYLLABIC GUITAR CHORDS (Nirvana progression)
+        // ==============================================================
+        const SYLLABLES = [
+            { chord: 'E',  lyric: "My...",           freqs: [82.4, 123.4, 164.8, 207.6, 246.9, 329.6] },
+            { chord: 'Em', lyric: "Girl...",         freqs: [82.4, 123.4, 164.8, 196.0, 246.9, 329.6] },
+            { chord: 'A',  lyric: "Don't...",        freqs: [110.0, 164.8, 220.0, 277.1, 329.6] },
+            { chord: 'G',  lyric: "Lie to me...",    freqs: [98.0, 123.4, 146.8, 196.0, 246.9, 392.0] },
+            { chord: 'B',  lyric: "Tell me...",      freqs: [123.4, 185.0, 246.9, 293.6, 370.0] },
+            { chord: 'Em', lyric: "Where did you...",freqs: [82.4, 123.4, 164.8, 196.0, 246.9, 329.6] },
+            { chord: 'Em', lyric: "Sleep last night",freqs: [82.4, 123.4, 164.8, 196.0, 246.9, 329.6] }
+        ];
 
-        function strumAcoustic(chordName) {
+        let curSyllableIdx = 0;
+
+        function playSyllableChord(idx) {
             initAudioEngine();
-            const freqs = chordPitches[chordName] || chordPitches['Em'];
+            curSyllableIdx = idx;
+            const item = SYLLABLES[idx];
             const now = audioCtx.currentTime;
 
-            freqs.forEach((freq, idx) => {
+            // Authentic acoustic nylon strumming with microsecond finger delay
+            item.freqs.forEach((freq, stringNum) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
 
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(freq, now + idx * 0.038);
+                osc.frequency.setValueAtTime(freq, now + stringNum * 0.042);
 
-                gain.gain.setValueAtTime(0.22, now + idx * 0.038);
-                gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.038 + 2.5);
+                gain.gain.setValueAtTime(0.24, now + stringNum * 0.042);
+                gain.gain.exponentialRampToValueAtTime(0.0001, now + stringNum * 0.042 + 2.6);
 
                 osc.connect(gain);
                 gain.connect(masterGain);
 
-                osc.start(now + idx * 0.038);
-                osc.stop(now + idx * 0.038 + 2.6);
+                osc.start(now + stringNum * 0.042);
+                osc.stop(now + stringNum * 0.042 + 2.7);
             });
 
             triggerAcousticRipple();
 
-            state.sanity = Math.min(100, state.sanity + 12);
-            state.pulse = Math.max(68, state.pulse - 8);
+            state.sanity = Math.min(100, state.sanity + 8);
+            state.pulse = Math.max(68, state.pulse - 5);
             updateVitalsUI();
-            setInnerVoice(`You plucked ${chordName} on your guitar... The acoustic vibrations push the dark shadows back.`);
+            setInnerVoice(`You strummed [${item.chord}] -> "${item.lyric}"... Warm vibrations echo between the frozen trunks.`);
+
+            // Advance syllable index
+            curSyllableIdx = (curSyllableIdx + 1) % SYLLABLES.length;
         }
 
         function playFootstep() {
@@ -705,7 +851,7 @@ The road splits into the dark.</div>
         }
 
         // ==============================================================
-        // 60 FPS LIVE ANIMATED ASCII PROCEDURAL CANVAS RENDERER
+        // 4. LIVE ANIMATED ASCII FIRST-PERSON ENGINE (WASD INTERACTIVE)
         // ==============================================================
         const canvas = document.getElementById('ascii-screen');
         const ctx = canvas.getContext('2d');
@@ -714,6 +860,11 @@ The road splits into the dark.</div>
         const ROWS = 32;
         let animClock = 0;
         let currentSceneId = 'crossroads';
+
+        // Interactive Player Camera
+        let camX = 0;       // Pan left/right offset (-25 to 25)
+        let camZ = 0;       // Forward/backward depth zoom (0 to 12)
+        let walkBob = 0;    // Head bobbing
 
         let rippleRadius = 0;
         let isRippling = false;
@@ -756,12 +907,19 @@ The road splits into the dark.</div>
             ctx.font = 'bold 11px "Courier New", monospace';
             ctx.textBaseline = "middle";
 
+            // Camera Bobbing offset
+            const bobOffset = Math.sin(walkBob) * 2.5;
+
             for (let y = 0; y < ROWS; y++) {
                 for (let x = 0; x < COLS; x++) {
                     let ch = ' ';
                     let color = 'rgba(148, 163, 184, 0.18)';
 
-                    let distFromCenter = Math.hypot(x - COLS / 2, y - ROWS / 2);
+                    // World Coordinates adjusted by Camera WASD
+                    const wx = x - camX;
+                    const wy = y + bobOffset;
+
+                    let distFromCenter = Math.hypot(wx - COLS / 2, wy - ROWS / 2);
                     if (isRippling && Math.abs(distFromCenter - rippleRadius) < 2.5) {
                         ctx.fillStyle = "#38bdf8";
                         ctx.fillText('~', x * charW, y * charH + 5);
@@ -769,53 +927,52 @@ The road splits into the dark.</div>
                     }
 
                     if (scene === 'crossroads') {
-                        const swayLeft = Math.sin(animClock + y * 0.2) * 1.5;
-                        const swayRight = Math.sin(animClock + 1.2 + y * 0.2) * 1.5;
+                        const swayLeft = Math.sin(animClock + wy * 0.2) * 1.5;
+                        const swayRight = Math.sin(animClock + 1.2 + wy * 0.2) * 1.5;
 
-                        // Left Pine Grove
-                        if (x < 24 + swayLeft && y > 4) {
-                            if ((x + y) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
-                            else if ((x + y) % 2 === 0) { ch = '/'; color = '#94a3b8'; }
+                        // Left Pine Grove (moves with camZ zoom)
+                        if (wx < (24 + camZ * 0.8) + swayLeft && wy > 4) {
+                            if ((wx + wy) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
+                            else if ((wx + wy) % 2 === 0) { ch = '/'; color = '#94a3b8'; }
                             else { ch = '\\'; color = '#475569'; }
                         }
                         // Right Pine Grove
-                        else if (x > 76 + swayRight && y > 4) {
-                            if ((x + y) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
-                            else if ((x + y) % 2 === 0) { ch = '\\'; color = '#94a3b8'; }
+                        else if (wx > (76 - camZ * 0.8) + swayRight && wy > 4) {
+                            if ((wx + wy) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
+                            else if ((wx + wy) % 2 === 0) { ch = '\\'; color = '#94a3b8'; }
                             else { ch = '/'; color = '#475569'; }
                         }
                         // Road Fork Path
-                        else if (y > 18 && Math.abs(x - 50) < (y - 17) * 1.1) {
-                            ch = (x + y) % 4 === 0 ? '=' : '.';
+                        else if (wy > (18 - camZ * 0.5) && Math.abs(wx - 50) < (wy - 17 + camZ * 0.5) * 1.1) {
+                            ch = (wx + wy) % 4 === 0 ? '=' : '.';
                             color = '#334155';
                         }
                         // Wooden Signpost
-                        else if (x === 50 && y >= 11 && y <= 18) {
+                        else if (Math.abs(wx - 50) <= 0.8 && wy >= (11 - camZ * 0.3) && wy <= 18) {
                             ch = '|'; color = '#cbd5e1';
-                        } else if (Math.abs(x - 50) <= 5 && y === 12) {
+                        } else if (Math.abs(wx - 50) <= (5 + camZ * 0.3) && Math.abs(wy - (12 - camZ * 0.3)) <= 0.6) {
                             ch = '-'; color = '#f8fafc';
                         }
                     }
 
                     else if (scene === 'cabin') {
                         // Cabin Roof
-                        if (y >= 6 && y <= 12 && Math.abs(x - 50) < (13 - (y - 6)) * 2.3) {
+                        if (wy >= (6 - camZ * 0.5) && wy <= 12 && Math.abs(wx - 50) < (13 - (wy - 6) + camZ * 0.7) * 2.3) {
                             ch = '/'; color = '#64748b';
                         }
-                        // Cabin Walls & Hearth
-                        else if (y > 12 && y < 27 && x > 24 && x < 76) {
-                            if (y === 19 && x > 43 && x < 57) {
+                        // Cabin Walls
+                        else if (wy > 12 && wy < (27 + camZ * 0.6) && wx > (24 - camZ * 0.8) && wx < (76 + camZ * 0.8)) {
+                            if (wy === 19 && wx > 43 && wx < 57) {
                                 ch = '='; color = '#94a3b8';
-                            } else if (x === 32 || x === 68) {
+                            } else if (Math.abs(wx - 32) <= 1 || Math.abs(wx - 68) <= 1) {
                                 ch = '|'; color = '#475569';
                             } else {
-                                ch = (x + y) % 2 === 0 ? '#' : '=';
+                                ch = (wx + wy) % 2 === 0 ? '#' : '=';
                                 color = '#334155';
                             }
 
-                            // Dynamic Warm Amber Lantern Glow
                             if (state.has_lantern) {
-                                const distToLantern = Math.hypot(x - 50, y - 18);
+                                const distToLantern = Math.hypot(wx - 50, wy - 18);
                                 const flicker = Math.sin(animClock * 6) * 0.15;
                                 if (distToLantern < 18) {
                                     const lum = Math.max(0, 1 - (distToLantern / (18 + flicker)));
@@ -827,40 +984,59 @@ The road splits into the dark.</div>
                     }
 
                     else if (scene === 'tracks') {
-                        const railDist = (ROWS - y) * 1.6;
-                        if (y > 8 && (Math.abs(x - 50) === Math.floor(railDist) || Math.abs(x - 50) === Math.floor(railDist) - 1)) {
+                        const railDist = (ROWS - wy) * 1.6 + camZ * 0.8;
+                        if (wy > 8 && (Math.abs(wx - 50) === Math.floor(railDist) || Math.abs(wx - 50) === Math.floor(railDist) - 1)) {
                             ch = '|'; color = '#94a3b8';
-                        } else if (y > 8 && (y % 3 === 0) && Math.abs(x - 50) < railDist) {
+                        } else if (wy > 8 && (Math.floor(wy) % 3 === 0) && Math.abs(wx - 50) < railDist) {
                             ch = '='; color = '#475569';
                         }
                         // Giant Locomotive Wheel
-                        const distToWheel = Math.hypot((x - 70) * 0.7, y - 17);
-                        if (distToWheel < 6.5 && distToWheel > 3.8) {
+                        const distToWheel = Math.hypot((wx - 70 + camZ * 0.4) * 0.7, wy - 17);
+                        if (distToWheel < (6.5 + camZ * 0.2) && distToWheel > (3.8 + camZ * 0.1)) {
                             ch = '@'; color = '#f1f5f9';
-                        } else if (distToWheel <= 3.8 && distToWheel > 1.5) {
-                            ch = (x + y) % 2 === 0 ? 'X' : '+'; color = '#94a3b8';
+                        } else if (distToWheel <= (3.8 + camZ * 0.1) && distToWheel > 1.5) {
+                            ch = (wx + wy) % 2 === 0 ? 'X' : '+'; color = '#94a3b8';
                         }
                     }
 
                     else if (scene === 'pines_deep') {
-                        const windShift = Math.sin(animClock * 1.5 + x * 0.1) * 2;
-                        if ((x % 8 === 0 || x % 8 === 1) && y > 3) {
+                        const windShift = Math.sin(animClock * 1.5 + wx * 0.1) * 2;
+                        if ((Math.abs(wx) % 8 === 0 || Math.abs(wx) % 8 === 1) && wy > 3) {
                             ch = '|'; color = '#334155';
-                        } else if (y < 20 && Math.sin(x * 0.3 + y * 0.4 + windShift) > 0.3) {
+                        } else if (wy < 20 && Math.sin(wx * 0.3 + wy * 0.4 + windShift) > 0.3) {
                             ch = '#'; color = '#64748b';
                         }
                     }
 
                     else if (scene === 'clearing') {
-                        if (y >= 11 && y <= 21 && Math.abs(x - 50) < 6) {
-                            if (y === 11) ch = '_';
-                            else if (Math.abs(x - 50) === 5) ch = '|';
-                            else if (y === 15 && Math.abs(x - 50) < 3) ch = '+';
+                        if (wy >= (11 - camZ * 0.3) && wy <= 21 && Math.abs(wx - 50) < (6 + camZ * 0.3)) {
+                            if (wy === 11) ch = '_';
+                            else if (Math.abs(wx - 50) === 5) ch = '|';
+                            else if (wy === 15 && Math.abs(wx - 50) < 3) ch = '+';
                             else ch = '=';
                             color = '#f1f5f9';
-                        } else if (y > 21) {
-                            ch = (x + y) % 3 === 0 ? '_' : '.';
+                        } else if (wy > 21) {
+                            ch = (wx + wy) % 3 === 0 ? '_' : '.';
                             color = '#475569';
+                        }
+                    }
+
+                    // 1993 MTV UNPLUGGED STAGE CUTSCENE SCENE
+                    else if (scene === 'unplugged_stage') {
+                        // Sony Music Studios NYC Stage with Candles and Lilies
+                        if (wy > 20) {
+                            ch = (wx + wy) % 2 === 0 ? '=' : '_';
+                            color = '#1e293b';
+                        }
+                        // Acoustic Guitar Stool & Microphone in center
+                        else if (Math.abs(wx - 50) <= 1 && wy >= 12 && wy <= 20) {
+                            ch = '|'; color = '#94a3b8';
+                        } else if (Math.abs(wx - 50) <= 3 && wy === 16) {
+                            ch = 'O'; color = '#f59e0b'; // Acoustic Guitar Body
+                        }
+                        // Black Lilies and Candles
+                        else if ((wx === 35 || wx === 65) && wy >= 16 && wy <= 20) {
+                            ch = '*'; color = '#fbbf24'; // Candle Flame
                         }
                     }
 
@@ -886,7 +1062,7 @@ The road splits into the dark.</div>
         }
 
         // ==============================================================
-        // GAME STATE & MILK-STYLE PSYCHOLOGICAL NARRATIVE
+        // 5. GAME STATE & CINEMATIC EXPANDED ENDINGS
         // ==============================================================
         const state = {
             temp: 37,
@@ -923,7 +1099,7 @@ The road splits into the dark.</div>
             crossroads: {
                 title: "🌲 CROSSROADS IN THE PINES (03:17 AM)",
                 sceneId: "crossroads",
-                story: "The mountain pass is buried in bone-chilling mist.\n\nYour nylon-string acoustic guitar hangs cold across your back. Frost bites into your knuckles.\n\nDeep from within the timber, a familiar ragged vocal carries across the wind:\n'My girl, my girl... Tell me where did you sleep last night?'\n\nThe road splits into the dark.",
+                story: "The mountain pass is buried in bone-chilling mist.\n\nYour nylon-string acoustic guitar hangs cold across your back. Frost bites into your knuckles.\n\nDeep from within the timber, a familiar ragged vocal carries across the wind:\n'My girl, my girl... Tell me where did you sleep last night?'\n\nUse [W, A, S, D] to physically walk forward and look around, or select a path below:",
                 thought: "I know this song. Why does it feel like I left a piece of myself out here years ago?",
                 choices: [
                     {
@@ -934,6 +1110,7 @@ The road splits into the dark.</div>
                             state.sanity -= 6;
                             state.pulse = 98;
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('pines_deep', "Freezing needles brush your jacket as the trees close in behind you.");
                         }
                     },
@@ -942,6 +1119,7 @@ The road splits into the dark.</div>
                         hint: "[2]",
                         action: () => {
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('cabin', "The wooden porch groans under your weight.");
                         }
                     },
@@ -950,6 +1128,7 @@ The road splits into the dark.</div>
                         hint: "[3]",
                         action: () => {
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('tracks', "You stepped onto the frozen ballast gravel along the rusted rails.");
                         }
                     }
@@ -999,6 +1178,7 @@ The road splits into the dark.</div>
                         hint: "[3]",
                         action: () => {
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('crossroads', "You pulled the creaking door shut behind you.");
                         }
                     }
@@ -1041,6 +1221,7 @@ The road splits into the dark.</div>
                         action: () => {
                             if (state.clues >= 3) {
                                 playFootstep();
+                                camZ = 0; camX = 0;
                                 loadScene('clearing', "Passing through the tunnel, you emerged into the sacred clearing where the sun don't ever shine...");
                             } else {
                                 state.sanity -= 10;
@@ -1055,6 +1236,7 @@ The road splits into the dark.</div>
                         hint: "[3]",
                         action: () => {
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('crossroads', "You scrambled back up to the road fork.");
                         }
                     }
@@ -1082,13 +1264,13 @@ The road splits into the dark.</div>
                         }
                     },
                     {
-                        text: "Sit on the frozen log and play 'Where Did You Sleep Last Night'",
+                        text: "Sit on the frozen log and strum 'Where Did You Sleep Last Night'",
                         hint: "[2]",
                         action: () => {
-                            strumAcoustic('Em');
-                            setTimeout(() => strumAcoustic('A'), 350);
-                            setTimeout(() => strumAcoustic('G'), 700);
-                            setTimeout(() => strumAcoustic('Bm'), 1050);
+                            playSyllableChord(0);
+                            setTimeout(() => playSyllableChord(1), 350);
+                            setTimeout(() => playSyllableChord(2), 700);
+                            setTimeout(() => playSyllableChord(3), 1050);
                             state.sanity = Math.min(100, state.sanity + 25);
                             state.pulse = 74;
                             updateVitalsUI();
@@ -1100,6 +1282,7 @@ The road splits into the dark.</div>
                         hint: "[3]",
                         action: () => {
                             playFootstep();
+                            camZ = 0; camX = 0;
                             loadScene('crossroads', "You stepped back onto the mountain road.");
                         }
                     }
@@ -1113,18 +1296,23 @@ The road splits into the dark.</div>
                 thought: "This is where it ends. The loop is waiting for a final decision.",
                 choices: [
                     {
-                        text: "[ENDING 1] Kneel and play the final acoustic chords to release her soul",
+                        text: "[SECRET ENDING 1] Kneel and play the final acoustic chords to release her soul",
                         hint: "[1]",
                         action: () => triggerEnding('melancholic')
                     },
                     {
-                        text: "[ENDING 2] Ring the bronze bell and summon the phantom locomotive",
+                        text: "[MASTERPIECE ENDING 2] Step through the starlight into the 1993 MTV Unplugged Stage",
                         hint: "[2]",
+                        action: () => triggerEnding('unplugged')
+                    },
+                    {
+                        text: "[TRAGIC ENDING 3] Ring the bronze bell and summon the phantom locomotive",
+                        hint: "[3]",
                         action: () => triggerEnding('locomotive')
                     },
                     {
-                        text: "[ENDING 3] Turn back and run toward the first light of dawn",
-                        hint: "[3]",
+                        text: "[NORMAL ENDING 4] Turn back and run toward the first light of dawn",
+                        hint: "[4]",
                         action: () => triggerEnding('escape')
                     }
                 ]
@@ -1164,42 +1352,134 @@ The road splits into the dark.</div>
             state.gameOver = true;
             const story = document.getElementById('story-content');
             const choices = document.getElementById('choices-container');
-            choices.innerHTML = `<button class="choice-item" onclick="location.reload()"><span>[REPLAY] Play the Song from the Beginning</span><span class="choice-hint">[R]</span></button>`;
+            choices.innerHTML = `
+                <button class="choice-item" onclick="location.reload()">
+                    <span>[REPLAY] Re-enter the Pines from 03:17 AM</span>
+                    <span class="choice-hint">[R]</span>
+                </button>
+            `;
 
-            if (endingType === 'freeze') {
-                document.getElementById('location-header').innerText = "💀 DEATH BY HYPOTHERMIA";
-                story.innerText = ">>> I WOULD SHIVER THE WHOLE NIGHT THROUGH <<<\n\nYour core body temperature plummeted below 28°C. Your stiffened fingers can no longer grip the guitar frets.\n\nYou collapsed into the soft carpet of frozen pine needles. The cold no longer hurts; it wraps around you like a gentle, eternal slumber.\n\nWhen morning came, only a frozen silhouette and an unstrung guitar were found under the pines...";
-                setInnerVoice("Everything is so warm now. The music finally faded.");
-            } else if (endingType === 'insanity') {
-                document.getElementById('location-header').innerText = "🌑 LOSS OF SANITY";
-                story.innerText = ">>> LOST WHERE THE SUN DON'T EVER SHINE <<<\n\nThe whispers grew into a deafening roar inside your skull.\n\nYou can no longer tell whether you are hearing your own voice or hers. Casting your guitar aside, you ran screaming into the labyrinth of pines.\n\nNo one ever walked out of that valley again...";
-                setInnerVoice("I can't hear myself think anymore. The pines took everything.");
-            } else if (endingType === 'melancholic') {
+            if (endingType === 'unplugged') {
+                // MASTERPIECE SECRET ENDING
+                currentSceneId = 'unplugged_stage';
+                document.getElementById('location-header').innerText = "🎸 MASTERPIECE SECRET ENDING: SONY MUSIC STUDIOS, NYC (NOV 18, 1993)";
+                jumpClimax();
+                story.innerText = 
+`>>> THE 1993 MTV UNPLUGGED TIME SLIP <<<
+
+As your fingers struck the final acoustic chord, the mountain pines dissolved into dark velvet stage curtains.
+
+You blinked against the warm studio footlights. You are sitting on a wooden stool in Sony Music Studios, New York City.
+Around the floor burn white taper candles set in crystal goblets, flanked by deep black Stargazer lilies.
+
+Across your lap rests a 1959 Martin D-18E acoustic guitar.
+In front of you sits a quiet audience in cardigan sweaters, waiting in absolute, reverent silence.
+
+A stage producer in headphones whispers from the dark:
+"You're live in 3... 2... 1..."
+
+You lean into the vintage RCA ribbon microphone. You take Kurt Cobain's iconic final gasp of air.
+You realize the truth: You were never lost in the pines.
+You were the one singing the song all along.`;
+                setInnerVoice("The studio lights dim. The final acoustic chord rings into eternity.");
+            }
+
+            else if (endingType === 'melancholic') {
                 document.getElementById('location-header').innerText = "✨ SECRET ENDING: FAREWELL IN THE PINES";
-                strumAcoustic('Em');
-                setTimeout(() => strumAcoustic('A'), 400);
-                setTimeout(() => strumAcoustic('G'), 800);
-                setTimeout(() => strumAcoustic('Bm'), 1200);
-                story.innerText = ">>> 'WHERE DID YOU SLEEP LAST NIGHT?' <<<\n\nYou knelt beside the mossy stone. Even as your fingertips bled, you played the chords until the final ringing note.\n\nAt the last acoustic strum, the thick mountain mist gently lifted. For the first time in decades, pale amber sunlight filtered through the pine needles.\n\nA final whisper drifted on the breeze: 'I'm not cold anymore...'\n\nJust like Kurt Cobain's legendary closing gasp, you took a deep breath. The song was complete, and peace settled over the pines.";
+                playSyllableChord(0);
+                setTimeout(() => playSyllableChord(1), 400);
+                setTimeout(() => playSyllableChord(2), 800);
+                setTimeout(() => playSyllableChord(3), 1200);
+                story.innerText = 
+`>>> 'WHERE DID YOU SLEEP LAST NIGHT?' <<<
+
+You knelt beside the mossy stone. Even as your fingertips bled against the frost, you played the chords until the final ringing note.
+
+At the last acoustic strum, the thick mountain mist gently lifted. For the first time in decades, pale amber sunlight filtered through the pine needles.
+
+A final whisper drifted on the breeze:
+'I'm not cold anymore... thank you.'
+
+Just like Kurt Cobain's legendary closing breath, you inhaled deeply. The song was complete, and peace settled over the pines.`;
                 setInnerVoice("The sun broke through. She is at peace, and so are you.");
-            } else if (endingType === 'locomotive') {
+            }
+
+            else if (endingType === 'locomotive') {
                 document.getElementById('location-header').innerText = "🚂 TRAGIC ENDING: THE CALL OF THE TRACKS";
-                story.innerText = ">>> HER HEAD WAS FOUND IN A DRIVING WHEEL <<<\n\nYou struck the bronze bell. Through the wall of fog, the spectral headlights of a 1986 locomotive illuminated the valley.\n\nThe train halted upon the ghost tracks. The heavy carriage doors slid open, inviting you in.\n\nYou stepped aboard. The clock froze at 03:17 AM forever. You are now an eternal passenger on the lost train...";
-                setInnerVoice("The whistle blows. We are going nowhere, forever.");
-            } else if (endingType === 'escape') {
+                story.innerText = 
+`>>> HER HEAD WAS FOUND IN A DRIVING WHEEL <<<
+
+You struck the bronze bell. Through the wall of fog, the spectral headlights of a 1986 locomotive illuminated the valley.
+
+The train halted upon the ghost tracks. The heavy iron carriage doors slid open, inviting you in.
+
+You stepped aboard. The clock froze at 03:17 AM forever. You are now an eternal passenger on the lost train, riding through the pines where the sun don't ever shine.`;
+                setInnerVoice("The whistle blows into the cold dark. We are going nowhere, forever.");
+            }
+
+            else if (endingType === 'escape') {
                 document.getElementById('location-header').innerText = "🌅 NORMAL ENDING: SURVIVAL";
-                story.innerText = ">>> ESCAPE INTO THE DAWN <<<\n\nYou slung your guitar across your back and sprinted with all your remaining breath toward the highway.\n\nAs the dawn broke, you glanced back to see dark storm clouds hanging heavy over the pines. No one will ever believe your story, but you survived.";
-                setInnerVoice("You made it out alive. But every winter night, the melody will haunt you.");
+                story.innerText = 
+`>>> ESCAPE INTO THE DAWN <<<
+
+You slung your guitar across your back and sprinted with all your remaining breath toward the highway.
+
+As the pale morning broke, you glanced back to see dark storm clouds hanging heavy over the mountain ridge.
+No one will ever believe your story, but you survived.`;
+                setInnerVoice("You made it out alive. But every winter night, the melody will return.");
+            }
+
+            else if (endingType === 'freeze') {
+                document.getElementById('location-header').innerText = "💀 DEATH BY HYPOTHERMIA";
+                story.innerText = 
+`>>> I WOULD SHIVER THE WHOLE NIGHT THROUGH <<<
+
+Your core body temperature plummeted below 28°C. Your stiffened fingers can no longer grip the guitar frets.
+
+You collapsed into the soft carpet of frozen pine needles. The cold no longer hurts; it wraps around you like a gentle, eternal slumber.
+
+When morning came, only an unstrung guitar and a frozen silhouette were found under the pines...`;
+                setInnerVoice("Everything is so warm now. The music finally faded.");
+            }
+
+            else if (endingType === 'insanity') {
+                document.getElementById('location-header').innerText = "🌑 LOSS OF SANITY";
+                story.innerText = 
+`>>> LOST WHERE THE SUN DON'T EVER SHINE <<<
+
+The whispers grew into a deafening roar inside your skull.
+
+You can no longer tell whether you are hearing your own voice or hers. Casting your guitar aside, you ran screaming into the labyrinth of pines. No one ever walked out of that valley again...`;
+                setInnerVoice("I can't hear myself think anymore. The pines took everything.");
             }
         }
 
-        // Global Keyboard Controls
+        // ==============================================================
+        // 6. KEYBOARD CONTROLS (WASD INTERACTIVE + CHOICES + SPACE)
+        // ==============================================================
         window.addEventListener('keydown', (e) => {
             if (state.gameOver) {
                 if (e.key === 'r' || e.key === 'R') location.reload();
                 return;
             }
-            if (e.key === '1') {
+
+            // WASD Movement & Camera controls
+            if (e.key === 'w' || e.key === 'W') {
+                camZ = Math.min(12, camZ + 1.2);
+                walkBob += 0.8;
+                playFootstep();
+            } else if (e.key === 's' || e.key === 'S') {
+                camZ = Math.max(-4, camZ - 1.2);
+                walkBob += 0.8;
+                playFootstep();
+            } else if (e.key === 'a' || e.key === 'A') {
+                camX = Math.max(-25, camX - 2.5);
+            } else if (e.key === 'd' || e.key === 'D') {
+                camX = Math.min(25, camX + 2.5);
+            }
+
+            // Choice shortcuts
+            else if (e.key === '1') {
                 const btns = document.querySelectorAll('.choice-item');
                 if (btns[0]) btns[0].click();
             } else if (e.key === '2') {
@@ -1208,17 +1488,26 @@ The road splits into the dark.</div>
             } else if (e.key === '3') {
                 const btns = document.querySelectorAll('.choice-item');
                 if (btns[2]) btns[2].click();
-            } else if (e.key === ' ') {
+            } else if (e.key === '4') {
+                const btns = document.querySelectorAll('.choice-item');
+                if (btns[3]) btns[3].click();
+            }
+
+            // Spacebar = Strum current syllable chord
+            else if (e.key === ' ') {
                 e.preventDefault();
-                strumAcoustic('Em');
-            } else if (e.key === 't' || e.key === 'T') {
+                playSyllableChord(curSyllableIdx);
+            }
+
+            // 'T' = Toggle Cassette
+            else if (e.key === 't' || e.key === 'T') {
                 togglePlayback();
             }
         });
 
         function handleResize() {
             canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = 280;
+            canvas.height = 290;
         }
 
         window.onload = () => {
