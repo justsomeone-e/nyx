@@ -3,6 +3,7 @@ import sys
 import subprocess
 import shutil
 import glob
+import tempfile
 from typing import Optional, Sequence, Tuple
 
 class CppToolchain:
