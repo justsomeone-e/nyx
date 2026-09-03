@@ -1,0 +1,318 @@
+#target cpp
+
+import "std/terminal"
+
+struct Player {
+    hp: int,
+    sanity: int,
+    has_key: bool,
+    has_light: bool,
+    has_tape: bool,
+    has_photo: bool,
+    has_code: bool,
+    knows_truth: bool,
+    talked_to_voice: bool,
+    opened_tunnel: bool,
+    clues: int,
+    location: int
+}
+
+fn draw_ui(p: Player, message: string) {
+    clear_screen()
+    print("================================================================")
+    print("                      THE LAST SIGNAL                           ")
+    print("================================================================")
+    print(
+        "HP: " + to_string(p.hp) +
+        "/100  ::  SANITY: " + to_string(p.sanity) +
+        "/100  ::  CLUES: " + to_string(p.clues) + "/5"
+    )
+
+    var inv: string = "Inventory: ["
+    if p.has_light {
+        inv = inv + " Flashlight "
+    }
+    if p.has_key {
+        inv = inv + " Key "
+    }
+    if p.has_tape {
+        inv = inv + " Tape "
+    }
+    if p.has_photo {
+        inv = inv + " Photo "
+    }
+    if p.has_code {
+        inv = inv + " Cipher "
+    }
+    inv = inv + "]"
+    print(inv)
+    print("----------------------------------------------------------------")
+    print(">> " + message)
+    print("----------------------------------------------------------------")
+}
+
+fn wait_for_choice() -> int {
+    print("")
+    print("Choose [1, 2, 3] or [Q] Quit: ")
+
+    while true {
+        let k = read_key()
+        if k == 49 { return 1 }
+        if k == 50 { return 2 }
+        if k == 51 { return 3 }
+        if k == 113 or k == 81 { return 0 }
+    }
+    return 0
+}
+
+fn main() {
+    var p = Player(100, 100, false, false, false, false, false, false, false, false, 0, 0)
+    var running: bool = true
+    var msg: string = "03:17 AM. You stand in an abandoned, mist-covered train station."
+
+    while running {
+        draw_ui(p, msg)
+
+        // Game Over Conditions
+        if p.hp <= 0 {
+            print("")
+            print(">>> YOU COLLAPSED. THE STATION SWALLOWED YOUR VOICE. <<<")
+            print("The last thing you heard was the screech of phantom train brakes.")
+            print("==================== GAME OVER ====================")
+            running = false
+        } elif p.sanity <= 0 {
+            print("")
+            print(">>> YOU LOST YOUR MIND! YOUR SANITY DISSOLVED INTO SHADOWS. <<<")
+            print("You can no longer tell where the station ends and the past begins.")
+            print("==================== GAME OVER ====================")
+            running = false
+        } elif p.clues >= 5 {
+            print("")
+            print("================================================================")
+            print("                     THE TRUTH IS UNVEILED                      ")
+            print("================================================================")
+            print("In 1986 at 03:17 AM, Train No. 17 never departed this station.")
+            print("An experimental signal frequency redirected it into another realm.")
+            print("And the signal echoing tonight... was the train's call to return!")
+            print("================================================================")
+
+            if p.knows_truth and p.talked_to_voice and p.has_code {
+                print("")
+                print(">>> SECRET ENDING: THE RETURN <<<")
+                print("Instead of killing the transmitter, you reversed the signal phase.")
+                print("Lost Train No. 17 materialized from the dense fog and its doors slid open.")
+                print("You stepped inside. The last whisper on the radio was your own voice:")
+                print("'Never send the signal again.'")
+                print("================== SECRET ENDING ==================")
+            } elif p.knows_truth and p.has_code {
+                print("")
+                print(">>> TRUE ENDING: SILENCING THE FREQUENCY <<<")
+                print("You used the master cipher to silence the transmitter permanently.")
+                print("For the first time in decades, the clock ticked to 03:18 AM.")
+                print("The temporal curse upon the station dissolved into dawn light.")
+                print("================== TRUE ENDING ==================")
+            } else {
+                print("")
+                print(">>> NORMAL ENDING: SURVIVAL <<<")
+                print("The signal died out as the first rays of sunrise pierced the gloom.")
+                print("You survived the night, though its secrets remain buried.")
+                print("================== NORMAL ENDING ==================")
+            }
+            running = false
+        } else {
+            // =====================================================
+            // LOCATION 0 - STATION ENTRANCE
+            // =====================================================
+            if p.location == 0 {
+                print("LOCATION: [0] Station Entrance")
+                print("Rusted turnstiles, flickering neon tubes. The wall clock is frozen at 03:17 AM.")
+                print("")
+                print("  [1] Head into the Station Control Room")
+                print("  [2] Descend the stairs to the Lower Platform")
+                print("  [3] Listen closely to the crackling radio transmitter")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    p.location = 1
+                    msg = "You pushed open the rusted heavy metal door to the control room."
+                } elif c == 2 {
+                    p.location = 2
+                    msg = "You descended the crumbling concrete stairs into the cold, windy platform."
+                } elif c == 3 {
+                    p.sanity = p.sanity - 10
+                    p.talked_to_voice = true
+                    msg = "A distorted, muffled male voice whispers from static: 'If you hear this... do not board the train!' (-10 Sanity)"
+                }
+            }
+            // =====================================================
+            // LOCATION 1 - CONTROL ROOM
+            // =====================================================
+            elif p.location == 1 {
+                print("LOCATION: [1] Station Control Room")
+                print("Dust-caked CRT monitors and yellowed 1986 shift logbooks lie scattered across the desks.")
+                print("")
+                print("  [1] Read the bloodstained shift logbook on the desk")
+                print("  [2] Search the electrical fuse breaker and metal lockers")
+                print("  [3] Return to the Station Entrance")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if p.clues < 1 {
+                        p.clues = p.clues + 1
+                        p.sanity = p.sanity - 5
+                        msg = "Logbook Entry: 'Train 17 scheduled for 03:17 AM departure. Erase all arrival records.' (+1 Clue, -5 Sanity)"
+                    } else {
+                        msg = "You reread the logbook, but find no further notes."
+                    }
+                } elif c == 2 {
+                    if not p.has_light {
+                        p.has_light = true
+                        p.has_key = true
+                        p.has_photo = true
+                        p.clues = p.clues + 1
+                        msg = "Behind the panel you found a Flashlight, a Service Key, and a faded 1986 Photo! (+1 Clue)"
+                    } else {
+                        msg = "You searched the lockers again, but they are empty."
+                    }
+                } elif c == 3 {
+                    p.location = 0
+                    msg = "You stepped back into the station entrance."
+                }
+            }
+            // =====================================================
+            // LOCATION 2 - LOWER PLATFORM
+            // =====================================================
+            elif p.location == 2 {
+                print("LOCATION: [2] Lower Platform & Tracks")
+                print("Pitch black. Cold air sweeps across the tracks accompanied by distant metallic scraping.")
+                print("")
+                print("  [1] Turn on the flashlight and follow the rails toward the Service Tunnel")
+                print("  [2] Search the abandoned ticket booth for audio equipment")
+                print("  [3] Climb back up to the Station Entrance")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if p.has_light {
+                        p.location = 3
+                        msg = "Guided by the flashlight beam, you reached the Maintenance Service Tunnel."
+                    } else {
+                        p.hp = p.hp - 20
+                        msg = "In the pitch dark, you tripped on the rails and gashed your leg against rusted iron! (-20 HP)"
+                    }
+                } elif c == 2 {
+                    if not p.has_tape {
+                        p.has_tape = true
+                        p.clues = p.clues + 1
+                        msg = "Inside the booth you discovered a cassette labeled '03:17 - FINAL AUDIO LOG'! (+1 Clue)"
+                    } else {
+                        msg = "No more tapes remain in the booth."
+                    }
+                } elif c == 3 {
+                    p.location = 0
+                    msg = "You climbed the stairs back up to the entrance."
+                }
+            }
+            // =====================================================
+            // LOCATION 3 - SERVICE TUNNEL
+            // =====================================================
+            elif p.location == 3 {
+                print("LOCATION: [3] Maintenance Service Tunnel")
+                print("Damp walls weeping moisture. Ahead stands a reinforced steel blast shelter door.")
+                print("")
+                print("  [1] Unlock the steel door using the Service Key")
+                print("  [2] Enter through the unlocked blast door into the Signal Chamber")
+                print("  [3] Retreat back to the Lower Platform")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if p.has_key {
+                        p.opened_tunnel = true
+                        msg = "You turned the rusted key... with a heavy metallic groan, the steel door unlocked!"
+                    } else {
+                        msg = "The door is bolted shut! You need the service key from the Control Room."
+                    }
+                } elif c == 2 {
+                    if p.opened_tunnel {
+                        p.location = 4
+                        msg = "You crossed the threshold into the cavernous Secret Signal Chamber."
+                    } else {
+                        msg = "The door is locked tight. Unlock it first!"
+                    }
+                } elif c == 3 {
+                    p.location = 2
+                    msg = "You retreated back to the platform."
+                }
+            }
+            // =====================================================
+            // LOCATION 4 - SECRET SIGNAL CHAMBER
+            // =====================================================
+            elif p.location == 4 {
+                print("LOCATION: [4] Secret Signal Chamber")
+                print("Bundles of thick coaxial cables, an active green phosphor terminal, and a steel safe.")
+                print("")
+                print("  [1] Inspect the experimental project logs on the glowing terminal")
+                print("  [2] Crack open the heavy metal safe")
+                print("  [3] Venture into the deep void chamber at the end of the tunnel")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if not p.knows_truth {
+                        p.knows_truth = true
+                        p.clues = p.clues + 1
+                        msg = "The terminal flashes: '17 passengers projected across temporal fold via 03:17 carrier frequency.' (+1 Clue)"
+                    } else {
+                        msg = "The experimental logs remain displayed on the CRT screen."
+                    }
+                } elif c == 2 {
+                    if not p.has_code {
+                        p.has_code = true
+                        p.clues = p.clues + 1
+                        msg = "Inside the safe you found top secret frequency documents: 'CIPHER: 1986-REV'! (+1 Clue)"
+                    } else {
+                        msg = "The safe is empty; you already took the cipher."
+                    }
+                } elif c == 3 {
+                    p.location = 5
+                    msg = "You advanced slowly toward a low, thrumming locomotive engine hum in the deep darkness..."
+                }
+            }
+            // =====================================================
+            // LOCATION 5 - THE LOST LOCOMOTIVE VOID (FINAL)
+            // =====================================================
+            elif p.location == 5 {
+                print("LOCATION: [5] The Lost Locomotive Void (Final Area)")
+                print("In the center of the cavern, a vintage 1986 steam locomotive engine floats suspended in midair!")
+                print("")
+                print("  [1] Speak into the PA microphone dangling from the ceiling")
+                print("  [2] Approach the floating train carriage door")
+                print("  [3] Fall back to the Signal Chamber")
+
+                let c = wait_for_choice()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    p.sanity = p.sanity - 10
+                    msg = "Intercom crackles: 'If you are listening... connect all the clues to break the loop.' (-10 Sanity)"
+                } elif c == 2 {
+                    if p.clues >= 4 {
+                        p.clues = 5
+                        msg = "All the fragments aligned in your mind. You reached out and touched the train door..."
+                    } else {
+                        p.hp = p.hp - 15
+                        msg = "You haven't uncovered all the clues yet! A wave of temporal distortion throws you backward! (-15 HP)"
+                    }
+                } elif c == 3 {
+                    p.location = 4
+                    msg = "You scrambled back into the Signal Chamber."
+                }
+            }
+        }
+    }
+
+    print("")
+    print("THE LAST SIGNAL has ended.")
+}
