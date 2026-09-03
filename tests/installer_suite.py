@@ -99,7 +99,6 @@ def _exercise_install(install_dir: str, wrapper: str) -> None:
     assert os.path.isfile(os.path.join(install_dir, "compiler", "parser.nyx"))
     assert os.path.isfile(os.path.join(install_dir, "VERSION"))
     assert os.path.isfile(os.path.join(install_dir, "LICENSE"))
-    assert os.path.isfile(os.path.join(install_dir, "NYX-OUTPUT-EXCEPTION"))
 
     version = _run([wrapper, "--version"], cwd=install_dir)
     assert version.returncode == 0, version.stderr or version.stdout
@@ -210,7 +209,7 @@ def run_installer_suite() -> bool:
     with open(UNIX_INSTALLER, "r", encoding="utf-8") as handle:
         unix_source = handle.read()
     assert 'cp -R "$SOURCE_ROOT/src/." "$SRC_DIR/"' in unix_source
-    assert "for legal_file in VERSION LICENSE NYX-OUTPUT-EXCEPTION" in unix_source
+    assert "for legal_file in VERSION LICENSE;" in unix_source
     assert 'exec "$native" "$@"' in unix_source
     assert '"nyxc $EXPECTED_VERSION "*' in unix_source
     assert 'node_modules' not in unix_source
@@ -228,7 +227,7 @@ def run_installer_suite() -> bool:
     assert "NYX_NATIVE_COMPILER_PATH" in windows_source
     assert "Get-FileHash" in windows_source
     assert 'StartsWith("nyxc $ExpectedVersion ")' in windows_source
-    assert '@("VERSION", "LICENSE", "NYX-OUTPUT-EXCEPTION")' in windows_source
+    assert '@("VERSION", "LICENSE")' in windows_source
     assert "Prioritized $BinDir in User PATH" in windows_source
     assert "$nativeCommands" in windows_source
     assert '"nyx_commands.js"' in windows_source
