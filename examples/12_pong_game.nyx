@@ -1,0 +1,121 @@
+#target cpp
+
+// =======================================================
+// Nyx Arcade: ASCII Pong Simulation
+// Demonstrates loops, mutable state, AI tracking, and delay
+// =======================================================
+
+fn main() {
+    let width: int = 26
+    let height: int = 10
+
+    var ball_x: int = 13
+    var ball_y: int = 5
+    var dx: int = 1
+    var dy: int = 1
+
+    var p1_y: int = 4
+    var p2_y: int = 4
+
+    var score_p1: int = 0
+    var score_p2: int = 0
+
+    var frame: int = 0
+    let max_frames: int = 35
+
+    print("=== NYX PONG ARCADE ARENA ===")
+    print("AI-1 (Left) vs AI-2 (Right) - First to score wins!")
+    print("")
+
+    while frame < max_frames {
+        frame = frame + 1
+
+        // Move ball
+        ball_x = ball_x + dx
+        ball_y = ball_y + dy
+
+        // Bounce on top / bottom walls
+        if ball_y <= 1 {
+            ball_y = 1
+            dy = 1
+        }
+        if ball_y >= height - 2 {
+            ball_y = height - 2
+            dy = -1
+        }
+
+        // AI 1 Paddle Tracking
+        if p1_y + 1 < ball_y and p1_y < height - 3 {
+            p1_y = p1_y + 1
+        } elif p1_y + 1 > ball_y and p1_y > 1 {
+            p1_y = p1_y - 1
+        }
+
+        // AI 2 Paddle Tracking
+        if p2_y + 1 < ball_y and p2_y < height - 3 {
+            p2_y = p2_y + 1
+        } elif p2_y + 1 > ball_y and p2_y > 1 {
+            p2_y = p2_y - 1
+        }
+
+        // Paddle Collision (Left: x = 2, Right: x = width - 3)
+        if ball_x <= 2 and ball_y >= p1_y and ball_y <= p1_y + 2 {
+            ball_x = 3
+            dx = 1
+        }
+        if ball_x >= width - 3 and ball_y >= p2_y and ball_y <= p2_y + 2 {
+            ball_x = width - 4
+            dx = -1
+        }
+
+        // Scoring
+        if ball_x <= 0 {
+            score_p2 = score_p2 + 1
+            ball_x = 13
+            ball_y = 5
+            dx = 1
+        }
+        if ball_x >= width - 1 {
+            score_p1 = score_p1 + 1
+            ball_x = 13
+            ball_y = 5
+            dx = -1
+        }
+
+        // Render Frame
+        print($"--- Frame: {frame} | Score: [P1] {score_p1} - {score_p2} [P2] ---")
+        print("+--------------------------+")
+
+        for y in 1..height-2 {
+            var row: string = "|"
+            for x in 1..width-2 {
+                if x == ball_x and y == ball_y {
+                    row = row + "O"
+                } elif x == 2 and y >= p1_y and y <= p1_y + 2 {
+                    row = row + "["
+                } elif x == width - 3 and y >= p2_y and y <= p2_y + 2 {
+                    row = row + "]"
+                } elif x == 13 {
+                    row = row + ":"
+                } else {
+                    row = row + " "
+                }
+            }
+            row = row + "|"
+            print(row)
+        }
+
+        print("+--------------------------+")
+        delay_ms(60)
+    }
+
+    print("")
+    print("=== MATCH FINISHED ===")
+    if score_p1 > score_p2 {
+        print("Winner: AI-1 (Left Paddle)!")
+    } elif score_p2 > score_p1 {
+        print("Winner: AI-2 (Right Paddle)!")
+    } else {
+        print("Result: Epic Draw!")
+    }
+}
