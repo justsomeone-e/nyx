@@ -1,0 +1,344 @@
+#target cpp
+
+import "std/terminal"
+
+struct Player {
+    temp: int,
+    sanity: int,
+    clues: int,
+    has_lantern: bool,
+    has_knife: bool,
+    has_hairpin: bool,
+    has_journal: bool,
+    knows_wheel: bool,
+    heard_whisper: bool,
+    tape_playing: bool,
+    tape_frame: int,
+    location: int
+}
+
+fn clamp_max(val: int, max_val: int) -> int {
+    if val > max_val { return max_val }
+    return val
+}
+
+fn draw_ascii_header(p: Player) {
+    print("========================================================================")
+    print("      ___ _   _   _____ _   _ _____   ____ ___ _   _ _____ ____         ")
+    print("     |_ _| \\ | | |_   _| | | | ____| |  _ \\_ _| \\ | | ____/ ___|        ")
+    print("      | ||  \\| |   | | | |_| |  _|   | |_) | ||  \\| |  _| \\___ \\        ")
+    print("      | || |\\  |   | | |  _  | |___  |  __/| || |\\  | |___ ___) |       ")
+    print("     |___|_| \\_|   |_| |_| |_|_____| |_|  |___|_| \\_|_____|____/        ")
+    print("                \"Where the sun don't ever shine...\"                     ")
+    print("========================================================================")
+
+    // Animated / Reactive Cassette Tape Status
+    var tape_vis: string = "  [CASSETTE]  |O| ==== [ 03:17 AM / UNPLUGGED ] ==== |O|  "
+    if p.tape_playing {
+        if p.tape_frame % 2 == 0 {
+            tape_vis = "  [CASSETTE]  (@) >>>> [ 03:17 AM / UNPLUGGED ] >>>> (o)  [PLAYING]"
+        } else {
+            tape_vis = "  [CASSETTE]  (o) >>>> [ 03:17 AM / UNPLUGGED ] >>>> (@)  [PLAYING]"
+        }
+    } else {
+        tape_vis = "  [CASSETTE]  ( ) ==== [ 03:17 AM / UNPLUGGED ] ==== ( )  [STANDBY]"
+    }
+    print(tape_vis)
+    print("------------------------------------------------------------------------")
+    print(
+        "  BODY TEMP: " + to_string(p.temp) +
+        " C  |  SANITY: " + to_string(p.sanity) +
+        "%  |  CLUES: " + to_string(p.clues) +
+        "/4  |  TAPE: " + (if p.tape_playing { "ON" } else { "OFF" })
+    )
+
+    var inv: string = "  INVENTORY: [ Acoustic Guitar, Lighter"
+    if p.has_lantern {
+        inv = inv + ", Lantern"
+    }
+    if p.has_knife {
+        inv = inv + ", Knife"
+    }
+    if p.has_hairpin {
+        inv = inv + ", Blood Hairpin"
+    }
+    if p.has_journal {
+        inv = inv + ", Torn Journal"
+    }
+    inv = inv + " ]"
+    print(inv)
+    print("========================================================================")
+
+    // ASCII Pine Forest Atmosphere Silhouette
+    print("     /\\          /\\                  /\\          /\\          /\\     ")
+    print("    /  \\        /  \\     /\\         /  \\        /  \\        /  \\    ")
+    print("   /____\\      /____\\   /  \\       /____\\      /____\\      /____\\   ")
+    print("     ||          ||    /____\\        ||          ||          ||     ")
+    print("------------------------------------------------------------------------")
+}
+
+fn draw_ui(p: Player, message: string) {
+    clear_screen()
+    draw_ascii_header(p)
+    print(">> " + message)
+    print("------------------------------------------------------------------------")
+}
+
+fn wait_for_key() -> int {
+    print("")
+    print("Select [1, 2, 3], [G] Guitar, [T] Tape, or [Q] Quit: ")
+
+    while true {
+        let k = read_key()
+        if k == 49 { return 1 }
+        if k == 50 { return 2 }
+        if k == 51 { return 3 }
+        if k == 103 or k == 71 { return 4 } // 'g' or 'G'
+        if k == 116 or k == 84 { return 5 } // 't' or 'T'
+        if k == 113 or k == 81 { return 0 } // 'q' or 'Q'
+    }
+    return 0
+}
+
+fn main() {
+    var p = Player(37, 100, 0, false, false, false, false, false, false, true, 0, 0)
+    var running: bool = true
+    var msg: string = "Night 03:17 AM. Dense mist pierces your lungs on the deserted mountain road."
+
+    while running {
+        p.tape_frame = p.tape_frame + 1
+        draw_ui(p, msg)
+
+        // Endings & Survival Check
+        if p.temp <= 28 {
+            print("")
+            print(">>> I WOULD SHIVER THE WHOLE NIGHT THROUGH <<<")
+            print("Your core body temperature plunged below 28 C.")
+            print("Stiffened fingers can no longer grip the guitar frets.")
+            print("You collapsed into the bed of frozen pine needles.")
+            print("==================== DEATH BY HYPOTHERMIA ====================")
+            running = false
+        } elif p.sanity <= 0 {
+            print("")
+            print(">>> LOST WHERE THE SUN DON'T EVER SHINE <<<")
+            print("The whispers turned into a screaming chorus in your head.")
+            print("You cast your guitar aside and fled blindly into the dark labyrinth.")
+            print("==================== LOSS OF SANITY ====================")
+            running = false
+        } else {
+            // =====================================================
+            // LOCATION 0 - CROSSROADS IN THE PINES
+            // =====================================================
+            if p.location == 0 {
+                print("LOCATION: [0] Crossroads in the Pines")
+                print("Old road fork. A cold wind carries the distant lyric:")
+                print("'My girl, my girl... Tell me where did you sleep last night?'")
+                print("")
+                print("  [1] Walk down the left trail into the deep Pine Forest")
+                print("  [2] Approach the dark, decaying Log Cabin")
+                print("  [3] Descend toward the abandoned Cold Train Tracks")
+
+                let c = wait_for_key()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    p.location = 1
+                    p.temp = p.temp - 2
+                    p.sanity = p.sanity - 5
+                    msg = "Bitter winds howl as you step under the towering pine canopy. (-2 C, -5 Sanity)"
+                } elif c == 2 {
+                    p.location = 2
+                    msg = "You walked up the creaking timber porch to the cabin door."
+                } elif c == 3 {
+                    p.location = 3
+                    msg = "You slid down the frozen gravel embankment onto the cold iron rails."
+                } elif c == 4 {
+                    // Strum Guitar
+                    p.sanity = clamp_max(p.sanity + 10, 100)
+                    msg = "You plucked Em -> A -> G -> Bm on your nylon strings... (+10 Sanity)"
+                } elif c == 5 {
+                    // Toggle Tape
+                    p.tape_playing = not p.tape_playing
+                    msg = if p.tape_playing { "Magnetic tape started spinning... Kurt's acoustic voice echoes." } else { "Tape player paused. Silence falls." }
+                }
+            }
+            // =====================================================
+            // LOCATION 1 - DEEP PINES
+            // =====================================================
+            elif p.location == 1 {
+                print("LOCATION: [1] Deep Pines: Where The Sun Don't Ever Shine")
+                print("Trees are so dense they blot out the stars. Frost cuts like razor blades.")
+                print("")
+                print("  [1] Inspect the scorched campfire and torn notebook page")
+                print("  [2] Play 'Where Did You Sleep Last Night' into the dark woods")
+                print("  [3] Return to the Crossroads")
+
+                let c = wait_for_key()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if not p.has_journal {
+                        p.has_journal = true
+                        p.clues = p.clues + 1
+                        msg = "Torn Note: 'They buried me under the pines, but the locomotive took my head...' (+1 Clue)"
+                    } else {
+                        msg = "You already took the torn journal page."
+                    }
+                } elif c == 2 {
+                    p.sanity = clamp_max(p.sanity + 25, 100)
+                    p.heard_whisper = true
+                    msg = "Your chords resonate in the pines. A weeping whisper answers: 'Thank you...' (+25 Sanity)"
+                } elif c == 3 {
+                    p.location = 0
+                    msg = "You retraced your path back to the Crossroads."
+                } elif c == 4 {
+                    p.sanity = clamp_max(p.sanity + 10, 100)
+                    msg = "A warm acoustic chord echoes between the frosty trunks. (+10 Sanity)"
+                } elif c == 5 {
+                    p.tape_playing = not p.tape_playing
+                    msg = if p.tape_playing { "Cassette resumed." } else { "Cassette paused." }
+                }
+            }
+            // =====================================================
+            // LOCATION 2 - LOG CABIN
+            // =====================================================
+            elif p.location == 2 {
+                print("LOCATION: [2] Abandoned Log Cabin")
+                print("Rotting wood smells of damp mold. Cold air seeps through broken window glass.")
+                print("")
+                print("  [1] Search the table drawers and cupboards")
+                print("  [2] Check the pockets of the torn hunter's jacket on the wall")
+                print("  [3] Return outside to the Crossroads")
+
+                let c = wait_for_key()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if not p.has_lantern {
+                        p.has_lantern = true
+                        p.has_knife = true
+                        p.clues = p.clues + 1
+                        msg = "Found a working Kerosene Lantern and a sharp Hunting Knife! (+1 Clue)"
+                    } else {
+                        msg = "The drawers are empty."
+                    }
+                } elif c == 2 {
+                    if not p.has_hairpin {
+                        p.has_hairpin = true
+                        p.clues = p.clues + 1
+                        p.sanity = p.sanity - 10
+                        msg = "Inside the pocket: a silver Hairpin caked in dried blood! (-10 Sanity, +1 Clue)"
+                    } else {
+                        msg = "Nothing else remains in the jacket pockets."
+                    }
+                } elif c == 3 {
+                    p.location = 0
+                    msg = "You stepped out of the cabin into the freezing fog."
+                } elif c == 4 {
+                    p.sanity = clamp_max(p.sanity + 10, 100)
+                    msg = "You strummed softly beside the cold hearth. (+10 Sanity)"
+                } elif c == 5 {
+                    p.tape_playing = not p.tape_playing
+                    msg = if p.tape_playing { "Cassette resumed." } else { "Cassette paused." }
+                }
+            }
+            // =====================================================
+            // LOCATION 3 - COLD TRAIN TRACKS
+            // =====================================================
+            elif p.location == 3 {
+                print("LOCATION: [3] Cold Train Tracks")
+                print("Rusted rails where no train has run since 1986. A giant drive wheel sits on the tracks.")
+                print("'Her head was found in a driving wheel, but her body never was found...'")
+                print("")
+                print("  [1] Inspect the giant locomotive drive wheel")
+                print("  [2] Walk into the dark tunnel toward the Hidden Vale")
+                print("  [3] Climb back up to the Crossroads")
+
+                let c = wait_for_key()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    if p.has_lantern {
+                        if not p.knows_wheel {
+                            p.knows_wheel = true
+                            p.clues = p.clues + 1
+                            p.sanity = p.sanity - 15
+                            msg = "Under lantern light, you see initials and tangled hair caught in the drive wheel! (-15 Sanity, +1 Clue)"
+                        } else {
+                            msg = "The gouges on the drive wheel look freshly scraped."
+                        }
+                    } else {
+                        p.temp = p.temp - 4
+                        p.sanity = p.sanity - 10
+                        msg = "In the dark your hands froze against the icy iron! You need a lantern! (-4 C, -10 Sanity)"
+                    }
+                } elif c == 2 {
+                    if p.clues >= 3 {
+                        p.location = 4
+                        msg = "Passing through the dark tunnel, you entered the Hidden Vale..."
+                    } else {
+                        p.sanity = p.sanity - 10
+                        msg = "A terrifying spectral siren echoes from the tunnel. You need more clues to venture in! (-10 Sanity)"
+                    }
+                } elif c == 3 {
+                    p.location = 0
+                    msg = "You scrambled up the embankment back to the road."
+                } elif c == 4 {
+                    p.sanity = clamp_max(p.sanity + 10, 100)
+                    msg = "You strummed an acoustic chord over the frozen rails. (+10 Sanity)"
+                } elif c == 5 {
+                    p.tape_playing = not p.tape_playing
+                    msg = if p.tape_playing { "Cassette resumed." } else { "Cassette paused." }
+                }
+            }
+            // =====================================================
+            // LOCATION 4 - FINAL DESTINATION: THE HIDDEN VALE
+            // =====================================================
+            elif p.location == 4 {
+                print("LOCATION: [4] Final Destination: The Hidden Vale")
+                print("A secluded mist-filled clearing with a single gravestone and a rusted bronze train bell.")
+                print("")
+                print("  [1] Play the final acoustic song on your guitar to release her soul")
+                print("  [2] Ring the bronze train bell to summon the phantom locomotive")
+                print("  [3] Escape toward the first light of dawn")
+
+                let c = wait_for_key()
+                if c == 0 { running = false }
+                elif c == 1 {
+                    // Melancholic True Secret Ending
+                    clear_screen()
+                    print("========================================================================")
+                    print("                SECRET ENDING: FAREWELL IN THE PINES                    ")
+                    print("========================================================================")
+                    print("You knelt beside the gravestone and played the chords until the end.")
+                    print("As the final acoustic note decayed, the thick mountain mist lifted.")
+                    print("Pale dawn sunlight filtered through the pine needles.")
+                    print("A final whisper drifted on the breeze: 'I'm not cold anymore...'")
+                    print("You took a deep breath, like Kurt Cobain's final gasp. Peace arrived.")
+                    print("======================== CONGRATULATIONS ==============================")
+                    running = false
+                } elif c == 2 {
+                    // Locomotive Ending
+                    clear_screen()
+                    print("========================================================================")
+                    print("               TRAGIC ENDING: THE CALL OF THE TRACKS                    ")
+                    print("========================================================================")
+                    print("You rang the bronze bell. Spectral headlights flared in the fog.")
+                    print("A 1986 steam engine arrived and its carriage door slid open.")
+                    print("You stepped aboard. Time froze at 03:17 AM forever.")
+                    print("============================= GAME OVER ================================")
+                    running = false
+                } elif c == 3 {
+                    // Escape Ending
+                    clear_screen()
+                    print("========================================================================")
+                    print("                     NORMAL ENDING: SURVIVAL                            ")
+                    print("========================================================================")
+                    print("You ran with all your remaining breath toward the highway.")
+                    print("You survived the night, though the mystery of the pines remains buried.")
+                    print("============================= GAME OVER ================================")
+                    running = false
+                }
+            }
+        }
+    }
+
+    print("")
+    print("IN THE PINES has ended.")
+}
