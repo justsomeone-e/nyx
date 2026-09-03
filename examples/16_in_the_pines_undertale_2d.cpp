@@ -1,5 +1,4 @@
 #include <windows.h>
-#include <mmsystem.h>
 #include <vector>
 #include <string>
 #include <cmath>
@@ -11,10 +10,9 @@ using std::max;
 
 #pragma comment(lib, "gdi32.lib")
 #pragma comment(lib, "user32.lib")
-#pragma comment(lib, "winmm.lib")
 
 // ==============================================================
-// 1. CONSTANTS & COLOR PALETTE
+// 1. CONSTANTS & PALETTE
 // ==============================================================
 const int INTERNAL_W = 640;
 const int INTERNAL_H = 480;
@@ -23,27 +21,27 @@ uint32_t framebuffer[INTERNAL_W * INTERNAL_H];
 // Color definitions (0x00RRGGBB)
 const uint32_t C_BLACK        = 0x000000;
 const uint32_t C_WHITE        = 0xFFFFFF;
-const uint32_t C_SNOW_GROUND   = 0x0C121D;
-const uint32_t C_PINE_DEEP    = 0x091B11;
-const uint32_t C_PINE_MED     = 0x143522;
-const uint32_t C_PINE_LIGHT   = 0x225436;
+const uint32_t C_SNOW_GROUND  = 0x0C1322;
+const uint32_t C_PINE_DEEP    = 0x0A1C12;
+const uint32_t C_PINE_MED     = 0x143823;
+const uint32_t C_PINE_LIGHT   = 0x225938;
 const uint32_t C_SNOW_WHITE   = 0xEDF2F7;
-const uint32_t C_SNOW_BLUE    = 0xA0AEC0;
-const uint32_t C_WOOD_SHADOW  = 0x24140D;
-const uint32_t C_WOOD_LOG     = 0x442718;
-const uint32_t C_WOOD_LIGHT   = 0x6B3E26;
-const uint32_t C_ROOF_SHINGLE = 0x2D1B12;
+const uint32_t C_SNOW_BLUE    = 0x94A3B8;
+const uint32_t C_WOOD_SHADOW  = 0x22130C;
+const uint32_t C_WOOD_LOG     = 0x422617;
+const uint32_t C_WOOD_LIGHT   = 0x6E4028;
+const uint32_t C_ROOF_SHINGLE = 0x281810;
 const uint32_t C_SOUL_RED     = 0xFF0000;
 const uint32_t C_LANTERN_AMBER= 0xF59E0B;
 const uint32_t C_ICE_BLUE     = 0x38BDF8;
 const uint32_t C_YELLOW_TEXT  = 0xFFFF00;
 const uint32_t C_ORANGE_BTN   = 0xFF9900;
-const uint32_t C_RAIL_TIE     = 0x332015;
+const uint32_t C_RAIL_TIE     = 0x301E14;
 const uint32_t C_RAIL_STEEL   = 0x64748B;
 const uint32_t C_FIRE_ORANGE  = 0xEA580C;
 
 // ==============================================================
-// 2. PIXEL DRAWING PRIMITIVES & DYNAMIC LIGHTING
+// 2. DRAWING PRIMITIVES
 // ==============================================================
 inline void put_pixel(int x, int y, uint32_t color) {
     if (x >= 0 && x < INTERNAL_W && y >= 0 && y < INTERNAL_H) {
@@ -84,7 +82,6 @@ void draw_circle(int cx, int cy, int r, uint32_t color) {
     }
 }
 
-// Draw Soul Heart
 void draw_soul_heart(int hx, int hy, uint32_t color) {
     const char* heart_map[10] = {
         "  ..    ..  ",
@@ -107,168 +104,184 @@ void draw_soul_heart(int hx, int hy, uint32_t color) {
     }
 }
 
-// Rich Texturing: Gnarled Snowy Pine Tree
 void draw_rich_pine_tree(int tx, int ty) {
-    // Trunk
     draw_rect(tx + 22, ty + 60, 12, 28, C_WOOD_SHADOW);
     draw_rect(tx + 25, ty + 60, 6, 28, C_WOOD_LOG);
 
-    // Bough 3 (Bottom)
     for (int y = 0; y < 28; y++) {
         int w = y * 2 + 10;
         draw_rect(tx + 28 - w / 2, ty + 42 + y, w, 1, C_PINE_DEEP);
     }
-    // Snow Drift Layer 3
     draw_rect(tx + 4, ty + 56, 48, 5, C_SNOW_WHITE);
     draw_rect(tx + 8, ty + 54, 40, 2, C_SNOW_BLUE);
 
-    // Bough 2 (Middle)
     for (int y = 0; y < 24; y++) {
         int w = y * 2 + 8;
         draw_rect(tx + 28 - w / 2, ty + 22 + y, w, 1, C_PINE_MED);
     }
-    // Snow Drift Layer 2
     draw_rect(tx + 10, ty + 36, 36, 4, C_SNOW_WHITE);
 
-    // Bough 1 (Top Crown)
     for (int y = 0; y < 22; y++) {
         int w = y * 2 + 4;
         draw_rect(tx + 28 - w / 2, ty + y, w, 1, C_PINE_LIGHT);
     }
-    // Snow Cap
     draw_rect(tx + 22, ty + 6, 12, 4, C_SNOW_WHITE);
 }
 
-// Rich Texturing: Detailed Log Cabin
-void draw_rich_cabin(int cx, int cy, bool has_lantern, int fire_anim) {
-    // 1. Horizontal Cedar Logs with grooves
+void draw_rich_cabin(int cx, int cy, bool has_lantern) {
     for (int log = 0; log < 7; log++) {
         int ly = cy + 40 + log * 13;
         draw_rect(cx, ly, 160, 11, C_WOOD_LOG);
-        draw_rect(cx, ly + 11, 160, 2, C_WOOD_SHADOW);     // Shadow between logs
-        draw_rect(cx + 4, ly + 2, 152, 2, C_WOOD_LIGHT);   // Log highlight
+        draw_rect(cx, ly + 11, 160, 2, C_WOOD_SHADOW);
+        draw_rect(cx + 4, ly + 2, 152, 2, C_WOOD_LIGHT);
     }
 
-    // 2. Corner Notch Posts
     draw_rect(cx, cy + 38, 12, 94, C_WOOD_SHADOW);
     draw_rect(cx + 148, cy + 38, 12, 94, C_WOOD_SHADOW);
 
-    // 3. Wooden Door with iron hinges
-    draw_rect(cx + 66, cy + 82, 34, 50, 0x1A0F0A);
+    // Door
+    draw_rect(cx + 66, cy + 82, 34, 50, 0x180D08);
     draw_rect_outline(cx + 66, cy + 82, 34, 50, 2, C_WOOD_LIGHT);
-    draw_rect(cx + 92, cy + 106, 4, 4, 0xD4D4D8); // Iron knob
+    draw_rect(cx + 92, cy + 106, 4, 4, 0xD4D4D8);
 
-    // 4. Overhanging Shingle Roof with deep snow drifts
+    // Roof
     draw_rect(cx - 16, cy + 20, 192, 24, C_ROOF_SHINGLE);
-    draw_rect(cx - 12, cy + 16, 184, 8, C_SNOW_WHITE); // Thick snow blanket
+    draw_rect(cx - 12, cy + 16, 184, 8, C_SNOW_WHITE);
     draw_rect(cx - 8, cy + 22, 176, 3, C_SNOW_BLUE);
 
-    // 5. Hearth Chimney with rising smoke puffs
+    // Chimney
     draw_rect(cx + 120, cy - 8, 20, 32, 0x374151);
     draw_rect(cx + 118, cy - 12, 24, 6, 0x1F2937);
 
-    // 6. Glowing Window
+    // Window
     uint32_t win_glow = has_lantern ? C_LANTERN_AMBER : 0x1E293B;
     draw_rect(cx + 20, cy + 62, 32, 32, win_glow);
-    draw_rect(cx + 34, cy + 62, 4, 32, C_WOOD_SHADOW); // Window frame cross
+    draw_rect(cx + 34, cy + 62, 4, 32, C_WOOD_SHADOW);
     draw_rect(cx + 20, cy + 76, 32, 4, C_WOOD_SHADOW);
 }
 
-// Wanderer Character Sprite (Kurt / Frisk)
 void draw_rich_wanderer(int px, int py, int dir, int walk_frame) {
     int leg_offset = (walk_frame % 2 == 0) ? 0 : 3;
 
-    // Acoustic Guitar strapped to back
     int gx = (dir == 1) ? (px + 16) : (px - 8);
-    draw_rect(gx, py + 8, 10, 20, 0xD97706);     // Honey mahogany body
-    draw_circle(gx + 5, py + 18, 3, 0x180E05);   // Soundhole
-    draw_rect(gx + 3, py - 2, 4, 11, 0xFEF08A);  // Maple neck & tuning pegs
+    draw_rect(gx, py + 8, 10, 20, 0xD97706);
+    draw_circle(gx + 5, py + 18, 3, 0x180E05);
+    draw_rect(gx + 3, py - 2, 4, 11, 0xFEF08A);
 
-    // Parka Coat with highlights and shadow folds
     draw_rect(px, py + 10, 18, 18, 0x0369A1);
     draw_rect(px + 4, py + 12, 11, 15, 0x0284C7);
 
-    // Warm Knitted Crimson Scarf
     draw_rect(px - 2, py + 8, 22, 5, 0xBE123C);
-    draw_rect(px + 2, py + 13, 5, 8, 0x9F1239); // Hanging scarf tail
+    draw_rect(px + 2, py + 13, 5, 8, 0x9F1239);
 
-    // Face, Features & Messy Grunge Hair
     draw_rect(px + 3, py + 2, 12, 8, 0xFED7AA);
-    draw_rect(px + 5, py + 5, 2, 2, 0x1E293B);   // Eye left
-    draw_rect(px + 11, py + 5, 2, 2, 0x1E293B);  // Eye right
+    draw_rect(px + 5, py + 5, 2, 2, 0x1E293B);
+    draw_rect(px + 11, py + 5, 2, 2, 0x1E293B);
 
-    // Blonde Grunge Hair Fringe
     draw_rect(px + 1, py - 3, 16, 6, 0xEAB308);
     draw_rect(px + 2, py + 1, 4, 5, 0xCA8A04);
     draw_rect(px + 12, py + 1, 4, 5, 0xCA8A04);
 
-    // Winter Boots
     draw_rect(px + 2, py + 28, 5, 6 - leg_offset, 0x1E293B);
     draw_rect(px + 11, py + 28, 5, 6 + leg_offset, 0x1E293B);
 }
 
-// Monospace Font Bitmap
+// Gorgeous High-Quality Undertale Boss: The Lost Ghost Girl
+void draw_ghost_girl(int gx, int gy, bool pacified, int anim_tick) {
+    uint32_t color = pacified ? C_YELLOW_TEXT : 0xF8FAFC;
+    uint32_t shadow = pacified ? 0xCA8A04 : 0x94A3B8;
+
+    int float_y = (int)(sin(anim_tick * 0.08f) * 6.0f);
+    int y = gy + float_y;
+
+    // 1. Flowing Ethereal Ghost Hair
+    draw_rect(gx - 26, y - 24, 52, 24, shadow);
+    draw_rect(gx - 22, y - 26, 44, 26, color);
+    draw_rect(gx - 28, y - 10, 10, 36, shadow);
+    draw_rect(gx + 18, y - 10, 10, 36, shadow);
+
+    // 2. Ghost Face & Tear Streams
+    draw_circle(gx, y - 8, 18, color);
+    draw_rect(gx - 8, y - 12, 4, 6, 0x000000); // Eyes
+    draw_rect(gx + 4, y - 12, 4, 6, 0x000000);
+    // Cyan Teardrops on cheeks
+    draw_rect(gx - 8, y - 4, 3, 10, C_ICE_BLUE);
+    draw_rect(gx + 5, y - 4, 3, 10, C_ICE_BLUE);
+
+    // 3. Victorian Gothic Ruffled Dress
+    draw_rect(gx - 20, y + 10, 40, 15, color);
+    for (int r = 0; r < 35; r++) {
+        int w = 40 + r * 2;
+        draw_rect(gx - w / 2, y + 25 + r, w, 1, (r % 4 == 0) ? shadow : color);
+    }
+
+    // 4. Spectral Hands clutching an acoustic music sheet / hairpin
+    draw_circle(gx - 10, y + 22, 4, color);
+    draw_circle(gx + 10, y + 22, 4, color);
+    draw_rect(gx - 6, y + 18, 12, 12, pacified ? C_YELLOW_TEXT : 0xE2E8F0);
+}
+
 void draw_char(char c, int x, int y, uint32_t color, int scale = 2) {
     static const uint8_t font_data[95][7] = {
-        {0x00,0x00,0x00,0x00,0x00,0x00,0x00}, // ' '
-        {0x04,0x04,0x04,0x04,0x00,0x00,0x04}, // '!'
-        {0x0A,0x0A,0x00,0x00,0x00,0x00,0x00}, // '"'
-        {0x0A,0x1F,0x0A,0x0A,0x1F,0x0A,0x00}, // '#'
-        {0x04,0x0F,0x14,0x0E,0x05,0x1E,0x04}, // '$'
-        {0x18,0x19,0x02,0x04,0x08,0x13,0x03}, // '%'
-        {0x08,0x14,0x14,0x08,0x15,0x12,0x0D}, // '&'
-        {0x04,0x04,0x00,0x00,0x00,0x00,0x00}, // '\''
-        {0x02,0x04,0x08,0x08,0x08,0x04,0x02}, // '('
-        {0x08,0x04,0x02,0x02,0x02,0x04,0x08}, // ')'
-        {0x00,0x0A,0x04,0x1F,0x04,0x0A,0x00}, // '*'
-        {0x00,0x04,0x04,0x1F,0x04,0x04,0x00}, // '+'
-        {0x00,0x00,0x00,0x00,0x00,0x04,0x08}, // ','
-        {0x00,0x00,0x00,0x1F,0x00,0x00,0x00}, // '-'
-        {0x00,0x00,0x00,0x00,0x00,0x04,0x04}, // '.'
-        {0x01,0x02,0x04,0x08,0x10,0x00,0x00}, // '/'
-        {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E}, // '0'
-        {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E}, // '1'
-        {0x0E,0x11,0x01,0x06,0x08,0x10,0x1F}, // '2'
-        {0x1E,0x01,0x01,0x0E,0x01,0x01,0x1E}, // '3'
-        {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02}, // '4'
-        {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E}, // '5'
-        {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E}, // '6'
-        {0x1F,0x01,0x02,0x04,0x08,0x08,0x08}, // '7'
-        {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E}, // '8'
-        {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C}, // '9'
-        {0x00,0x04,0x04,0x00,0x04,0x04,0x00}, // ':'
-        {0x00,0x04,0x04,0x00,0x04,0x08,0x00}, // ';'
-        {0x02,0x04,0x08,0x10,0x08,0x04,0x02}, // '<'
-        {0x00,0x1F,0x00,0x1F,0x00,0x00,0x00}, // '='
-        {0x08,0x04,0x02,0x01,0x02,0x04,0x08}, // '>'
-        {0x0E,0x11,0x01,0x06,0x04,0x00,0x04}, // '?'
-        {0x0E,0x11,0x17,0x15,0x17,0x10,0x0F}, // '@'
-        {0x0E,0x11,0x11,0x1F,0x11,0x11,0x11}, // 'A'
-        {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E}, // 'B'
-        {0x0E,0x11,0x10,0x10,0x10,0x11,0x0E}, // 'C'
-        {0x1C,0x12,0x11,0x11,0x11,0x12,0x1C}, // 'D'
-        {0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F}, // 'E'
-        {0x1F,0x10,0x10,0x1E,0x10,0x10,0x10}, // 'F'
-        {0x0E,0x11,0x10,0x17,0x11,0x11,0x0F}, // 'G'
-        {0x11,0x11,0x11,0x1F,0x11,0x11,0x11}, // 'H'
-        {0x0E,0x04,0x04,0x04,0x04,0x04,0x0E}, // 'I'
-        {0x07,0x02,0x02,0x02,0x02,0x12,0x0C}, // 'J'
-        {0x11,0x12,0x14,0x18,0x14,0x12,0x11}, // 'K'
-        {0x10,0x10,0x10,0x10,0x10,0x10,0x1F}, // 'L'
-        {0x11,0x1B,0x15,0x15,0x11,0x11,0x11}, // 'M'
-        {0x11,0x19,0x15,0x13,0x11,0x11,0x11}, // 'N'
-        {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E}, // 'O'
-        {0x1E,0x11,0x11,0x1E,0x10,0x10,0x10}, // 'P'
-        {0x0E,0x11,0x11,0x11,0x15,0x12,0x0D}, // 'Q'
-        {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11}, // 'R'
-        {0x0E,0x11,0x10,0x0E,0x01,0x11,0x0E}, // 'S'
-        {0x1F,0x04,0x04,0x04,0x04,0x04,0x04}, // 'T'
-        {0x11,0x11,0x11,0x11,0x11,0x11,0x0E}, // 'U'
-        {0x11,0x11,0x11,0x11,0x11,0x0A,0x04}, // 'V'
-        {0x11,0x11,0x11,0x15,0x15,0x1B,0x11}, // 'W'
-        {0x11,0x11,0x0A,0x04,0x0A,0x11,0x11}, // 'X'
-        {0x11,0x11,0x0A,0x04,0x04,0x04,0x04}, // 'Y'
-        {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}  // 'Z'
+        {0x00,0x00,0x00,0x00,0x00,0x00,0x00},
+        {0x04,0x04,0x04,0x04,0x00,0x00,0x04},
+        {0x0A,0x0A,0x00,0x00,0x00,0x00,0x00},
+        {0x0A,0x1F,0x0A,0x0A,0x1F,0x0A,0x00},
+        {0x04,0x0F,0x14,0x0E,0x05,0x1E,0x04},
+        {0x18,0x19,0x02,0x04,0x08,0x13,0x03},
+        {0x08,0x14,0x14,0x08,0x15,0x12,0x0D},
+        {0x04,0x04,0x00,0x00,0x00,0x00,0x00},
+        {0x02,0x04,0x08,0x08,0x08,0x04,0x02},
+        {0x08,0x04,0x02,0x02,0x02,0x04,0x08},
+        {0x00,0x0A,0x04,0x1F,0x04,0x0A,0x00},
+        {0x00,0x04,0x04,0x1F,0x04,0x04,0x00},
+        {0x00,0x00,0x00,0x00,0x00,0x04,0x08},
+        {0x00,0x00,0x00,0x1F,0x00,0x00,0x00},
+        {0x00,0x00,0x00,0x00,0x00,0x04,0x04},
+        {0x01,0x02,0x04,0x08,0x10,0x00,0x00},
+        {0x0E,0x11,0x13,0x15,0x19,0x11,0x0E},
+        {0x04,0x0C,0x04,0x04,0x04,0x04,0x0E},
+        {0x0E,0x11,0x01,0x06,0x08,0x10,0x1F},
+        {0x1E,0x01,0x01,0x0E,0x01,0x01,0x1E},
+        {0x02,0x06,0x0A,0x12,0x1F,0x02,0x02},
+        {0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E},
+        {0x06,0x08,0x10,0x1E,0x11,0x11,0x0E},
+        {0x1F,0x01,0x02,0x04,0x08,0x08,0x08},
+        {0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E},
+        {0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C},
+        {0x00,0x04,0x04,0x00,0x04,0x04,0x00},
+        {0x00,0x04,0x04,0x00,0x04,0x08,0x00},
+        {0x02,0x04,0x08,0x10,0x08,0x04,0x02},
+        {0x00,0x1F,0x00,0x1F,0x00,0x00,0x00},
+        {0x08,0x04,0x02,0x01,0x02,0x04,0x08},
+        {0x0E,0x11,0x01,0x06,0x04,0x00,0x04},
+        {0x0E,0x11,0x17,0x15,0x17,0x10,0x0F},
+        {0x0E,0x11,0x11,0x1F,0x11,0x11,0x11},
+        {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E},
+        {0x0E,0x11,0x10,0x10,0x10,0x11,0x0E},
+        {0x1C,0x12,0x11,0x11,0x11,0x12,0x1C},
+        {0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F},
+        {0x1F,0x10,0x10,0x1E,0x10,0x10,0x10},
+        {0x0E,0x11,0x10,0x17,0x11,0x11,0x0F},
+        {0x11,0x11,0x11,0x1F,0x11,0x11,0x11},
+        {0x0E,0x04,0x04,0x04,0x04,0x04,0x0E},
+        {0x07,0x02,0x02,0x02,0x02,0x12,0x0C},
+        {0x11,0x12,0x14,0x18,0x14,0x12,0x11},
+        {0x10,0x10,0x10,0x10,0x10,0x10,0x1F},
+        {0x11,0x1B,0x15,0x15,0x11,0x11,0x11},
+        {0x11,0x19,0x15,0x13,0x11,0x11,0x11},
+        {0x0E,0x11,0x11,0x11,0x11,0x11,0x0E},
+        {0x1E,0x11,0x11,0x1E,0x10,0x10,0x10},
+        {0x0E,0x11,0x11,0x11,0x15,0x12,0x0D},
+        {0x1E,0x11,0x11,0x1E,0x14,0x12,0x11},
+        {0x0E,0x11,0x10,0x0E,0x01,0x11,0x0E},
+        {0x1F,0x04,0x04,0x04,0x04,0x04,0x04},
+        {0x11,0x11,0x11,0x11,0x11,0x11,0x0E},
+        {0x11,0x11,0x11,0x11,0x11,0x0A,0x04},
+        {0x11,0x11,0x11,0x15,0x15,0x1B,0x11},
+        {0x11,0x11,0x0A,0x04,0x0A,0x11,0x11},
+        {0x11,0x11,0x0A,0x04,0x04,0x04,0x04},
+        {0x1F,0x01,0x02,0x04,0x08,0x10,0x1F}
     };
 
     if (c >= 'a' && c <= 'z') c = c - 'a' + 'A';
@@ -299,17 +312,17 @@ void draw_string(const std::string& str, int x, int y, uint32_t color, int scale
 }
 
 // ==============================================================
-// 3. GAME STATE, INTERACTION & BATTLE
+// 3. GAME STATE & COLLISION SYSTEM
 // ==============================================================
 enum GameLocation { LOC_OUTSIDE, LOC_INSIDE_CABIN };
 GameLocation g_loc = LOC_OUTSIDE;
 
-enum GameState { STATE_OVERWORLD, STATE_BATTLE, STATE_DIALOG };
+enum GameState { STATE_OVERWORLD, STATE_BATTLE, STATE_GAMEOVER };
 GameState g_state = STATE_OVERWORLD;
 
 struct Player {
     float x = 320;
-    float y = 340;
+    float y = 300;
     int dir = 0;
     int walk_frame = 0;
     int walk_timer = 0;
@@ -318,6 +331,51 @@ struct Player {
     bool has_hairpin = false;
     int clues = 0;
 } g_player;
+
+// Solid World Collision Box
+struct AABB {
+    int x, y, w, h;
+};
+
+// Check if moving to (nx, ny) collides with an obstacle
+bool check_collision(float nx, float ny) {
+    int pw = 18;
+    int ph = 14;
+    int px = (int)nx;
+    int py = (int)ny + 20; // Feet collision box
+
+    if (g_loc == LOC_OUTSIDE) {
+        // 1. World Bounds (Cannot walk off the screen into the void!)
+        if (px < 25 || px > 585 || py < 35 || py > 430) return true;
+
+        // 2. Cabin Roof & Walls Solid Collision Box
+        // Doorway is at x: 300 to 340, y: 130 to 150
+        bool in_doorway = (px >= 295 && px <= 345 && py >= 115 && py <= 155);
+        if (!in_doorway) {
+            if (px + pw > 230 && px < 410 && py + ph > 45 && py < 145) return true;
+        }
+
+        // 3. Tree Trunks
+        int tree_coords[6][2] = {{30, 30}, {120, 15}, {40, 260}, {110, 350}, {430, 30}, {450, 330}};
+        for (int i = 0; i < 6; i++) {
+            int tx = tree_coords[i][0] + 18;
+            int ty = tree_coords[i][1] + 60;
+            if (px + pw > tx && px < tx + 20 && py + ph > ty && py < ty + 25) return true;
+        }
+    } else {
+        // Cabin Interior Bounds
+        if (px < 90 || px > 530 || py < 85 || py > 395) {
+            // Exit door at bottom center
+            if (py >= 385 && px >= 285 && px <= 355) return false;
+            return true;
+        }
+        // Fireplace collision
+        if (px + pw > 265 && px < 375 && py < 95) return true;
+        // Table collision
+        if (px + pw > 115 && px < 200 && py + ph > 155 && py < 215) return true;
+    }
+    return false;
+}
 
 struct Footprint {
     int x, y;
@@ -338,7 +396,7 @@ struct BattleSystem {
     int box_w = 260;
     int box_h = 140;
     int selected_btn = 0;
-    int turn = 0; // 0: Menu, 1: Attack, 2: Strum
+    int turn = 0;
     int turn_timer = 0;
     float timing_x = 0;
     bool enemy_pacified = false;
@@ -351,13 +409,11 @@ struct Bullet {
 };
 std::vector<Bullet> g_bullets;
 
-// Active Dialogue System
 bool g_dialog_open = false;
 std::string g_dialog_line1 = "";
 std::string g_dialog_line2 = "";
 std::string g_interact_prompt = "";
 
-// Fullscreen mode state
 bool g_fullscreen = false;
 RECT g_window_rect;
 
@@ -388,28 +444,27 @@ void toggle_fullscreen(HWND hwnd) {
 // ==============================================================
 // 4. OVERWORLD RENDERER
 // ==============================================================
-int g_fire_clock = 0;
+int g_anim_clock = 0;
 
 void render_overworld() {
     clear_buffer(C_SNOW_GROUND);
 
     if (g_loc == LOC_OUTSIDE) {
-        // Footprints
         for (const auto& fp : g_footprints) {
             draw_rect(fp.x, fp.y, 4, 3, 0x162132);
         }
 
-        // Converging Cold Railroad Tracks on Right
+        // Railroad
         draw_rect(530, 0, 8, INTERNAL_H, C_RAIL_STEEL);
         draw_rect(570, 0, 8, INTERNAL_H, C_RAIL_STEEL);
         for (int y = 0; y < INTERNAL_H; y += 22) {
             draw_rect(520, y, 68, 5, C_RAIL_TIE);
         }
 
-        // Giant Locomotive Drive Wheel
+        // Locomotive Wheel
         draw_circle(554, 210, 28, 0x475569);
         draw_circle(554, 210, 16, 0x1E293B);
-        draw_rect(550, 185, 8, 50, 0x94A3B8); // Balance bar
+        draw_rect(550, 185, 8, 50, 0x94A3B8);
 
         // Pine Trees
         draw_rich_pine_tree(30, 30);
@@ -419,13 +474,13 @@ void render_overworld() {
         draw_rich_pine_tree(430, 30);
         draw_rich_pine_tree(450, 330);
 
-        // Rich Log Cabin
-        draw_rich_cabin(240, 40, g_player.has_lantern, g_fire_clock);
+        // Solid Rich Log Cabin
+        draw_rich_cabin(240, 40, g_player.has_lantern);
 
         // Player
         draw_rich_wanderer((int)g_player.x, (int)g_player.y, g_player.dir, g_player.walk_frame);
 
-        // Weather particles
+        // Snowflakes
         for (const auto& s : g_snow) {
             draw_rect((int)s.x, (int)s.y, (int)s.size, (int)s.size, C_SNOW_WHITE);
         }
@@ -433,43 +488,40 @@ void render_overworld() {
         // ==========================================
         // CABIN INTERIOR ROOM
         // ==========================================
-        // Wooden Floor Planks
         for (int y = 60; y < 400; y += 18) {
             draw_rect(80, y, 480, 16, C_WOOD_LOG);
             draw_rect(80, y + 16, 480, 2, C_WOOD_SHADOW);
         }
-        // Walls
         draw_rect(80, 30, 480, 40, C_WOOD_SHADOW);
 
-        // Fireplace with animated fire embers
+        // Fireplace
         draw_rect(270, 35, 100, 50, 0x374151);
         draw_rect(285, 45, 70, 40, 0x180E08);
-        g_fire_clock++;
-        int flame_h = 15 + (g_fire_clock % 8);
+        g_anim_clock++;
+        int flame_h = 16 + (g_anim_clock % 8);
         draw_rect(310, 80 - flame_h, 20, flame_h, C_FIRE_ORANGE);
         draw_rect(315, 80 - flame_h + 4, 10, flame_h - 4, C_YELLOW_TEXT);
 
-        // Table with Cupboard
+        // Table
         draw_rect(120, 160, 70, 50, C_WOOD_SHADOW);
         draw_rect(125, 165, 60, 40, C_WOOD_LIGHT);
         if (!g_player.has_lantern) {
-            // Draw glowing Brass Lantern on table
             draw_rect(148, 175, 14, 18, C_LANTERN_AMBER);
             draw_circle(155, 184, 4, 0xFEF08A);
         }
 
-        // Exit Doorway to outside at bottom
-        draw_rect(295, 385, 50, 15, 0x1E293B);
-        draw_string("EXIT", 305, 370, C_SNOW_WHITE, 1);
+        // Exit Door
+        draw_rect(295, 388, 50, 12, 0x1E293B);
+        draw_string("EXIT", 305, 372, C_SNOW_WHITE, 1);
 
-        // Player inside
+        // Player
         draw_rich_wanderer((int)g_player.x, (int)g_player.y, g_player.dir, g_player.walk_frame);
     }
 
     // Top HUD Bar
     draw_rect(0, 0, INTERNAL_W, 26, 0x06090F);
     draw_string("IN THE PINES 2D (UNDERTALE RETRO)", 15, 7, C_WHITE, 2);
-    draw_string("HP 20/20", 470, 7, C_YELLOW_TEXT, 2);
+    draw_string("HP " + std::to_string(g_player.hp) + "/20", 470, 7, C_YELLOW_TEXT, 2);
     draw_string(g_fullscreen ? "[F11] WINDOW" : "[F11] FULLSCREEN", 560, 8, C_ICE_BLUE, 1);
 
     // Interaction Prompt Icon above player head: "[!] PRESS Z"
@@ -479,7 +531,7 @@ void render_overworld() {
         draw_string(g_interact_prompt, (int)g_player.x - 16, (int)g_player.y - 17, C_YELLOW_TEXT, 1);
     }
 
-    // Undertale Dialog Box
+    // Dialogue Box
     if (g_dialog_open) {
         draw_rect(30, 340, 580, 120, C_BLACK);
         draw_rect_outline(30, 340, 580, 120, 4, C_WHITE);
@@ -499,14 +551,13 @@ void render_battle() {
     int sy = (g_battle.shake > 0) ? (rand() % 7 - 3) : 0;
     if (g_battle.shake > 0) g_battle.shake--;
 
-    uint32_t ghost_color = g_battle.enemy_pacified ? C_YELLOW_TEXT : C_WHITE;
-    draw_circle(320 + sx, 90 + sy, 22, ghost_color);
-    draw_rect(300 + sx, 112 + sy, 40, 50, ghost_color);
-    draw_circle(313 + sx, 88 + sy, 3, 0x000000);
-    draw_circle(327 + sx, 88 + sy, 3, 0x000000);
+    g_anim_clock++;
+    draw_ghost_girl(320 + sx, 90 + sy, g_battle.enemy_pacified, g_anim_clock);
 
-    draw_string(g_battle.enemy_pacified ? "* LOST GIRL (SPAREABLE)" : "* LOST GIRL", 220, 35, ghost_color, 2);
+    uint32_t ghost_tag_color = g_battle.enemy_pacified ? C_YELLOW_TEXT : C_WHITE;
+    draw_string(g_battle.enemy_pacified ? "* LOST GIRL (SPAREABLE)" : "* LOST GIRL", 220, 20, ghost_tag_color, 2);
 
+    // Undertale Battle Arena Box
     draw_rect_outline(g_battle.box_x, g_battle.box_y, g_battle.box_w, g_battle.box_h, 4, C_WHITE);
 
     if (g_battle.turn == 1) {
@@ -524,9 +575,12 @@ void render_battle() {
         draw_string("* What will you play?", g_battle.box_x + 15, g_battle.box_y + 60, C_WHITE, 2);
     }
 
-    draw_string("KURT   LV 1   HP 20 / 20", 170, 375, C_WHITE, 2);
-    draw_rect(380, 372, 80, 16, C_SOUL_RED);
-    draw_rect(380, 372, (int)(80.0f * (g_player.hp / 20.0f)), 16, C_YELLOW_TEXT);
+    // Cleaned-up HUD Layout (No text overlap)
+    draw_string("KURT   LV 1", 110, 375, C_WHITE, 2);
+    draw_string("HP", 280, 375, C_YELLOW_TEXT, 2);
+    draw_rect(315, 374, 80, 16, C_SOUL_RED);
+    draw_rect(315, 374, (int)(80.0f * (max(0, g_player.hp) / 20.0f)), 16, C_YELLOW_TEXT);
+    draw_string(std::to_string(max(0, g_player.hp)) + " / 20", 410, 375, C_WHITE, 2);
 
     const char* btn_labels[4] = {"[ STRUM ]", "[ ACT ]", "[ ITEM ]", "[ MERCY ]"};
     int bx = 50;
@@ -540,7 +594,34 @@ void render_battle() {
 }
 
 // ==============================================================
-// 6. WIN32 ENTRY POINT & 60 FPS SCALED BLIT
+// 6. GAME OVER SCREEN (Undertale Heart Shatter)
+// ==============================================================
+int g_gameover_tick = 0;
+
+void render_gameover() {
+    clear_buffer(C_BLACK);
+    g_gameover_tick++;
+
+    if (g_gameover_tick < 60) {
+        // Heart cracks in half
+        draw_soul_heart(320, 200, C_SOUL_RED);
+        draw_rect(319, 195, 2, 10, C_BLACK);
+    } else {
+        // Heart shattered into pieces
+        draw_rect(300, 190, 4, 4, C_SOUL_RED);
+        draw_rect(340, 195, 4, 4, C_SOUL_RED);
+        draw_rect(310, 220, 4, 4, C_SOUL_RED);
+        draw_rect(330, 225, 4, 4, C_SOUL_RED);
+
+        draw_string("GAME OVER", 230, 100, C_WHITE, 4);
+        draw_string("* You cannot give up just yet...", 140, 280, C_WHITE, 2);
+        draw_string("* Kurt! Stay determined!", 190, 310, C_WHITE, 2);
+        draw_string("[PRESS Z OR ENTER TO RETRY]", 200, 380, C_YELLOW_TEXT, 2);
+    }
+}
+
+// ==============================================================
+// 7. WIN32 ENTRY POINT & GAME LOOP
 // ==============================================================
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     if (msg == WM_DESTROY) {
@@ -564,11 +645,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WndProc;
     wc.hInstance = hInstance;
-    wc.lpszClassName = "InThePinesUndertalePro";
+    wc.lpszClassName = "InThePinesUndertaleFinal";
     wc.hCursor = LoadCursor(NULL, IDC_ARROW);
     RegisterClass(&wc);
 
-    HWND hwnd = CreateWindow("InThePinesUndertalePro", "IN THE PINES - 2D Undertale Edition",
+    HWND hwnd = CreateWindow("InThePinesUndertaleFinal", "IN THE PINES - 2D Undertale Edition",
         WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, INTERNAL_W + 16, INTERNAL_H + 39,
         NULL, NULL, hInstance, NULL);
@@ -589,7 +670,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     bool running = true;
     DWORD last_tick = GetTickCount();
 
-    // Initial dialogue
     g_dialog_open = true;
     g_dialog_line1 = "* 03:17 AM. Dense mist swirls around the pines.";
     g_dialog_line2 = "* Slung on your back is your acoustic guitar.";
@@ -609,15 +689,24 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         last_tick = cur_tick;
 
         if (g_state == STATE_OVERWORLD) {
-            bool moving = false;
+            float dx = 0;
+            float dy = 0;
             if (!g_dialog_open) {
-                if (GetAsyncKeyState(VK_UP) & 0x8000 || GetAsyncKeyState('W') & 0x8000) { g_player.y -= 2.6f; g_player.dir = 2; moving = true; }
-                if (GetAsyncKeyState(VK_DOWN) & 0x8000 || GetAsyncKeyState('S') & 0x8000) { g_player.y += 2.6f; g_player.dir = 0; moving = true; }
-                if (GetAsyncKeyState(VK_LEFT) & 0x8000 || GetAsyncKeyState('A') & 0x8000) { g_player.x -= 2.6f; g_player.dir = 3; moving = true; }
-                if (GetAsyncKeyState(VK_RIGHT) & 0x8000 || GetAsyncKeyState('D') & 0x8000) { g_player.x += 2.6f; g_player.dir = 1; moving = true; }
+                if (GetAsyncKeyState(VK_UP) & 0x8000 || GetAsyncKeyState('W') & 0x8000) { dy -= 2.6f; g_player.dir = 2; }
+                if (GetAsyncKeyState(VK_DOWN) & 0x8000 || GetAsyncKeyState('S') & 0x8000) { dy += 2.6f; g_player.dir = 0; }
+                if (GetAsyncKeyState(VK_LEFT) & 0x8000 || GetAsyncKeyState('A') & 0x8000) { dx -= 2.6f; g_player.dir = 3; }
+                if (GetAsyncKeyState(VK_RIGHT) & 0x8000 || GetAsyncKeyState('D') & 0x8000) { dx += 2.6f; g_player.dir = 1; }
             }
 
-            if (moving) {
+            if (dx != 0 || dy != 0) {
+                // Apply collision check before moving!
+                if (!check_collision(g_player.x + dx, g_player.y)) {
+                    g_player.x += dx;
+                }
+                if (!check_collision(g_player.x, g_player.y + dy)) {
+                    g_player.y += dy;
+                }
+
                 g_player.walk_timer++;
                 if (g_player.walk_timer % 10 == 0) {
                     g_player.walk_frame++;
@@ -628,48 +717,38 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             // Interactable Proximity Checks
             g_interact_prompt = "";
             if (g_loc == LOC_OUTSIDE) {
-                // Near Cabin Door?
-                if (g_player.x > 290 && g_player.x < 330 && g_player.y > 115 && g_player.y < 155) {
+                if (g_player.x > 290 && g_player.x < 340 && g_player.y > 115 && g_player.y < 155) {
                     g_interact_prompt = "[Z] ENTER";
-                }
-                // Near Railroad wheel?
-                else if (g_player.x > 500 && g_player.y > 170 && g_player.y < 250) {
+                } else if (g_player.x > 500 && g_player.y > 170 && g_player.y < 250) {
                     g_interact_prompt = "[Z] EXAMINE";
                 }
             } else {
-                // Inside Cabin: Near Cupboard Table?
                 if (g_player.x > 110 && g_player.x < 200 && g_player.y > 140 && g_player.y < 210) {
                     g_interact_prompt = g_player.has_lantern ? "[Z] TABLE" : "[Z] TAKE LANTERN";
-                }
-                // Near Fireplace?
-                else if (g_player.x > 280 && g_player.x < 360 && g_player.y < 120) {
+                } else if (g_player.x > 280 && g_player.x < 360 && g_player.y < 120) {
                     g_interact_prompt = "[Z] WARM UP";
-                }
-                // Near Exit Door?
-                else if (g_player.y > 360) {
+                } else if (g_player.y > 360) {
                     g_interact_prompt = "[Z] EXIT CABIN";
                 }
             }
 
-            // [Z] or [Enter] to Interact
+            // [Z] or [Enter]
             static bool z_key = false;
             if (GetAsyncKeyState('Z') & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
                 if (!z_key) {
                     z_key = true;
                     if (g_dialog_open) {
-                        g_dialog_open = false; // Close dialogue
+                        g_dialog_open = false;
                     } else if (!g_interact_prompt.empty()) {
                         if (g_loc == LOC_OUTSIDE) {
                             if (g_interact_prompt == "[Z] ENTER") {
                                 g_loc = LOC_INSIDE_CABIN;
                                 g_player.x = 310; g_player.y = 350;
-                                Beep(440, 100);
                             } else if (g_interact_prompt == "[Z] EXAMINE") {
                                 g_dialog_open = true;
                                 g_dialog_line1 = "* Initial 'K' is gouged into the wheel hub.";
                                 g_dialog_line2 = "* Blonde hair is locked into the iron bolts!";
                                 g_player.has_hairpin = true;
-                                Beep(220, 150);
                             }
                         } else {
                             if (g_interact_prompt == "[Z] TAKE LANTERN") {
@@ -677,16 +756,13 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                                 g_dialog_open = true;
                                 g_dialog_line1 = "* You picked up the Brass Kerosene Lantern!";
                                 g_dialog_line2 = "* (Its warm amber glow pushes back the dark.)";
-                                Beep(554, 150);
                             } else if (g_interact_prompt == "[Z] WARM UP") {
                                 g_dialog_open = true;
                                 g_dialog_line1 = "* The hearth fire crackles softly.";
                                 g_dialog_line2 = "* (Your frozen fingers are starting to thaw.)";
-                                Beep(330, 120);
                             } else if (g_interact_prompt == "[Z] EXIT CABIN") {
                                 g_loc = LOC_OUTSIDE;
                                 g_player.x = 310; g_player.y = 165;
-                                Beep(300, 100);
                             }
                         }
                     }
@@ -700,11 +776,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                     b_key = true;
                     g_state = STATE_BATTLE;
                     g_battle.turn = 0;
-                    MessageBeep(MB_OK);
                 }
             } else { b_key = false; }
 
-            // Snow & Footprint update
             for (auto& s : g_snow) {
                 s.y += s.speed; s.x -= 0.4f;
                 if (s.y > INTERNAL_H) { s.y = 0; s.x = rand() % INTERNAL_W; }
@@ -716,13 +790,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         }
 
         else if (g_state == STATE_BATTLE) {
-            // Battle Controls
             if (g_battle.turn == 0) {
                 static bool arr_key = false;
                 if (GetAsyncKeyState(VK_LEFT) & 0x8000) {
-                    if (!arr_key) { g_battle.selected_btn = (g_battle.selected_btn + 3) % 4; arr_key = true; MessageBeep(0xFFFFFFFF); }
+                    if (!arr_key) { g_battle.selected_btn = (g_battle.selected_btn + 3) % 4; arr_key = true; }
                 } else if (GetAsyncKeyState(VK_RIGHT) & 0x8000) {
-                    if (!arr_key) { g_battle.selected_btn = (g_battle.selected_btn + 1) % 4; arr_key = true; MessageBeep(0xFFFFFFFF); }
+                    if (!arr_key) { g_battle.selected_btn = (g_battle.selected_btn + 1) % 4; arr_key = true; }
                 } else if (GetAsyncKeyState('Z') & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
                     if (!arr_key) {
                         arr_key = true;
@@ -741,8 +814,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                 g_battle.soul_x = max(g_battle.box_x + 10.0f, min(g_battle.box_x + g_battle.box_w - 10.0f, g_battle.soul_x));
                 g_battle.soul_y = max(g_battle.box_y + 10.0f, min(g_battle.box_y + g_battle.box_h - 10.0f, g_battle.soul_y));
 
-                if (g_battle.turn_timer % 16 == 0) {
-                    g_bullets.push_back({(float)(g_battle.box_x + 15 + rand() % (g_battle.box_w - 30)), (float)(g_battle.box_y + 6), (float)((rand() % 20 - 10) / 10.0f), 2.4f + (rand() % 10) / 10.0f, 4.0f});
+                if (g_battle.turn_timer % 14 == 0) {
+                    g_bullets.push_back({(float)(g_battle.box_x + 15 + rand() % (g_battle.box_w - 30)), (float)(g_battle.box_y + 6), (float)((rand() % 20 - 10) / 10.0f), 2.5f + (rand() % 12) / 10.0f, 4.0f});
                 }
 
                 for (size_t i = 0; i < g_bullets.size(); ) {
@@ -751,10 +824,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
                     float dist = hypot(g_bullets[i].x - g_battle.soul_x, g_bullets[i].y - g_battle.soul_y);
                     if (dist < g_bullets[i].r + 6.0f) {
-                        g_player.hp = max(1, g_player.hp - 2);
-                        g_battle.shake = 6;
-                        MessageBeep(MB_ICONHAND);
+                        g_player.hp -= 3; // Mortal damage!
+                        g_battle.shake = 8;
                         g_bullets.erase(g_bullets.begin() + i);
+
+                        // Mortally Wounded -> Game Over!
+                        if (g_player.hp <= 0) {
+                            g_state = STATE_GAMEOVER;
+                            g_gameover_tick = 0;
+                            break;
+                        }
                         continue;
                     }
 
@@ -779,7 +858,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
                         if (fabs(g_battle.timing_x - center) < 30.0f) {
                             g_battle.enemy_hp -= 35;
                             g_battle.enemy_pacified = true;
-                            Beep(330, 200);
                         }
                         g_battle.turn = 1;
                         g_battle.turn_timer = 0;
@@ -797,7 +875,23 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
             render_battle();
         }
 
-        // Scaled Aspect-Ratio Blit (Maintains crisp pixel art in Window or Fullscreen!)
+        else if (g_state == STATE_GAMEOVER) {
+            static bool retry_key = false;
+            if (GetAsyncKeyState('Z') & 0x8000 || GetAsyncKeyState(VK_RETURN) & 0x8000) {
+                if (!retry_key && g_gameover_tick > 60) {
+                    retry_key = true;
+                    // Respawn
+                    g_player.hp = 20;
+                    g_player.x = 320;
+                    g_player.y = 300;
+                    g_state = STATE_OVERWORLD;
+                    g_loc = LOC_OUTSIDE;
+                }
+            } else { retry_key = false; }
+
+            render_gameover();
+        }
+
         RECT client_rect;
         GetClientRect(hwnd, &client_rect);
         int win_w = client_rect.right - client_rect.left;
