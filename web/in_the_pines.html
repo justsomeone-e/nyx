@@ -6,16 +6,17 @@
     <title>IN THE PINES — Live Animated ASCII Psychological Horror</title>
     <style>
         :root {
-            --bg: #040507;
-            --panel-bg: #080b10;
-            --border: #18202c;
-            --text-bright: #e2e8f0;
+            --bg: #030406;
+            --panel-bg: #070a0f;
+            --border: #16202c;
+            --text-bright: #f1f5f9;
             --text-dim: #94a3b8;
             --text-ghost: #475569;
             --amber-lantern: #f59e0b;
             --cold-blue: #38bdf8;
             --frost-white: #f8fafc;
             --crimson: #ef4444;
+            --cassette-border: #243447;
         }
 
         * {
@@ -34,16 +35,16 @@
             justify-content: center;
             align-items: center;
             overflow-x: hidden;
-            padding: 24px 0;
+            padding: 20px 0;
         }
 
-        /* Subtle Nostalgic CRT Scanlines & Breathing Vignette */
+        /* Nostalgic CRT Scanlines & Breathing Vignette */
         body::before {
             content: " ";
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.38) 50%);
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%);
             z-index: 99;
             background-size: 100% 3px;
             pointer-events: none;
@@ -54,7 +55,7 @@
             display: block;
             position: fixed;
             top: 0; left: 0; bottom: 0; right: 0;
-            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.94) 100%);
+            background: radial-gradient(circle, transparent 50%, rgba(0,0,0,0.95) 100%);
             z-index: 100;
             pointer-events: none;
         }
@@ -66,10 +67,10 @@
             border: 1px solid var(--border);
             border-radius: 8px;
             box-shadow: 0 0 60px rgba(0, 0, 0, 0.98), 0 0 30px rgba(56, 189, 248, 0.08);
-            padding: 24px;
+            padding: 22px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
             position: relative;
             z-index: 10;
         }
@@ -77,7 +78,7 @@
         /* Header */
         .game-header {
             border-bottom: 2px solid #111822;
-            padding-bottom: 12px;
+            padding-bottom: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -86,7 +87,7 @@
         }
 
         .title-block h1 {
-            font-size: 1.5rem;
+            font-size: 1.45rem;
             letter-spacing: 4px;
             color: #f1f5f9;
             text-transform: uppercase;
@@ -103,8 +104,8 @@
         .vitals-bar {
             display: flex;
             gap: 14px;
-            background: #0d131c;
-            padding: 8px 16px;
+            background: #0b1118;
+            padding: 7px 14px;
             border-radius: 4px;
             border: 1px solid #1a2330;
             font-size: 0.82rem;
@@ -137,7 +138,7 @@
         }
 
         .viewport-header {
-            background: #0b1017;
+            background: #0a0f15;
             padding: 6px 14px;
             font-size: 0.74rem;
             color: var(--text-dim);
@@ -150,51 +151,52 @@
 
         #ascii-screen {
             width: 100%;
-            height: 310px;
+            height: 280px;
             display: block;
             background: #020305;
         }
 
-        /* Ambient Tape & Wind Panel */
-        .tape-deck-bar {
-            background: #090e15;
-            border: 1px solid #16202c;
-            border-radius: 4px;
+        /* ================================================= */
+        /* ANIMATED RETRO ASCII CASSETTE DECK (TAPE PLAYER)  */
+        /* ================================================= */
+        .tape-deck-panel {
+            background: #06090e;
+            border: 1px solid var(--cassette-border);
+            border-radius: 6px;
             padding: 10px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .tape-ascii-box {
+            font-size: 0.73rem;
+            line-height: 1.25;
+            color: #7dd3fc;
+            background: #030508;
+            border: 1px solid #141f2c;
+            border-radius: 4px;
+            padding: 6px 10px;
+            overflow-x: auto;
+            text-align: center;
+        }
+
+        .tape-controls-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
-            font-size: 0.8rem;
-        }
-
-        .tape-info {
-            display: flex;
-            align-items: center;
             gap: 10px;
         }
 
-        .tape-led {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #2d3748;
-            transition: all 0.3s;
-        }
-
-        .tape-led.playing {
-            background: #10b981;
-            box-shadow: 0 0 10px #10b981;
-        }
-
         .deck-btn {
-            background: #131b26;
-            border: 1px solid #243142;
+            background: #111924;
+            border: 1px solid #223246;
             color: var(--text-bright);
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-family: inherit;
-            font-size: 0.76rem;
+            font-size: 0.78rem;
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.2s;
@@ -204,23 +206,39 @@
         }
 
         .deck-btn:hover {
-            background: #1e2a3b;
+            background: #1b283a;
             border-color: var(--cold-blue);
             color: #fff;
         }
 
-        .deck-slider {
-            width: 65px;
-            height: 4px;
+        .deck-btn.playing {
+            border-color: #10b981;
+            background: #0e2119;
+            color: #34d399;
+        }
+
+        .timeline-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 260px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+        }
+
+        .tape-slider {
+            flex: 1;
+            height: 5px;
             accent-color: var(--cold-blue);
             cursor: pointer;
         }
 
         /* Guitar & Inventory Row */
         .interactive-strip {
-            background: #06090e;
-            border: 1px dashed #1a2330;
-            padding: 9px 14px;
+            background: #05080c;
+            border: 1px dashed #16202c;
+            padding: 8px 14px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -236,8 +254,8 @@
         }
 
         .chord-tag {
-            background: #101721;
-            border: 1px solid #253346;
+            background: #0d141d;
+            border: 1px solid #1f2c3d;
             color: var(--cold-blue);
             padding: 4px 9px;
             font-family: inherit;
@@ -248,26 +266,26 @@
         }
 
         .chord-tag:hover {
-            background: #1b283a;
+            background: #182536;
             color: #fff;
             transform: translateY(-2px);
         }
 
         /* Narrative & Psychological Dual Text Area */
         .narrative-box {
-            min-height: 180px;
-            background: #030508;
-            border: 1px solid #131a24;
+            min-height: 160px;
+            background: #020305;
+            border: 1px solid #101620;
             border-radius: 6px;
-            padding: 20px;
+            padding: 18px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            gap: 14px;
+            gap: 12px;
         }
 
         .story-text {
-            font-size: 1.02rem;
+            font-size: 0.98rem;
             line-height: 1.65;
             color: #cbd5e1;
             white-space: pre-wrap;
@@ -275,9 +293,9 @@
 
         /* Milk-style Subconscious Inner Stream */
         .subconscious-stream {
-            border-top: 1px solid #101722;
-            padding-top: 10px;
-            font-size: 0.86rem;
+            border-top: 1px solid #0f1520;
+            padding-top: 8px;
+            font-size: 0.85rem;
             color: #64748b;
             font-style: italic;
             display: flex;
@@ -289,7 +307,7 @@
             color: var(--amber-lantern);
             font-style: normal;
             font-weight: bold;
-            font-size: 0.76rem;
+            font-size: 0.75rem;
             letter-spacing: 1px;
         }
 
@@ -297,17 +315,17 @@
         .choices-stack {
             display: flex;
             flex-direction: column;
-            gap: 9px;
+            gap: 8px;
         }
 
         .choice-item {
-            background: #0a0f16;
-            border: 1px solid #18222f;
+            background: #080d14;
+            border: 1px solid #151f2c;
             border-left: 3px solid var(--cold-blue);
             color: var(--text-bright);
-            padding: 12px 16px;
+            padding: 11px 16px;
             font-family: inherit;
-            font-size: 0.94rem;
+            font-size: 0.92rem;
             text-align: left;
             border-radius: 4px;
             cursor: pointer;
@@ -318,8 +336,8 @@
         }
 
         .choice-item:hover {
-            background: #141c28;
-            border-color: #475569;
+            background: #101824;
+            border-color: #334155;
             border-left-color: var(--amber-lantern);
             transform: translateX(5px);
             color: #fff;
@@ -328,7 +346,7 @@
         .choice-hint {
             font-size: 0.74rem;
             background: #030508;
-            border: 1px solid #273444;
+            border: 1px solid #1e2a38;
             padding: 2px 7px;
             border-radius: 3px;
             color: var(--text-dim);
@@ -378,28 +396,43 @@
         <div class="viewport-container">
             <div class="viewport-header">
                 <span id="location-header">🌲 CROSSROADS IN THE PINES (03:17 AM)</span>
-                <span id="weather-label" style="color:var(--cold-blue)">WEATHER: BITTER FROST & MIST</span>
+                <span id="weather-label" style="color:var(--cold-blue)">WEATHER: BITTER FROST & HOWLING GALE</span>
             </div>
             <canvas id="ascii-screen"></canvas>
         </div>
 
-        <!-- Ambient Tape Deck & Audio Player -->
-        <div class="tape-deck-bar">
-            <div class="tape-info">
-                <div id="tape-indicator" class="tape-led"></div>
-                <span id="tape-status-text" style="color:var(--text-dim);">CASSETTE DECK: STANDBY</span>
-                <span style="color:var(--text-ghost); font-size:0.75rem;">(Uncut MTV Unplugged Master & Pine Wind)</span>
+        <!-- ============================================= -->
+        <!-- ANIMATED RETRO ASCII CASSETTE DECK PANEL      -->
+        <!-- ============================================= -->
+        <div class="tape-deck-panel">
+            <div class="tape-ascii-box">
+                <pre id="tape-ascii-display">
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  [A] NIRVANA - WHERE DID YOU SLEEP LAST NIGHT (MTV UNPLUGGED 1993)   [STEREO]    ║
+║  ┌─────────┐                                                        ┌─────────┐  ║
+║  │  ( · )  │ ═════════════════ [ 00:00 / 05:14 ] ══════════════════ │  ( · )  │  ║
+║  └─────────┘                                                        └─────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝</pre>
             </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-                <button id="tape-toggle-btn" class="deck-btn" onclick="toggleTape()">
+            <div class="tape-controls-row">
+                <button id="tape-toggle-btn" class="deck-btn" onclick="togglePlayback()">
                     <span id="tape-icon">▶</span>
-                    <span id="tape-btn-text">START ATMOSPHERE</span>
+                    <span id="tape-btn-text">START ATMOSPHERE & MUSIC</span>
                 </button>
-                <button class="deck-btn" style="font-size:0.72rem;" onclick="jumpClimax()">
-                    🔥 CLIMAX / SCREAM
+                <button class="deck-btn" style="font-size:0.75rem;" onclick="jumpClimax()">
+                    🔥 CLIMAX SCREAM
                 </button>
-                <span style="font-size:0.75rem; color:var(--text-dim);">VOL:</span>
-                <input type="range" class="deck-slider" min="0" max="1" step="0.05" value="0.55" oninput="setMasterVolume(this.value)">
+
+                <div class="timeline-container">
+                    <span id="tape-time-cur">00:00</span>
+                    <input type="range" id="tape-seek" class="tape-slider" min="0" max="314" value="0" oninput="seekSong(this.value)">
+                    <span id="tape-time-total">05:14</span>
+                </div>
+
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <span style="font-size:0.75rem; color:var(--text-dim);">VOL:</span>
+                    <input type="range" style="width:65px; height:4px; accent-color:var(--cold-blue); cursor:pointer;" min="0" max="1" step="0.05" value="0.65" oninput="setMasterVolume(this.value)">
+                </div>
             </div>
         </div>
 
@@ -420,14 +453,21 @@
 
         <!-- Narrative & Psychological Monologue Box -->
         <div class="narrative-box">
-            <div id="story-content" class="story-text"></div>
+            <div id="story-content" class="story-text">The mountain pass is buried in bone-chilling mist.
+
+Your nylon-string acoustic guitar hangs cold across your back. Frost bites into your knuckles.
+
+Deep from within the timber, a familiar ragged vocal carries across the wind:
+'My girl, my girl... Tell me where did you sleep last night?'
+
+The road splits into the dark.</div>
             <div class="subconscious-stream">
                 <span class="subconscious-tag">[INNER VOICE]</span>
                 <span id="inner-thought">"I shouldn't be out here so late. Why does the mist feel like it's holding its breath?"</span>
             </div>
         </div>
 
-        <!-- Choices -->
+        <!-- Choices Stack -->
         <div id="choices-container" class="choices-stack"></div>
 
         <!-- Footer -->
@@ -437,143 +477,176 @@
         </div>
     </div>
 
-    <!-- Hidden Audio Source (MTV Unplugged Uncut Master) -->
-    <audio id="nirvana-audio" preload="auto" crossorigin="anonymous">
+    <!-- Nirvana Uncut Audio Element (Direct playback guarantee without CORS silencing) -->
+    <audio id="nirvana-audio" preload="auto">
         <source src="https://archive.org/download/NirvanaUnpluggedLiveUSA/12%20-%20Where%20Did%20You%20Sleep%20Last%20Night.mp3" type="audio/mpeg">
         <source src="https://p.scdn.co/mp3-preview/80b267c313117482050242cd0acbccf180da798c" type="audio/mpeg">
     </audio>
 
     <script>
         // ==============================================================
-        // AUDIO & SYNTHESIZER ENGINE (Cassette Filter, Wind, Guitar)
+        // AUDIO ENGINE: RICH HOWLING BLIZZARD WIND & SEAMLESS NIRVANA
         // ==============================================================
         const AUDIO_START = 5.2;
-        const AUDIO_END = 264.2;
+        const AUDIO_END = 313.5;
 
         let audioCtx = null;
-        let isAudioPlaying = false;
+        let isPlaying = false;
         let masterGain = null;
         let windGain = null;
-        let windFilter = null;
-        let musicFilter = null;
-        let musicGain = null;
-        let audioSourceNode = null;
+        let windFilter1 = null;
+        let windFilter2 = null;
 
         const audioElem = document.getElementById('nirvana-audio');
 
-        function initAudio() {
+        function initAudioEngine() {
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
                 masterGain = audioCtx.createGain();
-                masterGain.gain.setValueAtTime(0.55, audioCtx.currentTime);
+                masterGain.gain.setValueAtTime(0.65, audioCtx.currentTime);
                 masterGain.connect(audioCtx.destination);
 
-                // 1. Procedural Pine Wind Drone
+                // 1. DUAL-LAYER PROCEDURAL BLIZZARD WIND ENGINE
+                // Layer A: Low sub-bass mountain rumble
+                // Layer B: Resonant whistling pine tree gale
                 const bufferSize = audioCtx.sampleRate * 2;
                 const noiseBuf = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
                 const out = noiseBuf.getChannelData(0);
                 for (let i = 0; i < bufferSize; i++) out[i] = Math.random() * 2 - 1;
 
-                const noiseSrc = audioCtx.createBufferSource();
-                noiseSrc.buffer = noiseBuf;
-                noiseSrc.loop = true;
+                const whiteNoise = audioCtx.createBufferSource();
+                whiteNoise.buffer = noiseBuf;
+                whiteNoise.loop = true;
 
-                windFilter = audioCtx.createBiquadFilter();
-                windFilter.type = 'bandpass';
-                windFilter.frequency.value = 320;
-                windFilter.Q.value = 2.2;
+                // Rumble Filter (Lowpass at 140Hz)
+                windFilter1 = audioCtx.createBiquadFilter();
+                windFilter1.type = 'lowpass';
+                windFilter1.frequency.value = 140;
+
+                // Whistling Gale Filter (Bandpass at 360Hz with high resonance Q=3.8)
+                windFilter2 = audioCtx.createBiquadFilter();
+                windFilter2.type = 'bandpass';
+                windFilter2.frequency.value = 360;
+                windFilter2.Q.value = 3.8;
 
                 windGain = audioCtx.createGain();
-                windGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                windGain.gain.setValueAtTime(0.22, audioCtx.currentTime); // Crisp, audible atmospheric wind
 
-                noiseSrc.connect(windFilter);
-                windFilter.connect(windGain);
+                whiteNoise.connect(windFilter1);
+                whiteNoise.connect(windFilter2);
+                windFilter1.connect(windGain);
+                windFilter2.connect(windGain);
                 windGain.connect(masterGain);
-                noiseSrc.start(0);
+                whiteNoise.start(0);
 
-                // Organic Wind Gust Swells
+                // Organic Wind Swells
                 setInterval(() => {
-                    if (isAudioPlaying && windFilter) {
-                        const targetFreq = 220 + Math.random() * 240;
-                        windFilter.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 1.8);
+                    if (isPlaying && windFilter2) {
+                        const targetFreq = 260 + Math.random() * 280;
+                        windFilter2.frequency.setTargetAtTime(targetFreq, audioCtx.currentTime, 1.6);
                     }
-                }, 2800);
+                }, 2400);
 
-                // 2. Warm Magnetic Cassette Low-Pass Filter (1380Hz)
-                musicFilter = audioCtx.createBiquadFilter();
-                musicFilter.type = 'lowpass';
-                musicFilter.frequency.setValueAtTime(1380, audioCtx.currentTime);
-                musicFilter.Q.setValueAtTime(1.15, audioCtx.currentTime);
+                // 2. Direct Audio Volume setup
+                audioElem.volume = 0.65;
 
-                musicGain = audioCtx.createGain();
-                musicGain.gain.setValueAtTime(0.5, audioCtx.currentTime);
-
-                try {
-                    audioSourceNode = audioCtx.createMediaElementSource(audioElem);
-                    audioSourceNode.connect(musicFilter);
-                    musicFilter.connect(musicGain);
-                    musicGain.connect(masterGain);
-                } catch (e) {}
-
-                // Seamless loop handler
+                // Seamless loop at 313.5s
                 audioElem.addEventListener('timeupdate', () => {
                     if (audioElem.currentTime >= AUDIO_END) {
                         audioElem.currentTime = AUDIO_START;
                     }
+                    updateTapeUI();
                 });
             }
 
             if (audioCtx.state === 'suspended') audioCtx.resume();
         }
 
-        function toggleTape() {
-            initAudio();
-            const led = document.getElementById('tape-indicator');
-            const statusText = document.getElementById('tape-status-text');
+        let tapeFrame = 0;
+        const REEL_GLYPHS = ['·', 'o', 'O', '@', '*', 'O', 'o'];
+
+        function updateTapeUI() {
+            const cur = Math.max(0, audioElem.currentTime);
+            const total = audioElem.duration && !isNaN(audioElem.duration) ? audioElem.duration : 314;
+
+            document.getElementById('tape-seek').value = Math.floor(cur);
+
+            const m1 = Math.floor(cur / 60);
+            const s1 = Math.floor(cur % 60);
+            const m2 = Math.floor(total / 60);
+            const s2 = Math.floor(total % 60);
+
+            const timeStrCur = `${m1 < 10 ? '0' : ''}${m1}:${s1 < 10 ? '0' : ''}${s1}`;
+            const timeStrTotal = `${m2 < 10 ? '0' : ''}${m2}:${s2 < 10 ? '0' : ''}${s2}`;
+
+            document.getElementById('tape-time-cur').innerText = timeStrCur;
+            document.getElementById('tape-time-total').innerText = timeStrTotal;
+
+            if (isPlaying) {
+                tapeFrame = (tapeFrame + 1) % REEL_GLYPHS.length;
+                const r1 = REEL_GLYPHS[tapeFrame];
+                const r2 = REEL_GLYPHS[(tapeFrame + 3) % REEL_GLYPHS.length];
+
+                document.getElementById('tape-ascii-display').innerText = 
+`╔══════════════════════════════════════════════════════════════════════════════════╗
+║  [A] NIRVANA - WHERE DID YOU SLEEP LAST NIGHT (MTV UNPLUGGED 1993)   [STEREO]    ║
+║  ┌─────────┐                                                        ┌─────────┐  ║
+║  │  ( ${r1} )  │ ═════════════════ [ ${timeStrCur} / ${timeStrTotal} ] ══════════════════ │  ( ${r2} )  │  ║
+║  └─────────┘                                                        └─────────┘  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝`;
+            }
+        }
+
+        function togglePlayback() {
+            initAudioEngine();
+            const btn = document.getElementById('tape-toggle-btn');
             const btnText = document.getElementById('tape-btn-text');
             const btnIcon = document.getElementById('tape-icon');
 
-            if (isAudioPlaying) {
+            if (isPlaying) {
                 audioElem.pause();
                 if (windGain) windGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
-                if (musicGain) musicGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.4);
-                isAudioPlaying = false;
-                led.classList.remove('playing');
-                statusText.innerText = "CASSETTE DECK: PAUSED";
-                btnText.innerText = "START ATMOSPHERE";
+                isPlaying = false;
+                btn.classList.remove('playing');
+                btnText.innerText = "START ATMOSPHERE & MUSIC";
                 btnIcon.innerText = "▶";
-                setInnerVoice("Silence falls again. The cold feels heavier when the music stops.");
+                setInnerVoice("Silence falls. The cold wind dies down into a heavy quiet.");
             } else {
                 if (audioElem.currentTime < AUDIO_START || audioElem.currentTime >= AUDIO_END) {
                     audioElem.currentTime = AUDIO_START;
                 }
                 audioElem.play().catch(() => {});
-                if (windGain) windGain.gain.setTargetAtTime(0.08, audioCtx.currentTime, 0.5);
-                if (musicGain) musicGain.gain.setTargetAtTime(0.5, audioCtx.currentTime, 0.5);
-                isAudioPlaying = true;
-                led.classList.add('playing');
-                statusText.innerText = "CASSETTE DECK: PLAYING (Lo-Fi Unplugged Tape)";
-                btnText.innerText = "PAUSE AUDIO";
+                if (windGain) windGain.gain.setTargetAtTime(0.22, audioCtx.currentTime, 0.5);
+                isPlaying = true;
+                btn.classList.add('playing');
+                btnText.innerText = "PAUSE ATMOSPHERE";
                 btnIcon.innerText = "⏸";
-                setInnerVoice("The magnetic tape rolls... Kurt's voice fills the empty space between the pines.");
+                setInnerVoice("The magnetic reels spin... Kurt Cobain's guitar rings out through the freezing mountain gale.");
             }
         }
 
+        function seekSong(val) {
+            initAudioEngine();
+            audioElem.currentTime = parseFloat(val);
+            if (!isPlaying) togglePlayback();
+        }
+
         function jumpClimax() {
-            initAudio();
-            audioElem.currentTime = 214.0;
-            if (!isAudioPlaying) toggleTape();
-            setInnerVoice("'In the pines, in the pines... where the sun don't ever shine...'");
+            initAudioEngine();
+            audioElem.currentTime = 254.0; // The famous build-up and climax screams
+            if (!isPlaying) togglePlayback();
+            setInnerVoice("'MY GIRL, MY GIRL! WHERE DID YOU SLEEP LAST NIGHT?!'");
         }
 
         function setMasterVolume(val) {
             if (masterGain && audioCtx) {
                 masterGain.gain.setTargetAtTime(parseFloat(val), audioCtx.currentTime, 0.1);
             }
+            if (audioElem) audioElem.volume = parseFloat(val);
         }
 
-        // Realistic Acoustic Nylon Chord Synthesizer + Ripple Trigger
+        // Acoustic Nylon Chord Synthesizer + Ripple Trigger
         const chordPitches = {
             'E':  [82.4, 123.4, 164.8, 207.6, 246.9, 329.6],
             'Em': [82.4, 123.4, 164.8, 196.0, 246.9, 329.6],
@@ -583,7 +656,7 @@
         };
 
         function strumAcoustic(chordName) {
-            initAudio();
+            initAudioEngine();
             const freqs = chordPitches[chordName] || chordPitches['Em'];
             const now = audioCtx.currentTime;
 
@@ -594,7 +667,7 @@
                 osc.type = 'triangle';
                 osc.frequency.setValueAtTime(freq, now + idx * 0.038);
 
-                gain.gain.setValueAtTime(0.18, now + idx * 0.038);
+                gain.gain.setValueAtTime(0.22, now + idx * 0.038);
                 gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.038 + 2.5);
 
                 osc.connect(gain);
@@ -604,17 +677,14 @@
                 osc.stop(now + idx * 0.038 + 2.6);
             });
 
-            // Trigger Visual Acoustic Shockwave in Canvas!
             triggerAcousticRipple();
 
-            // Calming Psychological Effect
             state.sanity = Math.min(100, state.sanity + 12);
             state.pulse = Math.max(68, state.pulse - 8);
             updateVitalsUI();
-            setInnerVoice(`You plucked ${chordName} on your guitar... The acoustic resonance calms your racing heart.`);
+            setInnerVoice(`You plucked ${chordName} on your guitar... The acoustic vibrations push the dark shadows back.`);
         }
 
-        // Snowy Footstep Sound Synthesis
         function playFootstep() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
@@ -622,10 +692,10 @@
             const gain = audioCtx.createGain();
 
             osc.type = 'sine';
-            osc.frequency.setValueAtTime(140, now);
-            osc.frequency.exponentialRampToValueAtTime(40, now + 0.12);
+            osc.frequency.setValueAtTime(130, now);
+            osc.frequency.exponentialRampToValueAtTime(35, now + 0.12);
 
-            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.setValueAtTime(0.12, now);
             gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
 
             osc.connect(gain);
@@ -640,12 +710,11 @@
         const canvas = document.getElementById('ascii-screen');
         const ctx = canvas.getContext('2d');
 
-        const COLS = 110;
-        const ROWS = 36;
+        const COLS = 100;
+        const ROWS = 32;
         let animClock = 0;
         let currentSceneId = 'crossroads';
 
-        // Acoustic shockwave circle state
         let rippleRadius = 0;
         let isRippling = false;
 
@@ -654,16 +723,15 @@
             isRippling = true;
         }
 
-        // Particle weather engine (Drifting Snow Flurries & Cold Frost)
         const particles = [];
-        for (let i = 0; i < 55; i++) {
+        for (let i = 0; i < 50; i++) {
             particles.push({
                 x: Math.random() * COLS,
                 y: Math.random() * ROWS,
                 speedX: -0.2 - Math.random() * 0.4,
                 speedY: 0.1 + Math.random() * 0.25,
                 char: ['.', '*', '\'', '·'][Math.floor(Math.random() * 4)],
-                alpha: 0.2 + Math.random() * 0.7
+                alpha: 0.25 + Math.random() * 0.75
             });
         }
 
@@ -676,7 +744,6 @@
             });
         }
 
-        // Scene ASCII Geometry Renderers
         function renderSceneGeometry(scene) {
             animClock += 0.04;
             updateWeather();
@@ -686,78 +753,69 @@
 
             const charW = canvas.width / COLS;
             const charH = canvas.height / ROWS;
-            ctx.font = 'bold 10px "Courier New", monospace';
+            ctx.font = 'bold 11px "Courier New", monospace';
+            ctx.textBaseline = "middle";
 
-            // 1. Render Background Mountain Silhouettes & Deep Fog
             for (let y = 0; y < ROWS; y++) {
                 for (let x = 0; x < COLS; x++) {
                     let ch = ' ';
-                    let color = 'rgba(71, 85, 105, 0.15)';
+                    let color = 'rgba(148, 163, 184, 0.18)';
 
-                    // Acoustic shockwave distortion
                     let distFromCenter = Math.hypot(x - COLS / 2, y - ROWS / 2);
                     if (isRippling && Math.abs(distFromCenter - rippleRadius) < 2.5) {
                         ctx.fillStyle = "#38bdf8";
-                        ctx.fillText('~', x * charW, y * charH);
+                        ctx.fillText('~', x * charW, y * charH + 5);
                         continue;
                     }
 
                     if (scene === 'crossroads') {
-                        // Swaying Towering Pines on Left and Right + Road Signpost
                         const swayLeft = Math.sin(animClock + y * 0.2) * 1.5;
                         const swayRight = Math.sin(animClock + 1.2 + y * 0.2) * 1.5;
 
-                        // Left Pine Clump
-                        if (x < 28 + swayLeft && y > 6) {
-                            if ((x + y) % 3 === 0) { ch = '#'; color = '#334155'; }
-                            else if ((x + y) % 2 === 0) { ch = '/'; color = '#475569'; }
-                            else { ch = '\\'; color = '#1e293b'; }
+                        // Left Pine Grove
+                        if (x < 24 + swayLeft && y > 4) {
+                            if ((x + y) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
+                            else if ((x + y) % 2 === 0) { ch = '/'; color = '#94a3b8'; }
+                            else { ch = '\\'; color = '#475569'; }
                         }
-                        // Right Pine Clump
-                        else if (x > 82 + swayRight && y > 6) {
-                            if ((x + y) % 3 === 0) { ch = '#'; color = '#334155'; }
-                            else if ((x + y) % 2 === 0) { ch = '\\'; color = '#475569'; }
-                            else { ch = '/'; color = '#1e293b'; }
+                        // Right Pine Grove
+                        else if (x > 76 + swayRight && y > 4) {
+                            if ((x + y) % 3 === 0) { ch = '#'; color = '#38bdf8'; }
+                            else if ((x + y) % 2 === 0) { ch = '\\'; color = '#94a3b8'; }
+                            else { ch = '/'; color = '#475569'; }
                         }
-                        // Road Fork Path & Signpost
-                        else if (y > 22 && Math.abs(x - 55) < (y - 20) * 1.1) {
+                        // Road Fork Path
+                        else if (y > 18 && Math.abs(x - 50) < (y - 17) * 1.1) {
                             ch = (x + y) % 4 === 0 ? '=' : '.';
-                            color = '#1e293b';
+                            color = '#334155';
                         }
-                        // Signpost in center
-                        else if (x === 55 && y >= 14 && y <= 22) {
-                            ch = '|';
-                            color = '#94a3b8';
-                        } else if (Math.abs(x - 55) <= 5 && y === 15) {
-                            ch = '-';
-                            color = '#e2e8f0';
+                        // Wooden Signpost
+                        else if (x === 50 && y >= 11 && y <= 18) {
+                            ch = '|'; color = '#cbd5e1';
+                        } else if (Math.abs(x - 50) <= 5 && y === 12) {
+                            ch = '-'; color = '#f8fafc';
                         }
                     }
 
                     else if (scene === 'cabin') {
-                        // Abandoned Log Cabin with shattered window and hearth
-                        // Roof
-                        if (y >= 8 && y <= 14 && Math.abs(x - 55) < (15 - (y - 8)) * 2.2) {
-                            ch = '/';
-                            color = '#475569';
+                        // Cabin Roof
+                        if (y >= 6 && y <= 12 && Math.abs(x - 50) < (13 - (y - 6)) * 2.3) {
+                            ch = '/'; color = '#64748b';
                         }
-                        // Walls
-                        else if (y > 14 && y < 30 && x > 28 && x < 82) {
-                            if (y === 22 && x > 48 && x < 62) {
-                                // Table / Hearth
-                                ch = '=';
-                                color = '#64748b';
-                            } else if (x === 38 || x === 72) {
-                                ch = '|';
-                                color = '#334155';
+                        // Cabin Walls & Hearth
+                        else if (y > 12 && y < 27 && x > 24 && x < 76) {
+                            if (y === 19 && x > 43 && x < 57) {
+                                ch = '='; color = '#94a3b8';
+                            } else if (x === 32 || x === 68) {
+                                ch = '|'; color = '#475569';
                             } else {
                                 ch = (x + y) % 2 === 0 ? '#' : '=';
-                                color = '#1e293b';
+                                color = '#334155';
                             }
 
-                            // If lantern is found: Dynamic Warm Amber Lantern Glow Radiance!
+                            // Dynamic Warm Amber Lantern Glow
                             if (state.has_lantern) {
-                                const distToLantern = Math.hypot(x - 55, y - 20);
+                                const distToLantern = Math.hypot(x - 50, y - 18);
                                 const flicker = Math.sin(animClock * 6) * 0.15;
                                 if (distToLantern < 18) {
                                     const lum = Math.max(0, 1 - (distToLantern / (18 + flicker)));
@@ -769,70 +827,59 @@
                     }
 
                     else if (scene === 'tracks') {
-                        // Vanishing Railroad Tracks & Giant Locomotive Drive Wheel
-                        // Perspective converging rails
-                        const railDist = (ROWS - y) * 1.8;
-                        if (y > 10 && (Math.abs(x - 55) === Math.floor(railDist) || Math.abs(x - 55) === Math.floor(railDist) - 1)) {
-                            ch = '|';
-                            color = '#64748b';
-                        } else if (y > 10 && (y % 3 === 0) && Math.abs(x - 55) < railDist) {
-                            ch = '=';
-                            color = '#334155';
+                        const railDist = (ROWS - y) * 1.6;
+                        if (y > 8 && (Math.abs(x - 50) === Math.floor(railDist) || Math.abs(x - 50) === Math.floor(railDist) - 1)) {
+                            ch = '|'; color = '#94a3b8';
+                        } else if (y > 8 && (y % 3 === 0) && Math.abs(x - 50) < railDist) {
+                            ch = '='; color = '#475569';
                         }
-                        // Giant Rusted Driving Wheel on the right
-                        const distToWheel = Math.hypot((x - 76) * 0.7, y - 20);
-                        if (distToWheel < 7.5 && distToWheel > 4.5) {
-                            ch = '@';
-                            color = '#e2e8f0';
-                        } else if (distToWheel <= 4.5 && distToWheel > 2.0) {
-                            ch = (x + y) % 2 === 0 ? 'X' : '+';
-                            color = '#94a3b8';
+                        // Giant Locomotive Wheel
+                        const distToWheel = Math.hypot((x - 70) * 0.7, y - 17);
+                        if (distToWheel < 6.5 && distToWheel > 3.8) {
+                            ch = '@'; color = '#f1f5f9';
+                        } else if (distToWheel <= 3.8 && distToWheel > 1.5) {
+                            ch = (x + y) % 2 === 0 ? 'X' : '+'; color = '#94a3b8';
                         }
                     }
 
                     else if (scene === 'pines_deep') {
-                        // Deep dense labyrinth of pines with creeping fog
                         const windShift = Math.sin(animClock * 1.5 + x * 0.1) * 2;
-                        if ((x % 8 === 0 || x % 8 === 1) && y > 4) {
-                            ch = '|';
-                            color = '#1e293b';
-                        } else if (y < 22 && Math.sin(x * 0.3 + y * 0.4 + windShift) > 0.3) {
-                            ch = '#';
-                            color = '#334155';
+                        if ((x % 8 === 0 || x % 8 === 1) && y > 3) {
+                            ch = '|'; color = '#334155';
+                        } else if (y < 20 && Math.sin(x * 0.3 + y * 0.4 + windShift) > 0.3) {
+                            ch = '#'; color = '#64748b';
                         }
                     }
 
                     else if (scene === 'clearing') {
-                        // Gravestone under pale dawn sky with glowing particles
-                        if (y >= 14 && y <= 24 && Math.abs(x - 55) < 7) {
-                            if (y === 14) ch = '_';
-                            else if (Math.abs(x - 55) === 6) ch = '|';
-                            else if (y === 18 && Math.abs(x - 55) < 3) ch = '+'; // Cross on stone
+                        if (y >= 11 && y <= 21 && Math.abs(x - 50) < 6) {
+                            if (y === 11) ch = '_';
+                            else if (Math.abs(x - 50) === 5) ch = '|';
+                            else if (y === 15 && Math.abs(x - 50) < 3) ch = '+';
                             else ch = '=';
-                            color = '#e2e8f0';
-                        } else if (y > 24) {
+                            color = '#f1f5f9';
+                        } else if (y > 21) {
                             ch = (x + y) % 3 === 0 ? '_' : '.';
-                            color = '#334155';
+                            color = '#475569';
                         }
                     }
 
                     if (ch !== ' ') {
                         ctx.fillStyle = color;
-                        ctx.fillText(ch, x * charW, y * charH);
+                        ctx.fillText(ch, x * charW, y * charH + 5);
                     }
                 }
             }
 
-            // 2. Render Drifting Weather Flurries (Snow & Frost Embers)
+            // Render Weather Particles
             particles.forEach(p => {
                 ctx.fillStyle = `rgba(248, 250, 252, ${p.alpha})`;
-                ctx.fillText(p.char, p.x * charW, p.y * charH);
+                ctx.fillText(p.char, p.x * charW, p.y * charH + 5);
             });
 
-            // Expand ripple wave
             if (isRippling) {
                 rippleRadius += 1.8;
-                if (rippleRadius > 70) isRippling = false;
+                if (rippleRadius > 65) isRippling = false;
             }
 
             requestAnimationFrame(() => renderSceneGeometry(currentSceneId));
@@ -872,7 +919,6 @@
             document.getElementById('inner-thought').innerText = `"${thought}"`;
         }
 
-        // Story Scenes
         const narrativeNodes = {
             crossroads: {
                 title: "🌲 CROSSROADS IN THE PINES (03:17 AM)",
@@ -1166,14 +1212,13 @@
                 e.preventDefault();
                 strumAcoustic('Em');
             } else if (e.key === 't' || e.key === 'T') {
-                toggleTape();
+                togglePlayback();
             }
         });
 
-        // Resize Canvas dynamically
         function handleResize() {
             canvas.width = canvas.parentElement.clientWidth;
-            canvas.height = 310;
+            canvas.height = 280;
         }
 
         window.onload = () => {
