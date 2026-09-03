@@ -1,1 +1,7 @@
-radar = '1.0.0' # installed
+# Auto-generated lockfile for nyx package manager
+# Manual modifications will be overwritten
+manifest_version = "4.0.0-rc.1"
+target = "cpp"
+
+[resolved_dependencies]
+std = "4.0.0"

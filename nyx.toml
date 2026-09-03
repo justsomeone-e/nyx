@@ -1,13 +1,16 @@
 # Nyx Package Manifest
 [package]
-name = "my-holy-project"
-version = "1.0.0"
-authors = ["USER"]
+name = "nyx"
+version = "4.0.0-rc.1"
+edition = "2026"
+authors = ["Nyx Authors"]
+description = "Systems-oriented programming language with multi-target compilation"
+license = "MIT"
 
 [dependencies]
 std = "4.0.0"
-radar = "2.1.0"
 
-[targets]
-native = "cpp"
-web = "react"
+[build]
+target = "cpp"
+output_type = "exe"
+opt_level = 2
