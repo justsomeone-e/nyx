@@ -135,7 +135,7 @@ fn main() {
             print("==========================================")
             print("        NYX RETRO ARCADE PONG (LIVE)      ")
             print("==========================================")
-            print($"Score: [YOU] {score_p1}   vs   {score_p2} [CPU]  | W/S to move")
+            print("Score: [YOU] " + to_string(score_p1) + "   vs   " + to_string(score_p2) + " [CPU]  | W/S to move")
             print("+----------------------------------+")
 
             for y in 1..height-2 {
