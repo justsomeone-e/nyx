@@ -1,45 +1,63 @@
 #target cpp
 
+#native include <windows.h>
 #native include <conio.h>
+
+#native raw {
+extern "C" void reset_cursor_pos() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coord = {0, 0};
+    SetConsoleCursorPosition(hOut, coord);
+}
+extern "C" void set_cursor_visibility(int visible) {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO cursorInfo;
+    GetConsoleCursorInfo(hOut, &cursorInfo);
+    cursorInfo.bVisible = visible ? TRUE : FALSE;
+    SetConsoleCursorInfo(hOut, &cursorInfo);
+}
+extern "C" void clear_screen_once() {
+    system("cls");
+}
+}
+
+extern "C" fn reset_cursor_pos() -> void;
+extern "C" fn set_cursor_visibility(visible: i32) -> void;
+extern "C" fn clear_screen_once() -> void;
 extern "C" fn _kbhit() -> i32;
 extern "C" fn _getch() -> i32;
 
 // =======================================================
-// Nyx Arcade: LIVE Real-Time Pong Game
-// Real-time keyboard input (NO ENTER NEEDED!)
-// Controls: 'w' = Up, 's' = Down, 'q' = Quit
-// First to 3 points wins!
+// Nyx Arcade: LIVE FLICKER-FREE Pong Game
+// Uses #native raw Win32 console buffer rendering
+// Controls: 'W' = Up, 'S' = Down, 'Q' = Quit
+// First to 3 points wins against the CPU!
 // =======================================================
 
 fn main() {
-    let width: int = 30
-    let height: int = 12
+    clear_screen_once()
+    set_cursor_visibility(0)
 
-    var ball_x: int = 15
-    var ball_y: int = 6
+    let width: int = 34
+    let height: int = 14
+
+    var ball_x: int = 17
+    var ball_y: int = 7
     var dx: int = 1
     var dy: int = 1
 
-    var p1_y: int = 4
-    var p2_y: int = 4
+    var p1_y: int = 5
+    var p2_y: int = 5
 
     var score_p1: int = 0
     var score_p2: int = 0
     let winning_score: int = 3
 
     var playing: bool = true
-    var status_msg: string = "Game started! Use W/S to move."
-
-    print("========================================")
-    print("      NYX REAL-TIME PONG ARCADE         ")
-    print("========================================")
-    print("Controls: Press 'W' for UP, 'S' for DOWN (No Enter!)")
-    print("Press 'Q' to quit anytime.")
-    print("Starting in 2 seconds...")
-    delay_ms(2000)
+    var status_msg: string = "Use W/S to move, Q to quit!"
 
     while playing {
-        // 1. Non-blocking Keyboard Input (NO ENTER NEEDED!)
+        // 1. Non-blocking real-time keypress (No Enter!)
         if _kbhit() != 0 {
             let key: i32 = _getch()
             // 'w' or 'W'
@@ -53,16 +71,16 @@ fn main() {
             // 'q' or 'Q'
             elif key == 113 or key == 81 {
                 playing = false
-                status_msg = "Game exited by player."
+                status_msg = "Game quit by player."
             }
         }
 
         if playing {
-            // 2. Ball Physics Update
+            // 2. Ball Physics
             ball_x = ball_x + dx
             ball_y = ball_y + dy
 
-            // Wall Bounces (Top & Bottom)
+            // Top / Bottom wall bounce
             if ball_y <= 1 {
                 ball_y = 1
                 dy = 1
@@ -72,7 +90,7 @@ fn main() {
                 dy = -1
             }
 
-            // 3. CPU Paddle AI (tracks the ball with small delay)
+            // 3. CPU Paddle AI (Right)
             if p2_y + 1 < ball_y and p2_y < height - 4 {
                 p2_y = p2_y + 1
             } elif p2_y + 1 > ball_y and p2_y > 1 {
@@ -84,7 +102,7 @@ fn main() {
             if ball_x <= 2 and ball_y >= p1_y and ball_y <= p1_y + 2 {
                 ball_x = 3
                 dx = 1
-                status_msg = "NICE HIT! You returned the ball!"
+                status_msg = "NICE REFLEX! Ball returned!"
             }
 
             // CPU paddle (Right: x = width - 3, length = 3)
@@ -93,48 +111,52 @@ fn main() {
                 dx = -1
             }
 
-            // 5. Scoring
+            // 5. Goal Check
             if ball_x <= 0 {
                 score_p2 = score_p2 + 1
-                status_msg = "POINT FOR CPU! Keep your guard up!"
-                ball_x = 15
-                ball_y = 6
+                status_msg = "CPU SCORED! Ready up..."
+                ball_x = 17
+                ball_y = 7
                 dx = 1
-                delay_ms(300)
+                delay_ms(250)
             }
             if ball_x >= width - 1 {
                 score_p1 = score_p1 + 1
-                status_msg = "GOAL! You scored against CPU!"
-                ball_x = 15
-                ball_y = 6
+                status_msg = "YOU SCORED! Awesome shot!"
+                ball_x = 17
+                ball_y = 7
                 dx = -1
-                delay_ms(300)
+                delay_ms(250)
             }
 
-            // 6. Check Win Condition
+            // 6. Match Outcome
             if score_p1 >= winning_score {
-                status_msg = "VICTORY! You defeated the CPU!"
+                status_msg = "VICTORY! You crushed the CPU!"
                 playing = false
             } elif score_p2 >= winning_score {
-                status_msg = "DEFEAT! CPU took the match!"
+                status_msg = "DEFEAT! CPU took the victory!"
                 playing = false
             }
 
-            // 7. Render Screen in-place (ANSI position)
-            print("")
-            print($"Score: [YOU] {score_p1}   vs   {score_p2} [CPU]  |  {status_msg}")
-            print("+----------------------------+")
+            // 7. IN-PLACE BUFFER DRAW (Zero Flickering, Zero Tearing!)
+            reset_cursor_pos()
+
+            print("==========================================")
+            print("        NYX RETRO ARCADE PONG (LIVE)      ")
+            print("==========================================")
+            print($"Score: [YOU] {score_p1}   vs   {score_p2} [CPU]  | W/S to move")
+            print("+--------------------------------+")
 
             for y in 1..height-2 {
                 var row: string = "|"
                 for x in 1..width-2 {
                     if x == ball_x and y == ball_y {
                         row = row + "O"
-                    } elif x == 2 and y >= p1_y and y <= p1_y + 2 {
+                    } elif x == 2 and (y >= p1_y and y <= p1_y + 2) {
                         row = row + "["
-                    } elif x == width - 3 and y >= p2_y and y <= p2_y + 2 {
+                    } elif x == width - 3 and (y >= p2_y and y <= p2_y + 2) {
                         row = row + "]"
-                    } elif x == 15 {
+                    } elif x == 17 {
                         row = row + ":"
                     } else {
                         row = row + " "
@@ -143,15 +165,18 @@ fn main() {
                 row = row + "|"
                 print(row)
             }
-            print("+----------------------------+")
 
-            // Smooth 20 FPS game tick
-            delay_ms(50)
+            print("+--------------------------------+")
+            print("Status: " + status_msg + "                         ")
+
+            // Solid 30 FPS tick
+            delay_ms(35)
         }
     }
 
+    set_cursor_visibility(1)
     print("")
-    print("========================================")
-    print("FINAL RESULT: " + status_msg)
-    print("========================================")
+    print("==========================================")
+    print("GAME OVER: " + status_msg)
+    print("==========================================")
 }
