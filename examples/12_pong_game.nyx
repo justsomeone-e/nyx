@@ -1,101 +1,51 @@
 #target cpp
 
 // =======================================================
-// Nyx Arcade: ASCII Pong Simulation
-// Demonstrates loops, mutable state, AI tracking, and delay
+// Nyx Arcade: Interactive Pong Game
+// You (Left Paddle '[') vs CPU (Right Paddle ']')
+// Controls: 'w' = Up, 's' = Down, Enter = Stay, 'q' = Quit
 // =======================================================
 
 fn main() {
-    let width: int = 26
-    let height: int = 10
+    let width: int = 24
+    let height: int = 9
 
-    var ball_x: int = 13
-    var ball_y: int = 5
+    var ball_x: int = 12
+    var ball_y: int = 4
     var dx: int = 1
     var dy: int = 1
 
-    var p1_y: int = 4
-    var p2_y: int = 4
+    var p1_y: int = 3
+    var p2_y: int = 3
 
     var score_p1: int = 0
     var score_p2: int = 0
+    let winning_score: int = 3
 
-    var frame: int = 0
-    let max_frames: int = 35
+    var playing: bool = true
 
-    print("=== NYX PONG ARCADE ARENA ===")
-    print("AI-1 (Left) vs AI-2 (Right) - First to score wins!")
+    print("========================================")
+    print("      NYX INTERACTIVE PONG ARCADE       ")
+    print("========================================")
+    print("Controls: 'w' = Up, 's' = Down, Enter = Stay, 'q' = Quit")
+    print("First to 3 points wins against the CPU!")
     print("")
 
-    while frame < max_frames {
-        frame = frame + 1
-
-        // Move ball
-        ball_x = ball_x + dx
-        ball_y = ball_y + dy
-
-        // Bounce on top / bottom walls
-        if ball_y <= 1 {
-            ball_y = 1
-            dy = 1
-        }
-        if ball_y >= height - 2 {
-            ball_y = height - 2
-            dy = -1
-        }
-
-        // AI 1 Paddle Tracking
-        if p1_y + 1 < ball_y and p1_y < height - 3 {
-            p1_y = p1_y + 1
-        } elif p1_y + 1 > ball_y and p1_y > 1 {
-            p1_y = p1_y - 1
-        }
-
-        // AI 2 Paddle Tracking
-        if p2_y + 1 < ball_y and p2_y < height - 3 {
-            p2_y = p2_y + 1
-        } elif p2_y + 1 > ball_y and p2_y > 1 {
-            p2_y = p2_y - 1
-        }
-
-        // Paddle Collision (Left: x = 2, Right: x = width - 3)
-        if ball_x <= 2 and ball_y >= p1_y and ball_y <= p1_y + 2 {
-            ball_x = 3
-            dx = 1
-        }
-        if ball_x >= width - 3 and ball_y >= p2_y and ball_y <= p2_y + 2 {
-            ball_x = width - 4
-            dx = -1
-        }
-
-        // Scoring
-        if ball_x <= 0 {
-            score_p2 = score_p2 + 1
-            ball_x = 13
-            ball_y = 5
-            dx = 1
-        }
-        if ball_x >= width - 1 {
-            score_p1 = score_p1 + 1
-            ball_x = 13
-            ball_y = 5
-            dx = -1
-        }
-
-        // Render Frame
-        print($"--- Frame: {frame} | Score: [P1] {score_p1} - {score_p2} [P2] ---")
-        print("+--------------------------+")
+    while playing {
+        // Render Pong Field
+        print($"Score: [YOU] {score_p1}  -  {score_p2} [CPU]")
+        print("+------------------------+")
 
         for y in 1..height-2 {
             var row: string = "|"
             for x in 1..width-2 {
                 if x == ball_x and y == ball_y {
                     row = row + "O"
-                } elif x == 2 and y >= p1_y and y <= p1_y + 2 {
+                } elif x == 2 and (y == p1_y or y == p1_y + 1) {
                     row = row + "["
-                } elif x == width - 3 and y >= p2_y and y <= p2_y + 2 {
+                } elif x == width - 3 and (y == p2_y or y == p2_y + 1) {
                     row = row + "]"
-                } elif x == 13 {
+                } elif x == 12 {
                     row = row + ":"
                 } else {
                     row = row + " "
@@ -104,18 +54,79 @@ fn main() {
             row = row + "|"
             print(row)
         }
+        print("+------------------------+")
 
-        print("+--------------------------+")
-        delay_ms(60)
-    }
+        // Player Input
+        let move: string = input("Your move (w/s/enter/q): ")
 
-    print("")
-    print("=== MATCH FINISHED ===")
-    if score_p1 > score_p2 {
-        print("Winner: AI-1 (Left Paddle)!")
-    } elif score_p2 > score_p1 {
-        print("Winner: AI-2 (Right Paddle)!")
-    } else {
-        print("Result: Epic Draw!")
+        if move == "q" or move == "Q" {
+            print("Game aborted by player.")
+            playing = false
+        } elif (move == "w" or move == "W") and p1_y > 1 {
+            p1_y = p1_y - 1
+        } elif (move == "s" or move == "S") and p1_y < height - 3 {
+            p1_y = p1_y + 1
+        }
+
+        if playing {
+            // Ball physics
+            ball_x = ball_x + dx
+            ball_y = ball_y + dy
+
+            // Top / Bottom wall bounce
+            if ball_y <= 1 {
+                ball_y = 1
+                dy = 1
+            }
+            if ball_y >= height - 2 {
+                ball_y = height - 2
+                dy = -1
+            }
+
+            // CPU Paddle AI
+            if p2_y < ball_y and p2_y < height - 3 {
+                p2_y = p2_y + 1
+            } elif p2_y > ball_y and p2_y > 1 {
+                p2_y = p2_y - 1
+            }
+
+            // Paddle Collisions
+            if ball_x <= 2 and (ball_y == p1_y or ball_y == p1_y + 1) {
+                ball_x = 3
+                dx = 1
+                print(">> NICE HIT! You returned the ball!")
+            }
+            if ball_x >= width - 3 and (ball_y == p2_y or ball_y == p2_y + 1) {
+                ball_x = width - 4
+                dx = -1
+            }
+
+            // Scoring check
+            if ball_x <= 0 {
+                score_p2 = score_p2 + 1
+                print(">> GOAL FOR CPU! Point lost.")
+                ball_x = 12
+                ball_y = 4
+                dx = 1
+            }
+            if ball_x >= width - 1 {
+                score_p1 = score_p1 + 1
+                print(">> GOOOAL! You scored against CPU!")
+                ball_x = 12
+                ball_y = 4
+                dx = -1
+            }
+
+            // Check match winner
+            if score_p1 >= winning_score {
+                print("")
+                print("🏆 CONGRATULATIONS! YOU DEFEATED THE CPU! 🏆")
+                playing = false
+            } elif score_p2 >= winning_score {
+                print("")
+                print("💀 GAME OVER! CPU wins this match! 💀")
+                playing = false
+            }
+        }
     }
 }

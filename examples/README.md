@@ -17,7 +17,7 @@ This directory contains standalone, runnable examples demonstrating the syntax, 
 | [`09_foreign_python.nyx`](09_foreign_python.nyx) | Foreign function interface to Python standard modules (`platform`) | `python` |
 | [`10_concurrent_tasks.nyx`](10_concurrent_tasks.nyx) | Asynchronous functions (`async fn`), `Task<T>`, `await`, `guard`, and `defer` | `cpp`, `js`, `python` |
 | [`11_data_pipeline.nyx`](11_data_pipeline.nyx) | Domain structs, traits (`impl Trait for Struct`), pattern matching, stream pipelines | `cpp`, `js`, `python` |
-| [`12_pong_game.nyx`](12_pong_game.nyx) | Real-time game loop, AI paddle tracking, ball physics, ASCII rendering, `delay_ms` | `cpp`, `js`, `python` |
+| [`12_pong_game.nyx`](12_pong_game.nyx) | Interactive playable Pong game (Player vs CPU), physics, input, ASCII arena | `cpp`, `js`, `python` |
 
 ## How to Run
 
