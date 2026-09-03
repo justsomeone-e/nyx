@@ -4,7 +4,7 @@
   "description": "Native compiler tooling, IntelliSense, and one-click multi-target workflows for Nyx.",
   "version": "4.0.0-rc.1",
   "publisher": "nyx",
-  "license": "AGPL-3.0-only",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/justsomeone-e/nyx.git"

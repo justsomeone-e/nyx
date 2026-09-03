@@ -176,7 +176,7 @@ if [ -n "$SOURCE_ROOT" ]; then
     fi
     echo "[*] Installing source and compiler support files..."
     cp -R "$SOURCE_ROOT/src/." "$SRC_DIR/"
-    for legal_file in VERSION LICENSE NYX-OUTPUT-EXCEPTION; do
+    for legal_file in VERSION LICENSE; do
         if [ -f "$SOURCE_ROOT/$legal_file" ]; then
             cp "$SOURCE_ROOT/$legal_file" "$INSTALL_DIR/$legal_file"
         fi
