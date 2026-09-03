@@ -45,9 +45,13 @@ async function requireNyxDocument(vscode) {
 
 function taskScope(vscode, document) {
     if (document) {
-        return vscode.workspace.getWorkspaceFolder(document.uri) || vscode.TaskScope.Workspace;
+        const folder = vscode.workspace.getWorkspaceFolder(document.uri);
+        if (folder) return folder;
     }
-    return vscode.TaskScope.Workspace;
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        return vscode.workspace.workspaceFolders[0];
+    }
+    return vscode.TaskScope.Global;
 }
 
 async function executeTask(vscode, action, document, target) {
@@ -70,6 +74,9 @@ async function executeTask(vscode, action, document, target) {
         new vscode.ShellExecution(cli, args),
         []
     );
+    if (action === 'build') {
+        task.group = vscode.TaskGroup.Build;
+    }
     task.presentationOptions = {
         reveal: vscode.TaskRevealKind.Always,
         panel: vscode.TaskPanelKind.Shared,

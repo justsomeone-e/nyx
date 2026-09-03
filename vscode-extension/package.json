@@ -155,6 +155,19 @@
         }
       ]
     },
+    "keybindings": [
+      {
+        "command": "nyx.buildCurrentFile",
+        "key": "ctrl+shift+b",
+        "mac": "cmd+shift+b",
+        "when": "editorTextFocus && resourceLangId == nyxlang"
+      },
+      {
+        "command": "nyx.runCurrentFile",
+        "key": "f5",
+        "when": "editorTextFocus && resourceLangId == nyxlang"
+      }
+    ],
     "languages": [
       {
         "id": "nyxlang",
