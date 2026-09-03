@@ -29,7 +29,7 @@ extern "C" fn _getch() -> i32;
 
 // =======================================================
 // Nyx Arcade: LIVE FLICKER-FREE Pong Game
-// Uses #native raw Win32 console buffer rendering
+// Balanced speed & humanized CPU AI
 // Controls: 'W' = Up, 'S' = Down, 'Q' = Quit
 // First to 3 points wins against the CPU!
 // =======================================================
@@ -55,8 +55,11 @@ fn main() {
 
     var playing: bool = true
     var status_msg: string = "Use W/S to move, Q to quit!"
+    var tick: int = 0
 
     while playing {
+        tick = tick + 1
+
         // 1. Non-blocking real-time keypress (No Enter!)
         if _kbhit() != 0 {
             let key: i32 = _getch()
@@ -90,11 +93,13 @@ fn main() {
                 dy = -1
             }
 
-            // 3. CPU Paddle AI (Right)
-            if p2_y + 1 < ball_y and p2_y < height - 4 {
-                p2_y = p2_y + 1
-            } elif p2_y + 1 > ball_y and p2_y > 1 {
-                p2_y = p2_y - 1
+            // 3. Humanized CPU AI (Only moves when ball approaches its half, with reaction delay)
+            if dx > 0 and ball_x > 14 and (tick % 2 == 0) {
+                if p2_y + 1 < ball_y and p2_y < height - 4 {
+                    p2_y = p2_y + 1
+                } elif p2_y + 1 > ball_y and p2_y > 1 {
+                    p2_y = p2_y - 1
+                }
             }
 
             // 4. Paddle Collisions
@@ -118,7 +123,7 @@ fn main() {
                 ball_x = 17
                 ball_y = 7
                 dx = 1
-                delay_ms(250)
+                delay_ms(400)
             }
             if ball_x >= width - 1 {
                 score_p1 = score_p1 + 1
@@ -126,7 +131,7 @@ fn main() {
                 ball_x = 17
                 ball_y = 7
                 dx = -1
-                delay_ms(250)
+                delay_ms(400)
             }
 
             // 6. Match Outcome
@@ -169,8 +174,8 @@ fn main() {
             print("+--------------------------------+")
             print("Status: " + status_msg + "                         ")
 
-            // Solid 30 FPS tick
-            delay_ms(35)
+            // Comfortable, responsive arcade game tick
+            delay_ms(55)
         }
     }
 
