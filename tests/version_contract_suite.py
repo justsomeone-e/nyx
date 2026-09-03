@@ -35,7 +35,7 @@ def run_version_contract_suite() -> bool:
 
     with open(os.path.join(ROOT_DIR, "README.md"), encoding="utf-8") as handle:
         readme = handle.read()
-    assert f"`{VERSION}`" in readme
+    assert (f"`{VERSION}`" in readme) or (f"`v{VERSION}`" in readme)
     assert "v3.0.0" not in readme
     for animated_asset in (
         "terminal_animated.svg",

@@ -12,7 +12,11 @@
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx v4.0.0-rc.1 "Samsara"** is the active release candidate. It validates compiler correctness, reproducible native self-hosting without Python runtime dependency, C++20/WASM targets, language ergonomics, and language server tooling. Microcontroller firmware has been decoupled to focus on an uncompromising semantic core.
+> **Nyx v4.0.0-rc.1 "Samsara"** (`4.0.0-rc.1`) is the active release candidate. It validates compiler correctness, reproducible native self-hosting without Python runtime dependency, C++20/WASM targets, language ergonomics, and language server tooling. Microcontroller firmware has been decoupled to focus on an uncompromising semantic core.
+
+<div align="center">
+  <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
+</div>
 
 <p align="left">
   <a href="#manifesto">MANIFESTO</a> •
@@ -569,6 +573,8 @@ See [`LICENSE`](LICENSE) for full legal terms.
 
 ---
 
-<p align="center">
+<div align="center">
+  <img src="assets/footer_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx systems footer banner"/>
+  <br/><br/>
   <sub>Designed for performance. Engineered for correctness. Built for the modern machine.</sub>
-</p>
+</div>
