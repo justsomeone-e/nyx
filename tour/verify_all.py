@@ -81,7 +81,7 @@ def verify_all():
     passed_count = sum(1 for r in results if r[1])
     print(f"Verification Summary: {passed_count}/{len(exercises)} passed.")
     if all_passed:
-        print("🎉 ALL 33 EXERCISES AND SOLUTIONS VERIFIED 100% CLEANLY!")
+        print(f"🎉 ALL {len(exercises)} EXERCISES AND SOLUTIONS VERIFIED 100% CLEANLY!")
     else:
         print("⚠️ Some exercises or solutions failed verification.")
     print("=" * 70)

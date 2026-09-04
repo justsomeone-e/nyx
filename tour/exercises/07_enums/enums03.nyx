@@ -1,0 +1,26 @@
+// I AM NOT DONE
+// Enums are ideal for state machines.
+// TODO: Complete `next_light`: Red -> Green -> Yellow -> Red.
+
+enum Light {
+    Red,
+    Green,
+    Yellow
+}
+
+fn next_light(current: Light) -> Light {
+    // TODO: Implement the transition sequence: Red -> Green -> Yellow -> Red
+    return Light.Red
+}
+
+fn main() {
+    let l1 = Light.Red
+    let l2 = next_light(l1)
+    let l3 = next_light(l2)
+
+    assert(l2 == Light.Green, "Red must transition to Green")
+    assert(l3 == Light.Yellow, "Green must transition to Yellow")
+    print("Traffic light transitions verified!")
+}
+
+main()

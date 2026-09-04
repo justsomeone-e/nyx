@@ -53,14 +53,30 @@ class NyxRunner:
         return "nyxc"
 
     def check(self, file_path: str) -> TestResult:
-        """Run fast static type and syntax check via nyxc check."""
+        """Run fast static type and syntax check using Nyx canonical compiler."""
         t0 = time.perf_counter()
         abs_path = os.path.abspath(file_path)
 
         if not os.path.isfile(abs_path):
             return TestResult(False, "", f"File not found: {file_path}", 0.0)
 
-        # First check with nyxc check
+        # 1. Native in-process compiler check (blazing fast ~5ms, supports all language features)
+        try:
+            if self.repo_dir not in sys.path:
+                sys.path.insert(0, self.repo_dir)
+            from src.api import NyxCompiler
+            compiler = NyxCompiler(os.path.dirname(abs_path))
+            result = compiler.check_file(abs_path)
+            dur = (time.perf_counter() - t0) * 1000
+            if result.success:
+                return TestResult(True, "NYX_CHECK_OK", "", dur)
+            else:
+                rendered = "\n".join(d.rendered for d in result.diagnostics)
+                return TestResult(False, "", rendered or "Semantic or syntax error found", dur)
+        except Exception:
+            pass
+
+        # 2. Fallback to nyxc check
         try:
             proc = subprocess.run(
                 [self.nyxc_exe, "check", abs_path],

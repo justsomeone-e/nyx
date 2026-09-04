@@ -1,0 +1,40 @@
+fn add_buff(val: int) -> int {
+    return val + 10
+}
+
+fn double_buff(val: int) -> int {
+    return val * 2
+}
+
+struct Hero {
+    name: string,
+    level: int,
+    attack: int
+}
+
+impl Hero {
+    fn boosted_attack(self) -> int {
+        return self.attack |> add_buff |> double_buff
+    }
+
+    fn title(self) -> string {
+        return match self.level {
+            10 => "Champion",
+            5 => "Knight",
+            _ => "Novice"
+        }
+    }
+}
+
+fn main() {
+    let hero = Hero("Kurt", 10, 20)
+
+    let final_atk = hero.boosted_attack()
+    let rank = hero.title()
+
+    assert(final_atk == 60, "Boosted attack must be (20 + 10) * 2 = 60!")
+    assert(rank == "Champion", "Level 10 hero must have rank 'Champion'!")
+    print("Hero:", hero.name, "Rank:", rank, "Attack:", final_atk)
+}
+
+main()

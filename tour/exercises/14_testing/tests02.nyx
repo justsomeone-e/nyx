@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// Multiple test blocks can be declared in a single file.
+// TODO: Add a second test block named "subtraction test" that asserts `sub(10, 4) == 6`.
+
+fn sub(a: int, b: int) -> int {
+    return a - b
+}
+
+test "subtraction test" {
+    var res = sub(10, 4)
+    assert(res == 0, "10 - 4 must equal 6!")
+    print("  [PASS] 10 - 4 == 6")
+}

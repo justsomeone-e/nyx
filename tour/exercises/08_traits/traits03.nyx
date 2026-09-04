@@ -1,0 +1,24 @@
+// I AM NOT DONE
+// Trait methods can take extra parameters in addition to `self`.
+// TODO: Implement `scale(self, factor: int) -> int` for `Score`.
+
+trait Scalable {
+    fn scale(self, factor: int) -> int
+}
+
+struct Score {
+    points: int
+}
+
+impl Scalable for Score {
+    // Implement scale here! Return self.points * factor
+}
+
+fn main() {
+    let sc = Score(15)
+    let doubled = sc.scale(2)
+    assert(doubled == 30, "Scaled score must be 30")
+    print("Scaled points:", doubled)
+}
+
+main()

@@ -1,0 +1,50 @@
+// I AM NOT DONE
+// CAPSTONE QUIZ 3: Character Level-Up System
+// Combine Pipelines, Structs, Methods, and Pattern Matching!
+//
+// TODO:
+// 1. Implement `boosted_attack` by piping `self.attack` through `add_buff` (+10) then `double_buff` (*2).
+//    For attack = 20: (20 + 10) * 2 = 60!
+// 2. Return title based on level: 10 => "Champion", 5 => "Knight", _ => "Novice".
+
+fn add_buff(val: int) -> int {
+    return val + 10
+}
+
+fn double_buff(val: int) -> int {
+    return val * 2
+}
+
+struct Hero {
+    name: string,
+    level: int,
+    attack: int
+}
+
+impl Hero {
+    fn boosted_attack(self) -> int {
+        // Pipe self.attack through add_buff and double_buff:
+        return self.attack
+    }
+
+    fn title(self) -> string {
+        return match self.level {
+            10 => "Champion",
+            5 => "Knight",
+            _ => "Novice"
+        }
+    }
+}
+
+fn main() {
+    let hero = Hero("Kurt", 10, 20)
+
+    let final_atk = hero.boosted_attack()
+    let rank = hero.title()
+
+    assert(final_atk == 60, "Boosted attack must be (20 + 10) * 2 = 60!")
+    assert(rank == "Champion", "Level 10 hero must have rank 'Champion'!")
+    print("Hero:", hero.name, "Rank:", rank, "Attack:", final_atk)
+}
+
+main()

@@ -1,0 +1,16 @@
+fn increment(x: int) -> int {
+    return x + 1
+}
+
+fn double_val(x: int) -> int {
+    return x * 2
+}
+
+fn main() {
+    let initial = 4
+    let result = initial |> increment |> double_val
+    assert(result == 10, "Pipelined result of (4 + 1) * 2 must be 10!")
+    print("Pipelined result:", result)
+}
+
+main()

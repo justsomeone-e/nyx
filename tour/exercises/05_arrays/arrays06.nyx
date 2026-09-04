@@ -1,0 +1,16 @@
+// I AM NOT DONE
+// TODO: Find the maximum number in `nums` and store it in `max_val`.
+
+fn main() {
+    let nums = [14, 88, 42, 95, 33]
+    var max_val = nums[0]
+
+    for i in 1..4 {
+        // Update max_val if nums[i] is greater!
+    }
+
+    assert(max_val == 95, "Maximum value must be 95!")
+    print("Highest score found:", max_val)
+}
+
+main()

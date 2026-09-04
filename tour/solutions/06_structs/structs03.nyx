@@ -1,0 +1,20 @@
+struct Position {
+    x: int,
+    y: int
+}
+
+struct Player {
+    name: string,
+    position: Position
+}
+
+fn main() {
+    let pos = Position(120, 80)
+    let player = Player("Aria", pos)
+    let player_x = player.position.x
+
+    assert(player_x == 120, "player_x must equal 120!")
+    print("Player position on X:", player_x)
+}
+
+main()

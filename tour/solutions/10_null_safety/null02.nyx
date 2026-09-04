@@ -1,0 +1,15 @@
+fn calculate_total(base: int, extra_score: int?) -> int {
+    let points = extra_score ?? 10
+    return base + points
+}
+
+fn main() {
+    let t1 = calculate_total(50, null)
+    let t2 = calculate_total(50, 25)
+
+    assert(t1 == 60, "t1 with null extra_score must equal 60")
+    assert(t2 == 75, "t2 with 25 extra_score must equal 75")
+    print("Calculated scores:", t1, t2)
+}
+
+main()

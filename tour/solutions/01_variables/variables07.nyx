@@ -1,0 +1,13 @@
+struct Point {
+    x: int,
+    y: int
+}
+
+fn main() {
+    let p = Point(30, 70)
+    let Point(px, py) = p
+    assert(px == 30 and py == 70, "px and py must match p.x and p.y!")
+    print("Destructured Point:", px, py)
+}
+
+main()

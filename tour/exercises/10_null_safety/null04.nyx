@@ -1,0 +1,18 @@
+// I AM NOT DONE
+// `guard` conditions can combine multiple checks with `and` / `or`.
+// TODO: Require that `age >= 18 and has_license` holds; else return `false`.
+
+fn can_rent_car(age: int, has_license: bool) -> bool {
+    // Add guard statement here!
+
+    return true
+}
+
+fn main() {
+    assert(can_rent_car(16, true) == false, "Underage cannot rent")
+    assert(can_rent_car(22, false) == false, "No license cannot rent")
+    assert(can_rent_car(25, true) == true, "Adult with license can rent")
+    print("Rental permissions verified!")
+}
+
+main()

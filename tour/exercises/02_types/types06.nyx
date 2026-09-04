@@ -1,0 +1,14 @@
+// I AM NOT DONE
+// An `int` automatically widens to `float` when combined with a float operator.
+// TODO: Add `base` (int) and `fraction` (float) together and store in `result: float`.
+
+fn main() {
+    let base: int = 10
+    let fraction: float = 0.5
+    let result: float = 0.0 // Add base + fraction
+
+    assert(result == 10.5, "result must be 10.5")
+    print("Widened calculation:", result)
+}
+
+main()

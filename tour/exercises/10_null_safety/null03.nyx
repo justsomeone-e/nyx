@@ -1,0 +1,23 @@
+// I AM NOT DONE
+// `guard condition else { return }` ensures a condition holds before continuing.
+// If the condition is false, the `else` block executes immediately.
+// TODO: Add a guard ensuring `energy > 0` else return "blocked"!
+
+fn perform_action(energy: int) -> string {
+    // Add guard statement here:
+    // guard energy > 0 else {
+    //     return "blocked"
+    // }
+
+    return "success"
+}
+
+fn main() {
+    let res1 = perform_action(0)  // Should be blocked by guard!
+    let res2 = perform_action(50) // Should succeed
+    assert(res1 == "blocked", "0 energy must be blocked by guard!")
+    assert(res2 == "success", "50 energy must succeed!")
+    print("Guards verified successfully!")
+}
+
+main()

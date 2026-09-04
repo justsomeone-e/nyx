@@ -1,0 +1,15 @@
+fn describe_flag(flag: bool) -> string {
+    return match flag {
+        true => "Enabled",
+        false => "Disabled",
+        _ => "Unknown"
+    }
+}
+
+fn main() {
+    assert(describe_flag(true) == "Enabled", "true should be Enabled")
+    assert(describe_flag(false) == "Disabled", "false should be Disabled")
+    print("Flag states verified!")
+}
+
+main()

@@ -1,0 +1,22 @@
+struct Lock {
+    is_locked: bool
+}
+
+fn release_lock(lock: Lock) {
+    lock.is_locked = false
+}
+
+fn do_critical_work(lock: Lock) {
+    lock.is_locked = true
+    defer release_lock(lock)
+    print("Performing critical work with lock held...")
+}
+
+fn main() {
+    let lock = Lock(false)
+    do_critical_work(lock)
+    assert(lock.is_locked == false, "Lock must be released automatically via defer upon exit!")
+    print("Lock safely released:", lock.is_locked == false)
+}
+
+main()

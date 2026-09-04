@@ -1,0 +1,14 @@
+fn factorial(n: int) -> int {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n - 1)
+}
+
+fn main() {
+    let res = factorial(5)
+    assert(res == 120, "factorial(5) must be 120 (5 * 4 * 3 * 2 * 1)!")
+    print("5! =", res)
+}
+
+main()

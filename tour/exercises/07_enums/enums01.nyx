@@ -1,0 +1,14 @@
+// I AM NOT DONE
+// Enums declare a set of discrete named variants:
+//   enum Color { Red, Green, Blue }
+// Access variants via `Color.Red`.
+// TODO: Declare an enum `Status` with Idle, Running, and Stopped variants.
+
+// Declare enum Status here:
+
+fn main() {
+    let current = Status.Running
+    print("Current system status:", current)
+}
+
+main()

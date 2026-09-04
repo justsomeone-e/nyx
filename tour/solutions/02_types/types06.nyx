@@ -1,0 +1,10 @@
+fn main() {
+    let base: int = 10
+    let fraction: float = 0.5
+    let result: float = base + fraction
+
+    assert(result == 10.5, "result must be 10.5")
+    print("Widened calculation:", result)
+}
+
+main()

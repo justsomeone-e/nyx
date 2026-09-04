@@ -1,0 +1,12 @@
+enum Status {
+    Idle,
+    Running,
+    Stopped
+}
+
+fn main() {
+    let current = Status.Running
+    print("Current system status:", current)
+}
+
+main()

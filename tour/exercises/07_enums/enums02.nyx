@@ -1,0 +1,20 @@
+// I AM NOT DONE
+// Enum variants can be compared with `==` and `!=`.
+// TODO: Verify if `hero_dir` is facing `Direction.East`.
+
+enum Direction {
+    North,
+    South,
+    East,
+    West
+}
+
+fn main() {
+    let hero_dir = Direction.East
+    let is_facing_east = false // Compare hero_dir == Direction.East
+
+    assert(is_facing_east == true, "Hero must be facing East!")
+    print("Hero facing East:", is_facing_east)
+}
+
+main()

@@ -1,0 +1,8 @@
+fn main() {
+    let nickname: string? = null
+    let display_name: string = nickname ?? "Guest"
+    assert(display_name == "Guest", "display_name must fallback to 'Guest' when nickname is null!")
+    print("Welcome,", display_name)
+}
+
+main()

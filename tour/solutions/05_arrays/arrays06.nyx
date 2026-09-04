@@ -1,0 +1,15 @@
+fn main() {
+    let nums = [14, 88, 42, 95, 33]
+    var max_val = nums[0]
+
+    for i in 1..4 {
+        if nums[i] > max_val {
+            set max_val = nums[i]
+        }
+    }
+
+    assert(max_val == 95, "Maximum value must be 95!")
+    print("Highest score found:", max_val)
+}
+
+main()

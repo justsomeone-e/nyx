@@ -1,0 +1,18 @@
+// I AM NOT DONE
+// Nested loops allow traversing 2D grids and matrices.
+// TODO: Iterate row `r` from 1..2, and col `c` from 1..2.
+// Multiply r by 10 and add c, accumulating into `total`.
+// Expected: (11) + (12) + (21) + (22) = 66!
+
+fn main() {
+    var total = 0
+    for r in 1..2 {
+        for c in 1..2 {
+            // Add (r * 10 + c) to total
+        }
+    }
+    assert(total == 66, "Nested loop total must be 66!")
+    print("Grid traversal sum:", total)
+}
+
+main()

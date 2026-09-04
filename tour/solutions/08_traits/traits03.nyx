@@ -1,0 +1,22 @@
+trait Scalable {
+    fn scale(self, factor: int) -> int
+}
+
+struct Score {
+    points: int
+}
+
+impl Scalable for Score {
+    fn scale(self, factor: int) -> int {
+        return self.points * factor
+    }
+}
+
+fn main() {
+    let sc = Score(15)
+    let doubled = sc.scale(2)
+    assert(doubled == 30, "Scaled score must be 30")
+    print("Scaled points:", doubled)
+}
+
+main()

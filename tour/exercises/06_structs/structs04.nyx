@@ -1,0 +1,18 @@
+// I AM NOT DONE
+// Mutable struct bindings allow field reassignment via `set target.field = val`.
+// TODO: Damage `hero` by subtracting 25 from `hero.health`.
+
+struct Hero {
+    name: string,
+    health: int
+}
+
+fn main() {
+    var hero = Hero("Kurt", 100)
+    // Subtract 25 damage:
+
+    assert(hero.health == 75, "Hero health must be 75 after 25 damage!")
+    print("Hero remaining health:", hero.health)
+}
+
+main()

@@ -1,0 +1,16 @@
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+fn create_square(size: int) -> Rectangle {
+    return Rectangle(size, size)
+}
+
+fn main() {
+    let sq = create_square(12)
+    assert(sq.width == 12 and sq.height == 12, "Square dimensions must both equal 12")
+    print("Square created:", sq.width, "x", sq.height)
+}
+
+main()

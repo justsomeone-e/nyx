@@ -1,0 +1,28 @@
+struct Cleaner {
+    step1: bool,
+    step2: bool
+}
+
+fn cleanup_step1(cleaner: Cleaner) {
+    cleaner.step1 = true
+}
+
+fn cleanup_step2(cleaner: Cleaner) {
+    cleaner.step2 = true
+}
+
+fn process_batch(cleaner: Cleaner) {
+    print("Batch processing in progress...")
+    defer cleanup_step1(cleaner)
+    defer cleanup_step2(cleaner)
+}
+
+fn main() {
+    let cleaner = Cleaner(false, false)
+    process_batch(cleaner)
+    assert(cleaner.step1 == true, "Cleanup step 1 must have run via defer!")
+    assert(cleaner.step2 == true, "Cleanup step 2 must have run via defer!")
+    print("All batch cleanup handlers executed via defer successfully!")
+}
+
+main()

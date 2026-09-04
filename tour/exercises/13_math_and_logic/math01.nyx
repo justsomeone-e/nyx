@@ -1,0 +1,16 @@
+// I AM NOT DONE
+// The modulo operator `%` calculates the remainder of integer division.
+// TODO: Complete `is_even(n: int) -> bool` using `n % 2`.
+
+fn is_even(n: int) -> bool {
+    // Return true if n % 2 == 0
+    return false
+}
+
+fn main() {
+    assert(is_even(42) == true, "42 must be even")
+    assert(is_even(17) == false, "17 must be odd")
+    print("Even/odd tests passed!")
+}
+
+main()

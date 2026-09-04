@@ -1,0 +1,45 @@
+// I AM NOT DONE
+// CAPSTONE QUIZ 2: Banking Ledger System
+// Model a secure bank account:
+// 1. Deposits must only accept positive amounts (> 0).
+// 2. Withdrawals must not overdraw the account (amount <= balance).
+//
+// TODO: Implement `deposit` and `withdraw` with proper `guard` checks!
+
+struct Account {
+    owner: string,
+    balance: int
+}
+
+impl Account {
+    fn deposit(self, amount: int) -> int {
+        // Add guard ensuring amount > 0 else return self.balance!
+        return self.balance
+    }
+
+    fn withdraw(self, amount: int) -> int {
+        // Add guard ensuring amount > 0 and self.balance >= amount else return self.balance!
+        return self.balance
+    }
+}
+
+fn main() {
+    var acc = Account("Kurt", 500)
+
+    // Deposit 200 -> balance becomes 700
+    let b1 = acc.deposit(200)
+    set acc.balance = b1
+
+    // Invalid withdraw (1000 > 700) -> blocked, stays 700
+    let b2 = acc.withdraw(1000)
+    set acc.balance = b2
+
+    // Valid withdraw (300) -> balance becomes 400
+    let b3 = acc.withdraw(300)
+    set acc.balance = b3
+
+    assert(acc.balance == 400, "Final balance after transactions must be 400!")
+    print("Account owner:", acc.owner, "Final verified balance:", acc.balance)
+}
+
+main()

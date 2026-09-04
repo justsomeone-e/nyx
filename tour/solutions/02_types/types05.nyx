@@ -1,0 +1,7 @@
+fn main() {
+    let text = "Hello\nWorld"
+    assert(text == "Hello\nWorld", "text must contain a newline escape \n")
+    print(text)
+}
+
+main()

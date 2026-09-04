@@ -1,0 +1,9 @@
+fn main() {
+    var numbers = [10, 20]
+    numbers.push(30)
+    assert(len(numbers) == 3, "numbers array should contain 3 elements")
+    assert(numbers[2] == 30, "last element should be 30")
+    print("Updated array length:", len(numbers))
+}
+
+main()

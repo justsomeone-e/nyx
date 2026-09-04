@@ -1,0 +1,23 @@
+// I AM NOT DONE
+// Pipelines make multi-stage transformations clean and readable.
+// TODO: Pipe `raw_val` through `add_tax` and then `apply_discount`.
+// 100 + 20 (tax) = 120 -> 120 - 15 (discount) = 105!
+
+fn add_tax(price: int) -> int {
+    return price + 20
+}
+
+fn apply_discount(price: int) -> int {
+    return price - 15
+}
+
+fn main() {
+    let raw_val = 100
+    // Chain with |>:
+    let final_price = raw_val
+
+    assert(final_price == 105, "final_price must equal 105!")
+    print("Pipelined checkout total:", final_price)
+}
+
+main()

@@ -1,0 +1,15 @@
+// I AM NOT DONE
+// When destructuring, you can discard unwanted values using `_`:
+//   `let [first, _] = values`
+// TODO: Extract only `first_val` and ignore the second value with `_`.
+
+fn main() {
+    let pair = [42, 999]
+    // Destructure first_val and discard the second with _:
+    let first_val = 0
+
+    assert(first_val == 42, "first_val must be 42!")
+    print("Extracted first value:", first_val)
+}
+
+main()

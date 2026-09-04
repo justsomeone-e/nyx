@@ -1,0 +1,24 @@
+// I AM NOT DONE
+// Exceptions can be recovered from cleanly by setting a safe fallback.
+// TODO: If `risky_divide` fails, catch the error and fallback `result = -1`.
+
+fn risky_divide(a: int, b: int) -> int {
+    if b == 0 {
+        throw "Division by zero"
+    }
+    return a / b
+}
+
+fn main() {
+    var result = 0
+    try {
+        set result = risky_divide(10, 0)
+    } catch err {
+        // Fallback to -1 on error:
+    }
+
+    assert(result == -1, "Fallback result must be -1 on error!")
+    print("Recovered with safe fallback:", result)
+}
+
+main()

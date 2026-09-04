@@ -1,0 +1,8 @@
+fn main() {
+    let pair = [42, 999]
+    let [first_val, _] = pair
+    assert(first_val == 42, "first_val must be 42!")
+    print("Extracted first value:", first_val)
+}
+
+main()

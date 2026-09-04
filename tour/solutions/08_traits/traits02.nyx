@@ -1,0 +1,35 @@
+trait Area {
+    fn area(self) -> int
+}
+
+struct Rect {
+    w: int,
+    h: int
+}
+
+impl Area for Rect {
+    fn area(self) -> int {
+        return self.w * self.h
+    }
+}
+
+struct Square {
+    side: int
+}
+
+impl Area for Square {
+    fn area(self) -> int {
+        return self.side * self.side
+    }
+}
+
+fn main() {
+    let r = Rect(4, 5)
+    let s = Square(6)
+
+    assert(r.area() == 20, "Rect area must be 20")
+    assert(s.area() == 36, "Square area must be 36")
+    print("Rect area:", r.area(), "Square area:", s.area())
+}
+
+main()

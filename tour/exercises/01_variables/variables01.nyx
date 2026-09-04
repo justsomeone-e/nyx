@@ -1,9 +1,10 @@
 // I AM NOT DONE
 // In Nyx, bindings are introduced with `let` (immutable) or `var` (mutable).
-// TODO: Add the missing keyword to declare `x`.
+// TODO: Declare `x` with value 42 using the `let` keyword.
 
 fn main() {
-    x = 42
+    // Declare x here:
+
     print("x is:", x)
 }
 

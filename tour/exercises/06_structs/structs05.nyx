@@ -1,0 +1,20 @@
+// I AM NOT DONE
+// You can write factory functions to construct initialized structs.
+// TODO: Complete `create_square(size: int) -> Rectangle` returning width=size, height=size.
+
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+fn create_square(size: int) -> Rectangle {
+    // Return Rectangle with width and height equal to size
+}
+
+fn main() {
+    let sq = create_square(12)
+    assert(sq.width == 12 and sq.height == 12, "Square dimensions must both equal 12")
+    print("Square created:", sq.width, "x", sq.height)
+}
+
+main()

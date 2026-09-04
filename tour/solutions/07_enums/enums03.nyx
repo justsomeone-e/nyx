@@ -1,0 +1,27 @@
+enum Light {
+    Red,
+    Green,
+    Yellow
+}
+
+fn next_light(current: Light) -> Light {
+    if current == Light.Red {
+        return Light.Green
+    } elif current == Light.Green {
+        return Light.Yellow
+    } else {
+        return Light.Red
+    }
+}
+
+fn main() {
+    let l1 = Light.Red
+    let l2 = next_light(l1)
+    let l3 = next_light(l2)
+
+    assert(l2 == Light.Green, "Red must transition to Green")
+    assert(l3 == Light.Yellow, "Green must transition to Yellow")
+    print("Traffic light transitions verified!")
+}
+
+main()

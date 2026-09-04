@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// The built-in function `len(string)` returns the length of a string.
+// TODO: Calculate the length of `title` using `len(...)`.
+
+fn main() {
+    let title = "Antigravity"
+    let length = 0 // Compute len(title)
+
+    assert(length == 11, "Length of 'Antigravity' must be 11!")
+    print("Title length is:", length)
+}
+
+main()

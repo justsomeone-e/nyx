@@ -1,0 +1,16 @@
+// I AM NOT DONE
+// Functions can call themselves recursively with a base case.
+// TODO: Implement the recursive `factorial(n: int) -> int` function!
+
+fn factorial(n: int) -> int {
+    // Add base case and recursive call!
+    return 0
+}
+
+fn main() {
+    let res = factorial(5)
+    assert(res == 120, "factorial(5) must be 120 (5 * 4 * 3 * 2 * 1)!")
+    print("5! =", res)
+}
+
+main()

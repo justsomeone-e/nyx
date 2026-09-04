@@ -1,0 +1,12 @@
+fn main() {
+    var total = 0
+    for r in 1..2 {
+        for c in 1..2 {
+            set total = total + (r * 10 + c)
+        }
+    }
+    assert(total == 66, "Nested loop total must be 66!")
+    print("Grid traversal sum:", total)
+}
+
+main()

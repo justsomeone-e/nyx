@@ -1,0 +1,11 @@
+fn is_even(n: int) -> bool {
+    return n % 2 == 0
+}
+
+fn main() {
+    assert(is_even(42) == true, "42 must be even")
+    assert(is_even(17) == false, "17 must be odd")
+    print("Even/odd tests passed!")
+}
+
+main()

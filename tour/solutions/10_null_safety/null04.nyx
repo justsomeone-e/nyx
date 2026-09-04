@@ -1,0 +1,16 @@
+fn can_rent_car(age: int, has_license: bool) -> bool {
+    guard age >= 18 and has_license else {
+        return false
+    }
+
+    return true
+}
+
+fn main() {
+    assert(can_rent_car(16, true) == false, "Underage cannot rent")
+    assert(can_rent_car(22, false) == false, "No license cannot rent")
+    assert(can_rent_car(25, true) == true, "Adult with license can rent")
+    print("Rental permissions verified!")
+}
+
+main()

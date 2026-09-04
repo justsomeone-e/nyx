@@ -1,0 +1,22 @@
+// I AM NOT DONE
+// `match` evaluates to a value directly.
+// TODO: Complete the `get_tier` function using `match tier`:
+//   1 => "Bronze"
+//   2 => "Silver"
+//   3 => "Gold"
+//   _ => "Unranked"
+
+fn get_tier(tier: int) -> string {
+    return match tier {
+        1 => "Bronze",
+        _ => "Unranked"
+    }
+}
+
+fn main() {
+    assert(get_tier(3) == "Gold", "Tier 3 must be Gold")
+    assert(get_tier(2) == "Silver", "Tier 2 must be Silver")
+    print("Tier 3 is:", get_tier(3))
+}
+
+main()

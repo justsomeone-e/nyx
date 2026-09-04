@@ -1,0 +1,25 @@
+// I AM NOT DONE
+// Structs can contain instances of other structs as fields.
+// TODO: Access the player's nested X position through `player.position.x`.
+
+struct Position {
+    x: int,
+    y: int
+}
+
+struct Player {
+    name: string,
+    position: Position
+}
+
+fn main() {
+    let pos = Position(120, 80)
+    let player = Player("Aria", pos)
+
+    let player_x = 0 // Read player.position.x
+
+    assert(player_x == 120, "player_x must equal 120!")
+    print("Player position on X:", player_x)
+}
+
+main()

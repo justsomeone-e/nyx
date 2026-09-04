@@ -1,0 +1,17 @@
+fn add_tax(price: int) -> int {
+    return price + 20
+}
+
+fn apply_discount(price: int) -> int {
+    return price - 15
+}
+
+fn main() {
+    let raw_val = 100
+    let final_price = raw_val |> add_tax |> apply_discount
+
+    assert(final_price == 105, "final_price must equal 105!")
+    print("Pipelined checkout total:", final_price)
+}
+
+main()

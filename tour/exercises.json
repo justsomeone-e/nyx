@@ -28,6 +28,20 @@
     ]
   },
   {
+    "id": "intro03",
+    "name": "intro03",
+    "topic": "00_intro",
+    "title": "Comments in Nyx",
+    "path": "exercises/00_intro/intro03.nyx",
+    "solution": "solutions/00_intro/intro03.nyx",
+    "mode": "run",
+    "description": "Uncomment code using double slash // line comments.",
+    "hints": [
+      "Lines starting with '//' are ignored by the compiler.",
+      "Remove '//' before `let message = \"Nyx is fast!\"` and the print call."
+    ]
+  },
+  {
     "id": "variables01",
     "name": "variables01",
     "topic": "01_variables",
@@ -100,13 +114,39 @@
     "id": "variables06",
     "name": "variables06",
     "topic": "01_variables",
-    "title": "Destructuring Declarations",
+    "title": "Array Destructuring",
     "path": "exercises/01_variables/variables06.nyx",
     "solution": "solutions/01_variables/variables06.nyx",
     "mode": "run",
     "description": "Unpack coordinates using array destructuring.",
     "hints": [
       "Use `let [x, y] = coords` to unpack the two values at once."
+    ]
+  },
+  {
+    "id": "variables07",
+    "name": "variables07",
+    "topic": "01_variables",
+    "title": "Struct Destructuring",
+    "path": "exercises/01_variables/variables07.nyx",
+    "solution": "solutions/01_variables/variables07.nyx",
+    "mode": "run",
+    "description": "Unpack fields from a struct using positional destructuring.",
+    "hints": [
+      "Write `let Point(px, py) = p` to bind `px` and `py`."
+    ]
+  },
+  {
+    "id": "variables08",
+    "name": "variables08",
+    "topic": "01_variables",
+    "title": "Discarding Values with Underscore",
+    "path": "exercises/01_variables/variables08.nyx",
+    "solution": "solutions/01_variables/variables08.nyx",
+    "mode": "run",
+    "description": "Discard unused values during destructuring with _.",
+    "hints": [
+      "Use `_` to ignore unwanted items: `let [first, _] = pair`."
     ]
   },
   {
@@ -148,6 +188,47 @@
     "description": "Concatenate string variables using the + operator.",
     "hints": [
       "Use `first + \" \" + last` to concatenate with a space."
+    ]
+  },
+  {
+    "id": "types04",
+    "name": "types04",
+    "topic": "02_types",
+    "title": "String Length",
+    "path": "exercises/02_types/types04.nyx",
+    "solution": "solutions/02_types/types04.nyx",
+    "mode": "run",
+    "description": "Determine the length of a string using len().",
+    "hints": [
+      "`len(s)` returns the character length of string `s`.",
+      "Write `let length = len(title)`."
+    ]
+  },
+  {
+    "id": "types05",
+    "name": "types05",
+    "topic": "02_types",
+    "title": "Escape Sequences",
+    "path": "exercises/02_types/types05.nyx",
+    "solution": "solutions/02_types/types05.nyx",
+    "mode": "run",
+    "description": "Use newline \\n and tab \\t escapes in string literals.",
+    "hints": [
+      "Use `\"Line 1\\nLine 2\"` to insert a newline."
+    ]
+  },
+  {
+    "id": "types06",
+    "name": "types06",
+    "topic": "02_types",
+    "title": "Integer Widening",
+    "path": "exercises/02_types/types06.nyx",
+    "solution": "solutions/02_types/types06.nyx",
+    "mode": "run",
+    "description": "Observe automatic int widening to float in mixed expressions.",
+    "hints": [
+      "In Nyx, adding an int to a float widens the int to float automatically.",
+      "Write `let result: float = base + fraction`."
     ]
   },
   {
@@ -200,6 +281,33 @@
     "description": "Supply a default parameter value for omitted arguments.",
     "hints": [
       "Change `title: string` to `title: string = \"Adventurer\"` in the parameter list."
+    ]
+  },
+  {
+    "id": "functions05",
+    "name": "functions05",
+    "topic": "03_functions",
+    "title": "Multiple Default Parameters",
+    "path": "exercises/03_functions/functions05.nyx",
+    "solution": "solutions/03_functions/functions05.nyx",
+    "mode": "run",
+    "description": "Provide multiple trailing parameters with default values.",
+    "hints": [
+      "Declare `fn make_sandwich(bread: string, filling: string = \"Cheese\", toasted: bool = true)`."
+    ]
+  },
+  {
+    "id": "functions06",
+    "name": "functions06",
+    "topic": "03_functions",
+    "title": "Recursive Functions",
+    "path": "exercises/03_functions/functions06.nyx",
+    "solution": "solutions/03_functions/functions06.nyx",
+    "mode": "run",
+    "description": "Implement the factorial function recursively in Nyx.",
+    "hints": [
+      "Base case: `if n <= 1 { return 1 }`.",
+      "Recursive step: `return n * factorial(n - 1)`."
     ]
   },
   {
@@ -270,6 +378,19 @@
     ]
   },
   {
+    "id": "loops04",
+    "name": "loops04",
+    "topic": "04_control_flow",
+    "title": "Nested Loops",
+    "path": "exercises/04_control_flow/loops04.nyx",
+    "solution": "solutions/04_control_flow/loops04.nyx",
+    "mode": "run",
+    "description": "Traverse a 2D coordinate space using nested for loops.",
+    "hints": [
+      "In the inner loop, accumulate: `set total = total + (r * 10 + c)`."
+    ]
+  },
+  {
     "id": "match01",
     "name": "match01",
     "topic": "04_control_flow",
@@ -281,6 +402,32 @@
     "hints": [
       "In Nyx, pattern matching must be exhaustive.",
       "Add `_ => \"Unknown\"` as the final match arm."
+    ]
+  },
+  {
+    "id": "match02",
+    "name": "match02",
+    "topic": "04_control_flow",
+    "title": "Match Value Expressions",
+    "path": "exercises/04_control_flow/match02.nyx",
+    "solution": "solutions/04_control_flow/match02.nyx",
+    "mode": "run",
+    "description": "Convert numerical grades to letter ratings using match.",
+    "hints": [
+      "Map 1 => \"Bronze\", 2 => \"Silver\", 3 => \"Gold\", _ => \"Unranked\"."
+    ]
+  },
+  {
+    "id": "match03",
+    "name": "match03",
+    "topic": "04_control_flow",
+    "title": "Matching Booleans",
+    "path": "exercises/04_control_flow/match03.nyx",
+    "solution": "solutions/04_control_flow/match03.nyx",
+    "mode": "run",
+    "description": "Match on boolean states to produce human-readable labels.",
+    "hints": [
+      "Match true => \"Enabled\", false => \"Disabled\", _ => \"Unknown\"."
     ]
   },
   {
@@ -324,6 +471,45 @@
     ]
   },
   {
+    "id": "arrays04",
+    "name": "arrays04",
+    "topic": "05_arrays",
+    "title": "Array Length",
+    "path": "exercises/05_arrays/arrays04.nyx",
+    "solution": "solutions/05_arrays/arrays04.nyx",
+    "mode": "run",
+    "description": "Inspect dynamic array capacity and item counts with len().",
+    "hints": [
+      "Use `len(languages)` to get the item count."
+    ]
+  },
+  {
+    "id": "arrays05",
+    "name": "arrays05",
+    "topic": "05_arrays",
+    "title": "Pushing Array Elements",
+    "path": "exercises/05_arrays/arrays05.nyx",
+    "solution": "solutions/05_arrays/arrays05.nyx",
+    "mode": "run",
+    "description": "Append elements dynamically to a mutable array using push().",
+    "hints": [
+      "Call `arr.push(30)` to append 30."
+    ]
+  },
+  {
+    "id": "arrays06",
+    "name": "arrays06",
+    "topic": "05_arrays",
+    "title": "Finding Max Element",
+    "path": "exercises/05_arrays/arrays06.nyx",
+    "solution": "solutions/05_arrays/arrays06.nyx",
+    "mode": "run",
+    "description": "Find the highest value in an integer array using a loop.",
+    "hints": [
+      "Inside the loop: `if nums[i] > max_val { set max_val = nums[i] }`."
+    ]
+  },
+  {
     "id": "structs01",
     "name": "structs01",
     "topic": "06_structs",
@@ -351,12 +537,90 @@
     ]
   },
   {
+    "id": "structs03",
+    "name": "structs03",
+    "topic": "06_structs",
+    "title": "Nested Structs",
+    "path": "exercises/06_structs/structs03.nyx",
+    "solution": "solutions/06_structs/structs03.nyx",
+    "mode": "run",
+    "description": "Compose structs containing other structs as fields.",
+    "hints": [
+      "Access nested field with `player.position.x`."
+    ]
+  },
+  {
+    "id": "structs04",
+    "name": "structs04",
+    "topic": "06_structs",
+    "title": "Mutating Struct Fields",
+    "path": "exercises/06_structs/structs04.nyx",
+    "solution": "solutions/06_structs/structs04.nyx",
+    "mode": "run",
+    "description": "Mutate internal struct fields using set instance.field = value.",
+    "hints": [
+      "Use `set hero.health = hero.health - 25` to apply damage."
+    ]
+  },
+  {
+    "id": "structs05",
+    "name": "structs05",
+    "topic": "06_structs",
+    "title": "Constructor Functions",
+    "path": "exercises/06_structs/structs05.nyx",
+    "solution": "solutions/06_structs/structs05.nyx",
+    "mode": "run",
+    "description": "Write a factory function that constructs and validates a struct.",
+    "hints": [
+      "Return `Rectangle(size, size)` for square dimensions."
+    ]
+  },
+  {
+    "id": "enums01",
+    "name": "enums01",
+    "topic": "07_enums",
+    "title": "Enum Declarations",
+    "path": "exercises/07_enums/enums01.nyx",
+    "solution": "solutions/07_enums/enums01.nyx",
+    "mode": "run",
+    "description": "Declare an enum and access its member variants.",
+    "hints": [
+      "Declare `enum Status { Idle, Running, Paused, Stopped }`."
+    ]
+  },
+  {
+    "id": "enums02",
+    "name": "enums02",
+    "topic": "07_enums",
+    "title": "Enum Variant Comparisons",
+    "path": "exercises/07_enums/enums02.nyx",
+    "solution": "solutions/07_enums/enums02.nyx",
+    "mode": "run",
+    "description": "Compare enum values using the equality operator ==.",
+    "hints": [
+      "Compare `hero_dir == Direction.East`."
+    ]
+  },
+  {
+    "id": "enums03",
+    "name": "enums03",
+    "topic": "07_enums",
+    "title": "State Machines with Enums",
+    "path": "exercises/07_enums/enums03.nyx",
+    "solution": "solutions/07_enums/enums03.nyx",
+    "mode": "run",
+    "description": "Model a traffic light state machine transition.",
+    "hints": [
+      "If current is Red return Green; if Green return Yellow; else return Red."
+    ]
+  },
+  {
     "id": "traits01",
     "name": "traits01",
-    "topic": "07_traits",
+    "topic": "08_traits",
     "title": "Traits and Interfaces",
-    "path": "exercises/07_traits/traits01.nyx",
-    "solution": "solutions/07_traits/traits01.nyx",
+    "path": "exercises/08_traits/traits01.nyx",
+    "solution": "solutions/08_traits/traits01.nyx",
     "mode": "run",
     "description": "Implement a trait method on a struct.",
     "hints": [
@@ -364,12 +628,38 @@
     ]
   },
   {
+    "id": "traits02",
+    "name": "traits02",
+    "topic": "08_traits",
+    "title": "Multiple Trait Implementations",
+    "path": "exercises/08_traits/traits02.nyx",
+    "solution": "solutions/08_traits/traits02.nyx",
+    "mode": "run",
+    "description": "Implement the same trait across multiple distinct structs.",
+    "hints": [
+      "Implement `fn area(self) -> int { return self.side * self.side }` for Square."
+    ]
+  },
+  {
+    "id": "traits03",
+    "name": "traits03",
+    "topic": "08_traits",
+    "title": "Trait Methods with Parameters",
+    "path": "exercises/08_traits/traits03.nyx",
+    "solution": "solutions/08_traits/traits03.nyx",
+    "mode": "run",
+    "description": "Define and implement trait methods that accept arguments.",
+    "hints": [
+      "Signature: `fn scale(self, factor: int) -> int`."
+    ]
+  },
+  {
     "id": "errors01",
     "name": "errors01",
-    "topic": "08_error_handling",
+    "topic": "09_error_handling",
     "title": "Try, Catch, and Throw",
-    "path": "exercises/08_error_handling/errors01.nyx",
-    "solution": "solutions/08_error_handling/errors01.nyx",
+    "path": "exercises/09_error_handling/errors01.nyx",
+    "solution": "solutions/09_error_handling/errors01.nyx",
     "mode": "run",
     "description": "Catch an exception with try / catch.",
     "hints": [
@@ -377,12 +667,38 @@
     ]
   },
   {
+    "id": "errors02",
+    "name": "errors02",
+    "topic": "09_error_handling",
+    "title": "Input Validation Exceptions",
+    "path": "exercises/09_error_handling/errors02.nyx",
+    "solution": "solutions/09_error_handling/errors02.nyx",
+    "mode": "run",
+    "description": "Throw an error when an input value fails domain constraints.",
+    "hints": [
+      "If `port < 1` throw \"Port must be positive\"."
+    ]
+  },
+  {
+    "id": "errors03",
+    "name": "errors03",
+    "topic": "09_error_handling",
+    "title": "Recovery with Fallback",
+    "path": "exercises/09_error_handling/errors03.nyx",
+    "solution": "solutions/09_error_handling/errors03.nyx",
+    "mode": "run",
+    "description": "Safely recover from an exception and provide a fallback value.",
+    "hints": [
+      "In catch block: `set result = -1`."
+    ]
+  },
+  {
     "id": "null01",
     "name": "null01",
-    "topic": "09_null_safety",
+    "topic": "10_null_safety",
     "title": "Nullable Types and Coalescing",
-    "path": "exercises/09_null_safety/null01.nyx",
-    "solution": "solutions/09_null_safety/null01.nyx",
+    "path": "exercises/10_null_safety/null01.nyx",
+    "solution": "solutions/10_null_safety/null01.nyx",
     "mode": "run",
     "description": "Provide a default value using the null coalescing operator ??.",
     "hints": [
@@ -392,10 +708,23 @@
   {
     "id": "null02",
     "name": "null02",
-    "topic": "09_null_safety",
+    "topic": "10_null_safety",
+    "title": "Nullable Integers",
+    "path": "exercises/10_null_safety/null02.nyx",
+    "solution": "solutions/10_null_safety/null02.nyx",
+    "mode": "run",
+    "description": "Handle optional integers int? with fallback defaults.",
+    "hints": [
+      "Write `let points = extra_score ?? 10`."
+    ]
+  },
+  {
+    "id": "null03",
+    "name": "null03",
+    "topic": "10_null_safety",
     "title": "Guard Preconditions",
-    "path": "exercises/09_null_safety/null02.nyx",
-    "solution": "solutions/09_null_safety/null02.nyx",
+    "path": "exercises/10_null_safety/null03.nyx",
+    "solution": "solutions/10_null_safety/null03.nyx",
     "mode": "run",
     "description": "Guard against invalid parameters with early return.",
     "hints": [
@@ -403,12 +732,25 @@
     ]
   },
   {
+    "id": "null04",
+    "name": "null04",
+    "topic": "10_null_safety",
+    "title": "Multi-Condition Guards",
+    "path": "exercises/10_null_safety/null04.nyx",
+    "solution": "solutions/10_null_safety/null04.nyx",
+    "mode": "run",
+    "description": "Protect operations with multi-condition guard statements.",
+    "hints": [
+      "Write `guard age >= 18 and has_license else { return false }`."
+    ]
+  },
+  {
     "id": "pipeline01",
     "name": "pipeline01",
-    "topic": "10_pipelines",
+    "topic": "11_pipelines",
     "title": "Pipeline Operator (|&gt;)",
-    "path": "exercises/10_pipelines/pipeline01.nyx",
-    "solution": "solutions/10_pipelines/pipeline01.nyx",
+    "path": "exercises/11_pipelines/pipeline01.nyx",
+    "solution": "solutions/11_pipelines/pipeline01.nyx",
     "mode": "run",
     "description": "Chain function calls using the pipeline operator.",
     "hints": [
@@ -416,12 +758,78 @@
     ]
   },
   {
+    "id": "pipeline02",
+    "name": "pipeline02",
+    "topic": "11_pipelines",
+    "title": "Data Processing Pipelines",
+    "path": "exercises/11_pipelines/pipeline02.nyx",
+    "solution": "solutions/11_pipelines/pipeline02.nyx",
+    "mode": "run",
+    "description": "Process data through a multi-stage math pipeline.",
+    "hints": [
+      "Chain: `raw_val |> add_tax |> apply_discount`."
+    ]
+  },
+  {
+    "id": "defer01",
+    "name": "defer01",
+    "topic": "12_defer",
+    "title": "Scope Cleanup with defer",
+    "path": "exercises/12_defer/defer01.nyx",
+    "solution": "solutions/12_defer/defer01.nyx",
+    "mode": "run",
+    "description": "Ensure cleanup actions run on scope exit with defer.",
+    "hints": [
+      "Add `defer release_lock(lock)` inside `do_critical_work()` so the lock is freed on return."
+    ]
+  },
+  {
+    "id": "defer02",
+    "name": "defer02",
+    "topic": "12_defer",
+    "title": "Multiple Defer Execution",
+    "path": "exercises/12_defer/defer02.nyx",
+    "solution": "solutions/12_defer/defer02.nyx",
+    "mode": "run",
+    "description": "Observe that defer statements execute when exiting their scope.",
+    "hints": [
+      "Add `defer cleanup_step1(cleaner)` and `defer cleanup_step2(cleaner)` inside `process_batch()`."
+    ]
+  },
+  {
+    "id": "math01",
+    "name": "math01",
+    "topic": "13_math_and_logic",
+    "title": "Modulo and Divisibility",
+    "path": "exercises/13_math_and_logic/math01.nyx",
+    "solution": "solutions/13_math_and_logic/math01.nyx",
+    "mode": "run",
+    "description": "Check if numbers are even or odd using the modulo operator %.",
+    "hints": [
+      "A number is even if `n % 2 == 0`."
+    ]
+  },
+  {
+    "id": "math02",
+    "name": "math02",
+    "topic": "13_math_and_logic",
+    "title": "Bitwise Operations",
+    "path": "exercises/13_math_and_logic/math02.nyx",
+    "solution": "solutions/13_math_and_logic/math02.nyx",
+    "mode": "run",
+    "description": "Perform bitwise AND &, OR |, and left-shift << operations.",
+    "hints": [
+      "`1 << 4` shifts 1 left by 4 bits (16).",
+      "`flags | 1` sets the lowest bit."
+    ]
+  },
+  {
     "id": "tests01",
     "name": "tests01",
-    "topic": "11_testing",
+    "topic": "14_testing",
     "title": "In-File Unit Testing",
-    "path": "exercises/11_testing/tests01.nyx",
-    "solution": "solutions/11_testing/tests01.nyx",
+    "path": "exercises/14_testing/tests01.nyx",
+    "solution": "solutions/14_testing/tests01.nyx",
     "mode": "test",
     "description": "Fix an assertion error in an in-file unit test.",
     "hints": [
@@ -430,17 +838,58 @@
     ]
   },
   {
+    "id": "tests02",
+    "name": "tests02",
+    "topic": "14_testing",
+    "title": "Multiple In-File Tests",
+    "path": "exercises/14_testing/tests02.nyx",
+    "solution": "solutions/14_testing/tests02.nyx",
+    "mode": "test",
+    "description": "Add a second test block to verify subtraction.",
+    "hints": [
+      "Add a test block: `test \"verify subtraction\" { assert(sub(10, 4) == 6, ...) }`."
+    ]
+  },
+  {
     "id": "quiz01",
     "name": "quiz01",
-    "topic": "12_quizzes",
+    "topic": "15_quizzes",
     "title": "Capstone Quiz: RPG Inventory Score",
-    "path": "exercises/12_quizzes/quiz01.nyx",
-    "solution": "solutions/12_quizzes/quiz01.nyx",
+    "path": "exercises/15_quizzes/quiz01.nyx",
+    "solution": "solutions/15_quizzes/quiz01.nyx",
     "mode": "run",
     "description": "Accumulate total gear score across an array of item structs.",
     "hints": [
       "Loop `for i in 0..2`.",
       "Inside the loop: `let item = items[i]`, then `set total_score = total_score + item.calculate_value()`."
+    ]
+  },
+  {
+    "id": "quiz02",
+    "name": "quiz02",
+    "topic": "15_quizzes",
+    "title": "Capstone Quiz: Banking Ledger System",
+    "path": "exercises/15_quizzes/quiz02.nyx",
+    "solution": "solutions/15_quizzes/quiz02.nyx",
+    "mode": "run",
+    "description": "Implement a banking ledger with deposits, withdrawals, and balance guards.",
+    "hints": [
+      "In `deposit`: guard `amount > 0` else return `self.balance`.",
+      "In `withdraw`: guard `amount > 0 and self.balance >= amount` else return `self.balance`."
+    ]
+  },
+  {
+    "id": "quiz03",
+    "name": "quiz03",
+    "topic": "15_quizzes",
+    "title": "Capstone Quiz: Character Level-Up System",
+    "path": "exercises/15_quizzes/quiz03.nyx",
+    "solution": "solutions/15_quizzes/quiz03.nyx",
+    "mode": "run",
+    "description": "Calculate hero stat boosts and level-ups using pipelines and match.",
+    "hints": [
+      "Use `self.attack |> add_buff |> double_buff` inside `boosted_attack`.",
+      "Match on `self.level`: 10 => \"Champion\", 5 => \"Knight\", _ => \"Novice\"."
     ]
   }
 ]

@@ -1,0 +1,8 @@
+fn main() {
+    let title = "Antigravity"
+    let length = len(title)
+    assert(length == 11, "Length of 'Antigravity' must be 11!")
+    print("Title length is:", length)
+}
+
+main()

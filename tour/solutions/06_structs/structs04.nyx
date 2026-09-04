@@ -1,0 +1,13 @@
+struct Hero {
+    name: string,
+    health: int
+}
+
+fn main() {
+    var hero = Hero("Kurt", 100)
+    set hero.health = hero.health - 25
+    assert(hero.health == 75, "Hero health must be 75 after 25 damage!")
+    print("Hero remaining health:", hero.health)
+}
+
+main()

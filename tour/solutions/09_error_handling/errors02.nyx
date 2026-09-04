@@ -1,0 +1,21 @@
+fn check_port(port: int) -> int {
+    if port < 1 {
+        throw "Port must be positive"
+    }
+    return port
+}
+
+fn main() {
+    var caught = false
+    try {
+        check_port(0)
+    } catch e {
+        set caught = true
+    }
+
+    assert(caught == true, "check_port(0) must throw an error!")
+    assert(check_port(8080) == 8080, "Valid port 8080 should return intact")
+    print("Port validation verified successfully!")
+}
+
+main()

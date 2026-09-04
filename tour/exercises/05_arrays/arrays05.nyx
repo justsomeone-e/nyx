@@ -1,0 +1,14 @@
+// I AM NOT DONE
+// Arrays support dynamic appending via the `.push(value)` method.
+// TODO: Append `30` to `numbers` so that its length becomes 3.
+
+fn main() {
+    var numbers = [10, 20]
+    // Append 30 here:
+
+    assert(len(numbers) == 3, "numbers array should contain 3 elements")
+    assert(numbers[2] == 30, "last element should be 30")
+    print("Updated array length:", len(numbers))
+}
+
+main()
