@@ -51,11 +51,14 @@ STATE_FILE = ".tour-state.json"
 
 
 class TourApp:
-    def __init__(self, tour_dir: Optional[str] = None):
+    def __init__(self, tour_dir: Optional[str] = None, workspace_dir: Optional[str] = None):
         self.tour_dir = tour_dir or os.path.dirname(os.path.abspath(__file__))
+        self.workspace_dir = os.path.abspath(workspace_dir) if workspace_dir else self.tour_dir
         self.repo_dir = os.path.abspath(os.path.join(self.tour_dir, ".."))
-        self.exercises_file = os.path.join(self.tour_dir, "exercises.json")
-        self.state_path = os.path.join(self.tour_dir, STATE_FILE)
+        self.exercises_file = os.path.join(self.workspace_dir, "exercises.json")
+        if not os.path.isfile(self.exercises_file):
+            self.exercises_file = os.path.join(self.tour_dir, "exercises.json")
+        self.state_path = os.path.join(self.workspace_dir, STATE_FILE)
 
         self.exercises: List[Dict[str, Any]] = self._load_exercises()
         self.runner = NyxRunner(repo_dir=self.repo_dir)
@@ -109,10 +112,41 @@ class TourApp:
             self._save_state()
 
     def get_exercise_file_path(self, ex: Dict[str, Any]) -> str:
-        return os.path.join(self.tour_dir, ex["path"])
+        return os.path.join(self.workspace_dir, ex["path"])
 
     def get_solution_file_path(self, ex: Dict[str, Any]) -> str:
         return os.path.join(self.tour_dir, ex["solution"])
+
+    def open_current_in_editor(self):
+        """Open the active exercise in VS Code or system default editor."""
+        import shutil
+        import subprocess
+        ex = self.get_current_exercise()
+        fpath = self.get_exercise_file_path(ex)
+        code_bin = shutil.which("code")
+        try:
+            if code_bin:
+                subprocess.Popen([code_bin, fpath], shell=False)
+            elif sys.platform == "win32":
+                os.startfile(fpath)
+            else:
+                subprocess.Popen(["xdg-open", fpath])
+        except Exception:
+            pass
+
+    def open_exercises_folder(self):
+        """Open the exercises folder in Windows Explorer or file manager."""
+        import subprocess
+        folder = os.path.join(self.workspace_dir, "exercises")
+        if not os.path.isdir(folder):
+            folder = os.path.join(self.tour_dir, "exercises")
+        try:
+            if sys.platform == "win32":
+                os.startfile(folder)
+            else:
+                subprocess.Popen(["xdg-open", folder])
+        except Exception:
+            pass
 
     def render_view(self, last_result: TestResult):
         clear_screen()
@@ -364,6 +398,12 @@ class TourApp:
                 self.show_solution = not self.show_solution
                 self.render_view(res)
 
+            elif k == "o":
+                self.open_current_in_editor()
+
+            elif k == "e":
+                self.open_exercises_folder()
+
             elif k == "l":
                 self.show_curriculum_list()
                 self.render_view(res)
@@ -394,14 +434,100 @@ class TourApp:
                 print(f"❌ Exercise '{exercise_name}' not found.")
 
 
+def init_workspace(target_path: Optional[str] = None):
+    """Scaffold a standalone learner exercises directory anywhere on disk."""
+    import shutil
+    base_tour_dir = os.path.dirname(os.path.abspath(__file__))
+    repo_dir = os.path.abspath(os.path.join(base_tour_dir, ".."))
+
+    if not target_path:
+        target_path = os.path.join(os.path.expanduser("~"), "Desktop", "Nyx_Tour_Exercises")
+
+    target_path = os.path.abspath(target_path)
+    os.makedirs(target_path, exist_ok=True)
+
+    # 1. Copy exercises
+    src_exercises = os.path.join(base_tour_dir, "exercises")
+    dest_exercises = os.path.join(target_path, "exercises")
+    if os.path.exists(dest_exercises):
+        shutil.rmtree(dest_exercises)
+    shutil.copytree(src_exercises, dest_exercises)
+
+    # 2. Copy exercises.json
+    shutil.copyfile(
+        os.path.join(base_tour_dir, "exercises.json"),
+        os.path.join(target_path, "exercises.json")
+    )
+
+    # 3. Create start_tour.bat in target_path
+    tour_bat_in_repo = os.path.join(repo_dir, "tour.bat")
+    start_bat_content = f"""@echo off
+setlocal
+chcp 65001 >nul 2>&1
+title Tour of Nyx
+call "{tour_bat_in_repo}" --workspace "{target_path}" %*
+pause
+"""
+    with open(os.path.join(target_path, "start_tour.bat"), "w", encoding="utf-8") as f:
+        f.write(start_bat_content)
+
+    # 4. Create BENI_OKU.txt in target_path
+    readme_content = """Tour of Nyx - Alıştırma Klasörü 🌙
+======================================================================
+Bu klasör, Nyx programlama dilini öğrenmeniz için bilerek hatalı veya
+eksik bırakılmış 67 alıştırmayı içerir.
+
+Nasıl Çalışır?
+1. Bu klasörü VS Code veya favori metin düzenleyicinizde açın:
+   Klasöre sağ tıklayın -> "Open with Code" (veya terminalde: code .)
+2. "start_tour.bat" dosyasını çift tıklayarak çalıştırın.
+3. Terminalde sıradaki dersin konusu, ipuçları ve hata mesajı belirir.
+4. VS Code'da ilgili .nyx dosyasını açıp kodunu düzeltin ve kaydedin (Ctrl + S).
+5. Terminal kaydettiğinizi ANINDA algılar, doğrular ve çözüldüğünde bir sonrakine geçer!
+======================================================================
+"""
+    with open(os.path.join(target_path, "BENI_OKU.txt"), "w", encoding="utf-8") as f:
+        f.write(readme_content)
+
+    print("=" * 70)
+    print("✨ Nyx Tour Öğrenci Çalışma Alanı Başarıyla Oluşturuldu!")
+    print(f"📁 Konum: {target_path}")
+    print("=" * 70)
+    print("1. Klasördeki 'start_tour.bat' dosyasını çalıştırarak turu başlatın.")
+    print("2. 'exercises/' klasöründeki dosyaları VS Code'da düzenleyip kaydedin.")
+    print("3. Sistem dosya kaydetmelerinizi (Ctrl+S) canlı olarak takip eder!")
+    print("=" * 70)
+
+    # Open VS Code & Explorer
+    code_bin = shutil.which("code")
+    if code_bin:
+        try:
+            import subprocess
+            subprocess.Popen([code_bin, target_path], shell=False)
+        except Exception:
+            pass
+    if sys.platform == "win32":
+        try:
+            os.startfile(target_path)
+        except Exception:
+            pass
+
+
 def main():
     parser = argparse.ArgumentParser(description="Tour of Nyx - Interactive Terminal Learning CLI")
-    parser.add_argument("command", nargs="?", default="watch", choices=["watch", "run", "check-all", "hint", "list", "reset"],
+    parser.add_argument("command", nargs="?", default="watch",
+                        choices=["watch", "run", "check-all", "hint", "list", "reset", "init"],
                         help="Tour command (default: watch)")
-    parser.add_argument("exercise", nargs="?", default=None, help="Target exercise name or id")
+    parser.add_argument("exercise", nargs="?", default=None, help="Target exercise name, id, or init path")
+    parser.add_argument("--workspace", default=None, help="Path to student exercise workspace directory")
 
     args = parser.parse_args()
-    app = TourApp()
+
+    if args.command == "init":
+        init_workspace(args.exercise)
+        return
+
+    app = TourApp(workspace_dir=args.workspace)
 
     if args.command == "watch":
         app.watch()

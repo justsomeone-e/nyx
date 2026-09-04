@@ -236,6 +236,8 @@ def format_hint_card(hint_text: str, hint_num: int, total_hints: int) -> str:
 def format_controls() -> str:
     """Render the bottom interactive key control bar."""
     keys = [
+        f"{BOLD}{BRIGHT_CYAN}[o]{RESET} Edit",
+        f"{BOLD}{BRIGHT_CYAN}[e]{RESET} Folder",
         f"{BOLD}{BRIGHT_CYAN}[n]{RESET} Next",
         f"{BOLD}{BRIGHT_CYAN}[p]{RESET} Prev",
         f"{BOLD}{BRIGHT_CYAN}[h]{RESET} Hint",
@@ -244,7 +246,7 @@ def format_controls() -> str:
         f"{BOLD}{BRIGHT_CYAN}[s]{RESET} Solution",
         f"{BOLD}{BRIGHT_CYAN}[q]{RESET} Quit",
     ]
-    return f"  {'  │  '.join(keys)}"
+    return f"  {' │ '.join(keys)}"
 
 
 def clear_screen():
