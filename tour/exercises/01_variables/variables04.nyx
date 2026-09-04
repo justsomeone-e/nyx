@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// `const` declares compile-time immutable values.
+// Attempting to reassign a `const` is a compile-time error.
+// TODO: Fix the code so `MAX_USERS` is not illegally reassigned.
+
+const MAX_USERS: int = 100
+
+fn main() {
+    set MAX_USERS = 200
+    print("Max users limit:", MAX_USERS)
+}
+
+main()

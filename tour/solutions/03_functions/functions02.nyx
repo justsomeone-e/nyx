@@ -1,0 +1,11 @@
+fn multiply(a: int, b: int) -> int {
+    return a * b
+}
+
+fn main() {
+    let result = multiply(6, 7)
+    assert(result == 42, "6 * 7 must be 42")
+    print("6 * 7 =", result)
+}
+
+main()

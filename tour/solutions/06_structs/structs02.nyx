@@ -1,0 +1,17 @@
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+impl Rectangle {
+    fn area(self) -> int {
+        return self.width * self.height
+    }
+}
+
+fn main() {
+    let rect = Rectangle(8, 5)
+    print("Rectangle area:", rect.area())
+}
+
+main()

@@ -1,0 +1,9 @@
+fn call_me() {
+    print("Called successfully!")
+}
+
+fn main() {
+    call_me()
+}
+
+main()

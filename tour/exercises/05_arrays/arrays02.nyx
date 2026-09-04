@@ -1,0 +1,12 @@
+// I AM NOT DONE
+// Array elements can be updated using `set array[index] = new_value`.
+// TODO: Update the middle element (index 1) to 999.
+
+fn main() {
+    var scores = [10, 20, 30]
+    // Set index 1 to 999
+    assert(scores[1] == 999, "Middle score must be updated to 999!")
+    print("Modified scores:", scores[0], scores[1], scores[2])
+}
+
+main()

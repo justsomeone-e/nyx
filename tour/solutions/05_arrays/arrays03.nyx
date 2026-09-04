@@ -1,0 +1,11 @@
+fn main() {
+    let values = [10, 20, 30, 40, 50]
+    var sum: int = 0
+    for i in 0..4 {
+        set sum = sum + values[i]
+    }
+    assert(sum == 150, "Sum of all 5 items must be 150!")
+    print("Total sum:", sum)
+}
+
+main()

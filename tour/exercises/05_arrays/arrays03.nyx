@@ -1,0 +1,15 @@
+// I AM NOT DONE
+// TODO: Loop through the array and compute the sum of all elements.
+// Expected output: "Total sum: 150"
+
+fn main() {
+    let values = [10, 20, 30, 40, 50]
+    var sum: int = 0
+    for i in 0..4 {
+        // Add values[i] to sum
+    }
+    assert(sum == 150, "Sum of all 5 items must be 150!")
+    print("Total sum:", sum)
+}
+
+main()

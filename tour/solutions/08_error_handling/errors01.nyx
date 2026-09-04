@@ -1,0 +1,16 @@
+fn validate_pin(pin: int) {
+    if pin != 1234 {
+        throw "Invalid PIN entered"
+    }
+}
+
+fn main() {
+    try {
+        validate_pin(9999)
+    } catch err {
+        print("Caught error!")
+    }
+    print("Done")
+}
+
+main()

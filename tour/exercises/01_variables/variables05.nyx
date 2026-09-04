@@ -1,0 +1,12 @@
+// I AM NOT DONE
+// TODO: Calculate the area of a rectangle with width 7 and height 6.
+// Store the result in `area` and print it.
+
+fn main() {
+    let width = 7
+    let height = 6
+    // Declare `area` and compute width * height
+    print("Rectangle area:", area)
+}
+
+main()

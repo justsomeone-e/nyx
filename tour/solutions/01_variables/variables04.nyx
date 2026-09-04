@@ -1,0 +1,8 @@
+const MAX_USERS: int = 100
+
+fn main() {
+    let current_limit = MAX_USERS
+    print("Max users limit:", current_limit)
+}
+
+main()

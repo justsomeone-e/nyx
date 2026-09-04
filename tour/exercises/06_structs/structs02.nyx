@@ -1,0 +1,22 @@
+// I AM NOT DONE
+// Methods are implemented in an `impl StructName` block.
+// The first parameter must be `self`.
+// TODO: Add `self` to the `area` method signature.
+
+struct Rectangle {
+    width: int,
+    height: int
+}
+
+impl Rectangle {
+    fn area() -> int { // Fix signature to take self!
+        return self.width * self.height
+    }
+}
+
+fn main() {
+    let rect = Rectangle(8, 5)
+    print("Rectangle area:", rect.area())
+}
+
+main()

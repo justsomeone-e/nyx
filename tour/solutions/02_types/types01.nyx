@@ -1,0 +1,4 @@
+fn demo_numerics() {
+    let count: int = 50
+    let ratio: float = 0.75
+}

@@ -1,0 +1,8 @@
+fn main() {
+    let width = 7
+    let height = 6
+    let area = width * height
+    print("Rectangle area:", area)
+}
+
+main()

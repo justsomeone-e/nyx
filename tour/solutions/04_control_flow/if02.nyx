@@ -1,0 +1,8 @@
+fn get_status(is_online: bool) -> string {
+    let status: string = if is_online {
+        "connected"
+    } else {
+        "disconnected"
+    }
+    return status
+}

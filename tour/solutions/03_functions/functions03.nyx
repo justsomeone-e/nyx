@@ -1,0 +1,9 @@
+fn cube(x: int) -> int = x * x * x
+
+fn main() {
+    let res = cube(3)
+    assert(res == 27, "Cube of 3 must be 27")
+    print("Cube of 3 is:", res)
+}
+
+main()

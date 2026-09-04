@@ -1,0 +1,23 @@
+trait Describable {
+    fn describe(self) -> string
+}
+
+struct Player {
+    name: string,
+    level: int
+}
+
+impl Describable for Player {
+    fn describe(self) -> string {
+        return "Player " + self.name
+    }
+}
+
+fn main() {
+    let p = Player("Hero", 1)
+    let desc = p.describe()
+    assert(desc == "Player Hero", "describe must return 'Player ' + self.name")
+    print(desc)
+}
+
+main()

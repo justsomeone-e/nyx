@@ -1,0 +1,8 @@
+fn main() {
+    var scores = [10, 20, 30]
+    set scores[1] = 999
+    assert(scores[1] == 999, "Middle score must be updated to 999!")
+    print("Modified scores:", scores[0], scores[1], scores[2])
+}
+
+main()

@@ -1,0 +1,7 @@
+fn main() {
+    var count = 10
+    set count = count + 5
+    print("Updated count:", count)
+}
+
+main()

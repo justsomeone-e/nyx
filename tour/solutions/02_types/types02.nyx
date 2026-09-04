@@ -1,0 +1,9 @@
+fn main() {
+    let is_admin: bool = false
+    let has_token: bool = true
+    let is_allowed: bool = is_admin or has_token
+    assert(is_allowed == true, "Access should be allowed when token is present!")
+    print("Access allowed:", is_allowed)
+}
+
+main()

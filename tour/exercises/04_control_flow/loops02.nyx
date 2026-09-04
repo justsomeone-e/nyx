@@ -1,0 +1,16 @@
+// I AM NOT DONE
+// A `while` loop runs while its boolean condition is true.
+// Remember to update mutable variables with `set`.
+// TODO: Make the loop count all the way down to 0!
+
+fn main() {
+    var countdown = 3
+    while countdown > 1 { // Should count down until 0!
+        print("T-minus", countdown)
+        set countdown = countdown - 1
+    }
+    assert(countdown == 0, "Countdown must reach 0!")
+    print("Liftoff!")
+}
+
+main()

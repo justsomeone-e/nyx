@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// Structs group related fields: `struct Name { field1: type, ... }`
+// Instantiate with `Name(val1, val2)`.
+// TODO: Define a struct `Point` with fields `x: int` and `y: int`.
+
+// Define struct Point here:
+
+fn main() {
+    let p = Point(15, 25)
+    print("Point coordinates:", p.x, p.y)
+}
+
+main()

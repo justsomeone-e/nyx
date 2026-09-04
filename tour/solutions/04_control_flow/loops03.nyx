@@ -1,0 +1,17 @@
+fn main() {
+    var step = 0
+    loop {
+        set step = step + 1
+        print("Step:", step)
+        if step == 4 {
+            break
+        }
+        if step > 10 {
+            throw "Loop runaway: failed to break at step 4!"
+        }
+    }
+    assert(step == 4, "Loop must stop exactly at step 4!")
+    print("Done after 4 steps!")
+}
+
+main()

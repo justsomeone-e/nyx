@@ -1,0 +1,12 @@
+// I AM NOT DONE
+// Arrays are written `[elem1, elem2, ...]` with 0-based indexing `arr[0]`.
+// TODO: Print the second item ("Sapphire") from the inventory array.
+
+fn main() {
+    let inventory = ["Ruby", "Sapphire", "Emerald"]
+    let item = inventory[0] // Change index to 1!
+    assert(item == "Sapphire", "Selected item must be Sapphire!")
+    print("Selected item:", item)
+}
+
+main()

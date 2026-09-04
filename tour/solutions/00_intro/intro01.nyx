@@ -1,0 +1,5 @@
+fn main() {
+    print("Hello, Nyx Explorer! Welcome to the Tour of Nyx.")
+}
+
+main()

@@ -1,0 +1,8 @@
+fn main() {
+    let coords = [100, 250]
+    let [x, y] = coords
+    assert(x == 100 and y == 250, "x and y must be destructured from coords!")
+    print("X:", x, "Y:", y)
+}
+
+main()

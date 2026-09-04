@@ -1,0 +1,9 @@
+fn describe_status(code: int) -> string {
+    let label = match code {
+        200 => "OK",
+        404 => "Not Found",
+        500 => "Server Error",
+        _ => "Unknown"
+    }
+    return label
+}

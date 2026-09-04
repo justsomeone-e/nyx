@@ -23,6 +23,7 @@ dist/
 # Nyx generated/cache files
 .nyx-cache/
 /main.nyx
+tour/.tour-state.json
 
 # Python
 __pycache__/

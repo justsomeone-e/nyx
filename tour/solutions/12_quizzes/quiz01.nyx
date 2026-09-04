@@ -1,0 +1,36 @@
+struct Item {
+    name: string,
+    base_power: int,
+    rarity: string
+}
+
+impl Item {
+    fn calculate_value(self) -> int {
+        let mult = match self.rarity {
+            "Common" => 1,
+            "Rare" => 2,
+            "Legendary" => 5,
+            _ => 0
+        }
+        return self.base_power * mult
+    }
+}
+
+fn main() {
+    let items = [
+        Item("Iron Sword", 10, "Common"),
+        Item("Silver Shield", 20, "Rare"),
+        Item("Dragon Ring", 10, "Legendary")
+    ]
+
+    var total_score: int = 0
+    for i in 0..2 {
+        let item = items[i]
+        set total_score = total_score + item.calculate_value()
+    }
+
+    assert(total_score == 100, "Total gear score must be 100!")
+    print("Total Gear Score:", total_score)
+}
+
+main()

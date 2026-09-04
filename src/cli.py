@@ -52,6 +52,7 @@ Project & Development Commands:
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
   nyx test [file.nyx | all]          Execute in-file unit tests or test framework
+  nyx tour [subcommand]              Launch interactive Tour of Nyx learning environment
   nyx clean                          Remove build artifacts and temporary files
 
 Toolchain & Quality:
@@ -1240,6 +1241,12 @@ def main():
         sys.exit(PackageManager.install())
     elif cmd == "pkg":
         sys.exit(PackageManager.list_installed())
+    elif cmd == "tour":
+        tour_script = os.path.join(os.path.dirname(__file__), "..", "tour", "tour.py")
+        if not os.path.exists(tour_script):
+            tour_script = os.path.join(os.getcwd(), "tour", "tour.py")
+        result = subprocess.run([sys.executable, tour_script] + sys.argv[2:])
+        sys.exit(result.returncode)
     else:
         print(f"\033[91m[!] Unknown command: '{cmd}'. Run 'nyx help' for available commands.\033[0m")
         sys.exit(1)

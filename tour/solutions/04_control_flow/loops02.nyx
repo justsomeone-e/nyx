@@ -1,0 +1,11 @@
+fn main() {
+    var countdown = 3
+    while countdown > 0 {
+        print("T-minus", countdown)
+        set countdown = countdown - 1
+    }
+    assert(countdown == 0, "Countdown must reach 0!")
+    print("Liftoff!")
+}
+
+main()
