@@ -29,7 +29,7 @@ Samsara` yayınlandı; aktif aday `v4.0.0-rc.2 Bodhi`, stable hedef ise
 - [ ] HIR verifier hata kodlarını ve source-span davranışını public sözleşme yap.
 - [ ] C++ emitter'ın yalnız kullanılan runtime parçalarını üretmesini sağla;
   gereksiz include ve boilerplate maliyetini ölç.
-- [ ] Stage 1 -> Stage 2 -> Stage 3 self-host zincirini temiz checkout'ta iki
+- [x] Stage 1 -> Stage 2 -> Stage 3 self-host zincirini temiz checkout'ta iki
   kez doğrula ve Python sınırını açıkça belgeleyip test et.
 - [ ] Modül grafiği, cycle diagnostics ve incremental cache anahtarlarını
   deterministik hale getir.
@@ -74,8 +74,10 @@ Python parser + Nyx parser + typechecker + HIR + backend parity gerektirir.
   foreign import sözdizimini parser, typed HIR ve üç emitter'da çalıştır.
 - [x] Foreign API binding manifesti ekle; parametre/dönüş türlerini `any` yerine
   HIR'da doğrula ve zincir dışı foreign değerleri güvenle sakla.
-- [ ] Rust crate resolution ve WASM host-import ABI'sini tasarlayıp şu anki
+- [ ] Rust crate resolution ve `import rust` lowering'ini tamamlayıp ilgili
   `E1413` geliştirme kapısını gerçek entegrasyonla değiştir.
+- [x] WASM host fonksiyonlarını versioned `extern "WASM:<namespace>"` ABI ile
+  typed HIR'a indir; `nyx_host_v1` sözleşmesini `std/web` ile doğrula.
 - [x] Typed `map`, `filter` ve left-to-right `fold` API'lerini contextual lambda
   typing ile `cpp`, `js` ve `python` hedeflerinde tamamla; desteklenmeyen
   backendlerde capability hatası üret.
@@ -130,7 +132,8 @@ yerine derleme tanısı üretir.
 - [x] Embedded kaldırma sonrası birleşik test bataryasını %100 geçir.
 - [ ] Temiz Windows/Linux/macOS x64 ve macOS arm64 paketleme-soak matrisini çalıştır.
 - [x] Stable backendlerin HIR, runtime parity ve capability negatif kapılarını geçir.
-- [ ] HIR, compiler API, plugin API ve Bundle ABI uyumluluk politikasını yayınla.
+- [x] HIR, compiler API, plugin API, Bundle ABI, host ABI ve lockfile
+  uyumluluk politikasını yayınla.
 - [ ] Checksum, provenance/SBOM ve rollback prosedürünü doğrula.
 - [ ] Temiz checkout'ta release auditini iki kez geçir.
 - [x] Product Owner onayından sonra `4.0.0-rc.1` etiketini oluştur.

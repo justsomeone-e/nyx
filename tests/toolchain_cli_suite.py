@@ -90,7 +90,17 @@ def run_toolchain_cli_suite() -> bool:
         local_added = _run(str(application), "add", "physics", "--path", "../physics")
         assert local_added.returncode == 0, _output(local_added)
         local_manifest = NyxManifest(str(application / "nyx.toml"))
-        assert local_manifest.dependencies["physics"] == {"path": "../physics", "version": "0.3.0"}
+        assert local_manifest.dependencies["physics"] == {
+            "path": "../physics",
+            "version": "0.3.0",
+        }, repr(local_manifest.dependencies["physics"])
+        windows_style_manifest = NyxManifest()
+        windows_style_manifest._parse(
+            ['[dependencies]\n', r'physics = { path = "..\physics", version = "0.3.0" }']
+        )
+        assert windows_style_manifest.dependencies["physics"]["path"] == "../physics", repr(
+            windows_style_manifest.dependencies["physics"]
+        )
         first_lock = (application / "nyx.lock").read_text(encoding="utf-8")
         assert "[local_dependencies]" in first_lock
         assert 'path = "../physics"' in first_lock

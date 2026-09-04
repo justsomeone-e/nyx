@@ -87,7 +87,9 @@ my_project/
 * `nyx pkg`: Displays the current project, dependencies, native settings, and build configuration.
 
 The RC2 package contract resolves recursive local path dependencies with
-canonical relative paths, SHA-256 content fingerprints, and cycle diagnostics.
+canonical slash-normalized relative paths, SHA-256 content fingerprints, and
+cycle diagnostics. Both `nyx.toml` and `nyx.lock` use the same portable path
+spelling on Windows, Linux, and macOS.
 There is no remote package registry download; `nyx install` states this
 explicitly and never reports a fake network installation.
 

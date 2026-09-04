@@ -17,8 +17,8 @@ API.
 - npm bundles can include React 19, Vue 3, and Svelte 5 adapters. The pure-Nyx
   browser Pong example exercises keyboard input and animation without handwritten
   application JavaScript.
-- Local path dependencies resolve recursively into deterministic, content-hashed
-  lock entries with cycle diagnostics.
+- Local path dependencies resolve recursively into deterministic,
+  slash-normalized, content-hashed lock entries with cycle diagnostics.
 - Transparent aliases now type-check identically in the Python and Nyx-authored
   frontends.
 - The stable HIR runtime trio (`cpp`, `js`, `python`) retains shared typed-HIR

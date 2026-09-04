@@ -3,6 +3,12 @@ import os
 import sys
 from typing import Dict, List, Any, Optional
 
+
+def _canonical_dependency_path(value: Any) -> str:
+    """Serialize local dependency paths independently of the host OS."""
+    return str(value).replace("\\", "/")
+
+
 class NyxManifest:
     def __init__(self, filepath: Optional[str] = None):
         self.filepath = filepath
@@ -58,6 +64,8 @@ class NyxManifest:
                 if current_section == "package":
                     self.package[key] = parsed_val
                 elif current_section == "dependencies":
+                    if isinstance(parsed_val, dict) and "path" in parsed_val:
+                        parsed_val["path"] = _canonical_dependency_path(parsed_val["path"])
                     self.dependencies[key] = parsed_val
                 elif current_section == "native":
                     self.native[key] = parsed_val
@@ -122,6 +130,8 @@ class NyxManifest:
             elif isinstance(v, dict):
                 ps = []
                 for dk, dv in sorted(v.items()):
+                    if dk == "path":
+                        dv = _canonical_dependency_path(dv)
                     if isinstance(dv, str):
                         ps.append(f'{dk} = "{dv}"')
                     else:

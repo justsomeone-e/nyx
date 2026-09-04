@@ -16,8 +16,8 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 * Expanded WASM lowering for host/internal calls, booleans, mutable globals,
   numeric arrays, collection loops, built-in `len()` methods, and conditional
   UTF-8 string results.
-* Added recursive deterministic local path dependencies with source checksums
-  and cycle diagnostics.
+* Added recursive deterministic local path dependencies with slash-normalized
+  manifests, source checksums, and cycle diagnostics.
 * Made aliases transparently compatible in both the Python and Nyx-authored
   type checkers.
 

@@ -7,7 +7,25 @@
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
 </p>
 
-**Nyx is a compiled, statically typed systems programming language engineered to make high-level code effortlessly expressive without hiding the machine underneath it.**
+## About Nyx
+
+> *Did you ever dream of watching the stars from the gardens of Elysium?*
+
+Nyx began as **HolyEasyLang**, a small experiment by its developer: could
+compiled programming become easier to approach without turning into a limited
+toy language? There was no grand compiler platform at the beginning—only a
+language, a growing collection of ideas, and the desire to see how far they
+could be taken.
+
+As native, JavaScript, Python, Rust, and WebAssembly targets were added, the
+original direct AST-to-backend design could no longer guarantee that every
+target understood a program in the same way. HolyEasyLang became **Nyx**, and
+the compiler was rebuilt around one checked representation shared by its
+backends: **Typed HIR v1**.
+
+Today, **Nyx is a compiled, statically typed systems programming language
+designed to keep source code approachable without hiding the machine
+underneath it.**
 
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
@@ -300,7 +318,7 @@ nyx bundle src/crypto.nyx --output dist/crypto --package --react --vue --svelte
 
 ### Memory Protocol
 
-ABI v1 requires modules to export `memory`, `__nyx_alloc(i32)`, `__nyx_free(i32, i32)`, and `__nyx_abi_version() -> 1`. Strings cross the boundary as a packed 64-bit scalar `(length << 32) | pointer`; numeric arrays use borrowed `(pointer, length)` pairs. The generated JavaScript layer refreshes views after heap growth, releases input buffers inside `finally` blocks, and frees caller-owned return strings immediately after decoding. Browser capabilities use the separately versioned `nyx_host_v1` import namespace.
+ABI v1 requires modules to export `memory`, `__nyx_alloc(i32)`, `__nyx_free(i32, i32)`, and `__nyx_abi_version() -> 1`. Strings cross the boundary as a packed 64-bit scalar `(length << 32) | pointer`; numeric arrays use borrowed `(pointer, length)` pairs. The generated JavaScript layer refreshes views after heap growth, releases input buffers inside `finally` blocks, and frees caller-owned return strings immediately after decoding. Browser capabilities use the separately versioned `nyx_host_v1` import namespace. Versioning and ownership rules are defined in [`docs/internals/COMPATIBILITY_CONTRACTS.md`](docs/internals/COMPATIBILITY_CONTRACTS.md).
 
 ```tsx
 'use client'

@@ -93,9 +93,12 @@ postfix          = primary { call | member | safe_member | index | "?" } ;
 ```
 
 Foreign imports require an explicit alias. In the current development
-contract, `cpp`, `js`, and `python` are executable integrations; `rust` and
-`wasm` spellings are reserved and produce `E1413` until package resolution and
-ABI lowering exist. A C++ import also requires its header:
+contract, `cpp`, `js`, and `python` are executable integrations; `import rust`
+and `import wasm` remain reserved and produce `E1413` until their package
+resolution and general foreign-module lowering exist. Versioned WASM host
+functions use the separate `extern "WASM:<namespace>"` contract already used by
+`std/web`; they are not general `import wasm` modules. A C++ import also
+requires its header:
 
 ```nyx
 import cpp "std::filesystem" from "<filesystem>" as fs

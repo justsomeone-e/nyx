@@ -24,8 +24,12 @@ import js "node:os" as os
 import python "platform" as platform
 ```
 
-Rust and WASM foreign import syntax is reserved but intentionally rejected
-until crate/package resolution and ABI lowering are implemented.
+`import rust` and general `import wasm` foreign-module syntax remain reserved
+and intentionally rejected until crate/package resolution and their general
+lowering are implemented. This does not block versioned WASM host imports:
+`extern "WASM:nyx_host_v1"` is lowered to a real WebAssembly import and powers
+the typed `std/web` module. Host imports and general foreign modules therefore
+have deliberately separate contracts.
 
 Foreign calls use versioned data-only binding manifests for argument and return
 types. Nyx ships contracts for `std::filesystem`, `node:os`, `node:fs`, Python
