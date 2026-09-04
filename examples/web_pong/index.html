@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nyx Web Pong</title>
+  <style>
+    :root { color-scheme: dark; font-family: ui-monospace, monospace; background: #030711; color: #dffaff; }
+    body { min-height: 100vh; margin: 0; display: grid; place-content: center; gap: 1rem; text-align: center; }
+    canvas { border: 1px solid #1b6680; box-shadow: 0 0 48px #00d9ff24; image-rendering: pixelated; }
+  </style>
+</head>
+<body>
+  <h1>Nyx Web Pong</h1>
+  <p>W/S to move — game state, physics, input dispatch, and drawing are Nyx.</p>
+  <script type="module">
+    import { initNyxModule } from './dist/pong.mjs';
+    const nyx = await initNyxModule();
+    nyx.pong_start();
+  </script>
+</body>
+</html>

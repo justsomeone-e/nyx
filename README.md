@@ -1,8 +1,8 @@
 # Nyx
 
 <p align="left">
-  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0--rc.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
-  <a href="https://github.com/justsomeone-e/nyx/releases/tag/v4.0.0-rc.1"><img src="https://img.shields.io/badge/status-release%20candidate-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0--rc.2-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+  <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-release%20candidate-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
 </p>
@@ -12,7 +12,7 @@
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx v4.0.0-rc.1 "Samsara"** (`4.0.0-rc.1`) is the active release candidate. It validates compiler correctness, reproducible native self-hosting without Python runtime dependency, C++20/WASM targets, language ergonomics, and language server tooling. Microcontroller firmware has been decoupled to focus on an uncompromising semantic core.
+> **Nyx v4.0.0-rc.2 "Bodhi"** (`4.0.0-rc.2`) is the active release candidate. It adds a versioned browser host ABI, typed `std/web`, npm-ready WASM bundles, framework adapters, deterministic local dependencies, and a pure-Nyx browser Pong while preserving native self-host reproducibility. Microcontroller firmware remains outside the v4 compiler-focused scope.
 
 <div align="center">
   <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
@@ -265,7 +265,7 @@ Nyx exposes multiple code-generation backends with explicit capability gating. T
 
 | Subsystem | Exact Compiler Guarantee |
 | :-- | :-- |
-| **Source Standard** | Strictly UTF-8 encoded `.nyx` files with 46 canonical v4 keywords. |
+| **Source Standard** | Strictly UTF-8 encoded `.nyx` files with 44 canonical v4 keywords. |
 | **Integer Semantics** | Signed `i64` with defined two's-complement overflow wrapping, integer division, and bitwise shifts. |
 | **Floating-Point** | IEEE-754 `binary64` with canonical cross-platform formatting for `nan`, `inf`, and `-0.0`. |
 | **String Architecture** | UTF-8 sequences with embedded `\0` safety, `\uXXXX` escapes, interpolation, and zero implicit normalization mutations. |
@@ -283,6 +283,7 @@ Compiling for the web should not require manually orchestrating memory offsets, 
 ```bash
 nyx bundle src/crypto.nyx --output dist/crypto
 nyx bundle src/crypto.nyx --output dist/crypto --react
+nyx bundle src/crypto.nyx --output dist/crypto --package --react --vue --svelte
 ```
 
 ### Emitted Artifact Suite
@@ -290,29 +291,36 @@ nyx bundle src/crypto.nyx --output dist/crypto --react
 | Generated Artifact | Purpose & Role |
 | :-- | :-- |
 | `<module>.wat` | Human-readable, auditable WebAssembly text representation |
-| `<module>.wasm` | Optimized, standalone `wasm32` binary payload |
-| `<module>.mjs` | ES2022 loader with automatic memory resizing, string marshalling, and Promise caching |
+| `<module>.wasm` | Valid, standalone `wasm32` binary payload |
+| `<module>.mjs` | ES2022 loader with grow-safe views, typed marshalling, host imports, and Promise caching |
 | `<module>.d.ts` | 100% pointer-free TypeScript declaration interface |
 | `<module>.react.tsx` | Native React 19 client hook with Concurrent Mode / Suspense safety |
+| `package.json` | Optional npm manifest with conditional exports and Nyx ABI metadata |
+| `<module>.{react,vue,svelte}.{mjs,d.ts}` | Optional framework adapters for React 19, Vue 3, and Svelte 5 |
 
 ### Memory Protocol
 
-ABI v1 requires modules to export `memory`, `__nyx_alloc(i32)`, `__nyx_free(i32, i32)`, and `__nyx_abi_version() -> 1`. Strings cross the boundary as a packed 64-bit scalar `(length << 32) | pointer`. The generated JavaScript layer automatically invalidates views upon heap growth, releases input buffers inside `finally` blocks, and frees returned memory immediately after decoding.
+ABI v1 requires modules to export `memory`, `__nyx_alloc(i32)`, `__nyx_free(i32, i32)`, and `__nyx_abi_version() -> 1`. Strings cross the boundary as a packed 64-bit scalar `(length << 32) | pointer`; numeric arrays use borrowed `(pointer, length)` pairs. The generated JavaScript layer refreshes views after heap growth, releases input buffers inside `finally` blocks, and frees caller-owned return strings immediately after decoding. Browser capabilities use the separately versioned `nyx_host_v1` import namespace.
 
 ```tsx
 'use client'
 
-import { useCryptoModule } from './crypto.react'
+import { useNyxModule } from './crypto.react'
 
 export function VerificationWidget() {
-    const { hashToken, isReady } = useCryptoModule()
-
-    if (!isReady) return <p>Instantiating WASM engine...</p>
+    const { hashToken } = useNyxModule()
     return <div>Digest: {hashToken("payload-secret")}</div>
 }
 ```
 
 *The generated Promise cache completely eliminates double-instantiation penalties under React Strict Mode.*
+
+### Browser host API
+
+`std/web` exposes typed opaque handles for DOM nodes, events, listeners, and
+Canvas 2D operations. Nyx code imports no browser globals directly; the
+generated ESM loader supplies and validates host ABI v1. A complete keyboard
+and animation-loop example lives in [`examples/web_pong`](examples/web_pong/README.md).
 
 ---
 
@@ -320,7 +328,7 @@ export function VerificationWidget() {
 
 ## `06` — Industrial Verification Suite
 
-Samsara RC1 is certified by a comprehensive automated test battery. We test language invariants across target boundaries under hostile conditions:
+Bodhi RC2 is guarded by a comprehensive automated test battery. We test language invariants across target boundaries under hostile conditions:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -465,6 +473,9 @@ nyx run src/main.nyx --target js
 nyx build src/main.nyx --target asm
 
 # Package for WebAssembly with TypeScript bindings
+nyx build src/main.nyx --target wasm
+
+# Choose an output directory and optionally emit the React 19 hook
 nyx bundle src/main.nyx --output dist/bundle --react
 
 # Run native self-hosting compiler commands directly
@@ -486,8 +497,8 @@ The Nyx release lifecycle is bound to verifiable technical milestones rather tha
 | `v2.x` | — | — | Initial compiler pipeline, standard library, CLI baseline | Historical |
 | `v3.x` | — | — | Bundle ABI, Unicode compliance, cross-backend parity | Historical |
 | `v4.0.0-dev` | **Maya** | *Illusion / Appearance* | Microcontroller decoupling, typed HIR v1 expansion, self-hosting | Completed |
-| `v4.0.0-rc.1` | **Samsara** | *Cycle of Existence* | Cross-platform release candidate, verification battery, VSIX | **Active RC** |
-| `v4.0.0-rc.2` | **Bodhi** | *Awakening* | Target fixes & edge optimizations identified during RC1 soak | As needed |
+| `v4.0.0-rc.1` | **Samsara** | *Cycle of Existence* | First cross-platform release candidate, verification battery, VSIX | Published |
+| `v4.0.0-rc.2` | **Bodhi** | *Awakening* | Browser host ABI, std/web, npm bundles, local dependencies | **Active RC** |
 | `v4.0.0-rc.3` | **Moksha** | *Liberation* | Release-candidate lock without syntax additions | As needed |
 | `v4.0.0` | **Nirvana** | *Absolute Stability* | Long-term stable v4 language, toolchain, and ABI contract | Planned |
 | `v5.0.0` | **Aether** | *Upper Medium* | Portable C output, LLVM IR emitter, reference frontend | Future Target |

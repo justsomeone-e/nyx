@@ -17,6 +17,57 @@ def emit_mjs(functions: Iterable[IRFunction], module_name: str) -> str:
         f"const defaultWasmSource = new URL('./{module_name}.wasm', import.meta.url);",
         "let defaultApi = null;",
         "",
+        "function createDefaultImports(getInstance) {",
+        "  const handles = new Map();",
+        "  let nextHandle = 1;",
+        "  const store = (value) => { if (value == null) return 0; const id = nextHandle++; handles.set(id, value); return id; };",
+        "  const load = (id, kind = 'web value') => { const value = handles.get(id >>> 0); if (value == null) throw new RangeError(`Unknown Nyx ${kind} handle: ${id}`); return value; };",
+        "  const memory = () => { const value = getInstance()?.exports?.memory; if (!(value instanceof WebAssembly.Memory)) throw new TypeError('Nyx WASM memory is not initialized'); return value; };",
+        "  const text = (ptr, len) => {",
+        "    const view = new Uint8Array(memory().buffer);",
+        "    ptr >>>= 0; len >>>= 0;",
+        "    if (ptr > view.byteLength || len > view.byteLength - ptr) throw new RangeError(`Nyx host string is outside linear memory: ptr=${ptr}, len=${len}`);",
+        "    return new TextDecoder('utf-8').decode(view.subarray(ptr, ptr + len));",
+        "  };",
+        "  const browserDocument = () => { if (typeof document === 'undefined') throw new Error('std/web requires a browser DOM host'); return document; };",
+        "  const dispatch = (callbackId, eventId) => {",
+        "    const fn = getInstance()?.exports?.nyx_dispatch;",
+        "    if (typeof fn !== 'function') throw new TypeError('std/web event use requires exported fn nyx_dispatch(callback_id: int, event: WebEvent)');",
+        "    return fn(callbackId | 0, eventId | 0);",
+        "  };",
+        "  return {",
+        "    env: {",
+        "      print: (value) => console.log(value),",
+        "      abort: () => { throw new WebAssembly.RuntimeError('Nyx Aborted'); },",
+        "    },",
+        "    nyx_host_v1: {",
+        "      _nyx_host_abi_version: () => 1,",
+        "      _nyx_web_document: () => store(browserDocument()),",
+        "      _nyx_web_query: (ptr, len) => store(browserDocument().querySelector(text(ptr, len))),",
+        "      _nyx_web_create: (ptr, len) => store(browserDocument().createElement(text(ptr, len))),",
+        "      _nyx_web_set_text: (handle, ptr, len) => { load(handle, 'element').textContent = text(ptr, len); },",
+        "      _nyx_web_set_attribute: (handle, np, nl, vp, vl) => load(handle, 'element').setAttribute(text(np, nl), text(vp, vl)),",
+        "      _nyx_web_append: (parent, child) => load(parent, 'element').append(load(child, 'element')),",
+        "      _nyx_web_remove: (handle) => load(handle, 'element').remove(),",
+        "      _nyx_web_release: (handle) => { handles.delete(handle >>> 0); },",
+        "      _nyx_web_listen: (handle, ptr, len, callbackId) => {",
+        "        const target = load(handle, 'element'); const type = text(ptr, len);",
+        "        const listener = (event) => { const eventId = store(event); try { dispatch(callbackId, eventId); } finally { handles.delete(eventId); } };",
+        "        target.addEventListener(type, listener); return store({ target, type, listener });",
+        "      },",
+        "      _nyx_web_unlisten: (handle) => { const item = load(handle, 'listener'); item.target.removeEventListener(item.type, item.listener); handles.delete(handle >>> 0); },",
+        "      _nyx_web_request_animation_frame: (callbackId) => {",
+        "        const raf = globalThis.requestAnimationFrame; if (typeof raf !== 'function') throw new Error('requestAnimationFrame is unavailable');",
+        "        raf(() => dispatch(callbackId, 0));",
+        "      },",
+        "      _nyx_web_event_key: (handle) => { const key = String(load(handle, 'event').key ?? ''); return key.length ? key.codePointAt(0) : 0; },",
+        "      _nyx_web_canvas_clear: (handle) => { const canvas = load(handle, 'canvas'); const ctx = canvas.getContext('2d'); if (!ctx) throw new Error('Canvas 2D context unavailable'); ctx.clearRect(0, 0, canvas.width, canvas.height); },",
+        "      _nyx_web_canvas_set_fill_style: (handle, ptr, len) => { const ctx = load(handle, 'canvas').getContext('2d'); if (!ctx) throw new Error('Canvas 2D context unavailable'); ctx.fillStyle = text(ptr, len); },",
+        "      _nyx_web_canvas_fill_rect: (handle, x, y, width, height) => { const ctx = load(handle, 'canvas').getContext('2d'); if (!ctx) throw new Error('Canvas 2D context unavailable'); ctx.fillRect(x, y, width, height); },",
+        "    },",
+        "  };",
+        "}",
+        "",
         "export async function initNyxModule(source = defaultWasmSource) {",
         "  const cacheKey = source instanceof URL ? source.href : source;",
         "  let apiPromise = instanceCache.get(cacheKey);",
@@ -30,15 +81,19 @@ def emit_mjs(functions: Iterable[IRFunction], module_name: str) -> str:
         "  return api;",
         "}",
         "",
-        "async function instantiateNyxModule(source) {",
-        "  const importObject = {",
-        "    env: {",
-        "      print: (value) => console.log(value),",
-        "      abort: () => { throw new WebAssembly.RuntimeError('Nyx Aborted'); },",
-        "    },",
-        "  };",
-        "  const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);",
+        "export async function createNyxModule(source = defaultWasmSource, options = {}) {",
+        "  return createPublicApi(await instantiateNyxModule(source, options.imports));",
+        "}",
+        "",
+        "async function instantiateNyxModule(source, customImports = undefined) {",
         "  let instance;",
+        "  const defaultImports = createDefaultImports(() => instance);",
+        "  const importObject = customImports ? {",
+        "    ...defaultImports, ...customImports,",
+        "    env: { ...defaultImports.env, ...(customImports.env ?? {}) },",
+        "    nyx_host_v1: { ...defaultImports.nyx_host_v1, ...(customImports.nyx_host_v1 ?? {}) },",
+        "  } : defaultImports;",
+        "  const isNode = typeof process !== 'undefined' && Boolean(process.versions?.node);",
         "",
         "  if (source instanceof WebAssembly.Module) {",
         "    instance = await WebAssembly.instantiate(source, importObject);",
@@ -76,6 +131,8 @@ def emit_mjs(functions: Iterable[IRFunction], module_name: str) -> str:
         "  const memory = wasm.memory;",
         "  const alloc = wasm.__nyx_alloc;",
         "  const dealloc = wasm.__nyx_free;",
+        "  const hostAbiVersion = typeof wasm.web_host_abi_version === 'function' ? wasm.web_host_abi_version() : 1;",
+        "  if (hostAbiVersion !== 1) throw new Error(`Incompatible Nyx host ABI version: expected 1, found ${hostAbiVersion}`);",
         "  if (!(memory instanceof WebAssembly.Memory) || typeof alloc !== 'function' || typeof dealloc !== 'function') {",
         "    throw new TypeError('Nyx ABI exports memory/__nyx_alloc/__nyx_free are required');",
         "  }",
@@ -94,6 +151,25 @@ def emit_mjs(functions: Iterable[IRFunction], module_name: str) -> str:
         "    }",
         "    view.set(encoded, ptr);",
         "    return { ptr, len: encoded.length };",
+        "  }",
+        "",
+        "  function passNumericArray(value, kind) {",
+        "    if (!Array.isArray(value) && !ArrayBuffer.isView(value)) throw new TypeError('Nyx WASM array arguments require an Array or typed array');",
+        "    const length = value.length >>> 0;",
+        "    const stride = kind === 'f64' ? 8 : 4;",
+        "    const size = length * stride;",
+        "    if (length !== 0 && Math.floor(size / stride) !== length) throw new RangeError('Nyx WASM array is too large');",
+        "    if (size === 0) return { ptr: 0, len: 0, size: 0 };",
+        "    const ptr = alloc(size) >>> 0;",
+        "    if (ptr === 0) throw new RangeError(`Nyx WASM allocation failed for ${size} bytes`);",
+        "    const view = memoryView();",
+        "    if (ptr > view.byteLength || size > view.byteLength - ptr) { dealloc(ptr, size); throw new RangeError('Nyx WASM array allocation is outside linear memory'); }",
+        "    const data = new DataView(view.buffer, view.byteOffset + ptr, size);",
+        "    for (let index = 0; index < length; index++) {",
+        "      if (kind === 'f64') data.setFloat64(index * stride, Number(value[index]), true);",
+        "      else data.setInt32(index * stride, Number(value[index]) | 0, true);",
+        "    }",
+        "    return { ptr, len: length, size };",
         "  }",
         "",
         "  function readPackedString(packed) {",
@@ -156,8 +232,18 @@ def _api_method(function: IRFunction) -> List[str]:
             lines.append(f"      const {boxed} = passString({parameter.name});")
             call_args.extend((f"{boxed}.ptr", f"{boxed}.len"))
             cleanups.append(f"if ({boxed}.ptr !== 0) dealloc({boxed}.ptr, {boxed}.len);")
+        elif parameter_type == "Array":
+            arguments = getattr(parameter.type_annot, "arguments", ())
+            element_name = getattr(arguments[0], "name", "int") if arguments else "int"
+            kind = "f64" if element_name == "float" else "i32"
+            boxed = f"_{parameter.name}Boxed"
+            lines.append(f"      const {boxed} = passNumericArray({parameter.name}, '{kind}');")
+            call_args.extend((f"{boxed}.ptr", f"{boxed}.len"))
+            cleanups.append(f"if ({boxed}.ptr !== 0) dealloc({boxed}.ptr, {boxed}.size);")
         elif parameter_type == "float":
             call_args.append(f"Number({parameter.name})")
+        elif parameter_type == "bool":
+            call_args.append(f"({parameter.name} ? 1 : 0)")
         else:
             call_args.append(f"({parameter.name} | 0)")
 
@@ -169,6 +255,8 @@ def _api_method(function: IRFunction) -> List[str]:
             lines.append(f"        return readPackedString({call});")
         elif result_type == "void":
             lines.append(f"        {call};")
+        elif result_type == "bool":
+            lines.append(f"        return Boolean({call});")
         else:
             lines.append(f"        return {call};")
         lines.append("      } finally {")
@@ -179,6 +267,8 @@ def _api_method(function: IRFunction) -> List[str]:
         lines.append(f"      return readPackedString({call});")
     elif result_type == "void":
         lines.append(f"      {call};")
+    elif result_type == "bool":
+        lines.append(f"      return Boolean({call});")
     else:
         lines.append(f"      return {call};")
     lines.append("    },")

@@ -1,6 +1,6 @@
 # Auto-generated lockfile for nyx package manager
 # Manual modifications will be overwritten
-manifest_version = "4.0.0-rc.1"
+manifest_version = "4.0.0-rc.2"
 target = "cpp"
 
 [resolved_dependencies]

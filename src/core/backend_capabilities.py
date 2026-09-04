@@ -100,7 +100,8 @@ BACKENDS: Dict[str, BackendSpec] = {
     "wasm": BackendSpec(
         "wasm", "WebAssembly", "web", "wat/wasm", "beta",
         ("wat", "webassembly"), HIR_V1_FEATURES | frozenset({
-            "control_flow", "functions", "numeric", "string_abi", "unicode", "wasm32",
+            "control_flow", "functions", "host_imports_v1", "numeric", "string_abi",
+            "unicode", "wasm32", "web_dom",
         }),
     ),
 }
@@ -158,6 +159,10 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     ),
     "thread": StdlibContract("thread", CPP_HOSTS),
     "memory": StdlibContract("memory", MEMORY_TARGETS),
+    "web": StdlibContract(
+        "web", frozenset({"wasm"}), "experimental",
+        "Typed browser host handles and DOM/canvas operations through nyx_host_v1.",
+    ),
 }
 
 

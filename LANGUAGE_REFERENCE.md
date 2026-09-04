@@ -1,7 +1,6 @@
 # Nyx v4 Language Reference
 
-This document describes the `v4.0.0-dev.1` (`Maya`) source language on the
-path to RC1.
+This document describes the `v4.0.0-rc.2` (`Bodhi`) source-language contract.
 Nyx source files use the `.nyx` extension and are built with the `nyx` CLI.
 Backend availability is a capability decision, not a change to language syntax.
 
@@ -319,6 +318,21 @@ import { sqrt, clamp } from "std/math"
 Local modules use `.nyx` files. Standard-library availability is target-specific
 and can be inspected with `nyx targets --json`.
 
+Local packages can be locked without a registry:
+
+```text
+nyx add physics --path ../physics
+nyx install
+```
+
+The lockfile records canonical relative paths and source-content checksums;
+recursive dependency cycles are rejected.
+
+For WebAssembly browser programs, `std/web` provides opaque `WebElement`,
+`WebEvent`, and `WebListener` handles plus DOM, event, animation-frame, and
+Canvas 2D functions. These calls require the generated `nyx_host_v1` adapter
+and are rejected on non-WASM targets.
+
 ## 10. Tests and unsafe boundaries
 
 ```nyx
@@ -340,7 +354,7 @@ Raw memory operations must remain inside an explicit `unsafe` boundary.
 nyx check main.nyx
 nyx run main.nyx --target cpp
 nyx build main.nyx --target js
-nyx bundle main.nyx --output dist --react
+nyx bundle main.nyx --output dist --package --react --vue --svelte
 nyx test main.nyx
 nyx self-host verify
 nyx targets --json

@@ -12,7 +12,7 @@ import re
 import shutil
 import subprocess
 import html
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # =========================================================
 # 1. CODE FORMATTER (nyx fmt)
@@ -356,7 +356,7 @@ class PackageManager:
         return 0
 
     @staticmethod
-    def add(pkg_name: str, version: str = "1.0.0") -> int:
+    def add(pkg_name: str, version: str = "1.0.0", local_path: Optional[str] = None) -> int:
         manifest_file = PackageManager._manifest_path()
         if not manifest_file:
             print("\033[91m[!] No nyx.toml found. Run 'nyx init' first.\033[0m")
@@ -367,11 +367,36 @@ class PackageManager:
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.+_-]*", version):
             print(f"\033[91m[!] Invalid package version: '{version}'.\033[0m")
             return 1
+        dependency: Any = version
+        if local_path is not None:
+            dependency_root = os.path.realpath(os.path.join(os.getcwd(), local_path))
+            dependency_manifest = os.path.join(dependency_root, "nyx.toml")
+            if not os.path.isfile(dependency_manifest):
+                print(f"\033[91m[!] Local dependency has no nyx.toml: {dependency_root}\033[0m")
+                return 1
+            child = NyxManifest(dependency_manifest)
+            child_name = str(child.package.get("name", ""))
+            child_version = str(child.package.get("version", ""))
+            if child_name != pkg_name:
+                print(f"\033[91m[!] Local package is named '{child_name}', expected '{pkg_name}'.\033[0m")
+                return 1
+            if version != "1.0.0" and version != child_version:
+                print(f"\033[91m[!] Local package version is {child_version}, requested {version}.\033[0m")
+                return 1
+            version = child_version
+            dependency = {
+                "path": os.path.relpath(dependency_root, os.getcwd()).replace("\\", "/"),
+                "version": version,
+            }
         print(f"\033[96m[*] Adding dependency:\033[0m {pkg_name} @ {version}...")
         m = NyxManifest(manifest_file)
-        m.dependencies[pkg_name] = version
+        m.dependencies[pkg_name] = dependency
+        try:
+            NyxLock.generate(m, "nyx.lock")
+        except ValueError as error:
+            print(f"\033[91m[!] Dependency resolution failed: {error}\033[0m")
+            return 1
         m.save(manifest_file)
-        NyxLock.generate(m, "nyx.lock")
         print(f"\033[92m[OK] Added '{pkg_name}' v{version} to {manifest_file} and nyx.lock.\033[0m")
         return 0
 
@@ -401,9 +426,13 @@ class PackageManager:
             return 1
         print(f"\033[96m[*] Validating dependencies from {manifest_file}...\033[0m")
         m = NyxManifest(manifest_file)
-        NyxLock.generate(m, "nyx.lock")
+        try:
+            NyxLock.generate(m, "nyx.lock")
+        except ValueError as error:
+            print(f"\033[91m[!] Dependency resolution failed: {error}\033[0m")
+            return 1
         print(f"\033[92m[OK] Validated and locked {len(m.dependencies)} dependencies in nyx.lock.\033[0m")
-        print("[*] Remote registry download is not part of the v4 RC1 package contract.")
+        print("[*] Remote registry download is not part of the v4 RC2 package contract; local path dependencies are installed deterministically.")
         return 0
 
     @staticmethod

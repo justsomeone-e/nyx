@@ -188,7 +188,7 @@
   "stdlibModules": [
     {
       "name": "std/encoding",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/encoding.",
       "targets": [
         "asm",
@@ -199,7 +199,7 @@
     },
     {
       "name": "std/env",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/env.",
       "targets": [
         "asm",
@@ -208,7 +208,7 @@
     },
     {
       "name": "std/fs",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/fs.",
       "targets": [
         "asm",
@@ -219,7 +219,7 @@
     },
     {
       "name": "std/hash",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/hash.",
       "targets": [
         "asm",
@@ -230,7 +230,7 @@
     },
     {
       "name": "std/io",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/io.",
       "targets": [
         "asm",
@@ -240,7 +240,7 @@
     },
     {
       "name": "std/json",
-      "detail": "Nyx stdlib \u00b7 deprecated",
+      "detail": "Nyx stdlib · deprecated",
       "documentation": "Use std/json_lite.",
       "targets": [
         "asm",
@@ -251,7 +251,7 @@
     },
     {
       "name": "std/json_lite",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Flat top-level string/integer field extraction only; not a general JSON parser.",
       "targets": [
         "asm",
@@ -262,7 +262,7 @@
     },
     {
       "name": "std/math",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/math.",
       "targets": [
         "asm",
@@ -273,7 +273,7 @@
     },
     {
       "name": "std/memory",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/memory.",
       "targets": [
         "asm",
@@ -282,7 +282,7 @@
     },
     {
       "name": "std/net",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/net.",
       "targets": [
         "asm",
@@ -291,7 +291,7 @@
     },
     {
       "name": "std/os",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/os.",
       "targets": [
         "asm",
@@ -300,7 +300,7 @@
     },
     {
       "name": "std/platform",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/platform.",
       "targets": [
         "asm",
@@ -309,7 +309,7 @@
     },
     {
       "name": "std/process",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/process.",
       "targets": [
         "asm",
@@ -318,7 +318,7 @@
     },
     {
       "name": "std/str",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/str.",
       "targets": [
         "asm",
@@ -330,7 +330,7 @@
     },
     {
       "name": "std/system",
-      "detail": "Nyx stdlib \u00b7 experimental",
+      "detail": "Nyx stdlib · experimental",
       "documentation": "Hosted OS inspection through the native platform ABI.",
       "targets": [
         "asm",
@@ -339,7 +339,7 @@
     },
     {
       "name": "std/terminal",
-      "detail": "Nyx stdlib \u00b7 experimental",
+      "detail": "Nyx stdlib · experimental",
       "documentation": "Terminal, cursor control, screen clearing, and keyboard input.",
       "targets": [
         "asm",
@@ -348,7 +348,7 @@
     },
     {
       "name": "std/thread",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/thread.",
       "targets": [
         "asm",
@@ -357,13 +357,21 @@
     },
     {
       "name": "std/time",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/time.",
       "targets": [
         "asm",
         "cpp",
         "js",
         "python"
+      ]
+    },
+    {
+      "name": "std/web",
+      "detail": "Nyx stdlib · experimental",
+      "documentation": "Typed browser host handles and DOM/canvas operations through nyx_host_v1.",
+      "targets": [
+        "wasm"
       ]
     }
   ],
@@ -1342,43 +1350,233 @@
         "js",
         "python"
       ]
+    },
+    {
+      "label": "WebElement",
+      "kind": "type",
+      "detail": "type WebElement = int",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "WebEvent",
+      "kind": "type",
+      "detail": "type WebEvent = int",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "WebListener",
+      "kind": "type",
+      "detail": "type WebListener = int",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_host_abi_version",
+      "kind": "function",
+      "detail": "fn web_host_abi_version() -> int",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_document",
+      "kind": "function",
+      "detail": "fn web_document() -> WebElement",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_query",
+      "kind": "function",
+      "detail": "fn web_query(selector: string) -> WebElement",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_create",
+      "kind": "function",
+      "detail": "fn web_create(tag: string) -> WebElement",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_set_text",
+      "kind": "function",
+      "detail": "fn web_set_text(element: WebElement, value: string) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_set_attribute",
+      "kind": "function",
+      "detail": "fn web_set_attribute(element: WebElement, name: string, value: string) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_append",
+      "kind": "function",
+      "detail": "fn web_append(parent: WebElement, child: WebElement) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_remove",
+      "kind": "function",
+      "detail": "fn web_remove(element: WebElement) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_release",
+      "kind": "function",
+      "detail": "fn web_release(element: WebElement) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_listen",
+      "kind": "function",
+      "detail": "fn web_listen(element: WebElement, event_name: string, callback_id: int) -> WebListener",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_unlisten",
+      "kind": "function",
+      "detail": "fn web_unlisten(listener: WebListener) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_request_animation_frame",
+      "kind": "function",
+      "detail": "fn web_request_animation_frame(callback_id: int) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_event_key",
+      "kind": "function",
+      "detail": "fn web_event_key(event: WebEvent) -> int",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_canvas_clear",
+      "kind": "function",
+      "detail": "fn web_canvas_clear(canvas: WebElement) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_canvas_set_fill_style",
+      "kind": "function",
+      "detail": "fn web_canvas_set_fill_style(canvas: WebElement, color: string) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
+    },
+    {
+      "label": "web_canvas_fill_rect",
+      "kind": "function",
+      "detail": "fn web_canvas_fill_rect(canvas: WebElement, x: float, y: float, width: float, height: float) -> void",
+      "module": "std/web",
+      "documentation": "Declared by std/web.",
+      "targets": [
+        "wasm"
+      ]
     }
   ],
   "targets": [
     {
       "name": "asm",
       "detail": "x86_64 Assembly",
-      "documentation": "assembly \u00b7 beta"
+      "documentation": "assembly · beta"
     },
     {
       "name": "cpp",
       "detail": "C++20 Native",
-      "documentation": "executable/library \u00b7 stable"
+      "documentation": "executable/library · stable"
     },
     {
       "name": "js",
       "detail": "Node.js ES2022",
-      "documentation": "javascript \u00b7 stable"
+      "documentation": "javascript · stable"
     },
     {
       "name": "python",
       "detail": "Python 3",
-      "documentation": "python \u00b7 stable"
+      "documentation": "python · stable"
     },
     {
       "name": "react",
       "detail": "React 19 TSX",
-      "documentation": "tsx \u00b7 beta"
+      "documentation": "tsx · beta"
     },
     {
       "name": "rust",
       "detail": "Rust 2021",
-      "documentation": "rust \u00b7 beta"
+      "documentation": "rust · beta"
     },
     {
       "name": "wasm",
       "detail": "WebAssembly",
-      "documentation": "wat/wasm \u00b7 beta"
+      "documentation": "wat/wasm · beta"
     }
   ],
   "boards": []

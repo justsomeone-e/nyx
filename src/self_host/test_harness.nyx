@@ -1742,7 +1742,7 @@ fn main() {
     }
     
     print("--- Type Checking ---")
-    var tc = TypeChecker([], [], [], "", false, "")
+    var tc = TypeChecker([], [], [], [], "", false, "")
     var valid = tc.check_program(ast)
     if tc.has_error {
         print("TYPE ERROR:", tc.error_msg)

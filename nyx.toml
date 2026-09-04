@@ -1,7 +1,7 @@
 # Nyx Package Manifest
 [package]
 name = "nyx"
-version = "4.0.0-rc.1"
+version = "4.0.0-rc.2"
 edition = "2026"
 authors = ["Nyx Authors"]
 description = "Systems-oriented programming language with multi-target compilation"

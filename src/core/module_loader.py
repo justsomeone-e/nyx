@@ -23,6 +23,7 @@ from src.core.backend_capabilities import (
     resolve_backend,
     stdlib_module_from_import,
 )
+from src.toolchain.manifest import NyxLock
 
 class ModuleLoader:
     def __init__(
@@ -39,6 +40,23 @@ class ModuleLoader:
         self.symbol_origins: Dict[str, str] = {}
         self.collected_declarations: List[ASTNode] = []
         self._foreign_bindings: Optional[ForeignBindingRegistry] = None
+        self.package_roots = self._load_package_roots()
+
+    def _load_package_roots(self) -> Dict[str, str]:
+        current = os.path.realpath(self.base_dir)
+        while True:
+            lock_path = os.path.join(current, "nyx.lock")
+            if os.path.isfile(lock_path):
+                roots: Dict[str, str] = {}
+                for name, item in NyxLock.read_local_dependencies(lock_path).items():
+                    path = item.get("path")
+                    if path:
+                        roots[name] = os.path.realpath(os.path.join(current, path))
+                return roots
+            parent = os.path.dirname(current)
+            if parent == current:
+                return {}
+            current = parent
 
     def resolve_module_path(self, import_path: str, current_file: str) -> Tuple[Optional[str], List[str]]:
         """Resolves module path to an absolute filesystem path and returns all searched candidate paths."""
@@ -55,7 +73,28 @@ class ModuleLoader:
                     return cand, searched
             return None, searched
 
-        # 2. Local relative import: ./utils, ../math, helper.nyx
+        # 2. Deterministically locked local package import: physics/vector
+        normalized_import = import_path.replace("::", "/").replace("\\", "/").strip("/")
+        package_name, _, package_module = normalized_import.partition("/")
+        package_root = self.package_roots.get(package_name)
+        if package_root:
+            package_source = os.path.join(package_root, "src")
+            bases = []
+            if package_module:
+                bases.append(os.path.join(package_source, package_module))
+                bases.append(os.path.join(package_root, package_module))
+            else:
+                bases.extend((os.path.join(package_source, "lib"), os.path.join(package_source, "main")))
+            for base in bases:
+                candidates = [base] if base.endswith(".nyx") else [base + ".nyx", os.path.join(base, "index.nyx")]
+                for candidate in candidates:
+                    if candidate not in searched:
+                        searched.append(candidate)
+                    if os.path.isfile(candidate):
+                        return candidate, searched
+            return None, searched
+
+        # 3. Local relative import: ./utils, ../math, helper.nyx
         curr_dir = os.path.dirname(os.path.abspath(current_file)) if current_file and current_file != "<memory>" else self.base_dir
         cand1 = os.path.normpath(os.path.join(curr_dir, import_path))
         for ext in (".nyx", ""):

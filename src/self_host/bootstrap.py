@@ -109,7 +109,7 @@ def _driver_source(source: str) -> str:
         return
     }}
 
-    var checker = TypeChecker([], [], [], "", false, false, "")
+    var checker = TypeChecker([], [], [], [], "", false, false, "")
     if not checker.check_program(ast) {{
         print("SELF_HOST_TYPE_ERROR:", checker.error_msg)
         return
@@ -170,7 +170,7 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
         return
     }
 
-    var checker = TypeChecker([], [], [], "", false, false, "")
+    var checker = TypeChecker([], [], [], [], "", false, false, "")
     if not checker.check_program(ast) {
         nyxc_fail("TYPE", checker.error_msg, 1)
         return

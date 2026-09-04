@@ -1,6 +1,6 @@
 # Nyx v4 Syntax and Semantic Contract
 
-Status: `v4.0.0-rc.1` (`Samsara`) release-candidate contract. The surface is
+Status: `v4.0.0-rc.2` (`Bodhi`) release-candidate contract. The surface is
 under RC soak and is not yet a stable compatibility promise.
 
 This file defines the compatibility boundary for Nyx source. The readable

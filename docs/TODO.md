@@ -1,8 +1,8 @@
 # Nyx v4 Development TODO
 
-Bu dosya Nyx v4 geliştirme hattının aktif görev listesidir. `v4.0.0 Nirvana`
-stable sürümü henüz yayınlanmadı; beta ve RC etiketleri ancak aşağıdaki kapılar
-gerçekten tamamlandığında oluşturulacaktır.
+Bu dosya Nyx v4 geliştirme hattının aktif görev listesidir. `v4.0.0-rc.1
+Samsara` yayınlandı; aktif aday `v4.0.0-rc.2 Bodhi`, stable hedef ise
+`v4.0.0 Nirvana`dır.
 
 ## Yön kararları
 
@@ -17,7 +17,7 @@ gerçekten tamamlandığında oluşturulacaktır.
   bir `Array<T, N>`/`array[T, N]` RFC'si olarak tasarla.
 - [x] Ana hedefleri `cpp`, `js`, `python`, `rust`, `wasm`, `react` ve `asm`
   olarak sınırla.
-- [ ] Birincil geliştirme hedeflerini `cpp` native ve `wasm` olarak belirle;
+- [x] Birincil geliştirme hedeflerini `cpp` native ve `wasm` olarak belirle;
   diğer backendleri açık capability sözleşmeleriyle koru.
 
 ## Compiler çekirdeği
@@ -89,8 +89,31 @@ Python parser + Nyx parser + typechecker + HIR + backend parity gerektirir.
   dönüşlerini `Result` modeline taşı; TCP EOF ile receive hatasını ayır.
 - [x] `std/json_lite` sözleşmesini yalnız düz üst-seviye string/int alan
   ayıklayıcı olarak sınırla; genel JSON parser olduğu izlenimini kaldır.
-- [ ] Paket manifesti, lockfile ve local dependency çözümünü deterministik yap.
+- [x] Paket manifesti, lockfile ve recursive local path dependency çözümünü
+  içerik checksum'ları ve cycle diagnostics ile deterministik yap.
 - [ ] En az üç gerçek örnek uygulama: CLI aracı, WASM modülü ve küçük servis.
+
+## v4.0.0-rc.2 Bodhi — Web/WASM ekosistemi
+
+- [x] `nyx build --target wasm` ile `.wat`, `.wasm`, `.mjs` ve `.d.ts`
+  artifactlarını tek build dizininde üret.
+- [x] WASM iç fonksiyon çağrılarında UTF-8 literal ve string parametrelerini
+  internal `ptr, len` ABI üzerinden geçir; string dönüş zincirini koru.
+- [x] WASM backendinde `Array<int/float>` iteration, `Array/string.len()` method
+  çağrıları, internal string call zinciri ve string conditional lowering'i tamamla.
+- [x] Versioned `nyx_host_v1` WASM host-import ABI ve capability diagnostics ekle.
+- [x] Typed `std/web` DOM handle, attribute, event, Canvas ve lifecycle API'sini ekle.
+- [x] npm-ready `package.json`, conditional `exports`, `types`, ESM ve React 19,
+  Vue 3, Svelte 5 adaptör çıktılarını üret.
+- [x] Nyx Pong'un tarayıcı sürümünü `std/web` üzerinden, elle yazılmış uygulama
+  JavaScript'i olmadan çalıştır.
+- [ ] JSX/HTML ve reactivity sözdizimini ayrı RFC olarak değerlendir; host ABI
+  kararlı olmadan grammar'a ekleme.
+
+RC2 bilinçli sınırı: arbitrary user-defined struct/method ABI, heap-owned string
+local'ları, DOM diffing ve JSX grammar bu pakete dahil değildir. Bunlar ABI v2
+veya sonraki major RFC gerektirir; desteklenmeyen kullanım sessiz yanlış kod
+yerine derleme tanısı üretir.
 
 ## Tooling
 
@@ -110,7 +133,7 @@ Python parser + Nyx parser + typechecker + HIR + backend parity gerektirir.
 - [ ] HIR, compiler API, plugin API ve Bundle ABI uyumluluk politikasını yayınla.
 - [ ] Checksum, provenance/SBOM ve rollback prosedürünü doğrula.
 - [ ] Temiz checkout'ta release auditini iki kez geçir.
-- [ ] Product Owner onayından sonra `4.0.0-rc.1` etiketini oluştur.
+- [x] Product Owner onayından sonra `4.0.0-rc.1` etiketini oluştur.
 
 ## v4.0.0 Nirvana stable kapıları
 

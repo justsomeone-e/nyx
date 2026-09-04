@@ -10,7 +10,7 @@ import zipfile
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 PACKAGER = ROOT_DIR / "tools" / "release_package.py"
-TEST_TAG = "v4.0.0-rc.1"
+TEST_TAG = f"v{(ROOT_DIR / 'VERSION').read_text(encoding='utf-8').strip()}"
 
 
 def _digest(path: Path) -> str:

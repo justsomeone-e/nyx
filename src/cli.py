@@ -44,7 +44,7 @@ Project & Development Commands:
   nyx init [name]                    Initialize a nyx.toml project in current directory
   nyx check [file.nyx] [--target t]  Fast type-check and semantic validation
   nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
-  nyx bundle [file.nyx] [-o dir]     Bundle Polyglot Web/WASM package (.wasm, .mjs, .d.ts, .tsx)
+  nyx bundle [file.nyx] [-o dir]     Bundle Web/WASM (--package; --react/--vue/--svelte)
   nyx self-host verify               Verify the native stage-1 -> stage-2 bootstrap
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
@@ -64,7 +64,7 @@ Toolchain & Quality:
   nyx doc <file.nyx>                 Generate HTML API documentation from /// comments
 
 Package Management:
-  nyx add <pkg> [@version]           Add a dependency into nyx.toml and lock in nyx.lock
+  nyx add <pkg> [@version] [--path]  Add a registry declaration or local dependency
   nyx remove <pkg>                   Remove a dependency from nyx.toml and nyx.lock
   nyx install                        Validate dependencies and regenerate nyx.lock
   nyx pkg                            Inspect current project manifest and dependencies
@@ -268,8 +268,14 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
     target = backend.name
 
     build_dir = os.path.join("build", target)
-    os.makedirs(build_dir, exist_ok=True)
     base_name = os.path.splitext(os.path.basename(entry_file))[0]
+
+    # A WASM build is a host-usable ABI v1 package, not just its textual WAT
+    # representation. `bundle` remains the explicit-output variant.
+    if target == "wasm":
+        return cmd_bundle(entry_file, out_dir=build_dir)
+
+    os.makedirs(build_dir, exist_ok=True)
     
     print(f"\033[96m[*] Building [{target}] ({output_type}):\033[0m {entry_file} -> {build_dir}")
     codegen = _compile_canonical_artifact(entry_file, target)
@@ -372,14 +378,6 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
         with open(out_tsx, "w", encoding="utf-8") as f:
             f.write(react_code)
         print(f"\033[92m[OK] Generated React 19 TSX Component:\033[0m {out_tsx}")
-        return 0
-
-    elif target == "wasm":
-        wasm_code = codegen.gen_wasm()
-        out_wat = os.path.join(build_dir, f"{base_name}.wat")
-        with open(out_wat, "w", encoding="utf-8") as f:
-            f.write(wasm_code)
-        print(f"\033[92m[OK] Generated WebAssembly Module:\033[0m {out_wat}")
         return 0
 
     else:
@@ -515,7 +513,14 @@ def cmd_run(entry_file, target) -> int:
         print(f"\033[91m[!] Unknown target '{target}'.\033[0m")
         return 1
 
-def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool = False) -> int:
+def cmd_bundle(
+    entry_file: str,
+    out_dir: Optional[str] = None,
+    emit_react: bool = False,
+    emit_package: bool = False,
+    emit_vue: bool = False,
+    emit_svelte: bool = False,
+) -> int:
     if not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File '{entry_file}' not found.\033[0m")
         return 1
@@ -542,6 +547,17 @@ def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool 
         mjs_code = emitter.emit_mjs()
         dts_code = emitter.emit_dts()
         react_code = emitter.emit_react() if emit_react else None
+        react_mjs = emitter.emit_react_mjs() if emit_react and emit_package else None
+        react_dts = emitter.emit_react_dts() if emit_react and emit_package else None
+        vue_mjs = emitter.emit_vue_mjs() if emit_vue else None
+        vue_dts = emitter.emit_vue_dts() if emit_vue else None
+        svelte_mjs = emitter.emit_svelte_mjs() if emit_svelte else None
+        svelte_dts = emitter.emit_svelte_dts() if emit_svelte else None
+        package_json = emitter.emit_package_json(
+            include_react=emit_react,
+            include_vue=emit_vue,
+            include_svelte=emit_svelte,
+        ) if emit_package else None
     except Exception as exc:
         from src.codegen.wasm_ir import BundleCompileError
         if isinstance(exc, BundleCompileError):
@@ -583,6 +599,28 @@ def cmd_bundle(entry_file: str, out_dir: Optional[str] = None, emit_react: bool 
         with open(react_path, "w", encoding="utf-8") as f:
             f.write(react_code or "")
         print(f"\033[92m  [+] React 19 useNyxModule: {react_path}\033[0m")
+
+    if emit_package:
+        package_path = os.path.join(bundle_dir, "package.json")
+        with open(package_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(package_json or "")
+        if emit_react:
+            react_mjs_path = os.path.join(bundle_dir, f"{base_name}.react.mjs")
+            react_dts_path = os.path.join(bundle_dir, f"{base_name}.react.d.ts")
+            with open(react_mjs_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(react_mjs or "")
+            with open(react_dts_path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(react_dts or "")
+        for enabled, suffix, module_code, type_code in (
+            (emit_vue, "vue", vue_mjs, vue_dts),
+            (emit_svelte, "svelte", svelte_mjs, svelte_dts),
+        ):
+            if enabled:
+                with open(os.path.join(bundle_dir, f"{base_name}.{suffix}.mjs"), "w", encoding="utf-8", newline="\n") as f:
+                    f.write(module_code or "")
+                with open(os.path.join(bundle_dir, f"{base_name}.{suffix}.d.ts"), "w", encoding="utf-8", newline="\n") as f:
+                    f.write(type_code or "")
+        print(f"\033[92m  [+] npm Package Manifest: {package_path}\033[0m")
 
     return 0
 
@@ -1164,7 +1202,20 @@ def main():
             if a in ("-o", "--output") and i + 1 < len(sys.argv):
                 out_dir = sys.argv[i + 1]
         emit_react = "--react" in sys.argv
-        sys.exit(cmd_bundle(entry, out_dir=out_dir, emit_react=emit_react))
+        emit_vue = "--vue" in sys.argv
+        emit_svelte = "--svelte" in sys.argv
+        emit_package = "--package" in sys.argv or "--npm" in sys.argv
+        if (emit_vue or emit_svelte) and not emit_package:
+            print("\033[91m[!] --vue and --svelte require --package.\033[0m")
+            sys.exit(1)
+        sys.exit(cmd_bundle(
+            entry,
+            out_dir=out_dir,
+            emit_react=emit_react,
+            emit_package=emit_package,
+            emit_vue=emit_vue,
+            emit_svelte=emit_svelte,
+        ))
     elif cmd in ("self-host", "selfhost"):
         sys.exit(cmd_self_host(sys.argv[2:]))
     elif cmd == "run":
@@ -1228,12 +1279,30 @@ def main():
         sys.exit(DocGenerator.generate_docs(sys.argv[2]))
     elif cmd == "add":
         if len(sys.argv) < 3: print("Usage: nyx add <package_name>"); sys.exit(1)
+        package_arguments = []
+        skip_next = False
+        for argument in sys.argv[2:]:
+            if skip_next:
+                skip_next = False
+                continue
+            if argument == "--path":
+                skip_next = True
+                continue
+            if argument.startswith("--path="):
+                continue
+            package_arguments.append(argument)
         try:
-            package_name, version = parse_package_spec(sys.argv[2:])
+            package_name, version = parse_package_spec(package_arguments)
         except ValueError as exc:
             print(f"[!] Invalid package specification: {exc}")
             sys.exit(1)
-        sys.exit(PackageManager.add(package_name, version))
+        local_path = None
+        for index, argument in enumerate(sys.argv):
+            if argument == "--path" and index + 1 < len(sys.argv):
+                local_path = sys.argv[index + 1]
+            elif argument.startswith("--path="):
+                local_path = argument.split("=", 1)[1]
+        sys.exit(PackageManager.add(package_name, version, local_path=local_path))
     elif cmd == "remove":
         if len(sys.argv) < 3: print("Usage: nyx remove <package_name>"); sys.exit(1)
         sys.exit(PackageManager.remove(sys.argv[2]))

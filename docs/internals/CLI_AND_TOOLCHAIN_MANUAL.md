@@ -81,14 +81,23 @@ my_project/
 * `nyx doc <file.nyx>`: Generates escaped local HTML API documentation from `///` comments.
 
 ### Package Management
-* `nyx add <package> [@version]`: Mutates `nyx.toml` and regenerates `nyx.lock`.
+* `nyx add <package> [@version] [--path <directory>]`: Mutates `nyx.toml` and regenerates `nyx.lock`.
 * `nyx remove <package>`: Removes one dependency from both manifest and lockfile.
 * `nyx install`: Validates manifest dependencies and regenerates the lockfile.
 * `nyx pkg`: Displays the current project, dependencies, native settings, and build configuration.
 
-The RC1 package contract is manifest/lockfile management only. There is no
-remote package registry download yet; `nyx install` states this explicitly and
-never reports a fake network installation.
+The RC2 package contract resolves recursive local path dependencies with
+canonical relative paths, SHA-256 content fingerprints, and cycle diagnostics.
+There is no remote package registry download; `nyx install` states this
+explicitly and never reports a fake network installation.
+
+### WebAssembly builds
+
+`nyx build src/main.nyx --target wasm` writes the complete ABI v1 package to
+`build/wasm/`: WAT, a WebAssembly binary, an ES2022 loader, and TypeScript
+declarations. Use `nyx bundle src/main.nyx --output <dir> [--package] [--react]
+[--vue] [--svelte]` when the output directory, npm metadata, or framework
+adapters must be selected explicitly.
 
 ### Toolchain Diagnostics
 * `nyx version`: Displays compiler version and detected host toolchains.

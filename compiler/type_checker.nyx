@@ -13,6 +13,11 @@ struct StructFieldInfo {
     field_type: string
 }
 
+struct TypeAliasInfo {
+    name: string,
+    actual_type: string
+}
+
 struct FunctionSignature {
     name: string,
     param_types: Array<string>,
@@ -51,6 +56,7 @@ fn typechecker_int_literal_fits_i64(value: string) -> bool {
 struct TypeChecker {
     scopes: Array<Scope>,
     struct_fields: Array<StructFieldInfo>,
+    type_aliases: Array<TypeAliasInfo>,
     functions: Array<FunctionSignature>,
     current_fn_return_type: string,
     current_fn_is_async: bool,
@@ -59,6 +65,23 @@ struct TypeChecker {
 }
 
 impl TypeChecker {
+    fn resolve_alias(self, type_name: string) -> string {
+        var current = type_name
+        var steps = 0
+        while steps <= len(self.type_aliases) {
+            var resolved = ""
+            for i in 0..len(self.type_aliases)-1 {
+                if self.type_aliases[i].name == current {
+                    resolved = self.type_aliases[i].actual_type
+                }
+            }
+            if resolved == "" or resolved == current { return current }
+            current = resolved
+            steps = steps + 1
+        }
+        return current
+    }
+
     fn validate_integer_literals(self, node: ASTNode) -> void {
         if node.kind == "Number" and not contains(node.value, ".") and
             not typechecker_int_literal_fits_i64(node.value) {
@@ -181,6 +204,8 @@ impl TypeChecker {
     }
 
     fn is_compatible(self, expected: string, found: string) -> bool {
+        expected = self.resolve_alias(expected)
+        found = self.resolve_alias(found)
         if expected == "" or expected == "any" or found == "any" { return true }
         if expected == found { return true }
         // Empty collection literals start as Array<any>; their element type is
@@ -522,6 +547,12 @@ impl TypeChecker {
             for i in 0..len(node.params)-1 {
                 self.register_struct_field(node.name, node.params[i].name, node.params[i].type_annot)
             }
+            return
+        }
+
+        if node.kind == "TypeAlias" {
+            self.type_aliases.push(TypeAliasInfo(node.name, node.type_name))
+            self.register_symbol(node.name, node.type_name)
             return
         }
 

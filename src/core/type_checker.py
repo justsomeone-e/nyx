@@ -57,6 +57,7 @@ class TypeChecker:
         self.source = source
         self.scopes: List[Dict[str, str]] = [{}]
         self.struct_defs: Dict[str, Dict[str, str]] = {}
+        self.type_aliases: Dict[str, str] = {}
         self.func_defs: Dict[str, Dict[str, Any]] = {}
         self.is_inside_unsafe = False
         self.current_return_type: Optional[str] = None
@@ -113,6 +114,8 @@ class TypeChecker:
     def is_compatible(self, expected: str, actual: str) -> bool:
         if expected in ('any', None) or actual in ('any', None):
             return True
+        expected = self.resolve_alias(expected)
+        actual = self.resolve_alias(actual)
         if expected == actual:
             return True
         if expected in self.generic_type_params:
@@ -153,6 +156,16 @@ class TypeChecker:
         if actual == 'null' and ('?' in expected or 'Option' in expected):
             return True
         return False
+
+    def resolve_alias(self, type_name: str) -> str:
+        """Resolve transparent aliases without looping on malformed cycles."""
+        suffix = "?" if type_name.endswith("?") else ""
+        current = type_name[:-1] if suffix else type_name
+        seen: Set[str] = set()
+        while current in self.type_aliases and current not in seen:
+            seen.add(current)
+            current = self.type_aliases[current]
+        return current + suffix
 
     def _check_fixed_integer_literal(self, node: VarDeclNode):
         if not node.type_annot or not isinstance(node.expr, NumberNode):
@@ -195,6 +208,10 @@ class TypeChecker:
                     fields[f.name] = f_type
                 self.struct_defs[stmt.name] = fields
                 self.declare(stmt.name, stmt.name)
+            elif isinstance(stmt, TypeAliasNode):
+                actual = str(stmt.actual_type)
+                self.type_aliases[stmt.name] = actual
+                self.declare(stmt.name, actual)
             elif isinstance(stmt, EnumDefNode):
                 self.declare(stmt.name, stmt.name)
                 self.generic_type_params.update(stmt.generic_params)

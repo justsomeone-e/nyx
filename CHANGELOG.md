@@ -4,6 +4,29 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [4.0.0-rc.2] - 2026-09-04
+
+### Bodhi release candidate
+
+* Added complete `.wat`/`.wasm`/`.mjs`/`.d.ts` output to ordinary WASM builds.
+* Added versioned `nyx_host_v1` imports and the typed `std/web` DOM, event,
+  lifecycle, and Canvas API.
+* Added npm-ready bundle manifests and React 19, Vue 3, and Svelte 5 adapters.
+* Added pure-Nyx browser Pong and host-simulated runtime conformance tests.
+* Expanded WASM lowering for host/internal calls, booleans, mutable globals,
+  numeric arrays, collection loops, built-in `len()` methods, and conditional
+  UTF-8 string results.
+* Added recursive deterministic local path dependencies with source checksums
+  and cycle diagnostics.
+* Made aliases transparently compatible in both the Python and Nyx-authored
+  type checkers.
+
+### Validation
+
+* Bundle ABI v1, host ABI v1, framework artifact syntax, local package locks,
+  canonical language surface, HIR parity, and native bootstrap remain direct
+  release gates.
+
 ## [4.0.0-rc.1] - 2026-09-02
 
 ### Release candidate

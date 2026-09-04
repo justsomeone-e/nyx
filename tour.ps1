@@ -1,11 +1,20 @@
 # Tour of Nyx PowerShell Launcher
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
-$preferredPython = 'C:\Users\USER\AppData\Local\Programs\Python\Python312\python.exe'
-$python = if (Test-Path -LiteralPath $preferredPython) { $preferredPython } else { (Get-Command python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1).Source }
+$python = (Get-Command py, python, python3 -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+
+if (-not $python -and $env:LOCALAPPDATA) {
+    foreach ($ver in @("Python312", "Python311", "Python310")) {
+        $candidate = Join-Path $env:LOCALAPPDATA "Programs\Python\$ver\python.exe"
+        if (Test-Path -LiteralPath $candidate) {
+            $python = $candidate
+            break
+        }
+    }
+}
 
 if (-not $python) {
-    Write-Error "Python 3.10+ is required to launch Tour of Nyx."
+    Write-Error "Python 3.10+ is required to launch Tour of Nyx. Please install Python or add it to PATH."
     exit 1
 }
 

@@ -109,6 +109,11 @@ class IRVerifier:
         self._checked_types: Set[IRType] = set()
         self._inside_async = False
         self._current_return_type: Optional[IRType] = None
+        self.type_aliases: Dict[str, IRType] = {
+            item.name: item.actual_type
+            for item in module.items
+            if isinstance(item, IRTypeAlias)
+        }
 
     def verify(self) -> IRModule:
         module_span = SourceSpan(self.module.source_name or "<unknown>", 1, 1)
@@ -1095,8 +1100,33 @@ class IRVerifier:
         span: SourceSpan,
         context: str,
     ) -> None:
-        if not compatible(expected, actual):
+        if not compatible(self._resolve_alias(expected), self._resolve_alias(actual)):
             self._issue("HIR0006", f"{context}: expected '{expected}', found '{actual}'", span)
+
+    def _resolve_alias(self, value_type: IRType) -> IRType:
+        seen: Set[str] = set()
+        resolved = value_type
+        while resolved.name in self.type_aliases and resolved.name not in seen:
+            seen.add(resolved.name)
+            target = self.type_aliases[resolved.name]
+            resolved = IRType(
+                target.name,
+                target.arguments,
+                resolved.optional or target.optional,
+                resolved.pointer or target.pointer,
+                target.parameter_types,
+                target.return_type,
+            )
+        if resolved.arguments:
+            resolved = IRType(
+                resolved.name,
+                tuple(self._resolve_alias(item) for item in resolved.arguments),
+                resolved.optional,
+                resolved.pointer,
+                resolved.parameter_types,
+                resolved.return_type,
+            )
+        return resolved
 
     def _pattern_bindings(self, expr: IRExpr) -> Set[str]:
         result: Set[str] = set()

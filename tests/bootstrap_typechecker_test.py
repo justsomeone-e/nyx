@@ -66,7 +66,8 @@ def run_bootstrap_typechecker_test() -> bool:
         ("valid_default_argument_decl", "fn greet(name: string = \"world\") { print(name); }"),
         ("valid_default_argument_call", "fn greet(name: string = \"world\") { print(name); } fn main() { greet(); }"),
         ("valid_array_destructuring", "let [left, right] = [20, 22]; var total: int = left + right;"),
-        ("valid_struct_destructuring", "struct Point { x: int, y: int } let Point(x, y) = Point(3, 4); var total: int = x + y;")
+        ("valid_struct_destructuring", "struct Point { x: int, y: int } let Point(x, y) = Point(3, 4); var total: int = x + y;"),
+        ("valid_transparent_type_alias", "type Handle = int; var raw: int = 1; var handle: Handle = raw; fn use_handle(value: Handle) -> int = value; var result: int = use_handle(handle);")
     ]
 
     all_passed = True
@@ -94,7 +95,7 @@ fn main() {{
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], [], "", false, false, "")
+    var tc = TypeChecker([], [], [], [], "", false, false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")
@@ -185,7 +186,7 @@ fn main() {{
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
-    var tc = TypeChecker([], [], [], "", false, false, "")
+    var tc = TypeChecker([], [], [], [], "", false, false, "")
     var ok = tc.check_program(ast)
     if ok {{
         print("SEMANTIC_OK")

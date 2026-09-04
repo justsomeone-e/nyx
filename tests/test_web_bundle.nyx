@@ -1,0 +1,13 @@
+import "std/web"
+
+fn update_status(selector: string, value: string) -> WebElement {
+    let element: WebElement = web_query(selector)
+    web_set_text(element, value)
+    return element
+}
+
+fn draw_box(canvas: WebElement) -> int {
+    web_canvas_set_fill_style(canvas, "#00d9ff")
+    web_canvas_fill_rect(canvas, 10.0, 20.0, 30.0, 40.0)
+    return 1
+}

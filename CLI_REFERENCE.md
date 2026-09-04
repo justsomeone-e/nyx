@@ -36,6 +36,9 @@ Supported targets:
 * `--target js` (Node.js ES2022 Module)
 * `--target python` (Python 3)
 * `--target rust` (Rust 2021 Source)
+* `--target wasm` (WAT, WebAssembly binary, ES2022 loader, and TypeScript declarations)
+* `--target react` (React 19 TSX preview)
+* `--target asm` (Intel-syntax x86_64 assembly through the native toolchain)
 
 Native console executables finish when `main` returns; use `nyx run file.nyx` to keep their
 output visible in the current terminal instead of double-clicking the EXE.
@@ -73,15 +76,18 @@ It does not print synthetic function timings.
 ### 14. `nyx doc <file.nyx>`
 Generates escaped HTML API documentation from `///` comments.
 
-### 15. `nyx add <package> [@version]`
-Adds an explicit dependency version to `nyx.toml` and regenerates `nyx.lock`.
+### 15. `nyx add <package> [@version] [--path <directory>]`
+Adds an explicit dependency to `nyx.toml` and regenerates `nyx.lock`. Local
+path dependencies are resolved recursively, cycle-checked, content-hashed, and
+recorded with canonical relative paths.
 
 ### 16. `nyx remove <package>`
 Removes a dependency from the manifest and lockfile. Missing dependencies return nonzero.
 
 ### 17. `nyx install`
-Validates manifest dependencies and regenerates `nyx.lock`. RC1 has no remote
-package registry download; the command reports that limit explicitly.
+Validates manifest dependencies and regenerates `nyx.lock`. The RC2 contract
+supports deterministic local path dependencies; remote registry download is
+not enabled.
 
 ### 18. `nyx pkg`
 Displays project metadata, dependencies, native settings, and build configuration.
@@ -89,3 +95,8 @@ Displays project metadata, dependencies, native settings, and build configuratio
 ### 19. `nyx targets [--json]`
 Displays the human-readable or machine-readable backend and standard-library
 capability contract.
+
+### 20. `nyx bundle <file.nyx> --output <dir> [--package] [--react] [--vue] [--svelte]`
+Writes the WASM ABI v1 package to an explicit directory. `--package` adds an
+npm manifest; framework flags add typed React 19, Vue 3, or Svelte 5 adapters.
+Vue and Svelte adapters require `--package`.

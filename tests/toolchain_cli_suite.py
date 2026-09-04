@@ -66,6 +66,56 @@ def run_toolchain_cli_suite() -> bool:
         assert NyxManifest(str(root / "nyx.toml")).dependencies == {}
         assert _run(directory, "remove", "telemetry").returncode == 1
 
+        workspace = root / "local-workspace"
+        application = workspace / "application"
+        physics = workspace / "physics"
+        application.mkdir(parents=True)
+        physics.mkdir(parents=True)
+        assert _run(str(physics), "init", "physics").returncode == 0
+        physics_manifest = NyxManifest(str(physics / "nyx.toml"))
+        physics_manifest.package["version"] = "0.3.0"
+        physics_manifest.save(str(physics / "nyx.toml"))
+        (physics / "src").mkdir()
+        (physics / "src" / "math.nyx").write_text(
+            "fn local_answer() -> int { return 42 }\n", encoding="utf-8"
+        )
+
+        assert _run(str(application), "init", "application").returncode == 0
+        (application / "src").mkdir()
+        application_source = application / "src" / "main.nyx"
+        application_source.write_text(
+            'import "physics/math"\nfn main() { print(local_answer()) }\n',
+            encoding="utf-8",
+        )
+        local_added = _run(str(application), "add", "physics", "--path", "../physics")
+        assert local_added.returncode == 0, _output(local_added)
+        local_manifest = NyxManifest(str(application / "nyx.toml"))
+        assert local_manifest.dependencies["physics"] == {"path": "../physics", "version": "0.3.0"}
+        first_lock = (application / "nyx.lock").read_text(encoding="utf-8")
+        assert "[local_dependencies]" in first_lock
+        assert 'path = "../physics"' in first_lock
+        assert "sha256:" in first_lock
+        local_checked = _run(str(application), "check", str(application_source), "--target", "python")
+        assert local_checked.returncode == 0, _output(local_checked)
+
+        local_installed = _run(str(application), "install")
+        assert local_installed.returncode == 0, _output(local_installed)
+        assert (application / "nyx.lock").read_text(encoding="utf-8") == first_lock
+
+        (physics / "src" / "math.nyx").write_text(
+            "fn local_answer() -> int { return 43 }\n", encoding="utf-8"
+        )
+        assert _run(str(application), "install").returncode == 0
+        second_lock = (application / "nyx.lock").read_text(encoding="utf-8")
+        assert second_lock != first_lock, "local dependency source changes must update the lock checksum"
+
+        physics_manifest = NyxManifest(str(physics / "nyx.toml"))
+        physics_manifest.dependencies["application"] = {"path": "../application", "version": "0.1.0"}
+        physics_manifest.save(str(physics / "nyx.toml"))
+        cycle = _run(str(application), "install")
+        assert cycle.returncode == 1
+        assert "cycle detected" in _output(cycle)
+
         source_path = root / "format_contract.nyx"
         source_path.write_text(
             'import cpp "std::filesystem" from "<filesystem>" as fs\n'

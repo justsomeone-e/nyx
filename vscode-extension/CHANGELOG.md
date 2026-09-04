@@ -1,5 +1,10 @@
 # Change Log
 
+## 4.0.0-rc.2
+
+- Align the extension catalog and package version with the Bodhi RC2 compiler.
+- Add the typed `std/web` surface to completion metadata.
+
 ## 4.0.0-rc.1
 
 - Align the extension package with the Nyx v4.0.0-rc.1 release candidate.

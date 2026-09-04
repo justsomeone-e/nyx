@@ -50,6 +50,9 @@ def run_capability_suite() -> bool:
         assert "typed_hir_v1" not in BACKENDS[target].features
     assert "int64_wrap" not in BACKENDS["wasm"].features
     assert "wasm32" in BACKENDS["wasm"].features
+    assert {"host_imports_v1", "web_dom"} <= BACKENDS["wasm"].features
+    assert "web" in stdlib_modules_for_target("wasm")
+    assert "web" not in stdlib_modules_for_target("cpp")
 
     cli_manifest = subprocess.run(
         [sys.executable, CLI_PATH, "targets", "--json"],
@@ -74,6 +77,14 @@ def run_capability_suite() -> bool:
             _write(js_source, '#target js\nimport "std/fs"\nfn main() {}\n')
             js_ast = ModuleLoader(base_dir=temp_dir).load_program(js_source)
             assert js_ast.target == "js"
+
+            wrong_web_source = os.path.join(temp_dir, "wrong_web_target.nyx")
+            _write(wrong_web_source, '#target cpp\nimport "std/web"\nfn main() {}\n')
+            try:
+                ModuleLoader(base_dir=temp_dir).load_program(wrong_web_source)
+                raise AssertionError("cpp accepted wasm-only std/web")
+            except DiagnosticError as error:
+                assert error.code == "E1400"
 
             portable_str = os.path.join(temp_dir, "portable_str.nyx")
             _write(
