@@ -1,6 +1,7 @@
 # Nyx
 
 <p align="left">
+  <a href="https://justsomeone-e.github.io/nyx/"><img src="https://img.shields.io/badge/interactive%20tour-try%20in%20browser-00F0FF?style=for-the-badge&amp;logoColor=05070A&amp;labelColor=0E1318" alt="Try Tour of Nyx Online"></a>
   <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
   <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Stable Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
@@ -37,6 +38,7 @@ A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.
 </div>
 
 <p align="left">
+  <a href="https://justsomeone-e.github.io/nyx/">⚡ <b>TRY ONLINE (TOUR &amp; PLAYGROUND)</b></a> •
   <a href="#manifesto">MANIFESTO</a> •
   <a href="#language-tour">LANGUAGE TOUR</a> •
   <a href="#architecture">ARCHITECTURE</a> •

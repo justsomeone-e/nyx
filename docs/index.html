@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tour of Nyx &bull; Interactive Systems Language Studio</title>
+  <meta name="description" content="Learn Nyx in your browser. 81 interactive exercises, WebAssembly arcade, real-time code editor, and zero-install live playground.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header class="header">
+    <div class="header-left">
+      <a href="https://github.com/justsomeone-e/nyx" class="brand" target="_blank" rel="noopener">
+        <div class="brand-icon">N</div>
+        <span>nyx</span>
+      </a>
+      <span class="version-badge">v4.0.0 Nirvana</span>
+
+      <!-- Main Mode Switcher -->
+      <nav class="mode-nav">
+        <button class="mode-btn active" id="btnModeTour" title="Interactive 81-step guided curriculum">
+          <span>🎓</span> Tour of Nyx
+        </button>
+        <button class="mode-btn" id="btnModePlayground" title="Free-form code playground">
+          <span>⚡</span> Playground
+        </button>
+        <button class="mode-btn" id="btnModeArcade" title="60 FPS WebAssembly 3D Canvas & Audio">
+          <span>🎮</span> WASM Arcade
+        </button>
+      </nav>
+    </div>
+
+    <div class="header-right">
+      <div class="progress-pill" id="tourProgressPill" title="Your Tour Progress">
+        <span id="progressText">0 / 81 Solved</span>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="progressBarFill"></div>
+        </div>
+      </div>
+
+      <button class="btn-secondary" id="btnOpenInstall">
+        <span>📦</span> Install CLI
+      </button>
+
+      <a href="https://github.com/justsomeone-e/nyx" class="btn-secondary" target="_blank" rel="noopener">
+        <span>★</span> Star on GitHub
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Workbench Layout -->
+  <main class="workbench">
+    
+    <!-- Left Sidebar: Exercise Curriculum Tree -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-search">
+        <input type="text" class="search-input" id="searchExercises" placeholder="Filter exercises... (/)" autocomplete="off">
+      </div>
+      <div class="exercise-tree" id="exerciseTree">
+        <!-- Generated dynamically from tour_data.js -->
+      </div>
+    </aside>
+
+    <!-- Center: Exercise Hero & Code Editor -->
+    <section class="workspace-editor">
+      
+      <!-- Exercise Header Info -->
+      <div class="exercise-hero" id="exerciseHero">
+        <div class="exercise-meta">
+          <span class="badge-topic" id="badgeTopic">00. Welcome</span>
+          <span class="badge-status" id="badgeStatus">Unsolved</span>
+        </div>
+        <h1 class="exercise-title" id="exerciseTitle">Welcome to Nyx</h1>
+        <p class="exercise-desc" id="exerciseDesc">Run your very first Nyx program to verify your environment.</p>
+        
+        <div class="hints-drawer">
+          <button class="hint-btn" id="btnToggleHint">
+            <span>💡</span> <span id="hintBtnText">Show Hint</span>
+          </button>
+          <button class="hint-btn" id="btnShowSolution">
+            <span>👁️</span> Show Solution
+          </button>
+        </div>
+        <div class="hint-box" id="hintBox"></div>
+      </div>
+
+      <!-- Code Editor Window -->
+      <div class="editor-wrap">
+        <div class="editor-toolbar">
+          <span id="editorFilename">main.nyx</span>
+          <span id="editorStats">Nyx v4.0.0 &bull; UTF-8</span>
+        </div>
+        <div class="editor-main">
+          <div class="line-numbers" id="lineNumbers">1</div>
+          <textarea class="code-textarea" id="codeEditor" spellcheck="false" placeholder="Write Nyx code here..."></textarea>
+        </div>
+      </div>
+
+      <!-- Action Bar -->
+      <div class="editor-actions">
+        <button class="btn-run" id="btnRun">
+          <span>▶</span> Run &amp; Verify (Ctrl+Enter)
+        </button>
+
+        <div class="action-nav">
+          <button class="btn-secondary" id="btnResetCode" title="Reset to initial code">
+            <span>↺</span> Reset
+          </button>
+          <button class="btn-secondary" id="btnPrevExercise" title="Previous exercise (Alt+P)">
+            <span>←</span> Prev
+          </button>
+          <button class="btn-secondary" id="btnNextExercise" title="Next exercise (Alt+N)">
+            Next <span>→</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: Output Terminal & Interactive Canvas Viewport -->
+    <section class="workspace-output">
+      <div class="output-header">
+        <div class="output-tabs">
+          <button class="output-tab-btn active" id="tabTerminal">📟 Terminal Output</button>
+          <button class="output-tab-btn" id="tabCanvas">🎨 3D Canvas / Game</button>
+        </div>
+        <button class="btn-secondary" id="btnClearTerminal" style="padding: 2px 8px; font-size: 11px;">Clear</button>
+      </div>
+
+      <div class="output-body">
+        <!-- Terminal Tab -->
+        <div class="terminal-view" id="terminalView">
+          <div class="term-line term-info">⚡ Nyx v4.0.0 WebAssembly Runtime initialized.</div>
+          <div class="term-line term-info">Press 'Run &amp; Verify' or hit Ctrl+Enter to execute.</div>
+        </div>
+
+        <!-- Canvas Tab (WASM 60 FPS Game / Simulation) -->
+        <div class="canvas-view" id="canvasView">
+          <canvas id="arcadeCanvas" width="800" height="600"></canvas>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Install CLI Modal -->
+  <div class="modal-overlay" id="installModal">
+    <div class="modal-card">
+      <h2 class="modal-title">Install Nyx Locally</h2>
+      <p class="modal-desc">Get the standalone, zero-dependency native compiler binary and toolchain.</p>
+
+      <div style="margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">Windows (PowerShell):</div>
+      <div class="install-cmd-box">
+        <code>irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.ps1 | iex</code>
+        <button class="btn-copy" onclick="navigator.clipboard.writeText('irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.ps1 | iex'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy', 1500)">Copy</button>
+      </div>
+
+      <div style="margin-bottom: 8px; font-size: 12px; font-weight: 600; color: var(--text-secondary);">Linux &amp; macOS (curl):</div>
+      <div class="install-cmd-box">
+        <code>curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.sh | bash</code>
+        <button class="btn-copy" onclick="navigator.clipboard.writeText('curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.sh | bash'); this.innerText='Copied!'; setTimeout(()=>this.innerText='Copy', 1500)">Copy</button>
+      </div>
+
+      <div style="text-align: right; margin-top: 16px;">
+        <button class="btn-secondary" id="btnCloseInstall">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Load Curriculum Data and Studio Application Script -->
+  <script src="tour_data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
