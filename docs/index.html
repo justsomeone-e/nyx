@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tour of Nyx &bull; Interactive Systems Language Studio</title>
-  <meta name="description" content="Learn Nyx in your browser. 81 interactive exercises, live code editor with IntelliSense, WebAssembly arcade, and zero-install live playground.">
+  <meta name="description" content="Learn Nyx in your browser. 81 interactive exercises, live code editor with IntelliSense, and zero-install live playground.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=4.0.2">
-  <!-- Bulletproof Ace Editor & Language Tools (Zero CORS / Zero WebWorker dependency) -->
+  <link rel="stylesheet" href="styles.css?v=4.0.3">
+  <!-- Ace Editor & Language Tools (Fast, Synchronous, Zero CORS / Zero WebWorker dependency) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ext-language_tools.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/theme-dracula.js"></script>
@@ -32,9 +32,6 @@
         </button>
         <button class="mode-btn" id="btnModePlayground" title="Free-form code playground">
           <span>⚡</span> Playground
-        </button>
-        <button class="mode-btn" id="btnModeArcade" title="60 FPS WebAssembly Arcade Game">
-          <span>🎮</span> WASM Arcade
         </button>
       </nav>
     </div>
@@ -165,13 +162,8 @@
       <!-- Output / Terminal Section -->
       <div class="terminal-section" id="terminalSection">
         <div class="terminal-toolbar">
-          <div class="terminal-tabs">
-            <button class="term-tab-btn active" id="tabTerminal">
-              <span>📟</span> Terminal Output
-            </button>
-            <button class="term-tab-btn" id="tabCanvas">
-              <span>🎮</span> 3D Canvas / Game
-            </button>
+          <div class="terminal-title">
+            <span>📟</span> Terminal Output
           </div>
 
           <div class="terminal-status">
@@ -181,15 +173,9 @@
         </div>
 
         <div class="terminal-content">
-          <!-- Terminal View -->
           <div class="term-console" id="terminalView">
             <div class="term-line term-info">⚡ Nyx v4.0.0 Nirvana WebAssembly Studio initialized.</div>
             <div class="term-line term-info">Press 'Run &amp; Verify' or hit Ctrl+Enter to test your code.</div>
-          </div>
-
-          <!-- Canvas View (WASM Arcade) -->
-          <div class="canvas-viewport" id="canvasView">
-            <canvas id="arcadeCanvas" width="800" height="600"></canvas>
           </div>
         </div>
       </div>
@@ -224,6 +210,6 @@
 
   <!-- Load Curriculum Data and Studio Application Script -->
   <script src="tour_data.js"></script>
-  <script src="app.js?v=4.0.2"></script>
+  <script src="app.js?v=4.0.3"></script>
 </body>
 </html>
