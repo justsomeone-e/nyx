@@ -1,0 +1,16 @@
+struct Address { city: string? }
+struct Profile { address: Address? }
+
+fn city_label(profile: Profile?) -> string {
+    return profile?.address?.city ?? "unknown"
+}
+
+fn main() {
+    let absent: Profile? = null
+    let present: Profile? = Profile(Address("Kyoto"))
+    assert(city_label(absent) == "unknown", "absent profile needs a fallback")
+    assert(city_label(present) == "Kyoto", "present city must survive navigation")
+    print(city_label(absent), city_label(present))
+}
+
+main()

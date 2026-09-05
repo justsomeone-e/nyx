@@ -17,7 +17,7 @@ from src.codegen.hir_python import PythonEmissionError, emit_python
 from src.codegen.hir_rust import RustEmissionError, emit_rust
 from src.codegen.wasm_ir import BundleCompileError
 from src.core.ast_nodes import ProgramNode
-from src.core.backend_capabilities import normalize_backend_name, resolve_backend
+from src.core.backend_capabilities import BACKENDS, normalize_backend_name, resolve_backend
 from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
 from src.core.module_loader import ModuleLoader
 from src.core.type_checker import TypeChecker
@@ -103,6 +103,11 @@ def _contains_payload_enum(value: object) -> bool:
     return False
 
 
+def _feature_hint(feature: str) -> str:
+    targets = [name for name, spec in BACKENDS.items() if feature in spec.features]
+    return "supported targets: " + ", ".join(targets)
+
+
 def _validate_backend_features(hir: IRModule) -> None:
     backend = resolve_backend(hir.target)
     if backend is None:
@@ -110,40 +115,40 @@ def _validate_backend_features(hir: IRModule) -> None:
     if _contains_payload_enum(hir) and "payload_enums" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support payload enum semantics yet; "
-            "use cpp, js, or python"
+            + _feature_hint("payload_enums")
         )
     if _contains_hir_node(hir, (IRResultPropagate,)) and "result_propagation" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Result propagation semantics yet; "
-            "use cpp, js, or python"
+            + _feature_hint("result_propagation")
         )
     if _contains_hir_node(hir, (IRYield,)) and "iterator_yield" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support lazy Iterator<T>/yield semantics yet; "
-            "use cpp, js, or python"
+            + _feature_hint("iterator_yield")
         )
     if _contains_hir_call_symbol(
         hir, frozenset(("builtin::map", "builtin::filter", "builtin::fold"))
     ) and "collection_combinators" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support collection combinators yet; "
-            "use cpp, js, or python"
+            + _feature_hint("collection_combinators")
         )
     if _contains_hir_node(hir, (IRThrow, IRTryCatch)) and "exceptions" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx exception semantics "
-            "(try/catch/throw); use cpp, js, or python"
+            f"(try/catch/throw); {_feature_hint('exceptions')}"
         )
     uses_tasks = _contains_hir_node(hir, (IRAwait,)) or _contains_async_function(hir)
     if uses_tasks and "async_tasks" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx Task<T> semantics "
-            "(async/await); use cpp, js, or python"
+            f"(async/await); {_feature_hint('async_tasks')}"
         )
     if _contains_hir_node(hir, (IRSpawn,)) and "spawn" not in backend.features:
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx spawn semantics; "
-            "use cpp, js, or python"
+            + _feature_hint("spawn")
         )
     if (
         _contains_hir_call_symbol(hir, frozenset(("builtin::channel",)))
@@ -151,7 +156,7 @@ def _validate_backend_features(hir: IRModule) -> None:
     ):
         raise BackendCapabilityError(
             f"target '{backend.name}' does not support Nyx channel semantics; "
-            "use cpp, js, or python"
+            + _feature_hint("channels")
         )
 @dataclass(frozen=True)
 class CompilerDiagnostic:

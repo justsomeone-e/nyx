@@ -1,22 +1,19 @@
-struct Lock {
-    is_locked: bool
+var cleanup_state: Array<bool> = [false]
+
+fn release_lock() {
+    set cleanup_state[0] = true
 }
 
-fn release_lock(lock: Lock) {
-    lock.is_locked = false
-}
-
-fn do_critical_work(lock: Lock) {
-    lock.is_locked = true
-    defer release_lock(lock)
+fn do_critical_work() {
+    set cleanup_state[0] = false
+    defer release_lock()
     print("Performing critical work with lock held...")
 }
 
 fn main() {
-    let lock = Lock(false)
-    do_critical_work(lock)
-    assert(lock.is_locked == false, "Lock must be released automatically via defer upon exit!")
-    print("Lock safely released:", lock.is_locked == false)
+    do_critical_work()
+    assert(cleanup_state[0] == true, "Cleanup must run automatically via defer upon exit!")
+    print("Lock safely released:", cleanup_state[0])
 }
 
 main()

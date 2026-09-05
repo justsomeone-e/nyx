@@ -1,0 +1,17 @@
+// I AM NOT DONE
+// A Task is a reusable handle to one completion.
+// TODO: call compute once and await the same task twice.
+
+async fn compute(calls: Array<int>) -> int {
+    set calls[0] = calls[0] + 1
+    return 21
+}
+
+async fn main() {
+    let calls = [0]
+    let first: int = await compute(calls)
+    let second: int = await compute(calls)
+    assert(first + second == 42, "both awaits must observe value 21")
+    assert(calls[0] == 1, "the task body must run once")
+    print("task total:", first + second)
+}

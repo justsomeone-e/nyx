@@ -1,7 +1,9 @@
 # Nyx v4 Compatibility Contracts
 
-Status: `v4.0.0-rc.2` candidate contract. Stable compatibility begins only
-when `v4.0.0 Nirvana` is released.
+Status: `v4.0.0 Nirvana` stable contract, effective upon publication.
+The stable semantic set is `cpp`, `js`, and `python`; other backends retain
+their documented capability and maturity levels. v4.5.0 must preserve this
+contract. Breaking changes require a versioned migration as described below.
 
 ## Source and diagnostics
 

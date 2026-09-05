@@ -574,6 +574,12 @@ inline bool _nyx_is_number(const std::string& value) {
     return end != value.c_str() && end && *end == '\0';
 }
 
+inline int64_t _nyx_len(const std::string& value) {
+    int64_t result = 0;
+    for (const unsigned char byte : value) if ((byte & 0xC0) != 0x80) ++result;
+    return result;
+}
+
 template <typename T>
 int64_t _nyx_len(const T& value) { return static_cast<int64_t>(value.size()); }
 
@@ -584,8 +590,15 @@ std::vector<T> _nyx_destructure_check(std::vector<T> value, int64_t minimum, con
 }
 
 inline std::string _nyx_string_index(const std::string& value, int64_t index) {
-    if (index < 0 || static_cast<size_t>(index) >= value.size()) return "";
-    return std::string(1, value[static_cast<size_t>(index)]);
+    if (index < 0) return "";
+    int64_t current = 0;
+    for (size_t offset = 0; offset < value.size();) {
+        const size_t start = offset++;
+        while (offset < value.size() &&
+               (static_cast<unsigned char>(value[offset]) & 0xC0) == 0x80) ++offset;
+        if (current++ == index) return value.substr(start, offset - start);
+    }
+    return "";
 }
 
 template <typename T>
@@ -1768,9 +1781,17 @@ class HIRCppEmitter:
             if node.collection_expr is not None:
                 collection_type = self.inference.expression_type(node.collection_expr)
                 if collection_type.name == "string":
-                    iterator = self._temporary("string_iter")
-                    lines = [f"{prefix}for (char {iterator} : {self._expr(node.collection_expr)}) {{"]
-                    lines.append(f"{prefix}    std::string {variable}(1, {iterator});")
+                    source = self._temporary("string_source")
+                    offset = self._temporary("string_offset")
+                    start = self._temporary("string_start")
+                    lines = [
+                        f"{prefix}const auto& {source} = {self._expr(node.collection_expr)};",
+                        f"{prefix}for (size_t {offset} = 0; {offset} < {source}.size();) {{",
+                        f"{prefix}    const size_t {start} = {offset}++;",
+                        f"{prefix}    while ({offset} < {source}.size() && "
+                        f"(static_cast<unsigned char>({source}[{offset}]) & 0xC0) == 0x80) ++{offset};",
+                        f"{prefix}    std::string {variable} = {source}.substr({start}, {offset} - {start});",
+                    ]
                 else:
                     lines = [
                         f"{prefix}for (auto& {variable} : {self._expr(node.collection_expr)}) {{"
@@ -2023,6 +2044,8 @@ class HIRCppEmitter:
                 if node.callee == "push" and len(node.args) == 1:
                     return f"{receiver}{separator}push_back({args})"
                 if node.callee in ("len", "length", "size") and not node.args:
+                    if self.inference.expression_type(node.receiver).name == "string":
+                        return f"_nyx_len({receiver})"
                     return f"static_cast<int64_t>({receiver}{separator}size())"
                 if node.callee == "pop" and not node.args:
                     return f"{receiver}{separator}pop_back()"

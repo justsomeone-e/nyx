@@ -1,0 +1,31 @@
+// I AM NOT DONE
+// A boundary function should preserve the exact error from the step that failed.
+// TODO: compose parse_port and validate_port with ?.
+
+fn parse_port(text: string) -> Result<int, string> {
+    if text == "8080" { return Ok(8080) }
+    return Err("not a supported port literal")
+}
+
+fn validate_port(port: int) -> Result<int, string> {
+    if port > 0 { return Ok(port) }
+    return Err("port must be positive")
+}
+
+fn load_port(text: string) -> Result<int, string> {
+    return Ok(0)
+}
+
+fn main() {
+    match load_port("8080") {
+        Ok(port) => assert(port == 8080, "valid port must survive both steps"),
+        Err(error) => assert(false, "valid port unexpectedly failed")
+    }
+    match load_port("bad") {
+        Ok(port) => assert(false, "bad text must not become a port"),
+        Err(error) => assert(error == "not a supported port literal", "preserve parse error")
+    }
+    print("fallible composition verified")
+}
+
+main()

@@ -446,12 +446,20 @@ def init_workspace(target_path: Optional[str] = None):
     target_path = os.path.abspath(target_path)
     os.makedirs(target_path, exist_ok=True)
 
-    # 1. Copy exercises
+    # 1. Copy only exercises referenced by the canonical manifest. This avoids
+    # leaking renamed or retired lessons into a learner workspace.
     src_exercises = os.path.join(base_tour_dir, "exercises")
     dest_exercises = os.path.join(target_path, "exercises")
     if os.path.exists(dest_exercises):
         shutil.rmtree(dest_exercises)
-    shutil.copytree(src_exercises, dest_exercises)
+    with open(os.path.join(base_tour_dir, "exercises.json"), "r", encoding="utf-8") as manifest_file:
+        curriculum = json.load(manifest_file)
+    for exercise in curriculum:
+        relative_path = os.path.relpath(exercise["path"], "exercises")
+        source_path = os.path.join(src_exercises, relative_path)
+        destination_path = os.path.join(dest_exercises, relative_path)
+        os.makedirs(os.path.dirname(destination_path), exist_ok=True)
+        shutil.copyfile(source_path, destination_path)
 
     # 2. Copy exercises.json
     shutil.copyfile(
@@ -472,10 +480,10 @@ pause
         f.write(start_bat_content)
 
     # 4. Create BENI_OKU.txt in target_path
-    readme_content = """Tour of Nyx - Alıştırma Klasörü 🌙
+    readme_content = f"""Tour of Nyx - Alıştırma Klasörü 🌙
 ======================================================================
 Bu klasör, Nyx programlama dilini öğrenmeniz için bilerek hatalı veya
-eksik bırakılmış 67 alıştırmayı içerir.
+eksik bırakılmış {len(curriculum)} alıştırmayı içerir.
 
 Nasıl Çalışır?
 1. Bu klasörü VS Code veya favori metin düzenleyicinizde açın:

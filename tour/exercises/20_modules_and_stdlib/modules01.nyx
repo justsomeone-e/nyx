@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// Selective imports make dependencies visible at the module boundary.
+// TODO: import sin and cos, then combine their values at angle zero.
+
+import { sin, cos } from "std/math"
+
+fn main() {
+    let value = sin(0.0)
+    assert(value == 1.0, "sin(0) + cos(0) must be 1")
+    print("unit-circle identity:", value)
+}
+
+main()

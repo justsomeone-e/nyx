@@ -72,7 +72,7 @@ fn lexer_wire_escape(value: string) -> string {
 
 fn emit_lexer_case(case_name: string, source: string) {
     print("__NYX_CASE__\t" + case_name)
-    var lexer = Lexer(source, 0, 1, 1)
+    var lexer = Lexer(lexer_characters(source), 0, 1, 1)
     var tokens = lexer.tokenize()
     for token in tokens {
         if token.type_name != "EOF" {

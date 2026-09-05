@@ -1,8 +1,8 @@
 # Nyx
 
 <p align="left">
-  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0--rc.2-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
-  <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-release%20candidate-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+  <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
 </p>
@@ -30,7 +30,7 @@ underneath it.**
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx v4.0.0-rc.2 "Bodhi"** (`4.0.0-rc.2`) is the active release candidate. It adds a versioned browser host ABI, typed `std/web`, npm-ready WASM bundles, framework adapters, deterministic local dependencies, and a pure-Nyx browser Pong while preserving native self-host reproducibility. Microcontroller firmware remains outside the v4 compiler-focused scope.
+> **Nyx v4.0.0 "Nirvana"** establishes the stable v4 language and toolchain contract for `cpp`, `js`, and `python`. Rust, WebAssembly, React, and assembly retain their documented beta capability boundaries. The release includes JavaScript ESM output, WASI preview1, scalar-struct WebAssembly parameters, and the 81-exercise Tour of Nyx. Microcontroller firmware remains outside the v4 compiler-focused scope. See the [release checklist](docs/internals/RELEASE_AUDIT_v4.0.0.md) for publication status.
 
 <div align="center">
   <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
@@ -82,7 +82,7 @@ Nyx is **not** a thin syntactic sugar over C, a grab-bag of transpiler macros, o
 2. **Correctness Before Feature Count**: A feature does not exist until it survives the unbroken gauntlet:
    $$\text{Syntax} \longrightarrow \text{Lexer} \longrightarrow \text{Parser} \longrightarrow \text{Type Checker} \longrightarrow \text{HIR v1} \longrightarrow \text{Verifier} \longrightarrow \text{Backend} \longrightarrow \text{Differential Parity}$$
 3. **No Leaky Boundaries**: When compiling to WebAssembly, memory and UTF-8 strings cross a versioned, pointer-free ABI without leaking raw pointers or allocator internals to host JavaScript/TypeScript.
-4. **Reproducible Self-Hosting**: The production compiler compiles itself. A native stage-1 binary compiles stage 2, and stage 2 emits byte-identical stage-3 C++ output. No Python runtime is required in production workflows.
+4. **Reproducible Self-Hosting**: The production compiler compiles itself. A native stage-1 binary compiles stage 2, and stage 2 emits byte-identical stage-3 C++ output. Native `check`, `emit-cpp`, and `compile` work without Python; optional orchestration commands and the Python target still require it.
 5. **Scope Discipline**: A language cannot excel everywhere simultaneously. The v4 line intentionally decouples embedded microcontroller targets to focus on absolute compiler precision across native binaries (C++20), modern web infrastructure (WASM/Node.js), and scientific tooling (Python/Rust).
 
 ---
@@ -346,7 +346,7 @@ and animation-loop example lives in [`examples/web_pong`](examples/web_pong/READ
 
 ## `06` — Industrial Verification Suite
 
-Bodhi RC2 is guarded by a comprehensive automated test battery. We test language invariants across target boundaries under hostile conditions:
+Nirvana is guarded by a comprehensive automated test battery. We test language invariants across target boundaries under hostile conditions:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════╗
@@ -406,7 +406,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 *Or install directly via the release script:*
 
 ```powershell
-$env:NYX_RELEASE_TAG = 'v4.0.0-rc.1'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.ps1 | iex
+$env:NYX_RELEASE_TAG = 'v4.0.0'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.ps1 | iex
 ```
 
 ### Linux & macOS (Bash)
@@ -419,7 +419,7 @@ chmod +x install.sh
 *Or install directly via curl:*
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0-rc.1/install.sh | NYX_RELEASE_TAG=v4.0.0-rc.1 bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.sh | NYX_RELEASE_TAG=v4.0.0 bash
 ```
 
 ### Toolchain Dependencies
@@ -452,7 +452,7 @@ Modern languages demand exceptional developer tooling from day zero.
 
 ### Local Visual Studio Code Extension
 
-Nyx ships with a fully integrated, zero-telemetry local extension (`nyx-language-support-4.0.0-rc.1.vsix`):
+Nyx ships with a fully integrated, zero-telemetry local extension (`nyx-language-support-v4.0.0.vsix`):
 
 * **Language Server Protocol**: Built-in JSON-RPC server powering syntax diagnostics, hover documentation, completion, and definition lookups.
 * **Persistent Execution Console**: Windows executables run in an integrated persistent shell—never closing abruptly before you inspect output.
@@ -461,7 +461,7 @@ Nyx ships with a fully integrated, zero-telemetry local extension (`nyx-language
 Install locally with:
 
 ```bash
-code --install-extension nyx-language-support-4.0.0-rc.1.vsix
+code --install-extension nyx-language-support-v4.0.0.vsix
 ```
 
 ---
@@ -506,7 +506,7 @@ nyxc compile src/main.nyx -o dist/main
 
 <a id="roadmap"></a>
 
-## `11` — The Road to Nirvana
+## `11` — Nirvana and the Road to v5
 
 The Nyx release lifecycle is bound to verifiable technical milestones rather than calendar estimates:
 
@@ -516,10 +516,15 @@ The Nyx release lifecycle is bound to verifiable technical milestones rather tha
 | `v3.x` | — | — | Bundle ABI, Unicode compliance, cross-backend parity | Historical |
 | `v4.0.0-dev` | **Maya** | *Illusion / Appearance* | Microcontroller decoupling, typed HIR v1 expansion, self-hosting | Completed |
 | `v4.0.0-rc.1` | **Samsara** | *Cycle of Existence* | First cross-platform release candidate, verification battery, VSIX | Published |
-| `v4.0.0-rc.2` | **Bodhi** | *Awakening* | Browser host ABI, std/web, npm bundles, local dependencies | **Active RC** |
-| `v4.0.0-rc.3` | **Moksha** | *Liberation* | Release-candidate lock without syntax additions | As needed |
-| `v4.0.0` | **Nirvana** | *Absolute Stability* | Long-term stable v4 language, toolchain, and ABI contract | Planned |
+| `v4.0.0-rc.2` | **Bodhi** | *Awakening* | Browser host ABI, std/web, npm bundles, local dependencies | Published |
+| `v4.0.0-rc.3` | **Moksha** | *Liberation* | Backend-parity development work incorporated into Nirvana | Not published separately |
+| `v4.0.0` | **Nirvana** | *Stability* | Stable v4 language, toolchain, and ABI contract | Release preparation |
+| `v4.5.0` | — | — | Compatible tooling, library, performance, and migration work toward v5 | Planned |
 | `v5.0.0` | **Aether** | *Upper Medium* | Portable C output, LLVM IR emitter, reference frontend | Future Target |
+
+The [v4.5 plan](docs/internals/ROADMAP_AND_BACKEND_GATES.md#v450-preparation-for-v5)
+preserves v4 source and ABI compatibility. New backends begin experimental;
+breaking language or ABI changes require the v5 design and migration process.
 
 ---
 

@@ -780,7 +780,7 @@
     "mode": "run",
     "description": "Ensure cleanup actions run on scope exit with defer.",
     "hints": [
-      "Add `defer release_lock(lock)` inside `do_critical_work()` so the lock is freed on return."
+      "Add `defer release_lock()` inside `do_critical_work()` so cleanup runs on return."
     ]
   },
   {
@@ -793,7 +793,7 @@
     "mode": "run",
     "description": "Observe that defer statements execute when exiting their scope.",
     "hints": [
-      "Add `defer cleanup_step1(cleaner)` and `defer cleanup_step2(cleaner)` inside `process_batch()`."
+      "Add `defer cleanup_step1()` and then `defer cleanup_step2()`; deferred calls run in LIFO order."
     ]
   },
   {
@@ -890,6 +890,202 @@
     "hints": [
       "Use `self.attack |> add_buff |> double_buff` inside `boosted_attack`.",
       "Match on `self.level`: 10 => \"Champion\", 5 => \"Knight\", _ => \"Novice\"."
+    ]
+  },
+  {
+    "id": "strings01",
+    "name": "strings01",
+    "topic": "16_modern_expressions",
+    "title": "Unicode-Safe String Interpolation",
+    "path": "exercises/16_modern_expressions/strings01.nyx",
+    "solution": "solutions/16_modern_expressions/strings01.nyx",
+    "mode": "run",
+    "description": "Build readable Unicode text with typed interpolation instead of manual concatenation.",
+    "hints": [
+      "Interpolated strings begin with `$\"` and evaluate expressions inside `{...}`.",
+      "Use `$\"{city}: {signals} signals 🌙\"`; Nyx preserves the Unicode text without normalization."
+    ]
+  },
+  {
+    "id": "navigation01",
+    "name": "navigation01",
+    "topic": "16_modern_expressions",
+    "title": "Safe Navigation Through Nested Data",
+    "path": "exercises/16_modern_expressions/navigation01.nyx",
+    "solution": "solutions/16_modern_expressions/navigation01.nyx",
+    "mode": "run",
+    "description": "Traverse nullable struct fields with ?. and provide one explicit fallback with ??.",
+    "hints": [
+      "Each `?.` stops the member chain when its left side is null.",
+      "Use `profile?.address?.city ?? \"unknown\"` so absence is handled once at the boundary."
+    ]
+  },
+  {
+    "id": "match04",
+    "name": "match04",
+    "topic": "16_modern_expressions",
+    "title": "Single-Evaluation Match",
+    "path": "exercises/16_modern_expressions/match04.nyx",
+    "solution": "solutions/16_modern_expressions/match04.nyx",
+    "mode": "run",
+    "description": "Use a value-producing match so a side-effecting subject is evaluated exactly once.",
+    "hints": [
+      "Calling `read_status()` in every condition repeats its side effect.",
+      "A match subject is evaluated once: `match read_status() { 200 => ..., _ => ... }`."
+    ]
+  },
+  {
+    "id": "result01",
+    "name": "result01",
+    "topic": "17_results",
+    "title": "Payload Enums as Domain Data",
+    "path": "exercises/17_results/result01.nyx",
+    "solution": "solutions/17_results/result01.nyx",
+    "mode": "run",
+    "description": "Model alternatives that carry typed data and destructure their payloads in match arms.",
+    "hints": [
+      "A payload variant is declared as `Message(string)` and constructed as `Message(\"...\")`.",
+      "Bind the payload in the pattern: `Message(text) => text`."
+    ]
+  },
+  {
+    "id": "result02",
+    "name": "result02",
+    "topic": "17_results",
+    "title": "Recoverable Errors with Result",
+    "path": "exercises/17_results/result02.nyx",
+    "solution": "solutions/17_results/result02.nyx",
+    "mode": "run",
+    "description": "Represent an expected failure with Result<T, E> and force callers to handle both outcomes.",
+    "hints": [
+      "Return `Err(\"division by zero\")` when the denominator is zero.",
+      "Return `Ok(left / right)` for the successful branch."
+    ]
+  },
+  {
+    "id": "result03",
+    "name": "result03",
+    "topic": "17_results",
+    "title": "Propagating Result with ?",
+    "path": "exercises/17_results/result03.nyx",
+    "solution": "solutions/17_results/result03.nyx",
+    "mode": "run",
+    "description": "Propagate Err from a Result-returning function while continuing with the unwrapped Ok value.",
+    "hints": [
+      "Postfix `?` unwraps Ok and immediately returns Err from the enclosing Result function.",
+      "Use `let value = source(ok)?`; the enclosing function already has a compatible error type."
+    ]
+  },
+  {
+    "id": "result04",
+    "name": "result04",
+    "topic": "17_results",
+    "title": "Composing Fallible Operations",
+    "path": "exercises/17_results/result04.nyx",
+    "solution": "solutions/17_results/result04.nyx",
+    "mode": "run",
+    "description": "Compose multiple Result-producing functions without losing the first failure.",
+    "hints": [
+      "Use postfix `?` after each operation that may fail.",
+      "Unwrap both `parse_port(text)?` and `validate_port(port)?`, then return `Ok(valid)`."
+    ]
+  },
+  {
+    "id": "collections01",
+    "name": "collections01",
+    "topic": "18_collection_transforms",
+    "title": "Iterating Domain Collections",
+    "path": "exercises/18_collection_transforms/collections01.nyx",
+    "solution": "solutions/18_collection_transforms/collections01.nyx",
+    "mode": "run",
+    "description": "Iterate Array<T> values directly and aggregate fields from typed structs.",
+    "hints": [
+      "`for item in items` binds each array element without an index.",
+      "Only add `reading.value` when `reading.valid` is true."
+    ]
+  },
+  {
+    "id": "collections02",
+    "name": "collections02",
+    "topic": "18_collection_transforms",
+    "title": "Typed map, filter, and fold",
+    "path": "exercises/18_collection_transforms/collections02.nyx",
+    "solution": "solutions/18_collection_transforms/collections02.nyx",
+    "mode": "run",
+    "description": "Build a typed collection transformation with contextual lambdas and a left-to-right fold.",
+    "hints": [
+      "First map each value to its double, then retain values greater than 4.",
+      "Use `fold(selected, 0, (total, value) => total + value)`; the expected result is 14."
+    ]
+  },
+  {
+    "id": "async01",
+    "name": "async01",
+    "topic": "19_async_tasks",
+    "title": "Reusable Task Handles",
+    "path": "exercises/19_async_tasks/async01.nyx",
+    "solution": "solutions/19_async_tasks/async01.nyx",
+    "mode": "run",
+    "description": "Store one Task<T> and await the same completion more than once without rerunning its body.",
+    "hints": [
+      "Calling `compute()` twice creates two tasks and executes the function twice.",
+      "Create `let task: Task<int> = compute()` once, then await `task` for both values."
+    ]
+  },
+  {
+    "id": "async02",
+    "name": "async02",
+    "topic": "19_async_tasks",
+    "title": "Errors Surface at await",
+    "path": "exercises/19_async_tasks/async02.nyx",
+    "solution": "solutions/19_async_tasks/async02.nyx",
+    "mode": "run",
+    "description": "Catch an asynchronous failure at the await boundary where it becomes observable.",
+    "hints": [
+      "Creating the task does not handle its eventual error.",
+      "Place `let value: int = await task` inside `try`, then inspect the error in `catch`."
+    ]
+  },
+  {
+    "id": "modules01",
+    "name": "modules01",
+    "topic": "20_modules_and_stdlib",
+    "title": "Selective Standard-Library Imports",
+    "path": "exercises/20_modules_and_stdlib/modules01.nyx",
+    "solution": "solutions/20_modules_and_stdlib/modules01.nyx",
+    "mode": "run",
+    "description": "Import only the std/math symbols a module needs and combine their typed results.",
+    "hints": [
+      "Use `import { sin, cos } from \"std/math\"` at the top of the file.",
+      "At angle 0, `sin(0.0) + cos(0.0)` is exactly `1.0`."
+    ]
+  },
+  {
+    "id": "modules02",
+    "name": "modules02",
+    "topic": "20_modules_and_stdlib",
+    "title": "Fallible Base64 Decoding",
+    "path": "exercises/20_modules_and_stdlib/modules02.nyx",
+    "solution": "solutions/20_modules_and_stdlib/modules02.nyx",
+    "mode": "run",
+    "description": "Use std/encoding while keeping malformed external data in an explicit Result path.",
+    "hints": [
+      "Encode the original text, then pass that encoded value to `base64_decode`.",
+      "Check `is_ok` before calling `unwrap()`; malformed input must remain a failed Result."
+    ]
+  },
+  {
+    "id": "modules03",
+    "name": "modules03",
+    "topic": "20_modules_and_stdlib",
+    "title": "Honest json_lite Boundaries",
+    "path": "exercises/20_modules_and_stdlib/modules03.nyx",
+    "solution": "solutions/20_modules_and_stdlib/modules03.nyx",
+    "mode": "run",
+    "description": "Extract supported top-level JSON fields and handle a missing field without pretending json_lite is a full parser.",
+    "hints": [
+      "Read `name` with get_string and `version` with get_int, then unwrap known-good fields.",
+      "The missing `channel` field must report `is_ok == false`."
     ]
   }
 ]

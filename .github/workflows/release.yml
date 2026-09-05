@@ -1,4 +1,4 @@
-name: Create GitHub Release
+name: Nyx v4.0.0 — Nirvana
 
 on:
   push:
@@ -14,8 +14,12 @@ permissions:
 
 jobs:
   verify:
-    name: Verify Release Candidate
-    runs-on: ubuntu-latest
+    name: Verify Release Candidate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-15-intel, macos-latest]
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -38,9 +42,22 @@ jobs:
         run: test "${GITHUB_REF_NAME}" = "v$(tr -d '\r\n' < VERSION)"
 
       - name: Set up native toolchain
+        if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y clang build-essential
 
+      - name: Ensure Windows LLVM toolchain
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (-not (Get-Command clang++ -ErrorAction SilentlyContinue)) {
+            choco install llvm --no-progress -y
+          }
+          if (Test-Path "C:\Program Files\LLVM\bin") {
+            "C:\Program Files\LLVM\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          }
+
       - name: Install and verify VS Code extension dependencies
+        if: runner.os == 'Linux'
         working-directory: vscode-extension
         run: |
           npm ci --ignore-scripts
@@ -49,6 +66,7 @@ jobs:
           npm run package -- --out "../dist/nyx-language-support-${{ github.ref_name }}.vsix"
 
       - name: Upload VS Code extension package
+        if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
           name: vscode-extension
@@ -234,7 +252,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "nyx ${{ github.ref_name }} (Official Release)"
+          name: "Nyx ${{ github.ref_name }} — Nirvana"
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           files: |

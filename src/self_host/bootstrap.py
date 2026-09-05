@@ -100,7 +100,7 @@ def _nyx_string_literal(value: str) -> str:
 def _driver_source(source: str) -> str:
     return _combined_source() + "\n\n" + f"""fn main() {{
     var source = {_nyx_string_literal(source)}
-    var lex = Lexer(source, 0, 1, 1)
+    var lex = Lexer(lexer_characters(source), 0, 1, 1)
     var tokens = lex.tokenize()
     var parser = Parser(tokens, 0, false, "", "")
     var ast = parser.parse_program()
@@ -161,7 +161,7 @@ fn nyxc_frontend(source_path: string, output_path: string, check_only: bool, rep
     }
 
     var source = _nyx_bootstrap_read_file(source_path)
-    var lex = Lexer(source, 0, 1, 1)
+    var lex = Lexer(lexer_characters(source), 0, 1, 1)
     var tokens = lex.tokenize()
     var parser = Parser(tokens, 0, false, "", "")
     var ast = parser.parse_program()
@@ -351,7 +351,7 @@ def build_native_compiler(output_path: str) -> bool:
     """Build the standalone stage-2 ``nyxc`` frontend executable."""
     return_code, output = _compile_driver(_native_driver_source())
     if return_code != 0:
-        raise SelfHostError(f"Stage-1 self-compilation exited with code {return_code}")
+        raise SelfHostError(f"Stage-1 self-compilation exited with code {return_code}:\n{output}")
     stage2_cpp = _extract_generated(output)
 
     target = Path(output_path)
@@ -370,7 +370,19 @@ def verify_stage2() -> bool:
     """Prove stage-1 -> stage-2 self compilation and deterministic output."""
     sample = (
         "fn add(a: int, b: int) -> int { return a + b; }\n"
-        'fn main() { print(add(20, 22)); print("e\\u0301"); print("a\\0b"); }\n'
+        'struct Box { values: Array<int> }\n'
+        'fn mutate(values: Array<int>) { set values[0] = 7; }\n'
+        'fn main() { print(add(20, 22)); print("e\\u0301"); print("a\\0b"); '
+        'var first: Array<int> = [1, 2]; var second = first; set second[0] = 9; '
+        'mutate(first); print(first[0], second[0]); '
+        'var left = Box([3]); var right = left; set right.values[0] = 8; '
+        'print(left.values[0], right.values[0]); '
+        'var text = "ş😀e\\u0301\\0"; '
+        'print(len(text), text.len(), text.length(), text.size()); '
+        'print(text[0], text[1], text[2], text[3]); '
+        'print(len(text[-1]), len(text[5]), len(text[4])); '
+        'var joined = ""; for character in text { joined = joined + character; } '
+        'print(joined == text); }\n'
     )
 
     stage1_return_code, stage1_output = _compile_driver(sample)
@@ -382,7 +394,7 @@ def verify_stage2() -> bool:
     compiler_return_code, compiler_output = _compile_driver(native_compiler_source)
     if compiler_return_code != 0:
         raise SelfHostError(
-            f"Stage-1 self-compilation exited with code {compiler_return_code}"
+            f"Stage-1 self-compilation exited with code {compiler_return_code}:\n{compiler_output}"
         )
     stage2_cpp = _extract_generated(compiler_output)
     if any(
@@ -464,7 +476,7 @@ def verify_stage2() -> bool:
         if build_return_code != 0 or "NYX_BUILD_OK" not in build_output:
             raise SelfHostError(f"Stage-2 native build command failed:\n{build_output}")
         sample_return_code, sample_output = CppToolchain.run_executable(sample_exe_path)
-        expected_output = "42\ne\u0301\na\0b"
+        expected_output = "42\ne\u0301\na\0b\n1 9\n3 8\n5 5 5 5\nş 😀 e \u0301\n0 0 1\ntrue"
         if sample_return_code != 0 or sample_output.strip() != expected_output:
             raise SelfHostError(
                 "Stage-2 output runtime mismatch: "
@@ -490,6 +502,17 @@ def verify_stage2() -> bool:
         ok, message = CppToolchain.compile_cpp(stage3_cpp_path, stage3_exe_path)
         if not ok:
             raise SelfHostError(f"Stage-3 native compilation failed:\n{message}")
+
+        stage3_sample_path = os.path.join(temp_dir, "stage3_sample.cpp")
+        return_code, output = CppToolchain.run_executable(
+            stage3_exe_path,
+            ("emit-cpp", sample_source_path, "-o", stage3_sample_path),
+            timeout=30,
+        )
+        if return_code != 0 or not os.path.exists(stage3_sample_path):
+            raise SelfHostError(f"Stage-3 sample compilation failed:\n{output}")
+        if Path(stage3_sample_path).read_text(encoding="utf-8") != stage1_sample_cpp:
+            raise SelfHostError("Stage-1 and stage-3 sample sources are not byte-identical")
 
     return True
 

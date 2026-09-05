@@ -5,6 +5,7 @@ Executes native Nyx compiler checks, builds, runs, and tests.
 """
 
 import os
+import re
 import sys
 import time
 import tempfile
@@ -158,8 +159,10 @@ class NyxRunner:
 
             # Clean internal CLI status banners
             cleaned_lines = []
+            ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
             for line in stdout.splitlines():
-                if not line.startswith("[*] Target") and not line.startswith("[*] Transpiled") and not line.startswith("[OK] Compiled") and not line.startswith("-----"):
+                plain_line = ansi_escape.sub("", line)
+                if not plain_line.startswith("[*] Target") and not plain_line.startswith("[*] Transpiled") and not plain_line.startswith("[OK] Compiled") and not plain_line.startswith("-----"):
                     cleaned_lines.append(line)
             clean_out = "\n".join(cleaned_lines).strip()
 
@@ -167,8 +170,6 @@ class NyxRunner:
                 return TestResult(True, clean_out, "", dur)
             else:
                 return TestResult(False, clean_out, stderr or clean_out or "Execution failed", dur)
-        except Exception as e:
-            return TestResult(False, "", str(e), 0.0)
         except Exception as e:
             return TestResult(False, "", str(e), 0.0)
 

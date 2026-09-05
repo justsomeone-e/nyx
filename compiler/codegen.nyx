@@ -47,7 +47,7 @@ impl CodeGen {
                 escaped = escaped + ch
             }
         }
-        return "std::string(\"" + escaped + "\", " + to_string(len(value)) + ")"
+        return "std::string(\"" + escaped + "\", sizeof(\"" + escaped + "\") - 1)"
     }
 
     fn map_type(self, t: string) -> string {

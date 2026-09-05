@@ -1,5 +1,10 @@
 # Change Log
 
+## 4.0.0
+
+- Align the extension package with the Nirvana v4.0.0 compiler.
+- Refresh the canonical language and standard-library completion catalog.
+
 ## 4.0.0-rc.2
 
 - Align the extension catalog and package version with the Bodhi RC2 compiler.

@@ -102,14 +102,32 @@ impl Token {
     }
 }
 
+// Decode once: lexer positions and columns count Unicode code points.
+// Array indexing avoids rescanning the entire UTF-8 source for every peek.
+fn lexer_characters(source: string) -> Array<string> {
+    var characters: Array<string> = []
+    for character in source { characters.push(character) }
+    return characters
+}
+
 struct Lexer {
-    source: string,
+    source: Array<string>,
     pos: int,
     line: int,
     col: int
 }
 
 impl Lexer {
+    fn text_slice(self, start: int, end_exclusive: int) -> string {
+        var result = ""
+        var i = start
+        while i < end_exclusive and i < len(self.source) {
+            if i >= 0 { result = result + self.source[i] }
+            i = i + 1
+        }
+        return result
+    }
+
     fn is_eof(self) -> bool {
         return self.pos >= len(self.source)
     }
@@ -347,7 +365,7 @@ impl Lexer {
                             }
                             self.pos = self.pos + 1
                         }
-                        var raw_body = lexer_trim(lexer_text_slice(self.source, start_body, self.pos))
+                        var raw_body = lexer_trim(self.text_slice(start_body, self.pos))
                         if self.pos < length and self.peek_char() == "}" {
                             self.pos = self.pos + 1
                             self.col = self.col + 1
@@ -361,7 +379,7 @@ impl Lexer {
                         self.pos = self.pos + 1
                         self.col = self.col + 1
                     }
-                    var raw_line = lexer_trim(lexer_text_slice(self.source, start_raw_line, self.pos))
+                    var raw_line = lexer_trim(self.text_slice(start_raw_line, self.pos))
                     tokens.push(Token("NATIVE_RAW", raw_line, self.line, start_col))
                     continue
                 }
@@ -601,7 +619,7 @@ impl Lexer {
 
 fn main() {
     var code = "var x: int = 100 + 20; print(\"Result:\", x)"
-    var lex = Lexer(code, 0, 1, 1)
+    var lex = Lexer(lexer_characters(code), 0, 1, 1)
     var tokens = lex.tokenize()
     for t in tokens {
         print(t.type_name, t.value)

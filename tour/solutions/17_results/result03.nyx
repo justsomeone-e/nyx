@@ -1,0 +1,23 @@
+fn source(ok: bool) -> Result<int, string> {
+    if ok { return Ok(40) }
+    return Err("offline")
+}
+
+fn calculate(ok: bool) -> Result<int, string> {
+    let value = source(ok)?
+    return Ok(value + 2)
+}
+
+fn main() {
+    match calculate(true) {
+        Ok(value) => assert(value == 42, "successful value must be transformed"),
+        Err(error) => assert(false, "successful calculation unexpectedly failed")
+    }
+    match calculate(false) {
+        Ok(value) => assert(false, "failure must propagate"),
+        Err(error) => assert(error == "offline", "original error must be preserved")
+    }
+    print("Result propagation verified")
+}
+
+main()

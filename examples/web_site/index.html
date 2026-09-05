@@ -1,0 +1,2462 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nyx WebAssembly Portal &bull; Eğlence, Müzik &amp; Arcade</title>
+  <meta name="description" content="Nyx programlama dili ile derlenen WebAssembly destekli interaktif web uygulaması, Pong oyunu, uzay koşusu ve prosedürel synth müzik motoru.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050811;
+      --card-bg: rgba(13, 19, 35, 0.78);
+      --card-border: rgba(30, 41, 68, 0.7);
+      --card-hover-border: rgba(0, 240, 255, 0.4);
+      --primary: #00f0ff;
+      --primary-glow: rgba(0, 240, 255, 0.25);
+      --secondary: #8b5cf6;
+      --accent-pink: #ff007f;
+      --accent-green: #10b981;
+      --accent-gold: #fbbf24;
+      --text: #e2e8f0;
+      --text-dim: #94a3b8;
+      --text-muted: #64748b;
+      --font-main: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'Fira Code', ui-monospace, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 240, 255, 0.12), transparent),
+        radial-gradient(ellipse 60% 40% at 100% 50%, rgba(139, 92, 246, 0.08), transparent),
+        radial-gradient(ellipse 50% 30% at 0% 80%, rgba(255, 0, 127, 0.06), transparent);
+      color: var(--text);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      line-height: 1.6;
+      padding: 2rem 1.5rem 4rem;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      width: min(48rem, 70vw);
+      aspect-ratio: 1;
+      border-radius: 50%;
+      filter: blur(90px);
+      pointer-events: none;
+      z-index: -1;
+      opacity: 0.13;
+      animation: ambient-drift 18s ease-in-out infinite alternate;
+    }
+
+    body::before {
+      top: -24rem;
+      left: -12rem;
+      background: var(--primary);
+    }
+
+    body::after {
+      right: -20rem;
+      top: 22rem;
+      background: var(--secondary);
+      animation-delay: -8s;
+    }
+
+    @keyframes ambient-drift {
+      to { transform: translate3d(7vw, 8vh, 0) scale(1.12); }
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+      position: relative;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 1rem;
+      background: rgba(0, 240, 255, 0.08);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 9999px;
+      color: var(--primary);
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, #ffffff 30%, var(--primary) 70%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      font-size: 1.15rem;
+      color: var(--text-dim);
+      max-width: 760px;
+      margin: 0 auto 1.5rem;
+    }
+
+    .system-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    .pill {
+      padding: 0.3rem 0.85rem;
+      background: rgba(30, 41, 68, 0.45);
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .pill strong {
+      color: var(--primary);
+    }
+
+    /* Grid Layout */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .col-12 { grid-column: span 12; }
+    .col-8 { grid-column: span 8; }
+    .col-6 { grid-column: span 6; }
+    .col-4 { grid-column: span 4; }
+
+    @media (max-width: 900px) {
+      .col-8, .col-6, .col-4 { grid-column: span 12; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.25s, box-shadow 0.25s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      border-color: var(--card-hover-border);
+      box-shadow: 0 12px 36px rgba(0, 240, 255, 0.08);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .card-badge {
+      font-size: 0.72rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      background: rgba(139, 92, 246, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.4);
+      color: var(--secondary);
+    }
+
+    /* Canvas Section with 3D Shader Post-Processing Effects */
+    .canvas-wrapper {
+      position: relative;
+      background: #020308;
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.12), inset 0 0 50px rgba(0, 0, 0, 0.95);
+      cursor: crosshair;
+      user-select: none;
+      transition: all 0.3s ease;
+      isolation: isolate;
+      min-height: 300px;
+      transform: translateZ(0);
+    }
+
+    .canvas-wrapper .optical-flare {
+      position: absolute;
+      inset: -35%;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0;
+      background:
+        conic-gradient(from 120deg at 50% 50%, transparent 0 12%, rgba(0,240,255,.11) 17%, transparent 23% 53%, rgba(255,0,127,.09) 60%, transparent 67%),
+        radial-gradient(circle at var(--flare-x, 50%) var(--flare-y, 50%), rgba(255,255,255,.2), rgba(0,240,255,.08) 8%, transparent 28%);
+      mix-blend-mode: screen;
+      animation: flare-spin 15s linear infinite;
+      transition: opacity .35s ease;
+    }
+
+    .canvas-wrapper.shader-active .optical-flare { opacity: .72; }
+
+    @keyframes flare-spin { to { transform: rotate(1turn) scale(1.08); } }
+
+    .canvas-wrapper.shader-active::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.28) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      z-index: 2;
+      background-size: 100% 3px, 4px 100%;
+      pointer-events: none;
+      border-radius: 12px;
+    }
+
+    .canvas-wrapper.shader-active::after {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0; left: 0; bottom: 0; right: 0;
+      box-shadow: inset 0 0 50px rgba(0, 240, 255, 0.15), inset 0 0 80px rgba(0, 0, 0, 0.8);
+      z-index: 3;
+      pointer-events: none;
+      border-radius: 12px;
+    }
+
+    .canvas-wrapper.shader-cinematic canvas {
+      filter: saturate(1.34) contrast(1.12) brightness(1.04);
+    }
+
+    .canvas-wrapper.shader-cinematic::before {
+      background:
+        linear-gradient(115deg, rgba(0,240,255,.04), transparent 36%, rgba(255,0,127,.05) 68%, transparent),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.018) 0 1px, transparent 1px 4px);
+      background-size: 100% 100%, 100% 4px;
+    }
+
+    .canvas-wrapper.shader-cinematic::after {
+      box-shadow: inset 0 0 34px rgba(0,240,255,.13), inset 0 0 94px rgba(0,0,0,.72);
+    }
+
+    .shader-telemetry {
+      position: absolute;
+      top: 10px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      z-index: 4;
+      pointer-events: none;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      letter-spacing: 0.5px;
+    }
+
+    .telemetry-left, .telemetry-right {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .telemetry-badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(0, 240, 255, 0.18);
+      border: 1px solid rgba(0, 240, 255, 0.45);
+      color: #00f0ff;
+      font-weight: 700;
+      text-transform: uppercase;
+      width: fit-content;
+    }
+
+    .telemetry-badge.pulse {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: rgba(16, 185, 129, 0.5);
+      color: #10b981;
+    }
+
+    .telemetry-item {
+      color: rgba(255, 255, 255, 0.6);
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 320px;
+      position: relative;
+      z-index: 0;
+      filter: saturate(1.16) contrast(1.08);
+    }
+
+    .render-deck {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 0.65rem;
+      margin-top: 0.75rem;
+    }
+
+    .render-stat {
+      min-width: 0;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid rgba(51, 65, 95, 0.72);
+      border-radius: 9px;
+      background: linear-gradient(145deg, rgba(10,16,31,.92), rgba(5,9,20,.72));
+      font-family: var(--font-mono);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .render-stat::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: var(--meter, 64%);
+      height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      box-shadow: 0 0 12px var(--primary);
+      transition: width .45s ease;
+    }
+
+    .render-stat-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: .64rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .render-stat-value {
+      display: block;
+      color: #f8fafc;
+      font-size: .82rem;
+      margin-top: .15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .scene-shortcuts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .45rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(51, 65, 95, .55);
+    }
+
+    .scene-shortcuts .btn[aria-pressed="true"] {
+      border-color: var(--primary);
+      background: rgba(0,240,255,.13);
+      box-shadow: inset 0 0 0 1px rgba(0,240,255,.12), 0 0 18px rgba(0,240,255,.08);
+    }
+
+    .btn:focus-visible,
+    select:focus-visible,
+    input:focus-visible {
+      outline: 2px solid #fff;
+      outline-offset: 3px;
+    }
+
+    @media (max-width: 700px) {
+      .render-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .canvas-wrapper { min-height: 220px; }
+      .shader-telemetry { font-size: .58rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+      }
+    }
+
+    .canvas-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-top: 1.25rem;
+    }
+
+    /* Buttons */
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .btn {
+      background: rgba(30, 41, 68, 0.6);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: var(--font-main);
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: rgba(0, 240, 255, 0.15);
+      border-color: var(--primary);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(139, 92, 246, 0.25));
+      border-color: var(--primary);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.15);
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.4), rgba(139, 92, 246, 0.4));
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-accent {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.25), rgba(139, 92, 246, 0.25));
+      border-color: var(--accent-pink);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.2);
+    }
+
+    .btn-accent:hover {
+      background: linear-gradient(135deg, rgba(255, 0, 127, 0.4), rgba(139, 92, 246, 0.4));
+      box-shadow: 0 0 25px rgba(255, 0, 127, 0.35);
+    }
+
+    .btn-gold {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.25));
+      border-color: var(--accent-gold);
+      color: #fff;
+      box-shadow: 0 0 15px rgba(251, 191, 36, 0.2);
+    }
+
+    .btn-gold:hover {
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.4), rgba(245, 158, 11, 0.4));
+      box-shadow: 0 0 25px rgba(251, 191, 36, 0.35);
+    }
+
+    .btn-danger {
+      border-color: rgba(255, 0, 127, 0.4);
+      background: rgba(255, 0, 127, 0.1);
+    }
+    .btn-danger:hover {
+      background: rgba(255, 0, 127, 0.25);
+      border-color: var(--accent-pink);
+    }
+
+    /* Counter Display */
+    .counter-hero {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem 0;
+    }
+
+    .counter-value {
+      font-size: 4.5rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: #fff;
+      text-shadow: 0 0 35px var(--primary-glow);
+      transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .counter-sub {
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      margin-top: 0.25rem;
+    }
+
+    /* Benchmark Result Bars */
+    .bench-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .bench-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .bench-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+    }
+
+    .bench-track {
+      background: #060913;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      height: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .bench-bar {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      align-items: center;
+      padding-left: 0.75rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .bar-wasm {
+      background: linear-gradient(90deg, #00d9ff, #00f0ff);
+      box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+    }
+
+    .bar-js {
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      box-shadow: 0 0 15px rgba(245, 158, 11, 0.3);
+    }
+
+    /* Input & Forms */
+    .input-field {
+      width: 100%;
+      background: #060913;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.65rem 0.9rem;
+      color: var(--text);
+      font-family: var(--font-main);
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 0.75rem;
+    }
+
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .result-box {
+      background: #060913;
+      border: 1px solid #162035;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--primary);
+      word-break: break-all;
+    }
+
+    .log-feed {
+      max-height: 140px;
+      overflow-y: auto;
+      background: #060913;
+      border: 1px solid #162035;
+      border-radius: 8px;
+      padding: 0.6rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 0.35rem;
+    }
+
+    .log-item {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      padding-bottom: 0.25rem;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+    }
+
+    /* Game HUDs */
+    .game-hud {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      background: rgba(4, 8, 20, 0.85);
+      border: 1px solid rgba(0, 240, 255, 0.25);
+      border-radius: 10px;
+      padding: 0.75rem 1.25rem;
+      margin-top: 1rem;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.05);
+    }
+
+    .score-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .score-num {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+      min-width: 28px;
+      text-align: center;
+    }
+
+    /* Music Sequencer Bar */
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      gap: 4px;
+      margin-top: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    .step-dot {
+      height: 12px;
+      border-radius: 3px;
+      background: #111827;
+      border: 1px solid #1f2937;
+      transition: background 0.1s, transform 0.1s, box-shadow 0.1s;
+    }
+
+    .step-dot.active {
+      background: var(--primary);
+      transform: scale(1.15);
+      box-shadow: 0 0 10px var(--primary);
+    }
+
+    /* Piano Keys */
+    .piano-board {
+      display: flex;
+      gap: 6px;
+      margin-top: 0.75rem;
+    }
+
+    .piano-key {
+      flex: 1;
+      height: 90px;
+      background: linear-gradient(180deg, #1e293b, #0f172a);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      border-radius: 0 0 8px 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.1s ease;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .piano-key strong {
+      font-size: 0.9rem;
+      color: #fff;
+    }
+
+    .piano-key:hover {
+      background: linear-gradient(180deg, rgba(0, 240, 255, 0.2), #0f172a);
+      border-color: var(--primary);
+      transform: translateY(2px);
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .piano-key:active, .piano-key.playing {
+      background: linear-gradient(180deg, var(--primary), #0284c7);
+      color: #000;
+      transform: translateY(4px);
+      box-shadow: 0 0 20px var(--primary);
+    }
+
+    /* DJ Soundboard Launchpad */
+    .dj-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 640px) {
+      .dj-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .dj-pad {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.7));
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 1rem 0.75rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dj-pad::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--pad-color, var(--primary));
+      opacity: 0.6;
+    }
+
+    .dj-pad .pad-key {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .dj-pad .pad-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .dj-pad .pad-sub {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .dj-pad:hover {
+      border-color: var(--pad-color, var(--primary));
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--pad-glow, var(--primary-glow));
+    }
+
+    .dj-pad:active, .dj-pad.active {
+      transform: scale(0.95);
+      background: var(--pad-color, var(--primary));
+      box-shadow: 0 0 25px var(--pad-color, var(--primary));
+    }
+
+    .dj-pad:active .pad-title, .dj-pad.active .pad-title {
+      color: #000;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(30, 41, 68, 0.4);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <!-- Header -->
+    <header>
+      <div class="logo-badge">
+        <span class="pulse-dot"></span>
+        Nyx v4.0.0-rc.2 (Bodhi) &bull; WebAssembly Portal &amp; Arcade &amp; Synth
+      </div>
+      <h1>Nyx ile WebAssembly Deneyimi</h1>
+      <p class="subtitle">
+        Sistem programlama dili Nyx ile derlenen saf WebAssembly: 60 FPS Canvas grafikleri, yapay zeka destekli Pong, siber uzay koşusu oyunu, prosedürel chiptune müzik sentezleyici ve matematik laboratuvarı!
+      </p>
+
+      <div class="system-pills">
+        <div class="pill"><span>Hedef:</span> <strong>WASM ABI v1 (wasm32)</strong></div>
+        <div class="pill"><span>Müzik:</span> <strong>WASM Prosedürel Synthwave</strong></div>
+        <div class="pill"><span>Oyunlar:</span> <strong>Pong Arcade &bull; Space Dodge</strong></div>
+        <div class="pill"><span>Grafik:</span> <strong>HTML5 Canvas 2D Direct</strong></div>
+        <div class="pill"><span>Durum:</span> <strong style="color: var(--accent-green);">Hazır ve Aktif</strong></div>
+      </div>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="grid">
+
+      <!-- Realtime Canvas Animation & Playable Games -->
+      <div class="card col-12">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🎨 Nyx WASM 60 FPS Canvas &amp; Oyun Arenası</span>
+          </div>
+          <span class="card-badge" id="canvas-mode-badge">Spektrum Dalgası</span>
+        </div>
+
+        <div class="canvas-wrapper shader-active" id="canvas-container" title="Havai fişek fırlatmak veya raket/geminizi yönlendirmek için tıklayın">
+          <div class="optical-flare" aria-hidden="true"></div>
+          <div class="shader-telemetry">
+            <div class="telemetry-left">
+              <span class="telemetry-badge" id="hud-render-badge">3D OPTICAL SHADER</span>
+              <span class="telemetry-item" id="hud-sim-info">WASM PIPELINE: 60 FPS</span>
+            </div>
+            <div class="telemetry-right" style="align-items: flex-end;">
+              <span class="telemetry-badge pulse" id="hud-fps-badge">60 FPS ACTIVE</span>
+              <span class="telemetry-item" id="hud-mode-info">KERR SINGULARITY</span>
+            </div>
+          </div>
+          <canvas id="nyx-canvas" width="680" height="300"></canvas>
+        </div>
+
+        <div class="render-deck" aria-label="Canlı render telemetrisi">
+          <div class="render-stat" id="stat-frame" style="--meter: 88%;">
+            <span class="render-stat-label">Frame pacing</span>
+            <strong class="render-stat-value" id="stat-frame-value">16.7 ms</strong>
+          </div>
+          <div class="render-stat" id="stat-nodes" style="--meter: 72%;">
+            <span class="render-stat-label">Scene complexity</span>
+            <strong class="render-stat-value" id="stat-nodes-value">32 luminous nodes</strong>
+          </div>
+          <div class="render-stat" style="--meter: 94%;">
+            <span class="render-stat-label">Blend pipeline</span>
+            <strong class="render-stat-value">Additive + bloom</strong>
+          </div>
+          <div class="render-stat" style="--meter: 100%;">
+            <span class="render-stat-label">Execution</span>
+            <strong class="render-stat-value">Nyx / wasm32</strong>
+          </div>
+        </div>
+
+        <!-- Pong 2.0 Scoreboard HUD -->
+        <div class="game-hud" id="pong-hud" style="display: none;">
+          <div class="score-badge" style="color: var(--primary);">
+            <span id="pong-p1-label">OYUNCU 1 (SOL):</span>
+            <span class="score-num" id="pong-player-score" style="text-shadow: 0 0 10px var(--primary);">0</span>
+            <div style="font-size: 0.75rem; margin-top: 0.2rem; color: var(--primary);">W/S veya Fare</div>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
+            <div id="pong-rally-counter" style="color: #fff; font-weight: 600;">Ralli: 0 Vuruş</div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;">
+              <button class="btn" id="btn-pong-2p" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">👤 1P (vs AI)</button>
+              <button class="btn" id="btn-pong-diff" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">Zorluk: Usta</button>
+            </div>
+            <div id="pong-powerup-status" style="font-size: 0.72rem; color: var(--accent-gold);">⚡ Ortadaki güç kürelerini kapın!</div>
+          </div>
+
+          <div class="score-badge" style="color: var(--accent-pink);">
+            <span id="pong-p2-label">NYX CPU AI (SAĞ):</span>
+            <span class="score-num" id="pong-cpu-score" style="text-shadow: 0 0 10px var(--accent-pink);">0</span>
+            <div style="font-size: 0.75rem; margin-top: 0.2rem; color: var(--accent-pink);" id="pong-p2-ctrl">Otonom AI</div>
+          </div>
+        </div>
+
+        <!-- Space Dodge HUD -->
+        <div class="game-hud" id="dodge-hud" style="display: none;">
+          <div class="score-badge" style="color: var(--primary);">
+            <span>UZAY SKORU:</span>
+            <span class="score-num" id="dodge-score" style="text-shadow: 0 0 10px var(--primary);">0</span>
+            <div id="dodge-shields-bar" style="margin-top: 0.25rem; font-size: 0.82rem; color: var(--primary);">🛡️ KALKAN: <span id="dodge-shields-val">■ ■ ■</span></div>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-dim); text-align: center;">
+            <div id="dodge-status" style="color: #fff; font-weight: 600;">Lazer &amp; Mayınlardan Kaç! Sarı Küreleri Topla!</div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">W/S veya Fare ile yönlendirin &bull; 🟡 Enerji küreleri kalkan ve +5 puan verir</div>
+          </div>
+
+          <div class="score-badge" style="color: var(--accent-gold);">
+            <span>EN YÜKSEK:</span>
+            <span class="score-num" id="dodge-high-score" style="text-shadow: 0 0 10px var(--accent-gold);">0</span>
+            <div style="margin-top: 0.25rem; font-size: 0.78rem; color: var(--accent-gold);">💎 EN İYİ REKOR</div>
+          </div>
+        </div>
+
+        <!-- Fireworks Festival HUD (Mode 5) -->
+        <div class="game-hud" id="fireworks-hud" style="display: none;">
+          <div class="score-badge" style="color: var(--accent-gold);">
+            <span>FESTİVAL:</span>
+            <span class="score-num" id="fw-count" style="text-shadow: 0 0 10px var(--accent-gold);">🎆</span>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
+            <div style="color: #fff; font-weight: 600;">Shibuya'da huzurlu bir yaz gecesi &bull; Gökyüzüne dokunun</div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;">
+              <button class="btn btn-primary" id="btn-fw-auto" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">🎇 Romantik Gösteri: Kapalı</button>
+              <button class="btn" id="btn-fw-blue" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color:#00f0ff;">🔷 Mavi</button>
+              <button class="btn" id="btn-fw-gold" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color:#f59e0b;">🌟 Altın</button>
+              <button class="btn" id="btn-fw-pink" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color:#ff007f;">💖 Pembe</button>
+              <button class="btn" id="btn-fw-green" style="padding: 0.25rem 0.6rem; font-size: 0.75rem; color:#10b981;">💚 Yeşil</button>
+            </div>
+          </div>
+
+          <div class="score-badge" style="color: var(--primary);">
+            <span>DURUM:</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #fff;">SHIBUYA NIGHT</span>
+          </div>
+        </div>
+
+        <!-- Quantum Gravity Vortex HUD (Mode 6) -->
+        <div class="game-hud" id="vortex-hud" style="display: none;">
+          <div class="score-badge" style="color: var(--accent-purple);">
+            <span>TEKİLLİK:</span>
+            <span class="score-num" style="text-shadow: 0 0 10px var(--accent-purple);">24●</span>
+          </div>
+
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--text-dim); text-align: center; display: flex; flex-direction: column; gap: 0.35rem; align-items: center;">
+            <div id="vortex-status-text" style="color: #fff; font-weight: 600;">Farenizi Gezdirin &bull; Kuantum Çekim Alanı</div>
+            <div style="display: flex; gap: 0.4rem; flex-wrap: wrap; justify-content: center;">
+              <button class="btn btn-accent" id="btn-vortex-mode" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">🌀 Mod: Çekim (Attract)</button>
+              <button class="btn btn-gold" id="btn-vortex-pulse" style="padding: 0.25rem 0.65rem; font-size: 0.75rem;">💫 Süpernova Dalgası</button>
+            </div>
+          </div>
+
+          <div class="score-badge" style="color: var(--primary);">
+            <span>GİRDAP:</span>
+            <span style="font-size: 0.85rem; font-weight: 700; color: #38bdf8;">AKTİF VORTEX</span>
+          </div>
+        </div>
+
+        <div class="canvas-controls">
+          <div class="btn-group">
+            <button class="btn btn-accent" id="btn-switch-pong">
+              🏓 Pong 2.0
+            </button>
+            <button class="btn btn-gold" id="btn-switch-dodge">
+              🚀 Uzay Koşusu
+            </button>
+            <button class="btn btn-primary" id="btn-switch-fw">
+              🎆 Havai Fişek Şöleni
+            </button>
+            <button class="btn" id="btn-switch-vortex" style="color: var(--accent-purple); border-color: rgba(168, 85, 247, 0.4);">
+              🌌 Çekim Girdabı
+            </button>
+            <button class="btn btn-primary" id="btn-shader-fx">
+              ⚡ Shader: CRT BLOOM
+            </button>
+            <button class="btn" id="btn-mode">
+              🔄 Modu Değiştir
+            </button>
+            <button class="btn" id="btn-firework">
+              🎆 Fişek At
+            </button>
+            <button class="btn" id="btn-toggle-anim">
+              ⏸ Duraklat / Devam Et
+            </button>
+            <button class="btn btn-danger" id="btn-game-reset" style="display: none;">
+              🔄 Sıfırla
+            </button>
+          </div>
+          <div class="pill">
+            <span>Motor:</span> <strong id="fps-counter">60 FPS &bull; Nyx Frame Loop</strong>
+          </div>
+        </div>
+
+        <nav class="scene-shortcuts" aria-label="Nyx görsel sahneleri">
+          <button class="btn scene-button" data-scene="0">Spectrum</button>
+          <button class="btn scene-button" data-scene="1">Matrix tunnel</button>
+          <button class="btn scene-button" data-scene="2">Quantum orbit</button>
+          <button class="btn scene-button" data-scene="6">Kerr vortex</button>
+          <button class="btn scene-button" data-scene="7">Aurora lattice</button>
+          <button class="btn scene-button" data-scene="8">Neural cosmos</button>
+        </nav>
+      </div>
+
+      <!-- Music & Procedural Synthesizer Card -->
+      <div class="card col-12">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🎵 Nyx Prosedürel 8-Bit &amp; Synthwave Müzik Motoru</span>
+          </div>
+          <span class="card-badge">Web Audio + Nyx WASM</span>
+        </div>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.75rem;">
+          Bu müzik hiçbir ses dosyası (MP3 vb.) içermez! Tüm melodi notaları, bas dizilimleri ve davul vuruşları (Kick, Snare, Hi-Hat) <strong>Nyx WebAssembly</strong> fonksiyonları tarafından hesaplanır ve Web Audio API ile canlı olarak sentezlenir.
+        </p>
+
+        <div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem;">
+          <div class="btn-group">
+            <button class="btn btn-primary" id="btn-music-play">
+              ▶ Müziği Başlat
+            </button>
+            <select id="music-track-select" class="input-field" style="margin-bottom: 0; width: auto; min-width: 250px;">
+              <option value="0">Parça 1: Cyberpunk Synthwave (128 BPM)</option>
+              <option value="1">Parça 2: 8-Bit Retro Arcade (140 BPM)</option>
+              <option value="2">Parça 3: Neon Chillwave (110 BPM)</option>
+              <option value="3">Parça 4: Tokyo Neon Drift (144 BPM) ⚡</option>
+              <option value="4">Parça 5: Arcade Boss Battle (152 BPM) 🔥</option>
+            </select>
+            <select id="synth-wave-select" class="input-field" style="margin-bottom: 0; width: auto;">
+              <option value="sawtooth">Dalga: Sawtooth (Synth)</option>
+              <option value="square">Dalga: Square (8-Bit Çip)</option>
+              <option value="triangle">Dalga: Triangle (Yumuşak)</option>
+              <option value="sine">Dalga: Sine (Saf Ton)</option>
+            </select>
+            <button class="btn" id="btn-sfx-toggle">
+              🔊 Oyun Sesleri (SFX): Açık
+            </button>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 0.4rem;" id="tempo-buttons">
+              <span style="font-size: 0.75rem; color: var(--text-dim);">Tempo:</span>
+              <button class="btn btn-tempo" data-tempo="0.75" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">0.75x</button>
+              <button class="btn btn-tempo btn-primary" data-tempo="1.0" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">1.0x</button>
+              <button class="btn btn-tempo" data-tempo="1.25" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">1.25x</button>
+              <button class="btn btn-tempo" data-tempo="1.5" style="padding: 0.2rem 0.5rem; font-size: 0.72rem;">1.5x</button>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="font-size: 0.8rem; color: var(--text-dim);">Ses:</span>
+              <input type="range" id="music-volume" min="0" max="100" value="35" style="accent-color: var(--primary); cursor: pointer; width: 85px;">
+            </div>
+          </div>
+        </div>
+
+        <!-- 16-step visual rhythm sequencer -->
+        <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.25rem;">16-Adımlı Canlı Ritim Göstergesi:</div>
+        <div class="step-grid" id="step-grid">
+          <!-- 16 dots -->
+        </div>
+
+        <!-- Interactive 8-Key Piano / Soundboard -->
+        <div style="font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem;">
+          🎹 <strong>İnteraktif Nyx Synthboard</strong> (Tuşlara tıklayın veya klavyede 1-8 rakamlarına basın):
+        </div>
+        <div class="piano-board" id="piano-board">
+          <!-- 8 keys generated by JS with Nyx WASM freqs -->
+        </div>
+      </div>
+
+      <!-- Cyber DJ Launchpad & Soundboard Card -->
+      <div class="card col-12">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🎛️ Nyx Cyber DJ Launchpad &amp; Ses Efektleri (8-Pad)</span>
+          </div>
+          <span class="card-badge">Web Audio Live Synthesis</span>
+        </div>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.75rem;">
+          Gerçek zamanlı osilatör ve gürültü filtreleri ile canlı siber ses tahtası! Pad'lere tıklayarak veya klavyenizdeki <strong>[Q, W, E, R, A, S, D, F]</strong> tuşlarına basarak kendi ritimlerinizi oluşturun:
+        </p>
+
+        <div class="dj-grid" id="dj-launchpad">
+          <div class="dj-pad" data-key="q" style="--pad-color: #00f0ff; --pad-glow: rgba(0,240,255,0.4);">
+            <span class="pad-key">[Q]</span>
+            <span class="pad-title">🥁 Sub Kick</span>
+            <span class="pad-sub">140Hz &rarr; 32Hz Sub Punch</span>
+          </div>
+          <div class="dj-pad" data-key="w" style="--pad-color: #ec4899; --pad-glow: rgba(236,72,153,0.4);">
+            <span class="pad-key">[W]</span>
+            <span class="pad-title">💥 Cyber Snare</span>
+            <span class="pad-sub">220Hz Filtreli Trampet</span>
+          </div>
+          <div class="dj-pad" data-key="e" style="--pad-color: #38bdf8; --pad-glow: rgba(56,189,248,0.4);">
+            <span class="pad-key">[E]</span>
+            <span class="pad-title">⚡ Neon Hi-Hat</span>
+            <span class="pad-sub">8000Hz Çıtır Metalik Zil</span>
+          </div>
+          <div class="dj-pad" data-key="r" style="--pad-color: #f59e0b; --pad-glow: rgba(245,158,11,0.4);">
+            <span class="pad-key">[R]</span>
+            <span class="pad-title">🛸 Laser Blaster</span>
+            <span class="pad-sub">1800Hz &rarr; 200Hz Lazer Sesi</span>
+          </div>
+          <div class="dj-pad" data-key="a" style="--pad-color: #8b5cf6; --pad-glow: rgba(139,92,246,0.4);">
+            <span class="pad-key">[A]</span>
+            <span class="pad-title">🌊 Sub Wobble</span>
+            <span class="pad-sub">55Hz Derin Bas Titreşimi</span>
+          </div>
+          <div class="dj-pad" data-key="s" style="--pad-color: #fbbf24; --pad-glow: rgba(251,191,36,0.4);">
+            <span class="pad-key">[S]</span>
+            <span class="pad-title">🔔 Retro Coin</span>
+            <span class="pad-sub">988Hz &rarr; 1318Hz Jeton</span>
+          </div>
+          <div class="dj-pad" data-key="d" style="--pad-color: #06b6d4; --pad-glow: rgba(6,182,212,0.4);">
+            <span class="pad-key">[D]</span>
+            <span class="pad-title">🌀 Warp Phase</span>
+            <span class="pad-sub">Boyut Atlama Efekti</span>
+          </div>
+          <div class="dj-pad" data-key="f" style="--pad-color: #10b981; --pad-glow: rgba(16,185,129,0.4);">
+            <span class="pad-key">[F]</span>
+            <span class="pad-title">🎆 Spark Pop</span>
+            <span class="pad-sub">3 Kademeli Kıvılcım Fişeği</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Binary & Hex Inspector Card -->
+      <div class="card col-12">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🧮 Nyx Hızlı İkili Kod (Binary) &amp; Hex Görüntüleyici</span>
+          </div>
+          <span class="card-badge">WASM Byte Inspector</span>
+        </div>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 0.75rem;">
+          Bir metin veya sayı girin; Nyx WebAssembly mantığı ile gerçek zamanlı 8-bit ikili (Binary), Onaltılık (Hexadecimal), ASCII kodları ve sağlama toplamını anında inceleyin:
+        </p>
+
+        <div style="display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem;">
+          <input type="text" id="inspector-input" class="input-field" value="Nyx Bodhi" placeholder="Metin veya sayı girin..." style="flex: 1; min-width: 240px; margin-bottom: 0;">
+          <button class="btn btn-primary" id="btn-inspect">🔍 İncele</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem;">
+          <div class="result-box">
+            <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.25rem;">8-BİT BİNARY (İKİLİ):</div>
+            <div id="inspector-bin" style="color: #00f0ff; font-weight: 600; font-size: 0.82rem;">01001110 01111001 01111000 ...</div>
+          </div>
+          <div class="result-box">
+            <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.25rem;">HEXADECIMAL (ONALTILIK):</div>
+            <div id="inspector-hex" style="color: #ec4899; font-weight: 600; font-size: 0.82rem;">0x4E 0x79 0x78 ...</div>
+          </div>
+          <div class="result-box">
+            <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.25rem;">ASCII KODLARI:</div>
+            <div id="inspector-ascii" style="color: #fbbf24; font-weight: 600; font-size: 0.82rem;">[78, 121, 120, 32, 66, 111, 100, 104, 105]</div>
+          </div>
+          <div class="result-box">
+            <div style="font-size: 0.75rem; color: var(--text-dim); margin-bottom: 0.25rem;">WASM TOPLAMI (CHECKSUM):</div>
+            <div id="inspector-sum" style="color: #10b981; font-weight: 600; font-size: 0.82rem;">Toplam = 907 &bull; EBOB = 1</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Nyx State & Reactive Counter -->
+      <div class="card col-6">
+        <div class="card-header">
+          <div class="card-title">
+            <span>⚡ Nyx Durum &amp; Sayaç Yöneticisi</span>
+          </div>
+          <span class="card-badge">std/web State</span>
+        </div>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1rem;">
+          Sayaç durumu ve tüm aritmetik dönüşümler Nyx değişkenlerinde (<code>var counter: int</code>) saklanır ve doğrudan WebAssembly fonksiyon çağrılarıyla yönetilir.
+        </p>
+
+        <div class="counter-hero">
+          <div class="counter-value" id="counter-val">0</div>
+          <div class="counter-sub" id="click-counter-sub">Toplam Tıklama: 0</div>
+        </div>
+
+        <div class="btn-group" style="justify-content: center; margin-bottom: 1.5rem;">
+          <button class="btn btn-primary" id="btn-inc">+1 Artır</button>
+          <button class="btn" id="btn-dec">-1 Azalt</button>
+          <button class="btn" id="btn-double">×2 İkiyle Çarp</button>
+          <button class="btn btn-danger" id="btn-reset">Sıfırla</button>
+        </div>
+
+        <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.4rem;">İşlem Günlüğü (Nyx Event Log):</div>
+        <div class="log-feed" id="state-log">
+          <div class="log-item">
+            <span>Nyx WASM modülü başarıyla bağlandı.</span>
+            <span class="log-time">Şimdi</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark: Nyx WASM vs JS -->
+      <div class="card col-6">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🚀 WASM vs JavaScript Hız Karşılaştırması</span>
+          </div>
+          <span class="card-badge">Asal Sayı Algoritması</span>
+        </div>
+
+        <p style="color: var(--text-dim); font-size: 0.9rem; margin-bottom: 1rem;">
+          Aynı matematiksel asal sayı tarama algoritması (6k &plusmn; 1 optimizasyonu) hem Nyx WASM ikili kodu hem de V8 JavaScript motorunda çalıştırılıp süreler kıyaslanır.
+        </p>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1rem;">
+          <select id="bench-limit" class="input-field" style="margin-bottom: 0; width: auto; flex: 1;">
+            <option value="25000">25,000'e kadar asallar</option>
+            <option value="50000" selected>50,000'e kadar asallar</option>
+            <option value="100000">100,000'e kadar asallar</option>
+            <option value="200000">200,000'e kadar asallar</option>
+          </select>
+          <button class="btn btn-primary" id="btn-run-bench" style="white-space: nowrap;">
+            ⚡ Testi Başlat
+          </button>
+        </div>
+
+        <div class="bench-grid">
+          <div class="bench-row">
+            <div class="bench-header">
+              <span>Nyx WebAssembly (WASM):</span>
+              <strong id="wasm-time-label" style="color: var(--primary);">-</strong>
+            </div>
+            <div class="bench-track">
+              <div class="bench-bar bar-wasm" id="wasm-bar" style="width: 0%;">WASM</div>
+            </div>
+          </div>
+
+          <div class="bench-row">
+            <div class="bench-header">
+              <span>JavaScript (V8 JIT):</span>
+              <strong id="js-time-label" style="color: #fbbf24;">-</strong>
+            </div>
+            <div class="bench-track">
+              <div class="bench-bar bar-js" id="js-bar" style="width: 0%;">JS</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-box" id="bench-summary" style="margin-top: 1.25rem;">
+          Hız karşılaştırması yapmak için "Testi Başlat" düğmesine tıklayın.
+        </div>
+      </div>
+
+      <!-- Algorithms Explorer -->
+      <div class="card col-6">
+        <div class="card-header">
+          <div class="card-title">
+            <span>🔬 Nyx Matematik Laboratuvarı</span>
+          </div>
+          <span class="card-badge">64-bit Aritmetik</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+          <div>
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Fibonacci Hesapla (n):</label>
+            <input type="number" id="fib-input" class="input-field" value="25" min="0" max="60">
+            <button class="btn" style="width: 100%;" id="btn-calc-fib">Hesapla</button>
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; color: var(--text-dim);">Collatz Adımları (3n+1):</label>
+            <input type="number" id="collatz-input" class="input-field" value="27" min="1" max="100000">
+            <button class="btn" style="width: 100%;" id="btn-calc-collatz">Adım Say</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 0.8rem; color: var(--text-dim);">En Büyük Ortak Bölen - EBOB / GCD(a, b):</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="number" id="gcd-a" class="input-field" value="1071" style="margin-bottom: 0;">
+            <input type="number" id="gcd-b" class="input-field" value="462" style="margin-bottom: 0;">
+            <button class="btn" id="btn-calc-gcd" style="white-space: nowrap;">EBOB Bul</button>
+          </div>
+        </div>
+
+        <div class="result-box" id="math-result">
+          Sonuç burada görüntülenecektir.
+        </div>
+      </div>
+
+      <!-- String & Data Operations -->
+      <div class="card col-6">
+        <div class="card-header">
+          <div class="card-title">
+            <span>📝 Nyx UTF-8 Metin &amp; Dizi İşleyici</span>
+          </div>
+          <span class="card-badge">WASM Memory ABI</span>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 0.8rem; color: var(--text-dim);">Kullanıcı Karşılama (UTF-8 String):</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="name-input" class="input-field" value="Müzik Sever" style="margin-bottom: 0;">
+            <button class="btn btn-primary" id="btn-greet" style="white-space: nowrap;">Selamla</button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 0.8rem; color: var(--text-dim);">Vektör / Dizi Toplamı (Array&lt;int&gt;):</label>
+          <div style="display: flex; gap: 0.5rem;">
+            <input type="text" id="array-input" class="input-field" value="10, 25, 40, 75, 150" style="margin-bottom: 0;">
+            <button class="btn" id="btn-sum-array" style="white-space: nowrap;">Topla</button>
+          </div>
+        </div>
+
+        <div class="result-box" id="string-result">
+          Metin ve dizi sonuçları burada görüntülenecektir.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>
+        Bu web sitesi, <strong>Nyx Systems Programming Language</strong> derleyicisi ve WebAssembly arka yüzü kullanılarak oluşturulmuştur.
+      </p>
+      <p style="margin-top: 0.5rem;">
+        Kaynak Kodu: <a href="site.nyx" target="_blank">site.nyx</a> &bull;
+        WASM Paketi: <a href="dist/site.mjs" target="_blank">dist/site.mjs</a> &bull;
+        WAT İnceleme: <a href="dist/site.wat" target="_blank">dist/site.wat</a>
+      </p>
+    </footer>
+  </div>
+
+  <!-- Application Logic (ES Module) -->
+  <script type="module">
+    import { initNyxModule } from './dist/site.mjs';
+
+    let nyx = null;
+
+    // --- Web Audio API Procedural Synthesizer & Soundboard ---
+    let audioCtx = null;
+    let musicPlaying = false;
+    let musicStep = 0;
+    let musicTimer = null;
+    let currentTrack = 0;
+    let masterGain = null;
+    let sfxEnabled = true;
+    let leadWaveform = 'sawtooth';
+    let tempoMultiplier = 1.0;
+    let selectedFwType = 0;
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContextClass();
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = 0.35;
+        masterGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // Play synthesized tone
+    function playTone(freq, type = leadWaveform, duration = 0.12, volume = 0.15) {
+      if (!audioCtx || freq <= 20) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      const filter = audioCtx.createBiquadFilter();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(freq * 3.2, audioCtx.currentTime);
+
+      gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(masterGain);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    }
+
+    // Drum & Launchpad synthesizers
+    function playKick() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(140, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.13);
+      gain.gain.setValueAtTime(0.45, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.13);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.13);
+    }
+
+    function playSnare() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(240, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.11);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.11);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.11);
+    }
+
+    function playHiHat() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(8000, audioCtx.currentTime);
+      gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.045);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.045);
+    }
+
+    function playLaser() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(1800, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(180, audioCtx.currentTime + 0.18);
+      gain.gain.setValueAtTime(0.28, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.18);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.18);
+    }
+
+    function playSubWobble() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(55, audioCtx.currentTime);
+      osc.frequency.linearRampToValueAtTime(110, audioCtx.currentTime + 0.1);
+      osc.frequency.linearRampToValueAtTime(45, audioCtx.currentTime + 0.25);
+      gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.25);
+    }
+
+    function playCoin() {
+      if (!audioCtx) return;
+      playTone(987.77, 'square', 0.08, 0.22);
+      setTimeout(() => playTone(1318.5, 'square', 0.18, 0.26), 70);
+    }
+
+    function playWarp() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(200, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.15);
+      osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playCracker() {
+      if (!audioCtx) return;
+      playTone(600, 'square', 0.04, 0.2);
+      setTimeout(() => playTone(950, 'sawtooth', 0.06, 0.25), 40);
+      setTimeout(() => playTone(1400, 'sine', 0.1, 0.3), 90);
+    }
+
+    // Sound effect trigger from WASM
+    function handleSfx(sfxCode) {
+      if (!sfxEnabled || !audioCtx) return;
+      if (sfxCode === 1) {
+        // Player paddle hit
+        playTone(587.33, 'square', 0.07, 0.22); // D5
+      } else if (sfxCode === 2) {
+        // CPU paddle hit
+        playTone(440.00, 'square', 0.07, 0.22); // A4
+      } else if (sfxCode === 3) {
+        // Wall bounce
+        playTone(329.63, 'triangle', 0.05, 0.18); // E4
+      } else if (sfxCode === 4) {
+        // Goal score / Crash explosion / Shield strike
+        playTone(220.00, 'sawtooth', 0.12, 0.35);
+        setTimeout(() => playTone(110.00, 'sawtooth', 0.2, 0.4), 70);
+      } else if (sfxCode === 5) {
+        // Firework sparkle
+        playTone(784.0, 'sine', 0.08, 0.2);
+        setTimeout(() => playTone(1046.5, 'sine', 0.12, 0.25), 60);
+        setTimeout(() => playTone(1318.5, 'sine', 0.16, 0.25), 120);
+      } else if (sfxCode === 6) {
+        // Golden Cyber Energy Orb / Power-up chime (C6 -> E6 -> G6 arpeggio)
+        playTone(1046.5, 'sine', 0.08, 0.22);
+        setTimeout(() => playTone(1318.5, 'sine', 0.1, 0.25), 60);
+        setTimeout(() => playTone(1568.0, 'sine', 0.14, 0.28), 120);
+      } else if (sfxCode === 7) {
+        playWarp();
+      }
+    }
+
+    // Music Tick Loop
+    function musicTick() {
+      if (!musicPlaying || !nyx) return;
+      initAudio();
+
+      const step = musicStep;
+      musicStep = (musicStep + 1) % 64;
+
+      // 1. Get note from Nyx WASM
+      const leadFreq = nyx.music_lead_note(currentTrack, step);
+      const bassFreq = nyx.music_bass_note(currentTrack, step);
+      const drumBeat = nyx.music_drum_beat(step);
+
+      // 2. Play lead synth
+      playTone(leadFreq, currentTrack === 1 ? 'square' : leadWaveform, 0.11, 0.18);
+
+      // 3. Play bass synth every other step
+      if (step % 2 === 0) {
+        playTone(bassFreq, 'triangle', 0.18, 0.25);
+      }
+
+      // 4. Play drums & trigger beat pulse in WASM
+      if (drumBeat === 1) {
+        playKick();
+        nyx.set_music_beat_pulse(1.0);
+      } else if (drumBeat === 2) {
+        playSnare();
+        nyx.set_music_beat_pulse(0.7);
+      } else if (drumBeat === 3) {
+        playHiHat();
+      }
+
+      // 5. Update visual 16-step grid
+      const grid = document.getElementById('step-grid');
+      if (grid) {
+        const dots = grid.children;
+        const current16 = step % 16;
+        for (let i = 0; i < dots.length; i++) {
+          if (i === current16) {
+            dots[i].className = 'step-dot active';
+          } else {
+            dots[i].className = 'step-dot';
+          }
+        }
+      }
+    }
+
+    function getTrackInterval(track, tempo) {
+      let base = 117; // 128 BPM
+      if (track === 1) base = 107;      // 140 BPM
+      else if (track === 2) base = 136; // 110 BPM
+      else if (track === 3) base = 104; // 144 BPM
+      else if (track === 4) base = 98;  // 152 BPM
+      return Math.max(30, Math.round(base / tempo));
+    }
+
+    function toggleMusic() {
+      initAudio();
+      const btn = document.getElementById('btn-music-play');
+      if (musicPlaying) {
+        musicPlaying = false;
+        clearInterval(musicTimer);
+        btn.textContent = '▶ Müziği Başlat';
+        addLog('Prosedürel müzik duraklatıldı.');
+      } else {
+        musicPlaying = true;
+        const interval = getTrackInterval(currentTrack, tempoMultiplier);
+        musicTimer = setInterval(musicTick, interval);
+        btn.textContent = '⏸ Müziği Duraklat';
+        addLog(`Prosedürel müzik başladı: ${nyx.track_name(currentTrack)}`);
+      }
+    }
+
+    // --- UI Helpers ---
+
+    function addLog(message) {
+      const logContainer = document.getElementById('state-log');
+      if (!logContainer) return;
+      const item = document.createElement('div');
+      item.className = 'log-item';
+      const time = new Date().toLocaleTimeString('tr-TR');
+      item.innerHTML = `<span>${message}</span><span class="log-time">${time}</span>`;
+      logContainer.prepend(item);
+      while (logContainer.children.length > 8) {
+        logContainer.lastElementChild.remove();
+      }
+    }
+
+    function updateCounterDisplay() {
+      const valEl = document.getElementById('counter-val');
+      const clickEl = document.getElementById('click-counter-sub');
+      if (valEl && nyx) {
+        valEl.textContent = nyx.get_counter();
+        valEl.style.transform = 'scale(1.15)';
+        setTimeout(() => { valEl.style.transform = 'scale(1)'; }, 120);
+      }
+      if (clickEl && nyx) {
+        clickEl.textContent = `Toplam Tıklama: ${nyx.get_click_count()}`;
+      }
+    }
+
+    function updateModeUI(mode) {
+      const modeTitle = nyx.mode_name(mode);
+      document.getElementById('canvas-mode-badge').textContent = modeTitle;
+
+      const pongHud = document.getElementById('pong-hud');
+      const dodgeHud = document.getElementById('dodge-hud');
+      const fireworksHud = document.getElementById('fireworks-hud');
+      const vortexHud = document.getElementById('vortex-hud');
+      const btnGameReset = document.getElementById('btn-game-reset');
+
+      const btnSwitchPong = document.getElementById('btn-switch-pong');
+      const btnSwitchDodge = document.getElementById('btn-switch-dodge');
+      const btnSwitchFw = document.getElementById('btn-switch-fw');
+      const btnSwitchVortex = document.getElementById('btn-switch-vortex');
+
+      pongHud.style.display = (mode === 3) ? 'flex' : 'none';
+      dodgeHud.style.display = (mode === 4) ? 'flex' : 'none';
+      if (fireworksHud) fireworksHud.style.display = (mode === 5) ? 'flex' : 'none';
+      if (vortexHud) vortexHud.style.display = (mode === 6) ? 'flex' : 'none';
+
+      document.querySelectorAll('.scene-button').forEach((button) => {
+        button.setAttribute('aria-pressed', String(Number(button.dataset.scene) === mode));
+      });
+
+      btnGameReset.style.display = (mode === 3 || mode === 4) ? 'inline-flex' : 'none';
+
+      if (btnSwitchPong) btnSwitchPong.textContent = (mode === 3) ? '🏓 Pong 2.0 (Aktif)' : '🏓 Pong 2.0';
+      if (btnSwitchDodge) btnSwitchDodge.textContent = (mode === 4) ? '🚀 Uzay Koşusu (Aktif)' : '🚀 Uzay Koşusu';
+      if (btnSwitchFw) btnSwitchFw.textContent = (mode === 5) ? '🎆 Havai Fişek (Aktif)' : '🎆 Havai Fişek Şöleni';
+      if (btnSwitchVortex) btnSwitchVortex.textContent = (mode === 6) ? '🌌 Çekim Girdabı (Aktif)' : '🌌 Çekim Girdabı';
+
+      // Update Shader Telemetry HUD
+      const hudBadge = document.getElementById('hud-render-badge');
+      const hudInfo = document.getElementById('hud-mode-info');
+      const telemetryTitles = [
+        '3D HOLOGRAPHIC SPECTRUM',
+        '3D CYBER MATRIX TUNNEL',
+        '3D QUANTUM GYROSCOPE',
+        '3D TRON ARENA & PLASMA BALL',
+        '3D WARP SPEED HYPERSPACE',
+        'SHIBUYA ROMANTIC NIGHT FESTIVAL',
+        'RELATIVISTIC KERR SINGULARITY',
+        'VOLUMETRIC AURORA PLASMA',
+        'DEEP-SPACE NEURAL CONSTELLATION'
+      ];
+      if (hudInfo) hudInfo.textContent = telemetryTitles[mode] || '3D WASM SHADER';
+      if (hudBadge) {
+        if (mode === 6) hudBadge.textContent = '3D EINSTEIN LENSING';
+        else if (mode === 7) hudBadge.textContent = 'AURORA RIBBON SHADER';
+        else if (mode === 8) hudBadge.textContent = 'NEURAL LIGHT FIELD';
+        else hudBadge.textContent = '3D OPTICAL SHADER';
+      }
+
+      const nodeStat = document.getElementById('stat-nodes-value');
+      const sceneComplexity = [
+        '24 spectrum towers', '26 data streams', '72 orbit segments',
+        'Tron arena physics', 'Warp obstacle field', 'Shibuya lightscape',
+        '32 relativistic nodes', '3 plasma ribbons', '30 stars / 12 nodes'
+      ];
+      if (nodeStat) nodeStat.textContent = sceneComplexity[mode] || 'Dynamic scene';
+    }
+
+    function syncGameHUDs() {
+      if (!nyx) return;
+
+      const sfxCode = nyx.get_and_clear_sfx();
+      if (sfxCode > 0) {
+        handleSfx(sfxCode);
+      }
+
+      const mode = nyx.get_anim_mode();
+      if (mode === 3) {
+        // Pong 2.0
+        const pScore = document.getElementById('pong-player-score');
+        const cScore = document.getElementById('pong-cpu-score');
+        const rally = document.getElementById('pong-rally-counter');
+        const p1Label = document.getElementById('pong-p1-label');
+        const p2Label = document.getElementById('pong-p2-label');
+        const p2Ctrl = document.getElementById('pong-p2-ctrl');
+        const powStatus = document.getElementById('pong-powerup-status');
+
+        if (pScore) pScore.textContent = nyx.get_player_score();
+        if (cScore) cScore.textContent = nyx.get_cpu_score();
+        if (rally) rally.textContent = `Ralli: ${nyx.get_pong_rally()} Vuruş`;
+
+        const is2P = nyx.pong_is_2p_mode ? nyx.pong_is_2p_mode() : 0;
+        if (p1Label) p1Label.textContent = is2P ? '1. OYUNCU (SOL):' : 'OYUNCU (SOL):';
+        if (p2Label) p2Label.textContent = is2P ? '2. OYUNCU (SAĞ):' : 'NYX CPU AI (SAĞ):';
+        if (p2Ctrl) p2Ctrl.textContent = is2P ? 'Yukarı/Aşağı Tuşları' : 'Otonom AI';
+
+        if (powStatus && nyx.get_pong_powerup_type) {
+          const pt = nyx.get_pong_powerup_type();
+          if (pt === 1) {
+            powStatus.innerHTML = '<span style="color:#f59e0b; font-weight:700;">🟡 HIZLI TOP SAHADA!</span>';
+          } else if (pt === 2) {
+            powStatus.innerHTML = '<span style="color:#10b981; font-weight:700;">🟢 MEGA RAKET SAHADA!</span>';
+          } else {
+            powStatus.innerHTML = '<span>⚡ Ralli vuruşları ile yeni güç küresi çağırın!</span>';
+          }
+        }
+      } else if (mode === 4) {
+        // Space Dodge
+        const dScore = document.getElementById('dodge-score');
+        const dHighScore = document.getElementById('dodge-high-score');
+        const dStatus = document.getElementById('dodge-status');
+        const dShields = document.getElementById('dodge-shields-val');
+        if (dScore) dScore.textContent = nyx.get_dodge_score();
+        if (dHighScore) dHighScore.textContent = nyx.get_dodge_high_score();
+
+        const shields = typeof nyx.get_dodge_shields === 'function' ? nyx.get_dodge_shields() : 3;
+        if (dShields) {
+          if (shields >= 3) {
+            dShields.innerHTML = '<span style="color: #00f0ff; letter-spacing: 2px;">■ ■ ■</span>';
+          } else if (shields === 2) {
+            dShields.innerHTML = '<span style="color: #38bdf8; letter-spacing: 2px;">■ ■ </span><span style="color: #475569; letter-spacing: 2px;">□</span>';
+          } else if (shields === 1) {
+            dShields.innerHTML = '<span style="color: #f59e0b; letter-spacing: 2px;">■ </span><span style="color: #475569; letter-spacing: 2px;">□ □</span>';
+          } else {
+            dShields.innerHTML = '<span style="color: #ef4444; font-weight: 700;">KRİTİK (0)</span>';
+          }
+        }
+
+        if (dStatus) {
+          if (nyx.is_dodge_game_over() === 1) {
+            dStatus.innerHTML = '<span style="color: #ff0055; font-weight: 700;">💥 GEMİ İMHA EDİLDİ! Yeniden başlamak için tıklayın</span>';
+          } else if (shields === 1) {
+            dStatus.innerHTML = '<span style="color: #f59e0b; font-weight: 600;">⚠️ KALKAN KRİTİK! 🟡 Sarı enerji kürelerini toplayın!</span>';
+          } else {
+            dStatus.textContent = 'Lazer & Mayınlardan Kaç! (W/S veya Fare)';
+          }
+        }
+      } else if (mode === 5) {
+        // Fireworks Festival
+        const btnAuto = document.getElementById('btn-fw-auto');
+        if (btnAuto && nyx.is_auto_fireworks) {
+          const autoOn = nyx.is_auto_fireworks();
+          btnAuto.textContent = autoOn ? '🎇 Romantik Gösteri: AÇIK' : '🎇 Romantik Gösteri: Kapalı';
+          btnAuto.className = autoOn ? 'btn btn-accent' : 'btn btn-primary';
+        }
+      } else if (mode === 6) {
+        // Gravity Vortex
+        const btnVortexMode = document.getElementById('btn-vortex-mode');
+        const vortexText = document.getElementById('vortex-status-text');
+        if (btnVortexMode && nyx.vortex_is_repel) {
+          const isRepel = nyx.vortex_is_repel();
+          btnVortexMode.textContent = isRepel ? '💥 Mod: İtme (Repel)' : '🌀 Mod: Çekim (Attract)';
+          btnVortexMode.className = isRepel ? 'btn btn-danger' : 'btn btn-accent';
+          if (vortexText) {
+            vortexText.textContent = isRepel ? 'İtme Alanı Aktif! Parçacıklar merkezden kaçıyor' : 'Kuantum Çekim Alanı! Parçacıklar farenizi takip ediyor';
+          }
+        }
+      }
+    }
+
+    // Pure JS reference implementation of prime counter for honest benchmarking
+    function jsCountPrimes(limit) {
+      function jsIsPrime(n) {
+        if (n <= 1) return false;
+        if (n <= 3) return true;
+        if (n % 2 === 0 || n % 3 === 0) return false;
+        let i = 5;
+        while (i * i <= n) {
+          if (n % i === 0 || n % (i + 2) === 0) return false;
+          i += 6;
+        }
+        return true;
+      }
+      let count = 0;
+      for (let n = 2; n < limit; n++) {
+        if (jsIsPrime(n)) count++;
+      }
+      return count;
+    }
+
+    async function main() {
+      try {
+        // Initialize Nyx WebAssembly module
+        nyx = await initNyxModule(new URL('./dist/site.wasm', import.meta.url));
+        console.log('Nyx WebAssembly Module Initialized:', nyx);
+
+        // Start Canvas Engine inside Nyx
+        nyx.app_start('#nyx-canvas');
+
+        // Setup 16-step sequencer grid DOM
+        const stepGrid = document.getElementById('step-grid');
+        for (let i = 0; i < 16; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'step-dot';
+          stepGrid.appendChild(dot);
+        }
+
+        // Setup 8-key piano keyboard with Nyx WASM frequencies
+        const pianoBoard = document.getElementById('piano-board');
+        const noteNames = ['Do (C4)', 'Re (D4)', 'Mi (E4)', 'Fa (F4)', 'Sol (G4)', 'La (A4)', 'Si (B4)', 'Do (C5)'];
+        for (let i = 0; i < 8; i++) {
+          const freq = nyx.piano_note_freq(i);
+          const key = document.createElement('div');
+          key.className = 'piano-key';
+          key.innerHTML = `<strong>${noteNames[i]}</strong><span>${freq.toFixed(1)}Hz</span><span style="font-size:0.65rem; color:#64748b;">[${i+1}]</span>`;
+          key.addEventListener('mousedown', () => {
+            initAudio();
+            playTone(freq, 'sawtooth', 0.35, 0.3);
+            key.classList.add('playing');
+            setTimeout(() => key.classList.remove('playing'), 150);
+          });
+          pianoBoard.appendChild(key);
+        }
+
+        // Keyboard 1-8 listener for piano
+        window.addEventListener('keydown', (e) => {
+          const num = parseInt(e.key, 10);
+          if (num >= 1 && num <= 8) {
+            initAudio();
+            const freq = nyx.piano_note_freq(num - 1);
+            playTone(freq, 'sawtooth', 0.35, 0.3);
+            const keyEl = pianoBoard.children[num - 1];
+            if (keyEl) {
+              keyEl.classList.add('playing');
+              setTimeout(() => keyEl.classList.remove('playing'), 150);
+            }
+          }
+        });
+
+        // Wire Up Music Controls
+        document.getElementById('btn-music-play').addEventListener('click', toggleMusic);
+
+        document.getElementById('music-track-select').addEventListener('change', (e) => {
+          currentTrack = parseInt(e.target.value, 10);
+          musicStep = 0;
+          if (musicPlaying) {
+            clearInterval(musicTimer);
+            const interval = currentTrack === 1 ? 107 : (currentTrack === 2 ? 136 : 117);
+            musicTimer = setInterval(musicTick, interval);
+          }
+          addLog(`Müzik parçası değiştirildi: ${nyx.track_name(currentTrack)}`);
+        });
+
+        document.getElementById('music-volume').addEventListener('input', (e) => {
+          initAudio();
+          if (masterGain) {
+            masterGain.gain.value = (parseFloat(e.target.value) / 100) * 0.8;
+          }
+        });
+
+        document.getElementById('btn-sfx-toggle').addEventListener('click', () => {
+          sfxEnabled = !sfxEnabled;
+          document.getElementById('btn-sfx-toggle').textContent = sfxEnabled
+            ? '🔊 Oyun Sesleri (SFX): Açık'
+            : '🔇 Oyun Sesleri (SFX): Kapalı';
+        });
+
+        // Wire Up Counter Buttons
+        document.getElementById('btn-inc').addEventListener('click', () => {
+          const val = nyx.inc_counter();
+          updateCounterDisplay();
+          addLog(`Sayaç +1 artırıldı: Yeni değer = ${val}`);
+        });
+
+        document.getElementById('btn-dec').addEventListener('click', () => {
+          const val = nyx.dec_counter();
+          updateCounterDisplay();
+          addLog(`Sayaç -1 azaltıldı: Yeni değer = ${val}`);
+        });
+
+        document.getElementById('btn-double').addEventListener('click', () => {
+          const val = nyx.double_counter();
+          updateCounterDisplay();
+          addLog(`Sayaç 2 ile çarpıldı: Yeni değer = ${val}`);
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+          const val = nyx.reset_counter();
+          updateCounterDisplay();
+          addLog(`Sayaç sıfırlandı: Yeni değer = ${val}`);
+        });
+
+        // Canvas Mode Switchers
+        document.getElementById('btn-mode').addEventListener('click', () => {
+          const newMode = nyx.cycle_anim_mode();
+          updateModeUI(newMode);
+          addLog(`Görsel modu değiştirildi: ${nyx.mode_name(newMode)}`);
+        });
+
+        document.querySelectorAll('.scene-button').forEach((button) => {
+          button.addEventListener('click', () => {
+            const scene = Number(button.dataset.scene);
+            nyx.set_anim_mode(scene);
+            updateModeUI(scene);
+            addLog(`Render sahnesi yüklendi: ${nyx.mode_name(scene)}`);
+          });
+        });
+
+        document.getElementById('btn-switch-pong').addEventListener('click', () => {
+          nyx.set_anim_mode(3);
+          updateModeUI(3);
+          addLog('Retro Nyx Pong 2.0 başlatıldı! W/S veya fare ile oynayabilirsiniz.');
+        });
+
+        document.getElementById('btn-switch-dodge').addEventListener('click', () => {
+          nyx.set_anim_mode(4);
+          nyx.dodge_reset();
+          updateModeUI(4);
+          addLog('Siber Uzay Koşusu 2.0 başladı! Lazerlerden kaçmak için farenizi veya W/S tuşlarını kullanın.');
+        });
+
+        const btnSwitchFw = document.getElementById('btn-switch-fw');
+        if (btnSwitchFw) {
+          btnSwitchFw.addEventListener('click', () => {
+            nyx.set_anim_mode(5);
+            updateModeUI(5);
+            addLog('Shibuya Havai Fişek Festivali aktif! Gökyüzüne dokunun veya sakin otomatik gösteriyi açın.');
+          });
+        }
+
+        const btnSwitchVortex = document.getElementById('btn-switch-vortex');
+        if (btnSwitchVortex) {
+          btnSwitchVortex.addEventListener('click', () => {
+            nyx.set_anim_mode(6);
+            updateModeUI(6);
+            addLog('Kuantum Çekim Girdabı aktif! Farenizi tuvalde gezdirerek parçacıkları yönlendirin.');
+          });
+        }
+
+        // Shader FX Post-Processing Toggle
+        const btnShaderFx = document.getElementById('btn-shader-fx');
+        const canvasContainer = document.getElementById('canvas-container');
+        let shaderProfile = 2;
+        if (btnShaderFx && canvasContainer) {
+          btnShaderFx.addEventListener('click', () => {
+            shaderProfile = (shaderProfile + 1) % 3;
+            canvasContainer.classList.remove('shader-active', 'shader-cinematic');
+            if (shaderProfile === 2) {
+              canvasContainer.classList.add('shader-active');
+              btnShaderFx.textContent = '⚡ Shader: CRT BLOOM';
+              btnShaderFx.className = 'btn btn-primary';
+              addLog('CRT bloom shader profili etkinleştirildi.');
+            } else if (shaderProfile === 1) {
+              canvasContainer.classList.add('shader-active', 'shader-cinematic');
+              btnShaderFx.textContent = '⚡ Shader: CINEMA';
+              btnShaderFx.className = 'btn btn-accent';
+              addLog('Sinematik renk ayrımı ve optik bloom etkinleştirildi.');
+            } else {
+              btnShaderFx.textContent = '⚡ Shader: RAW';
+              btnShaderFx.className = 'btn';
+              addLog('Post-processing kapatıldı; ham Nyx Canvas çıkışı gösteriliyor.');
+            }
+          });
+        }
+
+        // Space key shortcut for Supernova Shockwave in Vortex Mode
+        window.addEventListener('keydown', (e) => {
+          if ((e.code === 'Space' || e.key === ' ') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            if (nyx && nyx.get_anim_mode() === 6) {
+              if (nyx.vortex_trigger_shockwave) nyx.vortex_trigger_shockwave();
+              playLaser();
+              addLog('🌌 Süpernova Şok Dalgası tetiklendi! (Space)');
+            }
+          }
+        });
+
+        // Pong 2.0 Controls
+        const btnPong2P = document.getElementById('btn-pong-2p');
+        if (btnPong2P) {
+          btnPong2P.addEventListener('click', () => {
+            const current2P = nyx.pong_is_2p_mode();
+            const new2P = 1 - current2P;
+            nyx.pong_set_2p_mode(new2P);
+            btnPong2P.textContent = new2P ? '👥 2P (Aynı Klavye)' : '👤 1P (vs AI)';
+            btnPong2P.className = new2P ? 'btn btn-accent' : 'btn';
+            addLog(new2P ? 'Pong 2 Kişilik Mod Aktif! (P1: W/S, P2: Ok Tuşları)' : 'Pong Tek Kişilik Mod Aktif (vs Nyx AI)');
+          });
+        }
+
+        const btnPongDiff = document.getElementById('btn-pong-diff');
+        const diffLabels = ['Kolay', 'Usta', 'İmkansız'];
+        if (btnPongDiff) {
+          btnPongDiff.addEventListener('click', () => {
+            const nextDiff = (nyx.pong_get_difficulty() + 1) % 3;
+            nyx.pong_set_difficulty(nextDiff);
+            btnPongDiff.textContent = `Zorluk: ${diffLabels[nextDiff]}`;
+            addLog(`Pong AI Zorluğu: ${diffLabels[nextDiff]}`);
+          });
+        }
+
+        // Fireworks Controls
+        const btnFwAuto = document.getElementById('btn-fw-auto');
+        if (btnFwAuto) {
+          btnFwAuto.addEventListener('click', () => {
+            const on = nyx.toggle_auto_fireworks();
+            btnFwAuto.textContent = on ? '🎇 Romantik Gösteri: AÇIK' : '🎇 Romantik Gösteri: Kapalı';
+            btnFwAuto.className = on ? 'btn btn-accent' : 'btn btn-primary';
+            addLog(on ? 'Shibuya gece gösterisi başladı.' : 'Gece gösterisi durduruldu.');
+          });
+        }
+
+        const fwColorBtns = [
+          { id: 'btn-fw-blue', type: 0, name: 'Mavi Yıldız' },
+          { id: 'btn-fw-gold', type: 1, name: 'Altın Anka' },
+          { id: 'btn-fw-pink', type: 2, name: 'Magenta Deryası' },
+          { id: 'btn-fw-green', type: 3, name: 'Zümrüt Lazer' },
+        ];
+        fwColorBtns.forEach(b => {
+          const el = document.getElementById(b.id);
+          if (el) {
+            el.addEventListener('click', () => {
+              selectedFwType = b.type;
+              addLog(`Seçili havai fişek tipi: ${b.name}`);
+            });
+          }
+        });
+
+        // Vortex Controls
+        const btnVortexMode = document.getElementById('btn-vortex-mode');
+        if (btnVortexMode) {
+          btnVortexMode.addEventListener('click', () => {
+            const isRepel = nyx.vortex_toggle_repel();
+            btnVortexMode.textContent = isRepel ? '💥 Mod: İtme (Repel)' : '🌀 Mod: Çekim (Attract)';
+            btnVortexMode.className = isRepel ? 'btn btn-danger' : 'btn btn-accent';
+            addLog(isRepel ? 'Girdap modu: İtme Alanı' : 'Girdap modu: Çekim Alanı');
+          });
+        }
+
+        const btnVortexPulse = document.getElementById('btn-vortex-pulse');
+        if (btnVortexPulse) {
+          btnVortexPulse.addEventListener('click', () => {
+            nyx.vortex_trigger_shockwave();
+            initAudio();
+            handleSfx(5);
+            addLog('💫 Kuantum süpernova şok dalgası patlatıldı!');
+          });
+        }
+
+        // Firework Launcher button
+        document.getElementById('btn-firework').addEventListener('click', () => {
+          const rx = 80.0 + Math.random() * 520.0;
+          const ry = 40.0 + Math.random() * 140.0;
+          nyx.trigger_firework(rx, ry);
+          initAudio();
+          handleSfx(5);
+          addLog(`🎆 Havai fişek patlatıldı: (${rx.toFixed(0)}, ${ry.toFixed(0)})`);
+        });
+
+        // Click on canvas triggers fireworks, shockwave, or dodge reset
+        const canvasEl = document.getElementById('nyx-canvas');
+        canvasEl.addEventListener('click', (e) => {
+          const rect = canvasEl.getBoundingClientRect();
+          const relX = ((e.clientX - rect.left) / rect.width) * 680.0;
+          const relY = ((e.clientY - rect.top) / rect.height) * 300.0;
+
+          const mode = nyx.get_anim_mode();
+          if (mode === 4 && nyx.is_dodge_game_over() === 1) {
+            nyx.dodge_reset();
+            return;
+          }
+
+          if (mode === 5) {
+            nyx.trigger_firework_type(relX, relY, selectedFwType);
+          } else if (mode === 6) {
+            nyx.vortex_trigger_shockwave();
+          } else {
+            nyx.trigger_firework(relX, relY);
+          }
+          initAudio();
+          handleSfx(5);
+        });
+
+        // Reset current active game
+        document.getElementById('btn-game-reset').addEventListener('click', () => {
+          const mode = nyx.get_anim_mode();
+          if (mode === 3) {
+            nyx.pong_reset_game();
+            addLog('Pong skorları ve top sıfırlandı.');
+          } else if (mode === 4) {
+            nyx.dodge_reset();
+            addLog('Uzay koşusu sıfırlandı.');
+          }
+        });
+
+        // Animation Pause/Resume
+        document.getElementById('btn-toggle-anim').addEventListener('click', () => {
+          const running = nyx.toggle_anim();
+          const btn = document.getElementById('btn-toggle-anim');
+          btn.textContent = running ? '⏸ Duraklat / Devam Et' : '▶ Başlat';
+          addLog(running ? 'Animasyon döngüsü devam ediyor' : 'Animasyon duraklatıldı');
+        });
+
+        // Canvas Mouse & Touch Tracking
+        function handleCanvasMove(clientX, clientY) {
+          const mode = nyx.get_anim_mode();
+          const rect = canvasEl.getBoundingClientRect();
+          const relX = ((clientX - rect.left) / rect.width) * 680.0;
+          const relY = ((clientY - rect.top) / rect.height) * 300.0;
+          canvasContainer.style.setProperty('--flare-x', `${((clientX - rect.left) / rect.width) * 100}%`);
+          canvasContainer.style.setProperty('--flare-y', `${((clientY - rect.top) / rect.height) * 100}%`);
+
+          if (mode === 3) {
+            nyx.pong_set_paddle_y(relY);
+          } else if (mode === 4) {
+            nyx.dodge_set_y(relY);
+          } else if (mode === 6) {
+            nyx.vortex_set_mouse(relX, relY);
+          }
+        }
+
+        canvasEl.addEventListener('mousemove', (e) => handleCanvasMove(e.clientX, e.clientY));
+        canvasEl.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches[0]) {
+            handleCanvasMove(e.touches[0].clientX, e.touches[0].clientY);
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        // Waveform select
+        const waveSel = document.getElementById('synth-wave-select');
+        if (waveSel) {
+          waveSel.addEventListener('change', (e) => {
+            leadWaveform = e.target.value;
+            addLog(`Müzik dalga tipi: ${leadWaveform}`);
+          });
+        }
+
+        // Tempo buttons
+        document.querySelectorAll('.btn-tempo').forEach(b => {
+          b.addEventListener('click', () => {
+            document.querySelectorAll('.btn-tempo').forEach(btn => btn.classList.remove('btn-primary'));
+            b.classList.add('btn-primary');
+            tempoMultiplier = parseFloat(b.getAttribute('data-tempo'));
+            if (musicPlaying) {
+              clearInterval(musicTimer);
+              const interval = getTrackInterval(currentTrack, tempoMultiplier);
+              musicTimer = setInterval(musicTick, interval);
+            }
+            addLog(`Müzik tempo hızı: ${tempoMultiplier}x`);
+          });
+        });
+
+        // DJ Launchpad trigger helper
+        function triggerDjPad(key) {
+          initAudio();
+          const pad = document.querySelector(`.dj-pad[data-key="${key}"]`);
+          if (pad) {
+            pad.classList.add('active');
+            setTimeout(() => pad.classList.remove('active'), 120);
+          }
+          if (key === 'q') playKick();
+          else if (key === 'w') playSnare();
+          else if (key === 'e') playHiHat();
+          else if (key === 'r') playLaser();
+          else if (key === 'a') playSubWobble();
+          else if (key === 's') playCoin();
+          else if (key === 'd') playWarp();
+          else if (key === 'f') playCracker();
+        }
+
+        document.querySelectorAll('.dj-pad').forEach(pad => {
+          pad.addEventListener('mousedown', () => {
+            const k = pad.getAttribute('data-key');
+            triggerDjPad(k);
+          });
+        });
+
+        // Binary & Hex Inspector
+        function runInspector() {
+          const inputEl = document.getElementById('inspector-input');
+          const binEl = document.getElementById('inspector-bin');
+          const hexEl = document.getElementById('inspector-hex');
+          const asciiEl = document.getElementById('inspector-ascii');
+          const sumEl = document.getElementById('inspector-sum');
+
+          const val = inputEl ? inputEl.value : 'Nyx';
+          if (!val) return;
+
+          const codes = [];
+          const bins = [];
+          const hexs = [];
+          for (let i = 0; i < val.length; i++) {
+            const code = val.charCodeAt(i);
+            codes.push(code);
+            bins.push(code.toString(2).padStart(8, '0'));
+            hexs.push('0x' + code.toString(16).toUpperCase().padStart(2, '0'));
+          }
+
+          if (binEl) binEl.textContent = bins.slice(0, 10).join(' ') + (bins.length > 10 ? '...' : '');
+          if (hexEl) hexEl.textContent = hexs.slice(0, 12).join(' ') + (hexs.length > 12 ? '...' : '');
+          if (asciiEl) asciiEl.textContent = `[${codes.slice(0, 12).join(', ')}${codes.length > 12 ? ', ...' : ''}]`;
+
+          if (sumEl && nyx) {
+            const total = nyx.sum_array(codes);
+            const gcdVal = codes.length > 1 ? nyx.fast_gcd(codes[0], codes[1]) : codes[0];
+            sumEl.innerHTML = `WASM Toplamı = <strong>${total}</strong> &bull; EBOB(${codes[0] || 0}, ${codes[1] || 0}) = <strong>${gcdVal}</strong>`;
+          }
+        }
+
+        const btnInspect = document.getElementById('btn-inspect');
+        const inspectInput = document.getElementById('inspector-input');
+        if (btnInspect) btnInspect.addEventListener('click', runInspector);
+        if (inspectInput) inspectInput.addEventListener('input', runInspector);
+        runInspector();
+
+        // Keyboard controls (Arrow keys, W/S, and DJ launchpad Q,W,E,R,A,S,D,F)
+        window.addEventListener('keydown', (e) => {
+          const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+          if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+
+          const k = e.key.toLowerCase();
+          if (['q', 'w', 'e', 'r', 'a', 's', 'd', 'f'].includes(k)) {
+            // Also allow W/S for game movement if in game mode
+            const mode = nyx.get_anim_mode();
+            if ((mode === 3 || mode === 4) && (k === 'w' || k === 's')) {
+              // fall through to game controls
+            } else {
+              triggerDjPad(k);
+            }
+          }
+
+          const mode = nyx.get_anim_mode();
+          if (mode === 3) {
+            const is2P = nyx.pong_is_2p_mode();
+            if (is2P) {
+              // Player 1: W/S
+              if (e.key === 'w' || e.key === 'W') {
+                nyx.pong_move_paddle(-22.0);
+                e.preventDefault();
+              } else if (e.key === 's' || e.key === 'S') {
+                nyx.pong_move_paddle(22.0);
+                e.preventDefault();
+              }
+              // Player 2: Arrow Up / Down
+              if (e.key === 'ArrowUp') {
+                nyx.pong_move_p2(-22.0);
+                e.preventDefault();
+              } else if (e.key === 'ArrowDown') {
+                nyx.pong_move_p2(22.0);
+                e.preventDefault();
+              }
+            } else {
+              if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+                nyx.pong_move_paddle(-22.0);
+                e.preventDefault();
+              } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+                nyx.pong_move_paddle(22.0);
+                e.preventDefault();
+              }
+            }
+          } else if (mode === 4) {
+            if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+              nyx.dodge_move(-22.0);
+              e.preventDefault();
+            } else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') {
+              nyx.dodge_move(22.0);
+              e.preventDefault();
+            }
+          }
+        });
+
+        // Periodic Game HUD Sync & SFX polling
+        setInterval(syncGameHUDs, 30);
+
+        // Independent display telemetry. This measures browser presentation cadence,
+        // while scene simulation and drawing remain in the Nyx/WASM frame callback.
+        let telemetryFrames = 0;
+        let telemetryStart = performance.now();
+        function samplePresentationFrame(now) {
+          telemetryFrames += 1;
+          const elapsed = now - telemetryStart;
+          if (elapsed >= 750) {
+            const fps = Math.round((telemetryFrames * 1000) / elapsed);
+            const frameMs = 1000 / Math.max(fps, 1);
+            const fpsBadge = document.getElementById('hud-fps-badge');
+            const fpsCounter = document.getElementById('fps-counter');
+            const frameValue = document.getElementById('stat-frame-value');
+            const frameStat = document.getElementById('stat-frame');
+            if (fpsBadge) fpsBadge.textContent = `${fps} FPS ACTIVE`;
+            if (fpsCounter) fpsCounter.textContent = `${fps} FPS • Nyx Frame Loop`;
+            if (frameValue) frameValue.textContent = `${frameMs.toFixed(1)} ms`;
+            if (frameStat) frameStat.style.setProperty('--meter', `${Math.min(100, (fps / 60) * 100)}%`);
+            telemetryFrames = 0;
+            telemetryStart = now;
+          }
+          requestAnimationFrame(samplePresentationFrame);
+        }
+        requestAnimationFrame(samplePresentationFrame);
+
+        // Benchmark
+        document.getElementById('btn-run-bench').addEventListener('click', () => {
+          const limit = parseInt(document.getElementById('bench-limit').value, 10);
+          const wasmLabel = document.getElementById('wasm-time-label');
+          const jsLabel = document.getElementById('js-time-label');
+          const wasmBar = document.getElementById('wasm-bar');
+          const jsBar = document.getElementById('js-bar');
+          const summary = document.getElementById('bench-summary');
+
+          summary.textContent = `Test çalıştırılıyor (Limit: ${limit.toLocaleString()} asal kontrolü)...`;
+
+          setTimeout(() => {
+            const wasmStart = performance.now();
+            const wasmCount = nyx.count_primes(limit);
+            const wasmDuration = performance.now() - wasmStart;
+
+            const jsStart = performance.now();
+            const jsCount = jsCountPrimes(limit);
+            const jsDuration = performance.now() - jsStart;
+
+            wasmLabel.textContent = `${wasmDuration.toFixed(2)} ms (${wasmCount.toLocaleString()} asal)`;
+            jsLabel.textContent = `${jsDuration.toFixed(2)} ms (${jsCount.toLocaleString()} asal)`;
+
+            const maxDuration = Math.max(wasmDuration, jsDuration, 0.001);
+            const wasmPct = Math.max(10, Math.min(100, (wasmDuration / maxDuration) * 100));
+            const jsPct = Math.max(10, Math.min(100, (jsDuration / maxDuration) * 100));
+
+            wasmBar.style.width = `${wasmPct}%`;
+            wasmBar.textContent = `${wasmDuration.toFixed(1)} ms`;
+            jsBar.style.width = `${jsPct}%`;
+            jsBar.textContent = `${jsDuration.toFixed(1)} ms`;
+
+            const ratio = (jsDuration / Math.max(wasmDuration, 0.001)).toFixed(2);
+            summary.innerHTML = `✅ <strong>Test Tamamlandı!</strong> ${limit.toLocaleString()} sayısına kadar <strong>${wasmCount.toLocaleString()}</strong> asal sayı bulundu.<br>Nyx WASM süresi: <strong>${wasmDuration.toFixed(2)} ms</strong> &bull; JavaScript süresi: <strong>${jsDuration.toFixed(2)} ms</strong> (Oran: ~${ratio}x)`;
+          }, 50);
+        });
+
+        // Math Explorer
+        document.getElementById('btn-calc-fib').addEventListener('click', () => {
+          const n = parseInt(document.getElementById('fib-input').value, 10);
+          const res = nyx.calc_fibonacci(n);
+          document.getElementById('math-result').innerHTML = `Fibonacci(${n}) = <strong>${res.toLocaleString()}</strong>`;
+        });
+
+        document.getElementById('btn-calc-collatz').addEventListener('click', () => {
+          const n = parseInt(document.getElementById('collatz-input').value, 10);
+          const steps = nyx.collatz_steps(n);
+          document.getElementById('math-result').innerHTML = `Collatz(${n}) 1'e ulaşma adım sayısı = <strong>${steps}</strong> adım`;
+        });
+
+        document.getElementById('btn-calc-gcd').addEventListener('click', () => {
+          const a = parseInt(document.getElementById('gcd-a').value, 10);
+          const b = parseInt(document.getElementById('gcd-b').value, 10);
+          const res = nyx.fast_gcd(a, b);
+          document.getElementById('math-result').innerHTML = `EBOB(${a}, ${b}) = <strong>${res}</strong>`;
+        });
+
+        // String & Array
+        document.getElementById('btn-greet').addEventListener('click', () => {
+          const name = document.getElementById('name-input').value.trim() || 'Misafir';
+          const msg = nyx.greet_user(name);
+          document.getElementById('string-result').textContent = msg;
+        });
+
+        document.getElementById('btn-sum-array').addEventListener('click', () => {
+          const raw = document.getElementById('array-input').value;
+          const nums = raw.split(',').map(x => parseInt(x.trim(), 10)).filter(x => !isNaN(x));
+          const total = nyx.sum_array(nums);
+          document.getElementById('string-result').innerHTML = `Dizi Elemanları: [${nums.join(', ')}] &rarr; Nyx WASM Toplamı = <strong>${total}</strong>`;
+        });
+
+        // Initial setup
+        document.getElementById('btn-greet').click();
+        updateCounterDisplay();
+        updateModeUI(nyx.get_anim_mode());
+
+      } catch (err) {
+        console.error('Nyx WASM Initialization error:', err);
+        const errBanner = document.createElement('div');
+        errBanner.style.background = '#e11d48';
+        errBanner.style.color = '#fff';
+        errBanner.style.padding = '1rem';
+        errBanner.style.borderRadius = '8px';
+        errBanner.style.margin = '1rem 0';
+        errBanner.textContent = 'WASM Modülü Yüklenirken Hata Oluştu: ' + err.message;
+        document.querySelector('.container').prepend(errBanner);
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>

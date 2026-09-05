@@ -1,0 +1,11 @@
+fn main() {
+    let values = [1, 2, 3, 4]
+    let doubled = map(values, value => value * 2)
+    let selected = filter(doubled, value => value > 4)
+    let total = fold(selected, 0, (sum, value) => sum + value)
+
+    assert(total == 14, "6 + 8 must produce 14")
+    print("transformed total:", total)
+}
+
+main()

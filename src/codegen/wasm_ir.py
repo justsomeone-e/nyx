@@ -27,10 +27,12 @@ from src.ir.model import (
     IRIf,
     IRLiteral,
     IRMatchExpression,
+    IRMemberAccess,
     IRModule,
     IRReference,
     IRReturn,
     IRStatement,
+    IRStruct,
     IRTypeAlias,
     IRUnary,
     IRVarDecl,
@@ -46,6 +48,7 @@ VOID = "void"
 STRING = "string"
 ARRAY_I32 = "array_i32"
 ARRAY_F64 = "array_f64"
+STRUCT_PREFIX = "struct:"
 
 WASM_TYPE_CODES = {I32: 0x7F, I64: 0x7E, F64: 0x7C}
 
@@ -181,7 +184,7 @@ class ModuleIR:
             "f64.neg", "f64.eq", "f64.ne", "f64.lt", "f64.gt", "f64.le",
             "f64.ge", "f64.convert_i32_s", "return", "drop", "memory.size",
             "memory.grow", "memory.copy", "unreachable",
-            "i32.load", "f64.load", "i32.wrap_i64", "i64.shr_u",
+            "i32.load", "f64.load", "i32.store", "i32.wrap_i64", "i64.shr_u",
         }
         for instruction in instructions:
             op = instruction.op
@@ -379,6 +382,10 @@ class ModuleIR:
                 output.append(0x28 if op == "i32.load" else 0x2B)
                 output.extend(_u32(2 if op == "i32.load" else 3))
                 output.extend(_u32(0))
+            elif op == "i32.store":
+                output.append(0x36)
+                output.extend(_u32(2))
+                output.extend(_u32(0))
             elif op in ("local.get", "local.set", "local.tee"):
                 output.append({"local.get": 0x20, "local.set": 0x21, "local.tee": 0x22}[op])
                 output.extend(_u32(locals_by_name[str(arg)]))
@@ -428,15 +435,19 @@ class ModuleIR:
 class BundleLowerer:
     DATA_START = 2048
 
-    def __init__(self, hir: IRModule, module_name: str):
+    def __init__(self, hir: IRModule, module_name: str, wasi: bool = False):
         self.hir = hir
         self.module_name = module_name
+        self.wasi = wasi
         self.user_functions = [
             function for function in hir.functions
-            if not function.name.startswith("_") and function.name != "main"
+            if not function.name.startswith("_") and (wasi or function.name != "main")
         ]
         self.type_aliases = {
             item.name: item.actual_type for item in hir.items if isinstance(item, IRTypeAlias)
+        }
+        self.structs = {
+            item.name: item for item in hir.items if isinstance(item, IRStruct)
         }
         self.global_types: Dict[str, str] = {}
         self.extern_functions = {
@@ -460,6 +471,33 @@ class BundleLowerer:
         heap_start = _align8(self.next_data_offset)
         runtime = _runtime_functions()
         imports = [self._lower_import(item) for item in self.extern_functions.values()]
+        if self.wasi:
+            fd_write = next((item for item in imports if item.name == "fd_write"), None)
+            expected_fd_write = ImportFunctionIR(
+                "wasi_snapshot_preview1",
+                "fd_write",
+                (I32, I32, I32, I32),
+                I32,
+            )
+            if fd_write is not None and fd_write != expected_fd_write:
+                raise BundleCompileError(
+                    "WASI profile reserves fd_write with signature "
+                    "wasi_snapshot_preview1.(i32, i32, i32, i32) -> i32"
+                )
+            if fd_write is None:
+                imports.append(
+                    expected_fd_write
+                )
+            runtime.extend(_wasi_runtime_functions())
+            main = next((function for function in lowered if function.name == "main"), None)
+            if main is None:
+                raise BundleCompileError("WASI profile requires fn main()")
+            if main.params or main.result != VOID:
+                raise BundleCompileError("WASI entry point must be fn main() -> void")
+            main.export = False
+            runtime.append(
+                FunctionIR("_start", [], VOID, body=[Instruction("call", "main")])
+            )
         return ModuleIR(self.module_name, runtime + lowered, self.data, heap_start, imports, globals_)
 
     def _lower_globals(self) -> List[GlobalIR]:
@@ -516,12 +554,17 @@ class BundleLowerer:
             symbols[parameter.name] = value_type
             if value_type in (STRING, ARRAY_I32, ARRAY_F64):
                 params.extend(((f"{parameter.name}_ptr", I32), (f"{parameter.name}_len", I32)))
+            elif value_type.startswith(STRUCT_PREFIX):
+                self._struct_layout(value_type[len(STRUCT_PREFIX):])
+                params.append((f"{parameter.name}_ptr", I32))
             elif value_type in (I32, F64):
                 params.append((parameter.name, value_type))
             else:
                 raise BundleCompileError(f"Unsupported parameter type '{value_type}' in {function.name}()")
 
         result = self._type(function.return_type)
+        if self.wasi and function.name == "main" and result == "any":
+            result = VOID
         if result == STRING:
             wasm_result = I64
         elif result in (I32, F64, VOID):
@@ -775,6 +818,24 @@ class BundleLowerer:
             if value_type not in (I32, F64):
                 raise BundleCompileError(f"Identifier '{node.name}' is not a numeric WASM value")
             return [Instruction("global.get" if node.name in self.global_types else "local.get", node.name)]
+        if isinstance(node, IRMemberAccess):
+            if not isinstance(node.obj, IRReference):
+                raise BundleCompileError("WASM struct field access requires a struct parameter reference")
+            struct_type = symbols.get(node.obj.name, "")
+            if not struct_type.startswith(STRUCT_PREFIX):
+                raise BundleCompileError(f"WASM member access requires a scalar struct parameter, found '{struct_type}'")
+            struct_name = struct_type[len(STRUCT_PREFIX):]
+            _, fields = self._struct_layout(struct_name)
+            field = next((item for item in fields if item[0] == node.member), None)
+            if field is None:
+                raise BundleCompileError(f"Unknown field '{node.member}' on WASM struct '{struct_name}'")
+            _, field_type, offset = field
+            return [
+                Instruction("local.get", f"{node.obj.name}_ptr"),
+                Instruction("i32.const", offset),
+                Instruction("i32.add"),
+                Instruction("f64.load" if field_type == F64 else "i32.load"),
+            ]
         if isinstance(node, IRUnary):
             value_type = self._expr_type(node.expr, symbols)
             if node.op in ("not", "!"):
@@ -840,6 +901,8 @@ class BundleLowerer:
         raise BundleCompileError(f"Unsupported expression '{type(node).__name__}' in WASM bundle")
 
     def _emit_call(self, node: IRCall, symbols: Dict[str, str]) -> List[Instruction]:
+        if node.receiver is None and node.callee == "print" and self.wasi:
+            return self._emit_wasi_print(node.args, symbols)
         if node.receiver is not None:
             receiver_type = self._expr_type(node.receiver, symbols)
             if node.callee in ("len", "length", "size") and not node.args:
@@ -865,9 +928,35 @@ class BundleLowerer:
                 output.extend(self._emit_string_argument(argument, symbols))
             elif parameter_type in (ARRAY_I32, ARRAY_F64):
                 output.extend(self._emit_array_argument(argument, parameter_type, symbols))
+            elif parameter_type.startswith(STRUCT_PREFIX):
+                output.extend(self._emit_struct_argument(argument, parameter_type, symbols))
             else:
                 output.extend(self._emit_expr_as(argument, parameter_type, symbols))
         output.append(Instruction("call", node.callee))
+        return output
+
+    def _emit_wasi_print(
+        self,
+        arguments: Sequence[IRExpr],
+        symbols: Dict[str, str],
+    ) -> List[Instruction]:
+        output: List[Instruction] = []
+        separator = self._intern_data(b" ")
+        newline = self._intern_data(b"\n")
+        for index, argument in enumerate(arguments):
+            if index:
+                output.extend((
+                    Instruction("i32.const", separator),
+                    Instruction("i32.const", 1),
+                    Instruction("call", "__nyx_wasi_write"),
+                ))
+            output.extend(self._emit_string_argument(argument, symbols))
+            output.append(Instruction("call", "__nyx_wasi_write"))
+        output.extend((
+            Instruction("i32.const", newline),
+            Instruction("i32.const", 1),
+            Instruction("call", "__nyx_wasi_write"),
+        ))
         return output
 
     def _emit_string_argument(self, node: IRExpr, symbols: Dict[str, str]) -> List[Instruction]:
@@ -902,7 +991,19 @@ class BundleLowerer:
             ]
         raise BundleCompileError("WASM array arguments currently require an array parameter reference")
 
+    def _emit_struct_argument(
+        self,
+        node: IRExpr,
+        expected: str,
+        symbols: Dict[str, str],
+    ) -> List[Instruction]:
+        if isinstance(node, IRReference) and symbols.get(node.name) == expected:
+            return [Instruction("local.get", f"{node.name}_ptr")]
+        raise BundleCompileError("WASM struct arguments currently require a struct parameter reference")
+
     def _expr_type(self, node: IRExpr, symbols: Dict[str, str]) -> str:
+        if isinstance(node, IRCall) and node.receiver is None and node.callee == "print":
+            return VOID
         if (
             isinstance(node, IRCall)
             and node.receiver is not None
@@ -918,7 +1019,32 @@ class BundleLowerer:
         while value_type in self.type_aliases and value_type not in seen:
             seen.add(value_type)
             value_type = _nyx_type(self.type_aliases[value_type])
+        if value_type in self.structs:
+            return STRUCT_PREFIX + value_type
         return value_type
+
+    def _struct_layout(self, name: str) -> Tuple[int, Tuple[Tuple[str, str, int], ...]]:
+        definition = self.structs.get(name)
+        if definition is None:
+            raise BundleCompileError(f"Unknown WASM struct type '{name}'")
+        offset = 0
+        max_alignment = 1
+        layout: List[Tuple[str, str, int]] = []
+        for field in definition.fields:
+            field_type = self._type(field.type)
+            if field_type not in (I32, F64):
+                raise BundleCompileError(
+                    f"WASM struct ABI supports only int/float/bool fields; "
+                    f"'{name}.{field.name}' is '{field.type}'"
+                )
+            alignment = 8 if field_type == F64 else 4
+            size = alignment
+            offset = (offset + alignment - 1) & -alignment
+            layout.append((field.name, field_type, offset))
+            offset += size
+            max_alignment = max(max_alignment, alignment)
+        total = (offset + max_alignment - 1) & -max_alignment
+        return total, tuple(layout)
 
     def _emit_string_return(
         self,
@@ -1062,6 +1188,34 @@ def _runtime_functions() -> List[FunctionIR]:
         ],
     )
     return [abi, alloc, free]
+
+
+def _wasi_runtime_functions() -> List[FunctionIR]:
+    """Return the WASI preview1 stdout bridge used by the executable profile."""
+    return [
+        FunctionIR(
+            "__nyx_wasi_write",
+            [("ptr", I32), ("len", I32)],
+            VOID,
+            export=False,
+            body=[
+                # Linear-memory bytes 0..11 are reserved for one transient
+                # iovec and nwritten. Static Nyx data starts at DATA_START.
+                Instruction("i32.const", 0),
+                Instruction("local.get", "ptr"),
+                Instruction("i32.store"),
+                Instruction("i32.const", 4),
+                Instruction("local.get", "len"),
+                Instruction("i32.store"),
+                Instruction("i32.const", 1),
+                Instruction("i32.const", 0),
+                Instruction("i32.const", 1),
+                Instruction("i32.const", 8),
+                Instruction("call", "fd_write"),
+                Instruction("drop"),
+            ],
+        )
+    ]
 
 
 def _nyx_type(type_node: object) -> str:

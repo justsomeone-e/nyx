@@ -771,6 +771,8 @@ class IRVerifier:
                 collection_type = node.collection_expr.type
                 if collection_type.name in ("Array", "Iterator") and collection_type.arguments:
                     item_type = collection_type.arguments[0]
+                elif collection_type == STRING:
+                    item_type = STRING
                 elif collection_type not in (ANY, STRING):
                     self._issue("HIR0006", f"Type '{collection_type}' is not iterable", node.collection_expr.span)
             definition = self.definitions.get(node.symbol)

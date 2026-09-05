@@ -69,6 +69,13 @@ my_project/
   * If targeting `js`, emits an ES2022 Node.js module.
   * If targeting `rust`, emits clean, borrow-checked Rust 2021 code.
 * `nyx run [file.nyx] [--target <cpp|python|js|rust>]`: Compiles and executes with the selected backend.
+* `nyx build [file.nyx] --target js --esm`: Emits an import-safe ES2022 `.mjs`
+  module. Public Nyx functions are explicit exports and `main()` is not invoked
+  as an import side effect.
+* `nyx build [file.nyx] --target wasm --wasi`: Emits the normal WASM artifact
+  set with a WASI preview1 `fd_write` import and `_start` executable entry point.
+  The RC3 profile currently supports string arguments to `print`; richer WASI
+  filesystem/argument APIs remain separately capability-gated.
 * `nyx clean`: Removes local `build/`, `target/`, and `__pycache__/` artifacts.
 
 ### Testing & Quality Assurance
@@ -104,7 +111,7 @@ adapters must be selected explicitly.
 ### Toolchain Diagnostics
 * `nyx version`: Displays compiler version and detected host toolchains.
 * `nyx doctor`: Reports actionable C++20, Node.js, Rust, and Python availability.
-* `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract.
+* `nyx targets --json`: Prints the machine-readable backend/stdlib capability contract; requires the optional Python orchestration layer.
 ## Target selection
 
 `#target` is optional. Without an override Nyx uses the native C++20 target.

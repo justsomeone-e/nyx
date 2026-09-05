@@ -160,6 +160,29 @@ fn main() { lifecycle(false); lifecycle(true) }
     assert deferred.count('"first".to_string()') >= 2
     assert deferred.find('"second".to_string()', deferred.find("pub fn lifecycle")) < deferred.rfind('"first".to_string()')
 
+    propagate_source = """
+fn source(ok: bool) -> Result<int, string> {
+    if ok { return Ok(40) }
+    return Err("boom")
+}
+fn calculate(ok: bool) -> Result<int, string> {
+    defer print("cleanup")
+    var value = source(ok)?
+    return Ok(value + 2)
+}
+fn main() {
+    match calculate(false) {
+        Ok(value) => print(value),
+        Err(error) => print(error)
+    }
+}
+"""
+    propagated = _compile_metadata(compiler, propagate_source, "result_propagation_contract")
+    error_branch = propagated.find("NyxResult::Err(_nyx_propagate_error_")
+    cleanup = propagated.find('"cleanup".to_string()', error_branch)
+    early_return = propagated.find("return NyxResult::Err(_nyx_propagate_error_", error_branch)
+    assert 0 <= error_branch < cleanup < early_return
+
     numeric = _compile_metadata(compiler, NUMERIC_SOURCE, "numeric_contract")
     for marker in ("wrapping_add", "wrapping_sub", "wrapping_mul", "_nyx_i64_div", "_nyx_i64_mod"):
         assert marker in numeric, marker

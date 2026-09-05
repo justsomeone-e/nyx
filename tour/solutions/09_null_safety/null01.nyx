@@ -1,7 +1,0 @@
-fn main() {
-    let nickname: string? = null
-    let display_name: string = nickname ?? "Guest"
-    print("Welcome,", display_name)
-}
-
-main()

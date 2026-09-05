@@ -432,6 +432,8 @@ class HIRLowerer:
             item_type = INT
             if collection is not None and collection.type.name in ("Array", "Iterator") and collection.type.arguments:
                 item_type = collection.type.arguments[0]
+            elif collection is not None and collection.type.name == "string":
+                item_type = STRING
             self.scopes.push()
             try:
                 symbol = _Symbol(node.var_name, self._next_symbol(node.var_name), item_type, "loop-variable")

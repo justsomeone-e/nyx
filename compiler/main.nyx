@@ -10,7 +10,7 @@
 fn print_banner() {
     print("=======================================================")
     print("  nyx Systems Compiler (Stage 1 Native Toolchain)     ")
-    print("  Version: v4.0.0-rc.2 (Self-Hosted C++20 Core)         ")
+    print("  Version: v4.0.0 (Self-Hosted C++20 Core)         ")
     print("=======================================================")
 }
 

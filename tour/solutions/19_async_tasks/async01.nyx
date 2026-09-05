@@ -1,0 +1,14 @@
+async fn compute(calls: Array<int>) -> int {
+    set calls[0] = calls[0] + 1
+    return 21
+}
+
+async fn main() {
+    let calls = [0]
+    let task: Task<int> = compute(calls)
+    let first: int = await task
+    let second: int = await task
+    assert(first + second == 42, "both awaits must observe value 21")
+    assert(calls[0] == 1, "the task body must run once")
+    print("task total:", first + second)
+}

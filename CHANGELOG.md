@@ -4,6 +4,40 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [4.0.0] - Nirvana (release preparation)
+
+### Nirvana stable v4 contract
+
+* Consolidated the unpublished RC3 work into the v4.0.0 stable release scope.
+  C++, JavaScript, and Python retain the stable semantic contract; Rust,
+  WebAssembly, React, and assembly retain their existing beta status.
+* Removed quadratic full-source UTF-8 rescanning from the self-host lexer and
+  preserved complete UTF-8 byte lengths in generated C++ string literals.
+* Aligned string index boundaries and collection length methods across the
+  stable backends, with Unicode, combining-mark, and embedded-NUL regressions.
+* Required release conformance on Windows, Linux, Intel macOS, and ARM macOS.
+
+* Added typed-HIR postfix `?` lowering to the Rust backend with LIFO `defer`
+  execution before propagated error returns.
+* Added import-safe JavaScript ESM builds with explicit exports and preserved
+  signed 64-bit integer behavior.
+* Added WASI preview1 executable output and borrowed scalar-struct WebAssembly
+  ABI marshalling with generated TypeScript interfaces.
+* Tightened capability-derived diagnostics for backend features that remain
+  unsupported.
+* Expanded Tour of Nyx to 81 verified exercises across 21 modules and removed
+  retired duplicate lesson files.
+* Closed hosted-backend semantic gaps for Array/Struct value copies and Unicode
+  code-point length, indexing, and iteration.
+* Expanded typed browser/Canvas examples without introducing handwritten
+  application logic into the generated host bridge.
+
+### Validation
+
+* The unified test framework, native self-host chain, backend conformance,
+  release packaging, extension tests, and 81/81 Tour verification remain
+  release gates.
+
 ## [4.0.0-rc.2] - 2026-09-04
 
 ### Bodhi release candidate

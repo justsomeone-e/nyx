@@ -153,6 +153,52 @@ def _run_recursive_struct_constructor_contract() -> None:
     )
 
 
+def _run_value_and_unicode_semantics() -> None:
+    source = '''
+struct Box { value: int }
+
+fn mutate(values: Array<int>) {
+    set values[0] = 7
+}
+
+fn main() {
+    var first: Array<int> = [1, 2]
+    var second: Array<int> = first
+    set second[0] = 9
+    print(first[0], second[0])
+
+    var left: Box = Box(1)
+    var right: Box = left
+    set right.value = 9
+    print(left.value, right.value)
+
+    mutate(first)
+    print(first[0])
+    print("ş😀".len(), "ş😀"[0], "ş😀"[1])
+    var joined: string = ""
+    for character in "ş😀" { set joined = joined + character }
+    print(joined)
+    var text = "ş😀e\\u0301\\0"
+    print(len(text), text.len(), text.length(), text.size(), text[0], text[1], text[2])
+    print(text[3] == "\\u0301", text[4] == "\\0")
+    print(len(text[-1]), len(text[5]), len(text[9223372036854775807]))
+    var empty = ""
+    print(len(empty[0]), len(empty[-1]))
+}
+'''
+    generated = _emit(source, "value_unicode_semantics.nyx")
+    with tempfile.TemporaryDirectory(prefix="nyx_value_unicode_") as directory:
+        cpp_path = os.path.join(directory, "semantics.cpp")
+        executable = os.path.join(directory, "semantics.exe")
+        with open(cpp_path, "w", encoding="utf-8") as handle:
+            handle.write(generated)
+        compiled, message = CppToolchain.compile_cpp(cpp_path, executable)
+        assert compiled, message
+        return_code, output = CppToolchain.run_executable(executable)
+        assert return_code == 0, output
+        assert output.replace("\r\n", "\n").strip() == "1 9\n1 9\n1\n2 ş 😀\nş😀\n5 5 5 5 ş 😀 e\ntrue true\n0 0 0\n0 0"
+
+
 def run_hir_cpp_suite() -> bool:
     print("=" * 70)
     print("NYX HIR-AUTHORITATIVE C++20 NATIVE BACKEND")
@@ -164,6 +210,7 @@ def run_hir_cpp_suite() -> bool:
     _run_stage1_smoke()
     _run_cli_args_smoke()
     _run_recursive_struct_constructor_contract()
+    _run_value_and_unicode_semantics()
     print(
         f"[PASS] {corpus_count} emitted, {runtime_count} native runtime cases, "
         "Nyx-authored stage1 frontend and argv runtime compiled and executed"

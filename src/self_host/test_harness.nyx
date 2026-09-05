@@ -1729,7 +1729,7 @@ impl WasmEmitter {
 fn main() {
     var code = "fn add(a: int, b: int) -> int { return a + b; } fn main() -> int { var x: int = 10; return add(x, 20); }"
     print("--- Lexing ---")
-    var lex = Lexer(code, 0, 1, 1)
+    var lex = Lexer(lexer_characters(code), 0, 1, 1)
     var tokens = lex.tokenize()
     
     print("--- Parsing ---")

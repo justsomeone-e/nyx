@@ -77,6 +77,7 @@ from __future__ import annotations
 import base64 as _nyx_base64
 import asyncio as _nyx_asyncio
 import builtins as _nyx_builtins
+import copy as _nyx_copy
 import math as _nyx_math
 import os as _nyx_os
 import queue as _nyx_queue
@@ -85,6 +86,14 @@ import subprocess as _nyx_subprocess
 import sys as _nyx_sys
 import threading as _nyx_threading
 import time as _nyx_time
+
+
+def _nyx_clone_value(value):
+    return _nyx_copy.deepcopy(value)
+
+
+def _nyx_string_index(value, index):
+    return value[index] if 0 <= index < len(value) else ""
 
 
 if (getattr(_nyx_sys.stdout, "encoding", "") or "").lower().replace("-", "") != "utf8":
@@ -930,10 +939,12 @@ class HIRPythonEmitter:
         prefix = "    " * indent
         if isinstance(node, IRVarDecl):
             name = self._symbol(node.symbol, node.name)
-            return [f"{prefix}{name} = {self._expr_as(node.expr, node.type)}"]
+            value = self._copy_value(self._expr_as(node.expr, node.type), node.type)
+            return [f"{prefix}{name} = {value}"]
         if isinstance(node, IRAssign):
+            value = self._copy_value(self._expr_as(node.expr, node.target.type), node.target.type)
             return [
-                f"{prefix}{self._expr(node.target)} = {self._expr_as(node.expr, node.target.type)}"
+                f"{prefix}{self._expr(node.target)} = {value}"
             ]
         if isinstance(node, IRExprStatement):
             return [f"{prefix}{self._expr(node.expr)}"]
@@ -1131,9 +1142,12 @@ class HIRPythonEmitter:
         if isinstance(node, IRCall):
             expected_types = self._call_parameter_types(node)
             args = ", ".join(
-                self._expr_as(
-                    argument,
-                    expected_types[index] if index < len(expected_types) else None,
+                self._copy_value(
+                    self._expr_as(
+                        argument,
+                        expected_types[index] if index < len(expected_types) else None,
+                    ),
+                    expected_types[index] if index < len(expected_types) else argument.type,
                 )
                 for index, argument in enumerate(node.args)
             )
@@ -1141,7 +1155,12 @@ class HIRPythonEmitter:
                 receiver = self._expr(node.receiver)
                 if node.callee == "push":
                     return f"{receiver}.append({args})"
-                if node.callee == "len" and not node.args:
+                if not node.args and (
+                    node.callee == "len" or (
+                        node.callee in ("length", "size")
+                        and node.receiver.type.name in ("string", "Array")
+                    )
+                ):
                     return f"_nyx_i64(len({receiver}))"
                 return f"{receiver}.{self._identifier(node.callee)}({args})"
             collection_builtins = {
@@ -1163,6 +1182,8 @@ class HIRPythonEmitter:
                 return f"_nyx_safe_getattr({obj}, {member!r})"
             return f"{obj}.{member}"
         if isinstance(node, IRIndexAccess):
+            if node.obj.type.name == "string":
+                return f"_nyx_string_index({self._expr(node.obj)}, {self._expr(node.index)})"
             return f"{self._expr(node.obj)}[{self._expr(node.index)}]"
         if isinstance(node, IRArray):
             element_type = node.type.arguments[0] if node.type.arguments else None
@@ -1195,6 +1216,18 @@ class HIRPythonEmitter:
         rendered = self._expr(node)
         if expected is not None and expected.name == "float" and node.type.name == "int":
             return f"float({rendered})"
+        return rendered
+
+    def _copy_value(self, rendered: str, value_type: IRType | None) -> str:
+        if value_type is None:
+            return rendered
+        if value_type.name == "Array" or value_type.name in self.structs:
+            return f"_nyx_clone_value({rendered})"
+        if value_type.name in ("Option", "Result") and any(
+            argument.name == "Array" or argument.name in self.structs
+            for argument in value_type.arguments
+        ):
+            return f"_nyx_clone_value({rendered})"
         return rendered
 
     def _call_parameter_types(self, node: IRCall) -> Sequence[IRType]:

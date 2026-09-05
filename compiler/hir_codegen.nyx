@@ -66,7 +66,7 @@ impl HIRCodeGen {
             elif ch == "\t" { escaped = escaped + "\\t" }
             else { escaped = escaped + ch }
         }
-        return "std::string(\"" + escaped + "\", " + to_string(len(value)) + ")"
+        return "std::string(\"" + escaped + "\", sizeof(\"" + escaped + "\") - 1)"
     }
 
     fn map_type(self, value_type: HIRType) -> string {
@@ -257,7 +257,7 @@ impl HIRCodeGen {
                 var method = self.identifier(node.name)
                 if node.name == "push" { method = "push_back" }
                 if node.name == "len" or node.name == "length" or node.name == "size" {
-                    return "static_cast<int64_t>(" + receiver + separator + "size())"
+                    return "_nyx_len(" + receiver + ")"
                 }
                 if node.name == "pop" { method = "pop_back" }
                 return receiver + separator + method + "(" + args_text + ")"
@@ -479,10 +479,15 @@ impl HIRCodeGen {
             var variable = self.identifier(node.name)
             if len(node.third) > 0 {
                 if node.third[0].has_type and node.third[0].type_info.name == "string" {
-                    var iterator = self.temporary("string_iter")
-                    self.emit_line("for (char " + iterator + " : " + self.gen_expr(node.third[0]) + ") {")
+                    var source = self.temporary("string_source")
+                    var offset = self.temporary("string_offset")
+                    var start = self.temporary("string_start")
+                    self.emit_line("const auto& " + source + " = " + self.gen_expr(node.third[0]) + ";")
+                    self.emit_line("for (size_t " + offset + " = 0; " + offset + " < " + source + ".size();) {")
                     self.indent_level = self.indent_level + 1
-                    self.emit_line("std::string " + variable + "(1, " + iterator + ");")
+                    self.emit_line("const size_t " + start + " = " + offset + "++;")
+                    self.emit_line("while (" + offset + " < " + source + ".size() && (static_cast<unsigned char>(" + source + "[" + offset + "]) & 0xC0) == 0x80) ++" + offset + ";")
+                    self.emit_line("std::string " + variable + " = " + source + ".substr(" + start + ", " + offset + " - " + start + ");")
                 } else {
                     self.emit_line("for (auto& " + variable + " : " + self.gen_expr(node.third[0]) + ") {")
                     self.indent_level = self.indent_level + 1
@@ -917,9 +922,10 @@ impl HIRCodeGen {
         self.emit_line("    return result;")
         self.emit_line("}")
         self.emit_line("inline bool _nyx_contains(const std::string& value, const std::string& part) { return value.find(part) != std::string::npos; }")
+        self.emit_line("inline int64_t _nyx_len(const std::string& value) { int64_t result = 0; for (const unsigned char byte : value) if ((byte & 0xC0) != 0x80) ++result; return result; }")
         self.emit_line("template <typename T> int64_t _nyx_len(const T& value) { return static_cast<int64_t>(value.size()); }")
         self.emit_line("template <typename T> std::vector<T> _nyx_destructure_check(std::vector<T> value, int64_t minimum, const std::string& message) { if (static_cast<int64_t>(value.size()) < minimum) throw std::runtime_error(message); return value; }")
-        self.emit_line("inline std::string _nyx_index(const std::string& value, int64_t index) { if (index < 0 || static_cast<size_t>(index) >= value.size()) return {}; return std::string(1, value[static_cast<size_t>(index)]); }")
+        self.emit_line("inline std::string _nyx_index(const std::string& value, int64_t index) { if (index < 0) return {}; int64_t current = 0; for (size_t offset = 0; offset < value.size();) { const size_t start = offset++; while (offset < value.size() && (static_cast<unsigned char>(value[offset]) & 0xC0) == 0x80) ++offset; if (current++ == index) return value.substr(start, offset - start); } return {}; }")
         self.emit_line("template <typename T> T& _nyx_index(std::vector<T>& value, int64_t index) { return value.at(static_cast<size_t>(index)); }")
         self.emit_line("template <typename T> const T& _nyx_index(const std::vector<T>& value, int64_t index) { return value.at(static_cast<size_t>(index)); }")
         self.emit_line("inline std::vector<std::string> _nyx_cli_arguments;")

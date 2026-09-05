@@ -18,6 +18,8 @@ This directory contains standalone, runnable examples demonstrating the syntax, 
 | [`10_concurrent_tasks.nyx`](10_concurrent_tasks.nyx) | Asynchronous functions (`async fn`), `Task<T>`, `await`, `guard`, and `defer` | `cpp`, `js`, `python` |
 | [`11_data_pipeline.nyx`](11_data_pipeline.nyx) | Domain structs, traits (`impl Trait for Struct`), pattern matching, stream pipelines | `cpp`, `js`, `python` |
 | [`12_pong_game.nyx`](12_pong_game.nyx) | Interactive playable Pong game (Player vs CPU), physics, input, ASCII arena | `cpp`, `js`, `python` |
+| [`web_pong/`](web_pong/) | Interactive playable Pong in the browser with `std/web` | `wasm` |
+| [`web_site/`](web_site/) | Full interactive WebAssembly portal (Canvas 2D, 7 animation/game modes, 5 procedural music tracks, DJ launchpad, Pong 2.0, fireworks show, gravity vortex, byte inspector, benchmarks) | `wasm` |
 
 ## How to Run
 

@@ -312,7 +312,7 @@ def run_bootstrap_parser_test() -> bool:
         )
         native_sections.append(f"""
     var code_{index} = "{escaped_src}"
-    var lexer_{index} = Lexer(code_{index}, 0, 1, 1)
+    var lexer_{index} = Lexer(lexer_characters(code_{index}), 0, 1, 1)
     var tokens_{index} = lexer_{index}.tokenize()
     var parser_{index} = Parser(tokens_{index}, 0, false, "", "")
     var ast_{index} = parser_{index}.parse_program()

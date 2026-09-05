@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Curriculum Builder for Tour of Nyx
-Generates 67 progressive exercises across 16 core language modules.
+Generates 81 progressive exercises across 21 language modules.
 """
 
 import os
@@ -2651,54 +2651,48 @@ main()
         "mode": "run",
         "description": "Ensure cleanup actions run on scope exit with defer.",
         "hints": [
-            "Add `defer release_lock(lock)` inside `do_critical_work()` so the lock is freed on return."
+            "Add `defer release_lock()` inside `do_critical_work()` so cleanup runs on return."
         ],
         "exercise_code": '''// I AM NOT DONE
 // `defer expression` schedules an expression to run when the surrounding function exits.
-// TODO: Use `defer` so `release_lock(lock)` is guaranteed to run when `do_critical_work` exits.
+// TODO: Use `defer` so `release_lock()` is guaranteed to run when `do_critical_work` exits.
 
-struct Lock {
-    is_locked: bool
+var cleanup_state: Array<bool> = [false]
+
+fn release_lock() {
+    set cleanup_state[0] = true
 }
 
-fn release_lock(lock: Lock) {
-    lock.is_locked = false
-}
-
-fn do_critical_work(lock: Lock) {
-    lock.is_locked = true
-    // TODO: Add defer release_lock(lock) here so it is freed when exiting this function!
+fn do_critical_work() {
+    set cleanup_state[0] = false
+    // TODO: Add defer release_lock() here.
     print("Performing critical work with lock held...")
 }
 
 fn main() {
-    let lock = Lock(false)
-    do_critical_work(lock)
-    assert(lock.is_locked == false, "Lock must be released automatically via defer upon exit!")
-    print("Lock safely released:", lock.is_locked == false)
+    do_critical_work()
+    assert(cleanup_state[0] == true, "Cleanup must run automatically via defer upon exit!")
+    print("Lock safely released:", cleanup_state[0])
 }
 
 main()
 ''',
-        "solution_code": '''struct Lock {
-    is_locked: bool
+        "solution_code": '''var cleanup_state: Array<bool> = [false]
+
+fn release_lock() {
+    set cleanup_state[0] = true
 }
 
-fn release_lock(lock: Lock) {
-    lock.is_locked = false
-}
-
-fn do_critical_work(lock: Lock) {
-    lock.is_locked = true
-    defer release_lock(lock)
+fn do_critical_work() {
+    set cleanup_state[0] = false
+    defer release_lock()
     print("Performing critical work with lock held...")
 }
 
 fn main() {
-    let lock = Lock(false)
-    do_critical_work(lock)
-    assert(lock.is_locked == false, "Lock must be released automatically via defer upon exit!")
-    print("Lock safely released:", lock.is_locked == false)
+    do_critical_work()
+    assert(cleanup_state[0] == true, "Cleanup must run automatically via defer upon exit!")
+    print("Lock safely released:", cleanup_state[0])
 }
 
 main()
@@ -2714,65 +2708,57 @@ main()
         "mode": "run",
         "description": "Observe that defer statements execute when exiting their scope.",
         "hints": [
-            "Add `defer cleanup_step1(cleaner)` and `defer cleanup_step2(cleaner)` inside `process_batch()`."
+            "Add `defer cleanup_step1()` and then `defer cleanup_step2()`; deferred calls run in LIFO order."
         ],
         "exercise_code": '''// I AM NOT DONE
-// Multiple defer calls are scheduled and execute cleanly before return.
-// TODO: Add defer statements for cleanup_step1 and cleanup_step2 so both flags become true.
+// Multiple defer calls execute in last-in, first-out order before return.
+// TODO: Add both cleanup calls so `cleanup_order` becomes "21".
 
-struct Cleaner {
-    step1: bool,
-    step2: bool
+var cleanup_log: Array<string> = [""]
+
+fn cleanup_step1() {
+    set cleanup_log[0] = cleanup_log[0] + "1"
 }
 
-fn cleanup_step1(cleaner: Cleaner) {
-    cleaner.step1 = true
+fn cleanup_step2() {
+    set cleanup_log[0] = cleanup_log[0] + "2"
 }
 
-fn cleanup_step2(cleaner: Cleaner) {
-    cleaner.step2 = true
-}
-
-fn process_batch(cleaner: Cleaner) {
+fn process_batch() {
+    set cleanup_log[0] = ""
     print("Batch processing in progress...")
-    // TODO: Add defer cleanup_step1(cleaner) and defer cleanup_step2(cleaner)
+    // TODO: Add defer cleanup_step1() and defer cleanup_step2()
 }
 
 fn main() {
-    let cleaner = Cleaner(false, false)
-    process_batch(cleaner)
-    assert(cleaner.step1 == true, "Cleanup step 1 must have run via defer!")
-    assert(cleaner.step2 == true, "Cleanup step 2 must have run via defer!")
-    print("All batch cleanup handlers executed via defer successfully!")
+    process_batch()
+    assert(cleanup_log[0] == "21", "Deferred cleanup must execute in LIFO order!")
+    print("Cleanup order:", cleanup_log[0])
 }
 
 main()
 ''',
-        "solution_code": '''struct Cleaner {
-    step1: bool,
-    step2: bool
+        "solution_code": '''var cleanup_log: Array<string> = [""]
+
+fn cleanup_step1() {
+    set cleanup_log[0] = cleanup_log[0] + "1"
 }
 
-fn cleanup_step1(cleaner: Cleaner) {
-    cleaner.step1 = true
+fn cleanup_step2() {
+    set cleanup_log[0] = cleanup_log[0] + "2"
 }
 
-fn cleanup_step2(cleaner: Cleaner) {
-    cleaner.step2 = true
-}
-
-fn process_batch(cleaner: Cleaner) {
+fn process_batch() {
+    set cleanup_log[0] = ""
     print("Batch processing in progress...")
-    defer cleanup_step1(cleaner)
-    defer cleanup_step2(cleaner)
+    defer cleanup_step1()
+    defer cleanup_step2()
 }
 
 fn main() {
-    let cleaner = Cleaner(false, false)
-    process_batch(cleaner)
-    assert(cleaner.step1 == true, "Cleanup step 1 must have run via defer!")
-    assert(cleaner.step2 == true, "Cleanup step 2 must have run via defer!")
-    print("All batch cleanup handlers executed via defer successfully!")
+    process_batch()
+    assert(cleanup_log[0] == "21", "Deferred cleanup must execute in LIFO order!")
+    print("Cleanup order:", cleanup_log[0])
 }
 
 main()
@@ -3250,6 +3236,770 @@ fn main() {
     assert(final_atk == 60, "Boosted attack must be (20 + 10) * 2 = 60!")
     assert(rank == "Champion", "Level 10 hero must have rank 'Champion'!")
     print("Hero:", hero.name, "Rank:", rank, "Attack:", final_atk)
+}
+
+main()
+'''
+    },
+
+    # =========================================================================
+    # 16_modern_expressions (3 exercises)
+    # =========================================================================
+    {
+        "id": "strings01",
+        "name": "strings01",
+        "topic": "16_modern_expressions",
+        "title": "Unicode-Safe String Interpolation",
+        "path": "exercises/16_modern_expressions/strings01.nyx",
+        "solution": "solutions/16_modern_expressions/strings01.nyx",
+        "mode": "run",
+        "description": "Build readable Unicode text with typed interpolation instead of manual concatenation.",
+        "hints": [
+            "Interpolated strings begin with `$\"` and evaluate expressions inside `{...}`.",
+            "Use `$\"{city}: {signals} signals 🌙\"`; Nyx preserves the Unicode text without normalization."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Interpolation keeps values typed until they are formatted and avoids long
+// chains of string concatenation. Unicode text remains intact.
+// TODO: build exactly "İstanbul: 3 signals 🌙" with one interpolated string.
+
+fn main() {
+    let city = "İstanbul"
+    let signals = 3
+    let summary = city
+
+    assert(summary == "İstanbul: 3 signals 🌙", "summary must include both values")
+    print(summary)
+}
+
+main()
+''',
+        "solution_code": '''fn main() {
+    let city = "İstanbul"
+    let signals = 3
+    let summary = $"{city}: {signals} signals 🌙"
+
+    assert(summary == "İstanbul: 3 signals 🌙", "summary must include both values")
+    print(summary)
+}
+
+main()
+'''
+    },
+    {
+        "id": "navigation01",
+        "name": "navigation01",
+        "topic": "16_modern_expressions",
+        "title": "Safe Navigation Through Nested Data",
+        "path": "exercises/16_modern_expressions/navigation01.nyx",
+        "solution": "solutions/16_modern_expressions/navigation01.nyx",
+        "mode": "run",
+        "description": "Traverse nullable struct fields with ?. and provide one explicit fallback with ??.",
+        "hints": [
+            "Each `?.` stops the member chain when its left side is null.",
+            "Use `profile?.address?.city ?? \"unknown\"` so absence is handled once at the boundary."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// A profile, its address, or the city may be absent. Do not add nested ifs.
+// TODO: safely read the city and fall back to "unknown".
+
+struct Address { city: string? }
+struct Profile { address: Address? }
+
+fn city_label(profile: Profile?) -> string {
+    return "missing"
+}
+
+fn main() {
+    let absent: Profile? = null
+    let present: Profile? = Profile(Address("Kyoto"))
+    assert(city_label(absent) == "unknown", "absent profile needs a fallback")
+    assert(city_label(present) == "Kyoto", "present city must survive navigation")
+    print(city_label(absent), city_label(present))
+}
+
+main()
+''',
+        "solution_code": '''struct Address { city: string? }
+struct Profile { address: Address? }
+
+fn city_label(profile: Profile?) -> string {
+    return profile?.address?.city ?? "unknown"
+}
+
+fn main() {
+    let absent: Profile? = null
+    let present: Profile? = Profile(Address("Kyoto"))
+    assert(city_label(absent) == "unknown", "absent profile needs a fallback")
+    assert(city_label(present) == "Kyoto", "present city must survive navigation")
+    print(city_label(absent), city_label(present))
+}
+
+main()
+'''
+    },
+    {
+        "id": "match04",
+        "name": "match04",
+        "topic": "16_modern_expressions",
+        "title": "Single-Evaluation Match",
+        "path": "exercises/16_modern_expressions/match04.nyx",
+        "solution": "solutions/16_modern_expressions/match04.nyx",
+        "mode": "run",
+        "description": "Use a value-producing match so a side-effecting subject is evaluated exactly once.",
+        "hints": [
+            "Calling `read_status()` in every condition repeats its side effect.",
+            "A match subject is evaluated once: `match read_status() { 200 => ..., _ => ... }`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Repeated calls can observe different state or repeat expensive work.
+// TODO: replace the repeated if checks with one value-producing match.
+
+fn read_status(state: Array<int>) -> int {
+    set state[0] = state[0] + 1
+    if state[0] == 1 { return 500 }
+    return 404
+}
+
+fn status_label(state: Array<int>) -> string {
+    if read_status(state) == 200 { return "ok" }
+    if read_status(state) == 404 { return "missing" }
+    return "other"
+}
+
+fn main() {
+    let state = [0]
+    let label = status_label(state)
+    assert(label == "other", "the first status must map to other")
+    assert(state[0] == 1, "the status source must be evaluated exactly once")
+    print(label, "reads:", state[0])
+}
+
+main()
+''',
+        "solution_code": '''fn read_status(state: Array<int>) -> int {
+    set state[0] = state[0] + 1
+    if state[0] == 1 { return 500 }
+    return 404
+}
+
+fn status_label(state: Array<int>) -> string {
+    return match read_status(state) {
+        200 => "ok",
+        404 => "missing",
+        _ => "other"
+    }
+}
+
+fn main() {
+    let state = [0]
+    let label = status_label(state)
+    assert(label == "other", "the first status must map to other")
+    assert(state[0] == 1, "the status source must be evaluated exactly once")
+    print(label, "reads:", state[0])
+}
+
+main()
+'''
+    },
+
+    # =========================================================================
+    # 17_results (4 exercises)
+    # =========================================================================
+    {
+        "id": "result01",
+        "name": "result01",
+        "topic": "17_results",
+        "title": "Payload Enums as Domain Data",
+        "path": "exercises/17_results/result01.nyx",
+        "solution": "solutions/17_results/result01.nyx",
+        "mode": "run",
+        "description": "Model alternatives that carry typed data and destructure their payloads in match arms.",
+        "hints": [
+            "A payload variant is declared as `Message(string)` and constructed as `Message(\"...\")`.",
+            "Bind the payload in the pattern: `Message(text) => text`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Unlike a plain enum, each Event variant carries the data relevant to it.
+// TODO: return the text stored inside Message instead of a fixed label.
+
+enum Event {
+    Message(string),
+    Connected(int),
+    Tick()
+}
+
+fn describe(event: Event) -> string {
+    match event {
+        Message(text) => return "message",
+        Connected(id) => return $"client {id}",
+        Tick() => return "tick"
+    }
+    return "unknown"
+}
+
+fn main() {
+    assert(describe(Message("hello")) == "hello", "Message must expose its payload")
+    assert(describe(Connected(7)) == "client 7", "Connected must preserve its id")
+    print(describe(Message("hello")))
+}
+
+main()
+''',
+        "solution_code": '''enum Event {
+    Message(string),
+    Connected(int),
+    Tick()
+}
+
+fn describe(event: Event) -> string {
+    match event {
+        Message(text) => return text,
+        Connected(id) => return $"client {id}",
+        Tick() => return "tick"
+    }
+    return "unknown"
+}
+
+fn main() {
+    assert(describe(Message("hello")) == "hello", "Message must expose its payload")
+    assert(describe(Connected(7)) == "client 7", "Connected must preserve its id")
+    print(describe(Message("hello")))
+}
+
+main()
+'''
+    },
+    {
+        "id": "result02",
+        "name": "result02",
+        "topic": "17_results",
+        "title": "Recoverable Errors with Result",
+        "path": "exercises/17_results/result02.nyx",
+        "solution": "solutions/17_results/result02.nyx",
+        "mode": "run",
+        "description": "Represent an expected failure with Result<T, E> and force callers to handle both outcomes.",
+        "hints": [
+            "Return `Err(\"division by zero\")` when the denominator is zero.",
+            "Return `Ok(left / right)` for the successful branch."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Invalid user input is an expected outcome, not necessarily an exception.
+// TODO: make divide return Err for zero and Ok for valid division.
+
+fn divide(left: int, right: int) -> Result<int, string> {
+    return Ok(0)
+}
+
+fn main() {
+    match divide(12, 3) {
+        Ok(value) => assert(value == 4, "12 / 3 must be 4"),
+        Err(error) => assert(false, "valid division unexpectedly failed")
+    }
+    match divide(12, 0) {
+        Ok(value) => assert(false, "division by zero must not succeed"),
+        Err(error) => assert(error == "division by zero", "error must explain the failure")
+    }
+    print("both Result branches verified")
+}
+
+main()
+''',
+        "solution_code": '''fn divide(left: int, right: int) -> Result<int, string> {
+    if right == 0 { return Err("division by zero") }
+    return Ok(left / right)
+}
+
+fn main() {
+    match divide(12, 3) {
+        Ok(value) => assert(value == 4, "12 / 3 must be 4"),
+        Err(error) => assert(false, "valid division unexpectedly failed")
+    }
+    match divide(12, 0) {
+        Ok(value) => assert(false, "division by zero must not succeed"),
+        Err(error) => assert(error == "division by zero", "error must explain the failure")
+    }
+    print("both Result branches verified")
+}
+
+main()
+'''
+    },
+    {
+        "id": "result03",
+        "name": "result03",
+        "topic": "17_results",
+        "title": "Propagating Result with ?",
+        "path": "exercises/17_results/result03.nyx",
+        "solution": "solutions/17_results/result03.nyx",
+        "mode": "run",
+        "description": "Propagate Err from a Result-returning function while continuing with the unwrapped Ok value.",
+        "hints": [
+            "Postfix `?` unwraps Ok and immediately returns Err from the enclosing Result function.",
+            "Use `let value = source(ok)?`; the enclosing function already has a compatible error type."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// `unwrap()` turns an expected error into a runtime failure.
+// TODO: propagate the error from source with postfix ? instead.
+
+fn source(ok: bool) -> Result<int, string> {
+    if ok { return Ok(40) }
+    return Err("offline")
+}
+
+fn calculate(ok: bool) -> Result<int, string> {
+    let value = source(ok).unwrap()
+    return Ok(value + 2)
+}
+
+fn main() {
+    match calculate(true) {
+        Ok(value) => assert(value == 42, "successful value must be transformed"),
+        Err(error) => assert(false, "successful calculation unexpectedly failed")
+    }
+    match calculate(false) {
+        Ok(value) => assert(false, "failure must propagate"),
+        Err(error) => assert(error == "offline", "original error must be preserved")
+    }
+    print("Result propagation verified")
+}
+
+main()
+''',
+        "solution_code": '''fn source(ok: bool) -> Result<int, string> {
+    if ok { return Ok(40) }
+    return Err("offline")
+}
+
+fn calculate(ok: bool) -> Result<int, string> {
+    let value = source(ok)?
+    return Ok(value + 2)
+}
+
+fn main() {
+    match calculate(true) {
+        Ok(value) => assert(value == 42, "successful value must be transformed"),
+        Err(error) => assert(false, "successful calculation unexpectedly failed")
+    }
+    match calculate(false) {
+        Ok(value) => assert(false, "failure must propagate"),
+        Err(error) => assert(error == "offline", "original error must be preserved")
+    }
+    print("Result propagation verified")
+}
+
+main()
+'''
+    },
+    {
+        "id": "result04",
+        "name": "result04",
+        "topic": "17_results",
+        "title": "Composing Fallible Operations",
+        "path": "exercises/17_results/result04.nyx",
+        "solution": "solutions/17_results/result04.nyx",
+        "mode": "run",
+        "description": "Compose multiple Result-producing functions without losing the first failure.",
+        "hints": [
+            "Use postfix `?` after each operation that may fail.",
+            "Unwrap both `parse_port(text)?` and `validate_port(port)?`, then return `Ok(valid)`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// A boundary function should preserve the exact error from the step that failed.
+// TODO: compose parse_port and validate_port with ?.
+
+fn parse_port(text: string) -> Result<int, string> {
+    if text == "8080" { return Ok(8080) }
+    return Err("not a supported port literal")
+}
+
+fn validate_port(port: int) -> Result<int, string> {
+    if port > 0 { return Ok(port) }
+    return Err("port must be positive")
+}
+
+fn load_port(text: string) -> Result<int, string> {
+    return Ok(0)
+}
+
+fn main() {
+    match load_port("8080") {
+        Ok(port) => assert(port == 8080, "valid port must survive both steps"),
+        Err(error) => assert(false, "valid port unexpectedly failed")
+    }
+    match load_port("bad") {
+        Ok(port) => assert(false, "bad text must not become a port"),
+        Err(error) => assert(error == "not a supported port literal", "preserve parse error")
+    }
+    print("fallible composition verified")
+}
+
+main()
+''',
+        "solution_code": '''fn parse_port(text: string) -> Result<int, string> {
+    if text == "8080" { return Ok(8080) }
+    return Err("not a supported port literal")
+}
+
+fn validate_port(port: int) -> Result<int, string> {
+    if port > 0 { return Ok(port) }
+    return Err("port must be positive")
+}
+
+fn load_port(text: string) -> Result<int, string> {
+    let port = parse_port(text)?
+    let valid = validate_port(port)?
+    return Ok(valid)
+}
+
+fn main() {
+    match load_port("8080") {
+        Ok(port) => assert(port == 8080, "valid port must survive both steps"),
+        Err(error) => assert(false, "valid port unexpectedly failed")
+    }
+    match load_port("bad") {
+        Ok(port) => assert(false, "bad text must not become a port"),
+        Err(error) => assert(error == "not a supported port literal", "preserve parse error")
+    }
+    print("fallible composition verified")
+}
+
+main()
+'''
+    },
+
+    # =========================================================================
+    # 18_collection_transforms (2 exercises)
+    # =========================================================================
+    {
+        "id": "collections01",
+        "name": "collections01",
+        "topic": "18_collection_transforms",
+        "title": "Iterating Domain Collections",
+        "path": "exercises/18_collection_transforms/collections01.nyx",
+        "solution": "solutions/18_collection_transforms/collections01.nyx",
+        "mode": "run",
+        "description": "Iterate Array<T> values directly and aggregate fields from typed structs.",
+        "hints": [
+            "`for item in items` binds each array element without an index.",
+            "Only add `reading.value` when `reading.valid` is true."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Real collections usually contain domain values, not bare integers.
+// TODO: sum only valid sensor readings.
+
+struct Reading { value: int, valid: bool }
+
+fn valid_total(readings: Array<Reading>) -> int {
+    var total = 0
+    for reading in readings {
+        set total = total + reading.value
+    }
+    return total
+}
+
+fn main() {
+    let readings = [Reading(10, true), Reading(900, false), Reading(7, true)]
+    let total = valid_total(readings)
+    assert(total == 17, "invalid readings must be excluded")
+    print("valid total:", total)
+}
+
+main()
+''',
+        "solution_code": '''struct Reading { value: int, valid: bool }
+
+fn valid_total(readings: Array<Reading>) -> int {
+    var total = 0
+    for reading in readings {
+        if reading.valid {
+            set total = total + reading.value
+        }
+    }
+    return total
+}
+
+fn main() {
+    let readings = [Reading(10, true), Reading(900, false), Reading(7, true)]
+    let total = valid_total(readings)
+    assert(total == 17, "invalid readings must be excluded")
+    print("valid total:", total)
+}
+
+main()
+'''
+    },
+    {
+        "id": "collections02",
+        "name": "collections02",
+        "topic": "18_collection_transforms",
+        "title": "Typed map, filter, and fold",
+        "path": "exercises/18_collection_transforms/collections02.nyx",
+        "solution": "solutions/18_collection_transforms/collections02.nyx",
+        "mode": "run",
+        "description": "Build a typed collection transformation with contextual lambdas and a left-to-right fold.",
+        "hints": [
+            "First map each value to its double, then retain values greater than 4.",
+            "Use `fold(selected, 0, (total, value) => total + value)`; the expected result is 14."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// map transforms, filter selects, and fold reduces in left-to-right order.
+// TODO: select every doubled value greater than 4, not only values above 6.
+
+fn main() {
+    let values = [1, 2, 3, 4]
+    let doubled = map(values, value => value * 2)
+    let selected = filter(doubled, value => value > 6)
+    let total = fold(selected, 0, (sum, value) => sum + value)
+
+    assert(total == 14, "6 + 8 must produce 14")
+    print("transformed total:", total)
+}
+
+main()
+''',
+        "solution_code": '''fn main() {
+    let values = [1, 2, 3, 4]
+    let doubled = map(values, value => value * 2)
+    let selected = filter(doubled, value => value > 4)
+    let total = fold(selected, 0, (sum, value) => sum + value)
+
+    assert(total == 14, "6 + 8 must produce 14")
+    print("transformed total:", total)
+}
+
+main()
+'''
+    },
+
+    # =========================================================================
+    # 19_async_tasks (2 exercises)
+    # =========================================================================
+    {
+        "id": "async01",
+        "name": "async01",
+        "topic": "19_async_tasks",
+        "title": "Reusable Task Handles",
+        "path": "exercises/19_async_tasks/async01.nyx",
+        "solution": "solutions/19_async_tasks/async01.nyx",
+        "mode": "run",
+        "description": "Store one Task<T> and await the same completion more than once without rerunning its body.",
+        "hints": [
+            "Calling `compute()` twice creates two tasks and executes the function twice.",
+            "Create `let task: Task<int> = compute()` once, then await `task` for both values."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// A Task is a reusable handle to one completion.
+// TODO: call compute once and await the same task twice.
+
+async fn compute(calls: Array<int>) -> int {
+    set calls[0] = calls[0] + 1
+    return 21
+}
+
+async fn main() {
+    let calls = [0]
+    let first: int = await compute(calls)
+    let second: int = await compute(calls)
+    assert(first + second == 42, "both awaits must observe value 21")
+    assert(calls[0] == 1, "the task body must run once")
+    print("task total:", first + second)
+}
+''',
+        "solution_code": '''async fn compute(calls: Array<int>) -> int {
+    set calls[0] = calls[0] + 1
+    return 21
+}
+
+async fn main() {
+    let calls = [0]
+    let task: Task<int> = compute(calls)
+    let first: int = await task
+    let second: int = await task
+    assert(first + second == 42, "both awaits must observe value 21")
+    assert(calls[0] == 1, "the task body must run once")
+    print("task total:", first + second)
+}
+'''
+    },
+    {
+        "id": "async02",
+        "name": "async02",
+        "topic": "19_async_tasks",
+        "title": "Errors Surface at await",
+        "path": "exercises/19_async_tasks/async02.nyx",
+        "solution": "solutions/19_async_tasks/async02.nyx",
+        "mode": "run",
+        "description": "Catch an asynchronous failure at the await boundary where it becomes observable.",
+        "hints": [
+            "Creating the task does not handle its eventual error.",
+            "Place `let value: int = await task` inside `try`, then inspect the error in `catch`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Task failures become observable when the task is awaited.
+// TODO: catch the error raised by await and verify its message.
+
+async fn fetch_score() -> int {
+    throw "score service unavailable"
+}
+
+async fn main() {
+    let task: Task<int> = fetch_score()
+    let value: int = await task
+    print(value)
+}
+''',
+        "solution_code": '''async fn fetch_score() -> int {
+    throw "score service unavailable"
+}
+
+async fn main() {
+    let task: Task<int> = fetch_score()
+    try {
+        let value: int = await task
+        assert(false, "failed task must not produce a value")
+    } catch error {
+        assert(error == "score service unavailable", "await must preserve the task error")
+        print("caught:", error)
+    }
+}
+'''
+    },
+
+    # =========================================================================
+    # 20_modules_and_stdlib (3 exercises)
+    # =========================================================================
+    {
+        "id": "modules01",
+        "name": "modules01",
+        "topic": "20_modules_and_stdlib",
+        "title": "Selective Standard-Library Imports",
+        "path": "exercises/20_modules_and_stdlib/modules01.nyx",
+        "solution": "solutions/20_modules_and_stdlib/modules01.nyx",
+        "mode": "run",
+        "description": "Import only the std/math symbols a module needs and combine their typed results.",
+        "hints": [
+            "Use `import { sin, cos } from \"std/math\"` at the top of the file.",
+            "At angle 0, `sin(0.0) + cos(0.0)` is exactly `1.0`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Selective imports make dependencies visible at the module boundary.
+// TODO: import sin and cos, then combine their values at angle zero.
+
+import { sin, cos } from "std/math"
+
+fn main() {
+    let value = sin(0.0)
+    assert(value == 1.0, "sin(0) + cos(0) must be 1")
+    print("unit-circle identity:", value)
+}
+
+main()
+''',
+        "solution_code": '''import { sin, cos } from "std/math"
+
+fn main() {
+    let value = sin(0.0) + cos(0.0)
+    assert(value == 1.0, "sin(0) + cos(0) must be 1")
+    print("unit-circle identity:", value)
+}
+
+main()
+'''
+    },
+    {
+        "id": "modules02",
+        "name": "modules02",
+        "topic": "20_modules_and_stdlib",
+        "title": "Fallible Base64 Decoding",
+        "path": "exercises/20_modules_and_stdlib/modules02.nyx",
+        "solution": "solutions/20_modules_and_stdlib/modules02.nyx",
+        "mode": "run",
+        "description": "Use std/encoding while keeping malformed external data in an explicit Result path.",
+        "hints": [
+            "Encode the original text, then pass that encoded value to `base64_decode`.",
+            "Check `is_ok` before calling `unwrap()`; malformed input must remain a failed Result."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// Decoding external text can fail, so the API returns Result<string, string>.
+// TODO: decode the encoded message rather than malformed input.
+
+import "std/encoding"
+
+fn main() {
+    let original = "Nyx 🌙"
+    let encoded = base64_encode(original)
+    let decoded = base64_decode("%%%")
+
+    assert(decoded.is_ok, "the generated Base64 text must decode")
+    assert(decoded.unwrap() == original, "valid encoded text must round-trip")
+    print(encoded, decoded.unwrap())
+}
+
+main()
+''',
+        "solution_code": '''import "std/encoding"
+
+fn main() {
+    let original = "Nyx 🌙"
+    let encoded = base64_encode(original)
+    let decoded = base64_decode(encoded)
+    let malformed = base64_decode("%%%")
+
+    assert(decoded.is_ok, "the generated Base64 text must decode")
+    assert(decoded.unwrap() == original, "valid encoded text must round-trip")
+    assert(not malformed.is_ok, "malformed input must remain an error")
+    print(encoded, decoded.unwrap())
+}
+
+main()
+'''
+    },
+    {
+        "id": "modules03",
+        "name": "modules03",
+        "topic": "20_modules_and_stdlib",
+        "title": "Honest json_lite Boundaries",
+        "path": "exercises/20_modules_and_stdlib/modules03.nyx",
+        "solution": "solutions/20_modules_and_stdlib/modules03.nyx",
+        "mode": "run",
+        "description": "Extract supported top-level JSON fields and handle a missing field without pretending json_lite is a full parser.",
+        "hints": [
+            "Read `name` with get_string and `version` with get_int, then unwrap known-good fields.",
+            "The missing `channel` field must report `is_ok == false`."
+        ],
+        "exercise_code": '''// I AM NOT DONE
+// std/json_lite intentionally extracts flat top-level string and int fields.
+// TODO: request the real `version` key and preserve the missing-field error.
+
+import "std/json_lite"
+
+fn main() {
+    let document = "{\\\"name\\\":\\\"nyx\\\",\\\"version\\\":4}"
+    let name = get_string(document, "name").unwrap()
+    let version = get_int(document, "release").unwrap()
+    let missing = get_string(document, "channel")
+
+    assert(name == "nyx", "name must be extracted")
+    assert(version == 4, "version must be extracted as an int")
+    assert(not missing.is_ok, "the absent field must remain an error")
+    print(name, version)
+}
+
+main()
+''',
+        "solution_code": '''import "std/json_lite"
+
+fn main() {
+    let document = "{\\\"name\\\":\\\"nyx\\\",\\\"version\\\":4}"
+    let name = get_string(document, "name").unwrap()
+    let version = get_int(document, "version").unwrap()
+    let missing = get_string(document, "channel")
+
+    assert(name == "nyx", "name must be extracted")
+    assert(version == 4, "version must be extracted as an int")
+    assert(not missing.is_ok, "the absent field must remain an error")
+    print(name, version)
 }
 
 main()

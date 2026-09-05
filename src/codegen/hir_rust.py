@@ -52,6 +52,7 @@ from src.ir import (
     IRNullCoalesce,
     IRParameter,
     IRReference,
+    IRResultPropagate,
     IRReturn,
     IRSpawn,
     IRStatement,
@@ -366,6 +367,7 @@ class HIRRustEmitter:
             if isinstance(item, (IRStruct, IRFunction)):
                 self.declared_types.update(item.generic_params)
         self.current_return_type = VOID
+        self.active_defers: Tuple[IRExpr, ...] = ()
         self.temporary_index = 0
         self._register_declarations()
 
@@ -637,7 +639,12 @@ class HIRRustEmitter:
                 local_defers.append(statement.expr)
                 continue
             active = inherited_defers + tuple(local_defers)
-            lines.extend(self._emit_statement(statement, indent, active, loop_defer_base))
+            previous_defers = self.active_defers
+            self.active_defers = active
+            try:
+                lines.extend(self._emit_statement(statement, indent, active, loop_defer_base))
+            finally:
+                self.active_defers = previous_defers
         prefix = "    " * indent
         for expression in reversed(local_defers):
             lines.append(f"{prefix}{self._expr(expression)};")
@@ -858,6 +865,23 @@ class HIRRustEmitter:
             return f"{node.op}({operand})"
         if isinstance(node, IRAwait):
             raise RustEmissionError("Rust backend does not support Nyx Task<T> yet")
+        if isinstance(node, IRResultPropagate):
+            result_type = self.inference.expression_type(node.expr)
+            if result_type.name != "Result" or len(result_type.arguments) < 2:
+                raise RustEmissionError("Result propagation requires Result<T, E>")
+            value = self._temporary("propagate_value")
+            error = self._temporary("propagate_error")
+            cleanup = " ".join(
+                f"{self._expr(expression)};" for expression in reversed(self.active_defers)
+            )
+            if cleanup:
+                cleanup += " "
+            return (
+                f"(match {self._expr(node.expr)} {{ "
+                f"NyxResult::Ok({value}) => {value}, "
+                f"NyxResult::Err({error}) => {{ {cleanup}"
+                f"return NyxResult::Err({error}); }} }})"
+            )
         if isinstance(node, IRCall):
             return self._emit_call(node, expected)
         if isinstance(node, IRMemberAccess):

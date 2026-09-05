@@ -1,7 +1,7 @@
 # Nyx v4 Syntax and Semantic Contract
 
-Status: `v4.0.0-rc.2` (`Bodhi`) release-candidate contract. The surface is
-under RC soak and is not yet a stable compatibility promise.
+Status: `v4.0.0` (`Nirvana`) stable source contract, effective when the v4.0.0
+release is published. Backend support remains defined by capability metadata.
 
 This file defines the compatibility boundary for Nyx source. The readable
 examples live in [`../LANGUAGE_REFERENCE.md`](../LANGUAGE_REFERENCE.md). The

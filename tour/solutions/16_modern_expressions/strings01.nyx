@@ -1,0 +1,10 @@
+fn main() {
+    let city = "İstanbul"
+    let signals = 3
+    let summary = $"{city}: {signals} signals 🌙"
+
+    assert(summary == "İstanbul: 3 signals 🌙", "summary must include both values")
+    print(summary)
+}
+
+main()

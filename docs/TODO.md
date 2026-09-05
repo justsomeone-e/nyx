@@ -1,8 +1,9 @@
 # Nyx v4 Development TODO
 
 Bu dosya Nyx v4 geliştirme hattının aktif görev listesidir. `v4.0.0-rc.1
-Samsara` yayınlandı; aktif aday `v4.0.0-rc.2 Bodhi`, stable hedef ise
-`v4.0.0 Nirvana`dır.
+Samsara` ve `v4.0.0-rc.2 Bodhi` yayınlandı; hazırlanan sürüm `v4.0.0
+Nirvana`dır. Ayrı yayınlanmayan RC3 çalışmaları Nirvana'ya dahil edildi.
+Sonraki geliştirme hedefi, v4 uyumluluğunu koruyarak v5'e hazırlanan `v4.5.0`dır.
 
 ## Yön kararları
 
@@ -117,6 +118,35 @@ local'ları, DOM diffing ve JSX grammar bu pakete dahil değildir. Bunlar ABI v2
 veya sonraki major RFC gerektirir; desteklenmeyen kullanım sessiz yanlış kod
 yerine derleme tanısı üretir.
 
+## Nirvana'ya dahil edilen RC3 çalışmaları — Backend parity
+
+- [x] Rust HIR emitter'da postfix `?` hata yayılımını etkinleştir; erken dönüşte
+  aktif `defer` ifadelerini LIFO sırada çalıştır ve gerçek `rustc` testi ekle.
+- [x] JS signed 64-bit `int` sözleşmesinin `BigInt.asIntN(64)` ile uygulandığını
+  ve C++/Python ile exact runtime parity verdiğini koru; `nyx build --target js
+  --esm` ile import-safe `.mjs` ve explicit function exportları üret.
+- [x] WASM `Array<int/float>` ABI'sini capability manifestinde açıkça yayınla
+  (binary lowering ve JS typed-array marshalling RC2'de zaten mevcuttu).
+- [x] WASM için düz `int`, `float`, `bool` alanlı struct parametre ABI'si,
+  deterministik alignment/offset, JS object marshalling ve TypeScript interface
+  üretimini ekle.
+- [x] `nyx bundle/build --target wasm --wasi` executable profiline WASI preview1
+  `fd_write`, `_start` ve string stdout desteği ekle.
+- [x] React/Vue/Svelte typed adapterların tek kaynak olarak üretilen WASM/ESM
+  wrapper üzerinde kaldığını koru (RC2'de tamamlandı).
+- [x] Python frontend/HIR sınırının stage1 -> stage2 -> stage3 zincirinden ayrı
+  olduğunu ve production self-host yolunun native olduğunu koru.
+- [x] ASM/React/WASM hedeflerinde desteklenmeyen ileri HIR özelliklerini capability
+  matrisinden türetilen hedef listesiyle ve `E3001` ile derleme zamanında reddet.
+- [ ] ASM legacy C++ geçiş emitter'ını Typed HIR emitter'a taşı; taşınana kadar
+  capability manifestinde `typed_hir_v1` ilan etme.
+- [ ] Rust payload enum, Task/async, exception, spawn/channel ve crate import
+  kapılarını ancak runtime parity kanıtı geldikçe tek tek aç.
+
+v4 Struct ABI bilinçli sınırı: yalnız borrowed, düz scalar alanlı parametreler
+desteklenir. Struct dönüşleri, nested struct/string/array alanları ve ownership
+transferi Bundle ABI v2 RFC'sine aittir; bunlar açık derleme hatası üretir.
+
 ## Tooling
 
 - [x] Formatter'ı yeni grammar ile idempotent tut.
@@ -140,7 +170,23 @@ yerine derleme tanısı üretir.
 
 ## v4.0.0 Nirvana stable kapıları
 
-- [ ] RC soak süresini blocker olmadan tamamla.
-- [ ] Belgelenen syntax ve backend sözleşmelerini stable olarak dondur.
+- [x] Sonraki yayın olarak Nirvana'yı seç; RC3'ü ayrı yayınlamadan çalışmalarını dahil et.
+- [x] Belgelenen syntax ve backend sözleşmelerini v4.0.0 yayınıyla geçerli olacak şekilde dondur.
+- [ ] Son kaynak revizyonunda tam testleri ve dört platform CI kapısını geçir; önceki koşuları yeni değişikliklerin kanıtı sayma.
 - [ ] Kurulum, örnek projeler, LSP ve paketleme yollarını temiz makinelerde doğrula.
 - [ ] Product Owner kararıyla `v4.0.0 Nirvana` yayınını oluştur.
+
+Yayın kanıtları ve açık işler: [Nirvana release checklist](internals/RELEASE_AUDIT_v4.0.0.md).
+
+## v4.5.0 — v5'e uyumlu hazırlık
+
+- [ ] Diagnostic açıklamalarını ve LSP rename/references/semantic token desteğini geliştir.
+- [ ] Native CLI, JS/Python entegrasyonu ve WASM için gerçek örnek uygulamaları genişlet.
+- [ ] Sabit corpus üzerinde süre/bellek ölçerek compiler ve modül yükleme performansını iyileştir.
+- [ ] Stdlib eklemelerinde v4 API uyumluluğunu ve stable backendlerde Result/parity sözleşmesini koru.
+- [ ] Rust/WASM eksiklerini capability bazında kapat; test kanıtı olmadan stable ilan etme.
+- [ ] C/LLVM backend ve bağımsız frontend çalışmalarını v5 RFC/prototip kapsamına al.
+- [ ] Kırıcı v5 değişikliklerinden önce kaynak/HIR/ABI/lockfile geçiş rehberini hazırla.
+
+Bu liste planlanan işleri gösterir. v4.5.0, mevcut v4 programlarının anlamını
+veya varsayılan backendini değiştiren bir sürüm olmayacak.

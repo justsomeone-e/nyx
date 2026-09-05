@@ -1,0 +1,25 @@
+// I AM NOT DONE
+// Repeated calls can observe different state or repeat expensive work.
+// TODO: replace the repeated if checks with one value-producing match.
+
+fn read_status(state: Array<int>) -> int {
+    set state[0] = state[0] + 1
+    if state[0] == 1 { return 500 }
+    return 404
+}
+
+fn status_label(state: Array<int>) -> string {
+    if read_status(state) == 200 { return "ok" }
+    if read_status(state) == 404 { return "missing" }
+    return "other"
+}
+
+fn main() {
+    let state = [0]
+    let label = status_label(state)
+    assert(label == "other", "the first status must map to other")
+    assert(state[0] == 1, "the status source must be evaluated exactly once")
+    print(label, "reads:", state[0])
+}
+
+main()

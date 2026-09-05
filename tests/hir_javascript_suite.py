@@ -21,12 +21,12 @@ from tests.differential_testing import TRIPLE_DIFF_CASES
 NODE = shutil.which("node")
 
 
-def _emit(source: str, filename: str) -> str:
+def _emit(source: str, filename: str, esm: bool = False) -> str:
     tree = Parser(Lexer(source, filename).tokenize(), source, filename).parse()
     TypeChecker(tree, filename, source).check()
     hir = optimize_hir(lower_to_hir(tree, filename)).module
     verify_hir(hir)
-    return emit_javascript(hir)
+    return emit_javascript(hir, esm=esm)
 
 
 def _run(generated: str, timeout: int = 5) -> subprocess.CompletedProcess:
@@ -135,6 +135,72 @@ print(-7 / 3, -7 % 3)
     assert ROOT_DIR.replace("\\", "/") not in generated.replace("\\", "/")
 
 
+def _run_value_and_unicode_semantics() -> None:
+    source = '''
+struct Box { value: int }
+
+fn mutate(values: Array<int>) {
+    set values[0] = 7
+}
+
+fn main() {
+    var first: Array<int> = [1, 2]
+    var second: Array<int> = first
+    set second[0] = 9
+    print(first[0], second[0])
+
+    var left: Box = Box(1)
+    var right: Box = left
+    set right.value = 9
+    print(left.value, right.value)
+
+    mutate(first)
+    print(first[0])
+    print("ş😀".len(), "ş😀"[0], "ş😀"[1])
+    var joined: string = ""
+    for character in "ş😀" { set joined = joined + character }
+    print(joined)
+    var text = "ş😀e\\u0301\\0"
+    print(len(text), text.len(), text.length(), text.size(), text[0], text[1], text[2])
+    print(text[3] == "\\u0301", text[4] == "\\0")
+    print(len(text[-1]), len(text[5]), len(text[9223372036854775807]))
+    var empty = ""
+    print(len(empty[0]), len(empty[-1]))
+}
+'''
+    runtime = _run(_emit(source, "value_unicode_semantics.nyx"))
+    assert runtime.returncode == 0, runtime.stderr or runtime.stdout
+    assert runtime.stdout.replace("\r\n", "\n").strip() == "1 9\n1 9\n1\n2 ş 😀\nş😀\n5 5 5 5 ş 😀 e\ntrue true\n0 0 0\n0 0"
+
+
+def _run_esm_contract() -> None:
+    source = "fn add(a: int, b: int) -> int { return a + b }\nfn main() { print(\"not automatic\") }\n"
+    generated = _emit(source, "esm_contract.nyx", esm=True)
+    assert "export { add, main };" in generated
+    assert not generated.rstrip().endswith("main();")
+    with tempfile.TemporaryDirectory(prefix="nyx_js_esm_") as directory:
+        module_path = os.path.join(directory, "nyx_module.mjs")
+        with open(module_path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(generated)
+        runtime = subprocess.run(
+            [
+                NODE,
+                "--input-type=module",
+                "-e",
+                "import {pathToFileURL} from 'node:url'; "
+                "const api=await import(pathToFileURL(process.argv[1])); "
+                "if(api.add(20n,22n)!==42n)throw new Error('ESM export failed');",
+                module_path,
+            ],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert runtime.returncode == 0, runtime.stderr or runtime.stdout
+
+
 def run_hir_javascript_suite() -> bool:
     print("=" * 70)
     print("NYX HIR-AUTHORITATIVE JAVASCRIPT BACKEND")
@@ -144,9 +210,11 @@ def run_hir_javascript_suite() -> bool:
     runtime_count = _run_battery_runtime()
     differential_count = _run_differential_fixtures()
     _run_semantic_repairs()
+    _run_value_and_unicode_semantics()
+    _run_esm_contract()
     print(
         f"[PASS] {corpus_count} executed, {runtime_count} runtime cases, "
-        f"{differential_count} deterministic fixtures, shadowing/defer/int semantics"
+        f"{differential_count} deterministic fixtures, ESM exports, shadowing/defer/int semantics"
     )
     return True
 

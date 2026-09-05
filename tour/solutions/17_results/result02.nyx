@@ -1,0 +1,18 @@
+fn divide(left: int, right: int) -> Result<int, string> {
+    if right == 0 { return Err("division by zero") }
+    return Ok(left / right)
+}
+
+fn main() {
+    match divide(12, 3) {
+        Ok(value) => assert(value == 4, "12 / 3 must be 4"),
+        Err(error) => assert(false, "valid division unexpectedly failed")
+    }
+    match divide(12, 0) {
+        Ok(value) => assert(false, "division by zero must not succeed"),
+        Err(error) => assert(error == "division by zero", "error must explain the failure")
+    }
+    print("both Result branches verified")
+}
+
+main()

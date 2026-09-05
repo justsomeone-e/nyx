@@ -1,0 +1,15 @@
+// I AM NOT DONE
+// Interpolation keeps values typed until they are formatted and avoids long
+// chains of string concatenation. Unicode text remains intact.
+// TODO: build exactly "İstanbul: 3 signals 🌙" with one interpolated string.
+
+fn main() {
+    let city = "İstanbul"
+    let signals = 3
+    let summary = city
+
+    assert(summary == "İstanbul: 3 signals 🌙", "summary must include both values")
+    print(summary)
+}
+
+main()

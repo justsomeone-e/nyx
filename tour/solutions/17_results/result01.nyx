@@ -1,0 +1,22 @@
+enum Event {
+    Message(string),
+    Connected(int),
+    Tick()
+}
+
+fn describe(event: Event) -> string {
+    match event {
+        Message(text) => return text,
+        Connected(id) => return $"client {id}",
+        Tick() => return "tick"
+    }
+    return "unknown"
+}
+
+fn main() {
+    assert(describe(Message("hello")) == "hello", "Message must expose its payload")
+    assert(describe(Connected(7)) == "client 7", "Connected must preserve its id")
+    print(describe(Message("hello")))
+}
+
+main()

@@ -1,0 +1,26 @@
+// I AM NOT DONE
+// Unlike a plain enum, each Event variant carries the data relevant to it.
+// TODO: return the text stored inside Message instead of a fixed label.
+
+enum Event {
+    Message(string),
+    Connected(int),
+    Tick()
+}
+
+fn describe(event: Event) -> string {
+    match event {
+        Message(text) => return "message",
+        Connected(id) => return $"client {id}",
+        Tick() => return "tick"
+    }
+    return "unknown"
+}
+
+fn main() {
+    assert(describe(Message("hello")) == "hello", "Message must expose its payload")
+    assert(describe(Connected(7)) == "client 7", "Connected must preserve its id")
+    print(describe(Message("hello")))
+}
+
+main()

@@ -109,6 +109,18 @@ class NyxEnumValue {
     }
 }
 
+function _nyxCloneValue(value, seen = new Map()) {
+    if (value === null || typeof value !== "object") return value;
+    if (seen.has(value)) return seen.get(value);
+    const clone = Array.isArray(value) ? [] : Object.create(Object.getPrototypeOf(value));
+    seen.set(value, clone);
+    for (const key of Object.keys(value)) clone[key] = _nyxCloneValue(value[key], seen);
+    return clone;
+}
+
+function _nyxStringLength(value) { return _nyxI64(BigInt(Array.from(value).length)); }
+function _nyxStringIndex(value, index) { return Array.from(value)[Number(index)] ?? ""; }
+
 function Ok(value) { return new Result(true, value); }
 function Err(error) { return new Result(false, error); }
 function _nyxMap(items, transform) { return items.map(transform); }
@@ -233,7 +245,10 @@ function _nyx_toolchain_compile_cpp(source, output) {
 function _nyx_toolchain_last_error() { return _nyxToolchainError; }
 function contains(value, part) { return String(value).includes(String(part)); }
 function is_number(value) { return String(value).trim() !== "" && Number.isFinite(Number(value)); }
-function len(value) { return value == null ? 0n : _nyxI64(BigInt(value.length)); }
+function len(value) {
+    if (value == null) return 0n;
+    return typeof value === "string" ? _nyxStringLength(value) : _nyxI64(BigInt(value.length));
+}
 function args() { return process.argv.slice(); }
 function input(prompt = "") {
     if (prompt) process.stdout.write(String(prompt));
@@ -373,10 +388,11 @@ const _nyx_json_get_int_result = (document, key) => {
 
 
 class HIRJavaScriptEmitter:
-    """Emit a standalone CommonJS-compatible ES2022 script from HIR."""
+    """Emit either a standalone script or an importable ES2022 module from HIR."""
 
-    def __init__(self, module: IRModule):
+    def __init__(self, module: IRModule, esm: bool = False):
         self.module = module
+        self.esm = esm
         self.symbol_names: Dict[str, str] = {}
         self.impls: Dict[str, List[IRImpl]] = {}
         self.functions = {
@@ -401,7 +417,14 @@ class HIRJavaScriptEmitter:
         self._register_declarations()
 
     def emit(self) -> str:
-        lines = _JAVASCRIPT_RUNTIME.splitlines()
+        lines = []
+        if self.esm:
+            lines.extend((
+                "import { createRequire as _nyxCreateRequire } from 'node:module';",
+                "const require = _nyxCreateRequire(import.meta.url);",
+                "",
+            ))
+        lines.extend(_JAVASCRIPT_RUNTIME.splitlines())
         lines.append("")
         for item in self.module.items:
             if isinstance(item, IRForeignImport):
@@ -409,9 +432,14 @@ class HIRJavaScriptEmitter:
                     raise JavaScriptEmissionError(
                         f"JavaScript target cannot consume '{item.ecosystem}' foreign import '{item.module}'"
                     )
-                lines.append(
-                    f"const {self._symbol(item.symbol, item.alias)} = require({self._string(item.module)});"
-                )
+                if self.esm:
+                    lines.append(
+                        f"import * as {self._symbol(item.symbol, item.alias)} from {self._string(item.module)};"
+                    )
+                else:
+                    lines.append(
+                        f"const {self._symbol(item.symbol, item.alias)} = require({self._string(item.module)});"
+                    )
         if any(isinstance(item, IRForeignImport) for item in self.module.items):
             lines.append("")
         declarations: List[IRNode] = []
@@ -460,12 +488,21 @@ class HIRJavaScriptEmitter:
             and item.expr.callee == "main"
             for item in statements
         )
-        if main is not None and not explicitly_called:
+        if main is not None and not explicitly_called and not self.esm:
             call = f"{self._symbol(main.symbol, main.name)}()"
             if main.is_async:
                 lines.append(f"{call}.catch(error => {{ console.error(error); process.exitCode = 1; }});")
             else:
                 lines.append(f"{call};")
+        if self.esm:
+            exports = [
+                self._symbol(item.symbol, item.name)
+                for item in self.module.items
+                if isinstance(item, IRFunction) and not item.name.startswith("_")
+            ]
+            if exports:
+                lines.append("")
+                lines.append(f"export {{ {', '.join(exports)} }};")
         return "\n".join(lines).rstrip() + "\n"
 
     def _register_declarations(self) -> None:
@@ -650,13 +687,14 @@ class HIRJavaScriptEmitter:
         prefix = "    " * indent
         if isinstance(node, IRVarDecl):
             keyword_text = "const" if node.is_const else ("var" if top_level and indent > 0 else "let")
+            value = self._copy_value(self._expr_as(node.expr, node.type), node.type)
             return [
-                f"{prefix}{keyword_text} {self._symbol(node.symbol, node.name)} = "
-                f"{self._expr_as(node.expr, node.type)};"
+                f"{prefix}{keyword_text} {self._symbol(node.symbol, node.name)} = {value};"
             ]
         if isinstance(node, IRAssign):
+            value = self._copy_value(self._expr_as(node.expr, node.target.type), node.target.type)
             return [
-                f"{prefix}{self._expr(node.target)} = {self._expr_as(node.expr, node.target.type)};"
+                f"{prefix}{self._expr(node.target)} = {value};"
             ]
         if isinstance(node, IRExprStatement):
             return [f"{prefix}{self._expr(node.expr)};"]
@@ -873,16 +911,24 @@ class HIRJavaScriptEmitter:
         if isinstance(node, IRCall):
             expected_types = self._call_parameter_types(node)
             args = ", ".join(
-                self._expr_as(
-                    argument,
-                    expected_types[index] if index < len(expected_types) else None,
+                self._copy_value(
+                    self._expr_as(
+                        argument,
+                        expected_types[index] if index < len(expected_types) else None,
+                    ),
+                    expected_types[index] if index < len(expected_types) else argument.type,
                 )
                 for index, argument in enumerate(node.args)
             )
             if node.receiver is not None:
                 receiver = self._expr(node.receiver)
-                if node.callee == "len" and not node.args:
-                    return f"_nyxI64(BigInt({receiver}.length))"
+                if not node.args and (
+                    node.callee == "len" or (
+                        node.callee in ("length", "size")
+                        and node.receiver.type.name in ("string", "Array")
+                    )
+                ):
+                    return f"len({receiver})"
                 return f"{receiver}.{self._identifier(node.callee)}({args})"
             collection_builtins = {
                 "map": "_nyxMap",
@@ -900,6 +946,8 @@ class HIRJavaScriptEmitter:
             operator = "?." if node.safe else "."
             return f"{self._expr(node.obj)}{operator}{self._identifier(node.member)}"
         if isinstance(node, IRIndexAccess):
+            if node.obj.type.name == "string":
+                return f"_nyxStringIndex({self._expr(node.obj)}, {self._expr(node.index)})"
             return f"{self._expr(node.obj)}[Number({self._expr(node.index)})]"
         if isinstance(node, IRArray):
             element_type = node.type.arguments[0] if node.type.arguments else None
@@ -932,6 +980,18 @@ class HIRJavaScriptEmitter:
         rendered = self._expr(node)
         if expected is not None and expected.name == "float" and node.type.name == "int":
             return f"Number({rendered})"
+        return rendered
+
+    def _copy_value(self, rendered: str, value_type: IRType | None) -> str:
+        if value_type is None:
+            return rendered
+        if value_type.name == "Array" or value_type.name in self.structs:
+            return f"_nyxCloneValue({rendered})"
+        if value_type.name in ("Option", "Result") and any(
+            argument.name == "Array" or argument.name in self.structs
+            for argument in value_type.arguments
+        ):
+            return f"_nyxCloneValue({rendered})"
         return rendered
 
     def _call_parameter_types(self, node: IRCall) -> Sequence[IRType]:
@@ -986,7 +1046,7 @@ class HIRJavaScriptEmitter:
         return json.dumps(value, ensure_ascii=False)
 
 
-def emit_javascript(module: IRModule) -> str:
+def emit_javascript(module: IRModule, esm: bool = False) -> str:
     """Convenience entry point used by the public compiler API."""
 
-    return HIRJavaScriptEmitter(module).emit()
+    return HIRJavaScriptEmitter(module, esm=esm).emit()

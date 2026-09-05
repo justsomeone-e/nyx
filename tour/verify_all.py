@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Verification Test Harness for Tour of Nyx
-Autonomously tests all 33 exercises and their solutions.
+Autonomously tests every manifest exercise and its reference solution.
 """
 
 import os

@@ -10,6 +10,13 @@ Nyx is a **Value-Semantic by default** language with deterministic scoping:
 2. **Function Calls (`f(x)`)** pass by value logically. Calling `f(x)` does not invalidate or consume `x` in the caller's scope.
 3. **Explicit Pointer & Aliasing** is exclusively permitted inside `unsafe { ... }` via raw addresses (`addr(x)`, `peek(p)`).
 
+Hosted backends also share one Unicode contract: string `len()`, indexing, and
+iteration operate on Unicode code points. UTF-8 byte length remains an ABI or
+encoding concern and is not the language-level string length.
+On the stable `cpp`, `js`, and `python` backends, a string index below zero or
+at/above its code-point length returns an empty string. Combining marks are
+separate code points, and an embedded NUL counts as one code point.
+
 ---
 
 ## 2. Nyx to Rust Semantics Mapping Matrix
@@ -44,7 +51,8 @@ Nyx is a **Value-Semantic by default** language with deterministic scoping:
    * `to_string(v)` $\to$ canonical Nyx scalar display (`nan`, `inf`, lowercase Boolean).
    * `to_int(v)` $\to$ signed-i64 wrapping decimal conversion.
    * `contains(&str, &str)` $\to$ `haystack.contains(needle)`.
-   * `len(&[T])` $\to$ `collection.len() as i64`.
+   * `len(&[T])` $\to$ `collection.len() as i64`; string length counts Unicode
+     code points on every hosted backend.
 
 `Task<T>`/`await`, exception, `spawn`, and channel semantics remain explicit
 `E3001` capability rejections for `rust`; they are not silently approximated

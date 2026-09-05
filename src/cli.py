@@ -43,8 +43,8 @@ Project & Development Commands:
   nyx new <project_name>             Create a new nyx project in a directory
   nyx init [name]                    Initialize a nyx.toml project in current directory
   nyx check [file.nyx] [--target t]  Fast type-check and semantic validation
-  nyx build [file.nyx] [--target t]  Build executable or transpile project into build/
-  nyx bundle [file.nyx] [-o dir]     Bundle Web/WASM (--package; --react/--vue/--svelte)
+  nyx build [file.nyx] [--target t]  Build or transpile (--esm for importable JS)
+  nyx bundle [file.nyx] [-o dir]     Bundle Web/WASM (--wasi; --package; framework adapters)
   nyx self-host verify               Verify the native stage-1 -> stage-2 bootstrap
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
@@ -221,7 +221,11 @@ class _CanonicalArtifactAdapter:
         return self.content
 
 
-def _compile_canonical_artifact(entry_file: str, target: str) -> Optional[_CanonicalArtifactAdapter]:
+def _compile_canonical_artifact(
+    entry_file: str,
+    target: str,
+    javascript_esm: bool = False,
+) -> Optional[_CanonicalArtifactAdapter]:
     from src.api import NyxCompiler
     from src.ir import IRNativeDirective
 
@@ -233,12 +237,18 @@ def _compile_canonical_artifact(entry_file: str, target: str) -> Optional[_Canon
         for diagnostic in result.diagnostics:
             print(diagnostic.rendered)
         return None
+    content = result.artifact.content
+    if target == "js" and javascript_esm:
+        from src.codegen.hir_javascript import emit_javascript
+        if result.hir is None:
+            return None
+        content = emit_javascript(result.hir, esm=True)
     links = [
         item.value
         for item in (result.hir.items if result.hir is not None else ())
         if isinstance(item, IRNativeDirective) and item.kind == "link"
     ]
-    return _CanonicalArtifactAdapter(result.artifact.content, links)
+    return _CanonicalArtifactAdapter(content, links)
 
 def cmd_check(entry_file, target=None) -> int:
     if not entry_file or not os.path.exists(entry_file):
@@ -256,7 +266,14 @@ def cmd_check(entry_file, target=None) -> int:
     print("\033[92m[OK] Check Passed: 0 syntax or semantic errors found.\033[0m")
     return 0
 
-def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
+def cmd_build(
+    entry_file,
+    target,
+    is_release=False,
+    output_type="exe",
+    wasi=False,
+    javascript_esm=False,
+) -> int:
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: Source file not found '{entry_file}'.\033[0m")
         return 1
@@ -273,12 +290,12 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
     # A WASM build is a host-usable ABI v1 package, not just its textual WAT
     # representation. `bundle` remains the explicit-output variant.
     if target == "wasm":
-        return cmd_bundle(entry_file, out_dir=build_dir)
+        return cmd_bundle(entry_file, out_dir=build_dir, wasi=wasi)
 
     os.makedirs(build_dir, exist_ok=True)
     
     print(f"\033[96m[*] Building [{target}] ({output_type}):\033[0m {entry_file} -> {build_dir}")
-    codegen = _compile_canonical_artifact(entry_file, target)
+    codegen = _compile_canonical_artifact(entry_file, target, javascript_esm=javascript_esm)
     if codegen is None:
         return 1
     
@@ -350,7 +367,8 @@ def cmd_build(entry_file, target, is_release=False, output_type="exe") -> int:
 
     elif target == "js":
         js_code = codegen.gen_js()
-        out_js = os.path.join(build_dir, f"{base_name}.js")
+        extension = ".mjs" if javascript_esm else ".js"
+        out_js = os.path.join(build_dir, f"{base_name}{extension}")
         with open(out_js, "w", encoding="utf-8") as f:
             f.write(js_code)
         print(f"\033[92m[OK] Generated Node.js ES2022 Module:\033[0m {out_js}")
@@ -520,6 +538,7 @@ def cmd_bundle(
     emit_package: bool = False,
     emit_vue: bool = False,
     emit_svelte: bool = False,
+    wasi: bool = False,
 ) -> int:
     if not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File '{entry_file}' not found.\033[0m")
@@ -537,7 +556,12 @@ def cmd_bundle(
     ast = loader.load_program(entry_file, code)
     TypeChecker(ast, entry_file, code).check()
 
-    emitter = BundleEmitter(ast, module_name=base_name, source_name=entry_file)
+    emitter = BundleEmitter(
+        ast,
+        module_name=base_name,
+        source_name=entry_file,
+        wasi=wasi,
+    )
 
     # Lower and render every artifact before touching the output directory.
     # Unsupported constructs therefore fail without leaving a partial bundle.
@@ -587,7 +611,8 @@ def cmd_bundle(
     with open(dts_path, "w", encoding="utf-8") as f:
         f.write(dts_code)
 
-    print(f"\033[96m[*] Bundling Polyglot Web/WASM Package:\033[0m {entry_file} -> {bundle_dir}")
+    profile = "WASI preview1 executable" if wasi else "Polyglot Web/WASM Package"
+    print(f"\033[96m[*] Bundling {profile}:\033[0m {entry_file} -> {bundle_dir}")
     print(f"\033[92m  [+] WebAssembly Text:     {wat_path}\033[0m")
     print(f"\033[92m  [+] WebAssembly Binary:   {wasm_path}\033[0m")
     print(f"\033[92m  [+] ES Module Runtime:     {mjs_path}\033[0m")
@@ -1193,6 +1218,8 @@ def main():
             target,
             is_release,
             output_type=output_type,
+            wasi="--wasi" in sys.argv,
+            javascript_esm="--esm" in sys.argv,
         ))
     elif cmd == "bundle":
         raw_args = [a for a in sys.argv[2:] if not a.startswith("--")]
@@ -1205,6 +1232,7 @@ def main():
         emit_vue = "--vue" in sys.argv
         emit_svelte = "--svelte" in sys.argv
         emit_package = "--package" in sys.argv or "--npm" in sys.argv
+        wasi = "--wasi" in sys.argv
         if (emit_vue or emit_svelte) and not emit_package:
             print("\033[91m[!] --vue and --svelte require --package.\033[0m")
             sys.exit(1)
@@ -1215,6 +1243,7 @@ def main():
             emit_package=emit_package,
             emit_vue=emit_vue,
             emit_svelte=emit_svelte,
+            wasi=wasi,
         ))
     elif cmd in ("self-host", "selfhost"):
         sys.exit(cmd_self_host(sys.argv[2:]))

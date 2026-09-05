@@ -1,28 +1,24 @@
-struct Cleaner {
-    step1: bool,
-    step2: bool
+var cleanup_log: Array<string> = [""]
+
+fn cleanup_step1() {
+    set cleanup_log[0] = cleanup_log[0] + "1"
 }
 
-fn cleanup_step1(cleaner: Cleaner) {
-    cleaner.step1 = true
+fn cleanup_step2() {
+    set cleanup_log[0] = cleanup_log[0] + "2"
 }
 
-fn cleanup_step2(cleaner: Cleaner) {
-    cleaner.step2 = true
-}
-
-fn process_batch(cleaner: Cleaner) {
+fn process_batch() {
+    set cleanup_log[0] = ""
     print("Batch processing in progress...")
-    defer cleanup_step1(cleaner)
-    defer cleanup_step2(cleaner)
+    defer cleanup_step1()
+    defer cleanup_step2()
 }
 
 fn main() {
-    let cleaner = Cleaner(false, false)
-    process_batch(cleaner)
-    assert(cleaner.step1 == true, "Cleanup step 1 must have run via defer!")
-    assert(cleaner.step2 == true, "Cleanup step 2 must have run via defer!")
-    print("All batch cleanup handlers executed via defer successfully!")
+    process_batch()
+    assert(cleanup_log[0] == "21", "Deferred cleanup must execute in LIFO order!")
+    print("Cleanup order:", cleanup_log[0])
 }
 
 main()

@@ -91,7 +91,7 @@ def run_bootstrap_typechecker_test() -> bool:
 
 fn main() {{
     var code = "{escaped_src}"
-    var lex = Lexer(code, 0, 1, 1)
+    var lex = Lexer(lexer_characters(code), 0, 1, 1)
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()
@@ -182,7 +182,7 @@ main()
 
 fn main() {{
     var code = "{escaped_src}"
-    var lex = Lexer(code, 0, 1, 1)
+    var lex = Lexer(lexer_characters(code), 0, 1, 1)
     var tokens = lex.tokenize()
     var p = Parser(tokens, 0, false, "", "")
     var ast = p.parse_program()

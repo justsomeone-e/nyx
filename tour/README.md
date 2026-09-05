@@ -23,6 +23,9 @@ tour.bat
 # PowerShell
 .\tour.ps1
 
+# Linux / macOS
+bash tour.sh
+
 # Direct Python
 python tour/tour.py
 ```
@@ -47,12 +50,17 @@ While in watch mode, the Tour monitors your current exercise file in real-time. 
 
 ---
 
-## 📚 Curriculum (67 Exercises across 16 Modules)
+## 📚 Curriculum (81 Exercises across 21 Modules)
+
+The first modules establish the language fundamentals. Later modules require
+observable behavior—typed error propagation, single evaluation, task reuse,
+collection transformations, and real standard-library boundaries—rather than
+repeating keywords in isolation.
 
 1. **`00_intro`** (3 exercises)
    - `intro01`: Welcome to Nyx & verifying your environment.
    - `intro02`: Fixing syntax errors in string literals.
-   - `intro03`: Multi-line output and formatting strings.
+   - `intro03`: Line comments and uncommenting executable code.
 2. **`01_variables`** (8 exercises)
    - `variables01`: Immutable bindings with `let`.
    - `variables02`: Mutable variables with `var` and `set`.
@@ -61,14 +69,14 @@ While in watch mode, the Tour monitors your current exercise file in real-time. 
    - `variables05`: Arithmetic operations and variable scoping.
    - `variables06`: Destructuring array patterns (`let [x, y] = coords`).
    - `variables07`: Variable shadowing across nested block scopes.
-   - `variables08`: Multiple simultaneous variable assignments.
+   - `variables08`: Discarding destructured values with `_`.
 3. **`02_types`** (6 exercises)
    - `types01`: Scalar types: `int`, `float`, and widening.
    - `types02`: Boolean logic with `and`, `or`, and `not`.
    - `types03`: String concatenation and escapes.
    - `types04`: Measuring string length with `len()`.
    - `types05`: Character escape sequences (`\n`, `\t`, `\"`).
-   - `types06`: Explicit type conversions and casting.
+   - `types06`: Automatic `int` to `float` widening.
 4. **`03_functions`** (6 exercises)
    - `functions01`: Function declarations with `fn`.
    - `functions02`: Parameters and explicit return types (`-> int`).
@@ -84,8 +92,8 @@ While in watch mode, the Tour monitors your current exercise file in real-time. 
    - `loops03`: Unconditional `loop`, `break`, and `continue`.
    - `loops04`: Nested loops and multidimensional iteration.
    - `match01`: Pattern matching with mandatory wildcard `_`.
-   - `match02`: Numeric pattern matching ranges.
-   - `match03`: Multi-condition match expressions.
+   - `match02`: Literal numeric matching with a wildcard fallback.
+   - `match03`: Boolean value matching.
 6. **`05_arrays`** (6 exercises)
    - `arrays01`: Array literals and 0-based indexing.
    - `arrays02`: In-place element modification with `set arr[i] = ...`.
@@ -106,7 +114,7 @@ While in watch mode, the Tour monitors your current exercise file in real-time. 
 9. **`08_traits`** (3 exercises)
    - `traits01`: Trait definitions and contract implementations (`impl Trait for Type`).
    - `traits02`: Multi-trait polymorphism across shared types.
-   - `traits03`: Shared default method behaviors.
+   - `traits03`: Trait methods with typed arguments.
 10. **`09_error_handling`** (3 exercises)
     - `errors01`: Structured exceptions with `try`, `catch`, and `throw`.
     - `errors02`: Error message extraction and exception propagation.
@@ -132,6 +140,25 @@ While in watch mode, the Tour monitors your current exercise file in real-time. 
     - `quiz01`: RPG Inventory Score Calculator (structs, methods, loops, match, guards).
     - `quiz02`: Banking Transaction Ledger (structs, mutation, loops, error checks).
     - `quiz03`: Character Level-Up System (enums, traits, state progression).
+17. **`16_modern_expressions`** (3 exercises)
+    - `strings01`: Unicode-safe typed string interpolation.
+    - `navigation01`: Nested optional traversal with `?.` and `??`.
+    - `match04`: Single evaluation of a side-effecting match subject.
+18. **`17_results`** (4 exercises)
+    - `result01`: Payload enums and destructuring match arms.
+    - `result02`: Recoverable domain failures with `Result<T, E>`.
+    - `result03`: Typed early error propagation with postfix `?`.
+    - `result04`: Composition of multiple fallible operations.
+19. **`18_collection_transforms`** (2 exercises)
+    - `collections01`: Direct iteration over typed domain objects.
+    - `collections02`: Contextual lambdas with `map`, `filter`, and `fold`.
+20. **`19_async_tasks`** (2 exercises)
+    - `async01`: Reusing one `Task<T>` completion without rerunning work.
+    - `async02`: Catching task failures at the `await` boundary.
+21. **`20_modules_and_stdlib`** (3 exercises)
+    - `modules01`: Selective imports from `std/math`.
+    - `modules02`: Unicode Base64 round-trips and malformed-input results.
+    - `modules03`: Honest flat-field extraction with `std/json_lite`.
 
 ---
 
@@ -164,7 +191,7 @@ tour.bat reset all
 
 ## 🧪 Autonomous Test Suite
 
-To verify that all 67 unsolved exercises fail as expected and all 67 reference solutions compile and pass with 0 errors:
+To verify that all 81 unsolved exercises fail as expected and all 81 reference solutions compile and pass with 0 errors:
 
 ```bash
 python tour/verify_all.py
@@ -172,13 +199,13 @@ python tour/verify_all.py
 Output:
 ```text
 ======================================================================
-Tour of Nyx - Autonomous Verification Suite (67 Exercises)
+Tour of Nyx - Autonomous Verification Suite (81 Exercises)
 ======================================================================
-[01/67] ✅ PASS intro01        (Unsolved: FAIL as expected | Solved: OK in 411ms)
+[01/81] ✅ PASS intro01        (Unsolved: FAIL as expected | Solved: OK in 411ms)
 ...
-[67/67] ✅ PASS quiz03         (Unsolved: FAIL as expected | Solved: OK in 404ms)
+[81/81] ✅ PASS modules03      (Unsolved: FAIL as expected | Solved: OK in 404ms)
 ======================================================================
-Verification Summary: 67/67 passed.
-🎉 ALL 67 EXERCISES AND SOLUTIONS VERIFIED 100% CLEANLY!
+Verification Summary: 81/81 passed.
+🎉 ALL 81 EXERCISES AND SOLUTIONS VERIFIED 100% CLEANLY!
 ======================================================================
 ```

@@ -91,7 +91,7 @@ BACKENDS: Dict[str, BackendSpec] = {
     ),
     "rust": BackendSpec(
         "rust", "Rust 2021", "native", "rust", "beta",
-        ("rs",), CORE_FEATURES | HIR_V1_FEATURES | frozenset({"unsafe_memory"}),
+        ("rs",), CORE_FEATURES | HIR_V1_FEATURES | frozenset({"result_propagation", "unsafe_memory"}),
     ),
     "react": BackendSpec(
         "react", "React 19 TSX", "web", "tsx", "beta",
@@ -100,8 +100,8 @@ BACKENDS: Dict[str, BackendSpec] = {
     "wasm": BackendSpec(
         "wasm", "WebAssembly", "web", "wat/wasm", "beta",
         ("wat", "webassembly"), HIR_V1_FEATURES | frozenset({
-            "control_flow", "functions", "host_imports_v1", "numeric", "string_abi",
-            "unicode", "wasm32", "web_dom",
+            "control_flow", "functions", "host_imports_v1", "numeric", "numeric_array_abi",
+            "string_abi", "unicode", "wasi_preview1", "wasm32", "web_dom",
         }),
     ),
 }

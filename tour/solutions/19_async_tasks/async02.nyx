@@ -1,0 +1,14 @@
+async fn fetch_score() -> int {
+    throw "score service unavailable"
+}
+
+async fn main() {
+    let task: Task<int> = fetch_score()
+    try {
+        let value: int = await task
+        assert(false, "failed task must not produce a value")
+    } catch error {
+        assert(error == "score service unavailable", "await must preserve the task error")
+        print("caught:", error)
+    }
+}

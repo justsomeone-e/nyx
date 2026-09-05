@@ -141,6 +141,10 @@ def _run_nyx_authored_hir_parity() -> int:
             'fn values() -> string { var a: int = 0x2a; var f: float = 001.2500; var s: string = "e\\u0301\\0"; return s }\n',
         ),
         (
+            "literal_unicode_columns",
+            'fn text() -> string { var s = "ş😀e\\u0301\\0"; return s }\n',
+        ),
+        (
             "if_elif_else",
             "fn classify(x: int) -> int { if x > 0 { return 1 } elif x == 0 { return 0 } else { return -1 } }\n",
         ),
@@ -271,7 +275,7 @@ def _run_nyx_authored_hir_parity() -> int:
             (
                 f"    print({json.dumps(f'@@HIR_CASE@@{index}:{name}')})",
                 f"    var source_{index} = {json.dumps(program, ensure_ascii=False)}",
-                f"    var lexer_{index} = Lexer(source_{index}, 0, 1, 1)",
+                f"    var lexer_{index} = Lexer(lexer_characters(source_{index}), 0, 1, 1)",
                 f"    var tokens_{index} = lexer_{index}.tokenize()",
                 f"    var parser_{index} = Parser(tokens_{index}, 0, false, \"\", \"\")",
                 f"    var ast_{index} = parser_{index}.parse_program()",

@@ -1,0 +1,13 @@
+// I AM NOT DONE
+// Task failures become observable when the task is awaited.
+// TODO: catch the error raised by await and verify its message.
+
+async fn fetch_score() -> int {
+    throw "score service unavailable"
+}
+
+async fn main() {
+    let task: Task<int> = fetch_score()
+    let value: int = await task
+    print(value)
+}

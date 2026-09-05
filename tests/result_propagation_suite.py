@@ -59,7 +59,22 @@ def _run(target: str, content: str, directory: str) -> tuple[int, str]:
         assert compiled, message
         return CppToolchain.run_executable(executable_path)
 
-    if target == "js":
+    if target == "rust":
+        runtime = shutil.which("rustc")
+        assert runtime is not None, "rustc is required for Rust Result propagation coverage"
+        path = os.path.join(directory, "result_propagation.rs")
+        executable = os.path.join(
+            directory, "result_propagation-rust" + (".exe" if os.name == "nt" else "")
+        )
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        compiled = subprocess.run(
+            [runtime, "--edition=2021", path, "-o", executable],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+        )
+        assert compiled.returncode == 0, compiled.stderr or compiled.stdout
+        command = [executable]
+    elif target == "js":
         runtime = shutil.which("node")
         assert runtime is not None, "Node.js is required for Result propagation coverage"
         path = os.path.join(directory, "result_propagation.js")
@@ -83,7 +98,7 @@ def _assert_error(source: str, code: str) -> None:
 
 def run_result_propagation_suite() -> bool:
     with tempfile.TemporaryDirectory(prefix="nyx_result_propagation_") as directory:
-        for target in ("cpp", "js", "python"):
+        for target in ("cpp", "js", "python", "rust"):
             result = _compile(PROGRAM, target)
             assert result.success, result.diagnostics
             assert result.artifact is not None
@@ -107,18 +122,7 @@ def run_result_propagation_suite() -> bool:
         "E2039",
     )
 
-    unsupported = _compile(
-        "fn read() -> Result<int, string> { return Ok(1) } "
-        "fn run() -> Result<int, string> { return Ok(read()?) }",
-        "rust",
-    )
-    assert not unsupported.success
-    assert any(
-        "does not support Result propagation semantics" in (diagnostic.note or diagnostic.rendered)
-        for diagnostic in unsupported.diagnostics
-    ), unsupported.diagnostics
-
-    print("[PASS] Result '?': C++/JS/Python early return, typing diagnostics, and target gate")
+    print("[PASS] Result '?': C++/JS/Python/Rust early return and typing diagnostics")
     return True
 
 

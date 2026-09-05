@@ -21,6 +21,7 @@ from src.core.backend_capabilities import (
 )
 from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
 from src.core.module_loader import ModuleLoader
+from src.api import NyxCompiler
 
 
 def _write(path: str, source: str) -> None:
@@ -50,7 +51,9 @@ def run_capability_suite() -> bool:
         assert "typed_hir_v1" not in BACKENDS[target].features
     assert "int64_wrap" not in BACKENDS["wasm"].features
     assert "wasm32" in BACKENDS["wasm"].features
-    assert {"host_imports_v1", "web_dom"} <= BACKENDS["wasm"].features
+    assert {
+        "host_imports_v1", "numeric_array_abi", "wasi_preview1", "web_dom"
+    } <= BACKENDS["wasm"].features
     assert "web" in stdlib_modules_for_target("wasm")
     assert "web" not in stdlib_modules_for_target("cpp")
 
@@ -68,6 +71,20 @@ def run_capability_suite() -> bool:
     assert {backend["name"] for backend in manifest["backends"]} >= {
         "cpp", "js", "python", "rust", "react", "wasm"
     }
+
+    propagated = (
+        "fn read() -> Result<int, string> { return Ok(1) }\n"
+        "fn run() -> Result<int, string> { let value = read()?; return Ok(value) }\n"
+    )
+    for target in ("asm", "wasm", "react"):
+        rejected = NyxCompiler(ROOT_DIR).compile_source(
+            propagated,
+            target=target,
+            filename=f"capability-{target}.nyx",
+        )
+        assert not rejected.success, f"{target} silently accepted unsupported Result propagation"
+        assert rejected.diagnostics and rejected.diagnostics[0].code == "E3001"
+        assert "supported targets: cpp, js, python, rust" in rejected.diagnostics[0].note
 
     previous_exit_mode = DiagnosticEmitter.EXIT_ON_ERROR
     DiagnosticEmitter.EXIT_ON_ERROR = False

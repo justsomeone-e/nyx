@@ -1,0 +1,20 @@
+struct Reading { value: int, valid: bool }
+
+fn valid_total(readings: Array<Reading>) -> int {
+    var total = 0
+    for reading in readings {
+        if reading.valid {
+            set total = total + reading.value
+        }
+    }
+    return total
+}
+
+fn main() {
+    let readings = [Reading(10, true), Reading(900, false), Reading(7, true)]
+    let total = valid_total(readings)
+    assert(total == 17, "invalid readings must be excluded")
+    print("valid total:", total)
+}
+
+main()

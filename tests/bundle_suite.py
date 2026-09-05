@@ -73,6 +73,98 @@ def run_bundle_suite() -> bool:
             )
         assert not os.path.exists(os.path.join(build_dir, "test_bundle.react.tsx"))
 
+        wasi_source = os.path.join(output_dir, "wasi_hello.nyx")
+        wasi_output = os.path.join(output_dir, "wasi_bundle")
+        with open(wasi_source, "w", encoding="utf-8", newline="\n") as source_file:
+            source_file.write('fn main() { print("hello", "Nyx WASI") }\n')
+        wasi_bundle = subprocess.run(
+            [sys.executable, CLI_PATH, "bundle", wasi_source, "--output", wasi_output, "--wasi"],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert wasi_bundle.returncode == 0, wasi_bundle.stderr or wasi_bundle.stdout
+        wasi_wasm_path = os.path.join(wasi_output, "wasi_hello.wasm")
+        wasi_wat_path = os.path.join(wasi_output, "wasi_hello.wat")
+        with open(wasi_wat_path, "r", encoding="utf-8") as wat_file:
+            wasi_wat = wat_file.read()
+        assert '(import "wasi_snapshot_preview1" "fd_write"' in wasi_wat
+        assert '(export "_start")' in wasi_wat
+        assert '(export "main")' not in wasi_wat
+
+        wasi_runner_path = os.path.join(output_dir, "verify_wasi.mjs")
+        with open(wasi_runner_path, "w", encoding="utf-8", newline="\n") as runner:
+            runner.write(
+                "import fs from 'node:fs';\n"
+                "const bytes = fs.readFileSync(process.argv[2]);\n"
+                "let instance; let output = '';\n"
+                "const imports = { wasi_snapshot_preview1: { fd_write(fd, iovs, count, nwritten) {\n"
+                "  if (fd !== 1) return 8; const memory = instance.exports.memory; const view = new DataView(memory.buffer); let written = 0;\n"
+                "  for (let i = 0; i < count; i++) { const ptr = view.getUint32(iovs + i * 8, true); const len = view.getUint32(iovs + i * 8 + 4, true); output += new TextDecoder().decode(new Uint8Array(memory.buffer, ptr, len)); written += len; }\n"
+                "  view.setUint32(nwritten, written, true); return 0;\n"
+                "} } };\n"
+                "({ instance } = await WebAssembly.instantiate(bytes, imports));\n"
+                "instance.exports._start();\n"
+                "if (output !== 'hello Nyx WASI\\n') throw new Error(JSON.stringify(output));\n"
+            )
+        wasi_runtime = subprocess.run(
+            [node, wasi_runner_path, wasi_wasm_path],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert wasi_runtime.returncode == 0, wasi_runtime.stderr or wasi_runtime.stdout
+
+        struct_source = os.path.join(output_dir, "struct_abi.nyx")
+        struct_output = os.path.join(output_dir, "struct_bundle")
+        with open(struct_source, "w", encoding="utf-8", newline="\n") as source_file:
+            source_file.write(
+                "struct Point { x: int, y: float, active: bool }\n"
+                "fn score(point: Point) -> float {\n"
+                "  if point.active { return point.x + point.y }\n"
+                "  return 0.0\n"
+                "}\n"
+            )
+        struct_bundle = subprocess.run(
+            [sys.executable, CLI_PATH, "bundle", struct_source, "--output", struct_output],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert struct_bundle.returncode == 0, struct_bundle.stderr or struct_bundle.stdout
+        struct_module = os.path.join(struct_output, "struct_abi.mjs")
+        struct_types = os.path.join(struct_output, "struct_abi.d.ts")
+        with open(struct_types, "r", encoding="utf-8") as types_file:
+            declarations = types_file.read()
+        assert "export interface Point" in declarations
+        assert "score(point: Point): number" in declarations
+        struct_runtime = subprocess.run(
+            [
+                node,
+                "--input-type=module",
+                "-e",
+                (
+                    "import {pathToFileURL} from 'node:url'; "
+                    f"const {{initNyxModule}}=await import(pathToFileURL({json.dumps(struct_module)}).href); "
+                    "const api=await initNyxModule(); "
+                    "if(api.score({x:7,y:0.5,active:true})!==7.5)throw new Error('struct true'); "
+                    "if(api.score({x:7,y:0.5,active:false})!==0)throw new Error('struct false');"
+                ),
+            ],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert struct_runtime.returncode == 0, struct_runtime.stderr or struct_runtime.stdout
+
         alternate_source = os.path.join(output_dir, "alternate.nyx")
         alternate_output = os.path.join(output_dir, "alternate_bundle")
         with open(alternate_source, "w", encoding="utf-8") as source_file:
