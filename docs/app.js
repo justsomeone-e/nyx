@@ -1,5 +1,5 @@
 // ==========================================================================
-// Tour of Nyx & WebAssembly Studio Engine (Monaco Edition)
+// Tour of Nyx & WebAssembly Studio Engine
 // Client-side execution, interactive 81-step curriculum, and WASM Arcade
 // ==========================================================================
 
@@ -13,8 +13,7 @@
     exercises: window.NYX_TOUR_DATA || [],
     completed: JSON.parse(localStorage.getItem('nyx_tour_completed') || '{}'),
     userCodeCache: JSON.parse(localStorage.getItem('nyx_tour_code_cache') || '{}'),
-    monacoLoaded: false,
-    monacoEditor: null,
+    editor: null,
     wasmInstance: null,
     arcadeRunning: false,
     arcadeAnimationId: null
@@ -22,8 +21,10 @@
 
   // --- DOM Elements ---
   const el = {
-    sidebar: document.getElementById('sidebar'),
-    btnCollapseSidebar: document.getElementById('btnCollapseSidebar'),
+    leftPane: document.getElementById('leftPane'),
+    curriculumDrawer: document.getElementById('curriculumDrawer'),
+    btnToggleDrawer: document.getElementById('btnToggleDrawer'),
+    btnCloseDrawer: document.getElementById('btnCloseDrawer'),
     exerciseTree: document.getElementById('exerciseTree'),
     searchExercises: document.getElementById('searchExercises'),
     badgeTopic: document.getElementById('badgeTopic'),
@@ -41,9 +42,8 @@
     editorFilename: document.getElementById('editorFilename'),
     btnRun: document.getElementById('btnRun'),
     btnResetCode: document.getElementById('btnResetCode'),
-    monacoContainer: document.getElementById('monacoEditorContainer'),
-    editorLoading: document.getElementById('editorLoading'),
-    workbenchDivider: document.getElementById('workbenchDivider'),
+    paneResizer: document.getElementById('paneResizer'),
+    terminalSection: document.getElementById('terminalSection'),
     tabTerminal: document.getElementById('tabTerminal'),
     tabCanvas: document.getElementById('tabCanvas'),
     execStatusBadge: document.getElementById('execStatusBadge'),
@@ -136,272 +136,131 @@ main()`
     }
   ];
 
-  // --- Monaco Editor Initialization ---
-  function initMonaco() {
-    if (typeof require === 'undefined') {
-      console.warn('Monaco loader not found, falling back to textarea.');
-      initFallbackTextarea();
+  // --- Ace Editor Initialization ---
+  function initAce() {
+    if (typeof ace === 'undefined') {
+      console.warn('Ace not loaded, falling back to textarea');
       return;
     }
 
-    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
-    require(['vs/editor/editor.main'], function () {
-      // 1. Register Nyx Language
-      monaco.languages.register({ id: 'nyx' });
+    // Register Nyx Highlighting Mode
+    ace.define('ace/mode/nyx_highlight_rules', function (require, exports, module) {
+      var oop = require("ace/lib/oop");
+      var TextHighlightRules = require("ace/mode/text_highlight_rules").TextHighlightRules;
 
-      // 2. Syntax Highlighter (Monarch)
-      monaco.languages.setMonarchTokensProvider('nyx', {
-        defaultToken: '',
-        tokenPostfix: '.nyx',
-        keywords: [
-          'let', 'var', 'set', 'const', 'fn', 'struct', 'enum', 'type', 'trait',
-          'impl', 'match', 'if', 'elif', 'else', 'while', 'for', 'in', 'loop',
-          'defer', 'guard', 'break', 'continue', 'return', 'throw', 'try', 'catch',
-          'test', 'assert', 'print', 'import', 'from', 'self', 'mut', 'and', 'or',
-          'not', 'null', 'true', 'false', 'Ok', 'Err'
-        ],
-        typeKeywords: [
-          'int', 'float', 'string', 'bool', 'char', 'byte', 'void', 'any', 'Array', 'Map', 'Result', 'Option'
-        ],
-        operators: [
-          '=', '>', '<', '!', '~', '?', ':', '==', '<=', '>=', '!=',
-          '&&', '||', '+', '-', '*', '/', '%', '+=', '-=', '*=', '/=',
-          '|>', '??', '?.', '->', '=>'
-        ],
-        tokenizer: {
-          root: [
-            [/[a-z_$][\w$]*/, {
-              cases: {
-                '@keywords': 'keyword',
-                '@typeKeywords': 'type',
-                '@default': 'identifier'
-              }
-            }],
-            [/[A-Z][\w$]*/, 'type.identifier'],
-            { include: '@whitespace' },
-            [/\$"([^"\\]|\\.)*"/, 'string.interpolated'],
-            [/"([^"\\]|\\.)*"/, 'string'],
-            [/'([^'\\]|\\.)*'/, 'string'],
-            [/0[xX][0-9a-fA-F]+/, 'number.hex'],
-            [/0[bB][01]+/, 'number.binary'],
-            [/\d+(\.\d+)?/, 'number'],
-            [/[{}()\[\]]/, '@brackets'],
-            [/@operators/, {
-              cases: {
-                '@operators': 'operator',
-                '@default': ''
-              }
-            }]
-          ],
-          whitespace: [
-            [/[ \t\r\n]+/, 'white'],
-            [/\/\/.*$/, 'comment']
+      var NyxHighlightRules = function () {
+        var keywords = "let|var|set|const|fn|struct|enum|type|trait|impl|match|if|elif|else|while|for|in|loop|defer|guard|break|continue|return|throw|try|catch|test|assert|print|import|from|self|mut|and|or|not|null|true|false|Ok|Err";
+        var types = "int|float|string|bool|char|byte|void|any|Array|Map|Result|Option";
+
+        this.$rules = {
+          "start": [
+            { token: "comment", regex: "//.*$" },
+            { token: "string.interpolated", regex: '\\$"([^"\\\\]|\\\\.)*"' },
+            { token: "string", regex: '".*?"' },
+            { token: "string", regex: "'.*?'" },
+            { token: "constant.numeric", regex: "0[xX][0-9a-fA-F]+|0[bB][01]+|\\d+(\\.\\d+)?" },
+            { token: "keyword.control", regex: "\\b(" + keywords + ")\\b" },
+            { token: "support.type", regex: "\\b(" + types + ")\\b" },
+            { token: "keyword.operator", regex: "\\|>|\\?\\?|\\?\\.|->|=>|==|!=|<=|>=|\\+=|-=|\\*=|/=|=" }
           ]
-        }
-      });
-
-      // 3. IntelliSense Autocomplete Provider
-      monaco.languages.registerCompletionItemProvider('nyx', {
-        provideCompletionItems: function (model, position) {
-          const word = model.getWordUntilPosition(position);
-          const range = {
-            startLineNumber: position.lineNumber,
-            endLineNumber: position.lineNumber,
-            startColumn: word.startColumn,
-            endColumn: word.endColumn
-          };
-
-          const suggestions = [
-            {
-              label: 'fn',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'fn ${1:name}(${2:params}) -> ${3:int} {\n\t$0\n}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Define a function with typed parameters and return type',
-              range: range
-            },
-            {
-              label: 'let',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'let ${1:name} = ${2:value}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Immutable binding in Nyx',
-              range: range
-            },
-            {
-              label: 'var',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'var ${1:name} = ${2:value}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Mutable variable in Nyx (mutated via set)',
-              range: range
-            },
-            {
-              label: 'set',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'set ${1:target} = ${2:value}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Explicit mutation operator for var bindings',
-              range: range
-            },
-            {
-              label: 'struct',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'struct ${1:Name} {\n\t${2:field}: ${3:int}\n}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Declare a structured data type',
-              range: range
-            },
-            {
-              label: 'enum',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'enum ${1:Name} {\n\t${2:First},\n\t${3:Second}\n}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Declare an algebraic enumerated type',
-              range: range
-            },
-            {
-              label: 'match',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'match ${1:value} {\n\t${2:pattern} => ${3:result},\n\t_ => ${4:default}\n}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Pattern match on expressions or enum variants',
-              range: range
-            },
-            {
-              label: 'defer',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'defer ${1:cleanup_fn()}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'RAII scope-exit cleanup executed in LIFO order',
-              range: range
-            },
-            {
-              label: 'guard',
-              kind: monaco.languages.CompletionItemKind.Snippet,
-              insertText: 'guard ${1:condition} else {\n\treturn ${2:fallback}\n}',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Guard clause for early exit',
-              range: range
-            },
-            {
-              label: 'print',
-              kind: monaco.languages.CompletionItemKind.Function,
-              insertText: 'print(${1:message})',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Print values or formatted string to standard output',
-              range: range
-            },
-            {
-              label: 'assert',
-              kind: monaco.languages.CompletionItemKind.Function,
-              insertText: 'assert(${1:condition}, "${2:failure message}")',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Verify boolean assertion at runtime',
-              range: range
-            },
-            {
-              label: 'Ok',
-              kind: monaco.languages.CompletionItemKind.Constructor,
-              insertText: 'Ok(${1:value})',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Wrap successful Result payload',
-              range: range
-            },
-            {
-              label: 'Err',
-              kind: monaco.languages.CompletionItemKind.Constructor,
-              insertText: 'Err("${1:error message}")',
-              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-              documentation: 'Wrap error Result payload',
-              range: range
-            }
-          ];
-          return { suggestions };
-        }
-      });
-
-      // 4. Custom Dark Precision Theme
-      monaco.editor.defineTheme('nyx-dark', {
-        base: 'vs-dark',
-        inherit: true,
-        rules: [
-          { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' },
-          { token: 'type', foreground: '4EC9B0' },
-          { token: 'type.identifier', foreground: '4EC9B0' },
-          { token: 'identifier', foreground: '9CDCFE' },
-          { token: 'string', foreground: 'CE9178' },
-          { token: 'string.interpolated', foreground: 'D7BA7D' },
-          { token: 'number', foreground: 'B5CEA8' },
-          { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
-          { token: 'operator', foreground: '00F0FF' }
-        ],
-        colors: {
-          'editor.background': '#0c1018',
-          'editor.foreground': '#e2e8f0',
-          'editorLineNumber.foreground': '#334155',
-          'editorLineNumber.activeForeground': '#00f0ff',
-          'editorCursor.foreground': '#00f0ff',
-          'editor.selectionBackground': '#1e3a5f',
-          'editor.lineHighlightBackground': '#101622',
-          'editorBracketMatch.background': '#1e293b',
-          'editorBracketMatch.border': '#00f0ff'
-        }
-      });
-
-      // 5. Instantiate Editor
-      el.monacoContainer.innerHTML = '';
-      state.monacoEditor = monaco.editor.create(el.monacoContainer, {
-        value: '// Loading Nyx code...',
-        language: 'nyx',
-        theme: 'nyx-dark',
-        automaticLayout: true,
-        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-        fontSize: 13.5,
-        lineHeight: 21,
-        lineNumbers: 'on',
-        renderWhitespace: 'selection',
-        smoothScrolling: true,
-        cursorBlinking: 'smooth',
-        minimap: { enabled: false },
-        scrollBeyondLastLine: false,
-        padding: { top: 12, bottom: 12 }
-      });
-
-      state.monacoLoaded = true;
-      if (el.editorLoading) el.editorLoading.style.display = 'none';
-
-      // Load initial exercise into Monaco
-      loadLastOrFirstExercise();
+        };
+      };
+      oop.inherits(NyxHighlightRules, TextHighlightRules);
+      exports.NyxHighlightRules = NyxHighlightRules;
     });
-  }
 
-  function initFallbackTextarea() {
-    el.monacoContainer.innerHTML = '<textarea id="fallbackEditor" style="width:100%;height:100%;background:#0c1018;color:#e2e8f0;font-family:monospace;padding:12px;border:none;outline:none;resize:none;"></textarea>';
-    state.monacoLoaded = true;
+    ace.define('ace/mode/nyx', function (require, exports, module) {
+      var oop = require("ace/lib/oop");
+      var TextMode = require("ace/mode/text").Mode;
+      var NyxHighlightRules = require("ace/mode/nyx_highlight_rules").NyxHighlightRules;
+
+      var Mode = function () {
+        this.HighlightRules = NyxHighlightRules;
+      };
+      oop.inherits(Mode, TextMode);
+      exports.Mode = Mode;
+    });
+
+    state.editor = ace.edit("aceEditor");
+    state.editor.setTheme("ace/theme/dracula");
+    state.editor.session.setMode("ace/mode/nyx");
+    state.editor.setOptions({
+      enableBasicAutocompletion: true,
+      enableLiveAutocompletion: true,
+      enableSnippets: true,
+      fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+      fontSize: "13.5px",
+      tabSize: 4,
+      useSoftTabs: true,
+      showPrintMargin: false,
+      cursorStyle: "smooth",
+      wrap: true
+    });
+
+    // Custom Nyx Autocompletion with Documentation
+    var langTools = ace.require("ace/ext/language_tools");
+    var nyxCompleter = {
+      getCompletions: function (editor, session, pos, prefix, callback) {
+        var wordList = [
+          { caption: "fn", snippet: "fn ${1:name}(${2:params}) -> ${3:void} {\n    $0\n}", meta: "fn" },
+          { caption: "let", snippet: "let ${1:name} = ${2:value}", meta: "let" },
+          { caption: "var", snippet: "var ${1:name} = ${2:value}", meta: "var" },
+          { caption: "set", snippet: "set ${1:target} = ${2:value}", meta: "set" },
+          { caption: "struct", snippet: "struct ${1:Name} {\n    ${2:field}: ${3:int}\n}", meta: "struct" },
+          { caption: "enum", snippet: "enum ${1:Name} {\n    ${2:Variant}\n}", meta: "enum" },
+          { caption: "match", snippet: "match ${1:value} {\n    ${2:pattern} => ${3:result},\n    _ => ${4:default}\n}", meta: "match" },
+          { caption: "defer", snippet: "defer ${1:cleanup_fn()}", meta: "defer" },
+          { caption: "guard", snippet: "guard ${1:condition} else {\n    return ${2:fallback}\n}", meta: "guard" },
+          { caption: "print", snippet: "print(${1:message})", meta: "builtin" },
+          { caption: "assert", snippet: "assert(${1:condition}, \"${2:msg}\")", meta: "builtin" },
+          { caption: "Ok", snippet: "Ok(${1:value})", meta: "result" },
+          { caption: "Err", snippet: "Err(\"${1:error}\")", meta: "result" }
+        ];
+        callback(null, wordList);
+      }
+    };
+    langTools.addCompleter(nyxCompleter);
+
+    state.editor.commands.addCommand({
+      name: 'runCode',
+      bindKey: { win: 'Ctrl-Enter', mac: 'Command-Enter' },
+      exec: function () {
+        runCode();
+      }
+    });
+
+    state.editor.commands.addCommand({
+      name: 'nextExercise',
+      bindKey: { win: 'Alt-N', mac: 'Alt-N' },
+      exec: function () {
+        switchExercise(state.currentExerciseIndex + 1);
+      }
+    });
+
+    state.editor.commands.addCommand({
+      name: 'prevExercise',
+      bindKey: { win: 'Alt-P', mac: 'Alt-P' },
+      exec: function () {
+        switchExercise(state.currentExerciseIndex - 1);
+      }
+    });
+
     loadLastOrFirstExercise();
   }
 
   function getEditorCode() {
-    if (state.monacoEditor) {
-      return state.monacoEditor.getValue();
-    }
-    const fb = document.getElementById('fallbackEditor');
-    return fb ? fb.value : '';
+    return state.editor ? state.editor.getValue() : '';
   }
 
   function setEditorCode(val) {
-    if (state.monacoEditor) {
-      state.monacoEditor.setValue(val);
-    } else {
-      const fb = document.getElementById('fallbackEditor');
-      if (fb) fb.value = val;
+    if (state.editor) {
+      state.editor.setValue(val, -1);
     }
   }
 
   // --- Initialization ---
   function init() {
-    // Clean up any empty string cache from previous sessions
+    // Clear corrupted empty cache from previous broken runs
     Object.keys(state.userCodeCache).forEach(k => {
       if (!state.userCodeCache[k] || state.userCodeCache[k].trim().length === 0) {
         delete state.userCodeCache[k];
@@ -412,7 +271,7 @@ main()`
     buildExerciseTree();
     setupEventListeners();
     updateProgressUI();
-    initMonaco();
+    initAce();
   }
 
   // --- Build Sidebar Tree ---
@@ -461,6 +320,7 @@ main()`
 
         item.addEventListener('click', () => {
           switchExercise(index);
+          el.curriculumDrawer.classList.remove('open');
         });
 
         groupDiv.appendChild(item);
@@ -475,7 +335,7 @@ main()`
     if (index < 0 || index >= state.exercises.length) return;
 
     // Save previous exercise code IF non-empty
-    if (state.monacoLoaded) {
+    if (state.editor) {
       const prevEx = state.exercises[state.currentExerciseIndex];
       const currentCode = getEditorCode();
       if (prevEx && currentCode && currentCode.trim().length > 0) {
@@ -498,7 +358,7 @@ main()`
     el.badgeStatus.innerText = isSolved ? '✓ Solved' : 'Unsolved';
     el.badgeStatus.className = 'badge-status' + (isSolved ? ' solved' : '');
 
-    // Compute and show expected canonical output
+    // Compute expected canonical output
     try {
       const solRes = evaluateNyx(ex.solution);
       const expectedText = (solRes.output || []).join('\n').trim();
@@ -518,7 +378,7 @@ main()`
       el.btnToggleHint.style.display = 'none';
     }
 
-    // Set Editor Code (safely fallback to ex.code if cache is missing or corrupt)
+    // Set Editor Code (safely fallback to ex.code if cache is missing or empty)
     const savedCode = state.userCodeCache[ex.id];
     const initialCode = (savedCode && savedCode.trim().length > 0) ? savedCode : ex.code;
     setEditorCode(initialCode);
@@ -543,7 +403,7 @@ main()`
     logTerminal(`[Compiling: ${el.editorFilename.innerText}]`, 'term-info');
 
     el.execStatusBadge.innerText = 'Running...';
-    el.execStatusBadge.className = 'exec-status-badge';
+    el.execStatusBadge.className = 'status-badge';
 
     const startTime = performance.now();
     try {
@@ -552,7 +412,7 @@ main()`
 
       if (res.error) {
         el.execStatusBadge.innerText = 'Failed';
-        el.execStatusBadge.className = 'exec-status-badge failed';
+        el.execStatusBadge.className = 'status-badge failed';
         logTerminal(`❌ Execution Error: ${res.error}`, 'term-error');
         return;
       }
@@ -564,12 +424,12 @@ main()`
         verifyTourSolution(code, res.output, elapsed);
       } else {
         el.execStatusBadge.innerText = 'Success';
-        el.execStatusBadge.className = 'exec-status-badge passed';
+        el.execStatusBadge.className = 'status-badge passed';
         logTerminal(`\n[Finished in ${elapsed} ms]`, 'term-success');
       }
     } catch (err) {
       el.execStatusBadge.innerText = 'Failed';
-      el.execStatusBadge.className = 'exec-status-badge failed';
+      el.execStatusBadge.className = 'status-badge failed';
       logTerminal(`❌ Compilation Error: ${err.message}`, 'term-error');
     }
   }
@@ -583,9 +443,7 @@ main()`
       const userStr = userOutput.join('\n').trim();
       const expectedStr = (solRes.output || []).join('\n').trim();
 
-      // Meaningful Verification Check:
-      // 1. If solution produces stdout, user output must match expected output!
-      // 2. If solution has assert() and no stdout, execution must succeed without runtime error!
+      // Strict & Fair Verification Check:
       let passed = false;
       let reason = '';
 
@@ -596,9 +454,8 @@ main()`
           reason = `Output mismatch:\nExpected: ${JSON.stringify(expectedStr)}\nGot:      ${JSON.stringify(userStr)}`;
         }
       } else {
-        // Assertions-only exercise
         if (userCode.includes('TODO') || userCode.includes('I AM NOT DONE')) {
-          reason = `Exercise contains uncompleted TODO comment. Finish the task before verifying.`;
+          reason = `Exercise contains uncompleted TODO comments. Finish the required task before verifying.`;
         } else {
           passed = true;
         }
@@ -612,14 +469,14 @@ main()`
         el.badgeStatus.innerText = '✓ Solved';
         el.badgeStatus.className = 'badge-status solved';
         el.execStatusBadge.innerText = `Passed (${elapsed}ms)`;
-        el.execStatusBadge.className = 'exec-status-badge passed';
+        el.execStatusBadge.className = 'status-badge passed';
 
         logTerminal(`\n🎉 EXCELLENT! Exercise verified and passed! (${elapsed} ms)`, 'term-success');
         updateProgressUI();
         buildExerciseTree(el.searchExercises.value);
       } else {
         el.execStatusBadge.innerText = 'Failed';
-        el.execStatusBadge.className = 'exec-status-badge failed';
+        el.execStatusBadge.className = 'status-badge failed';
         logTerminal(`\n❌ Not passed: ${reason}`, 'term-error');
         logTerminal(`[i] Hint: Review the task requirements or click 'Show Hint' if stuck.`, 'term-hint');
       }
@@ -736,7 +593,7 @@ main()`
         });
         return out;
       })
-      // Struct constructors
+      // Struct constructors (support multi-line and single-line comma-separated fields)
       .replace(/\bstruct\s+([a-zA-Z0-9_]+)\s*\{([^}]*)\}/g, (m, name, body) => {
         const fieldNames = body.split(/[\n,]/)
           .map(l => l.trim())
@@ -1155,9 +1012,10 @@ main()`
         e.preventDefault();
         switchExercise(state.currentExerciseIndex - 1);
       }
-      if (e.key === '/' && document.activeElement !== el.searchExercises && (!state.monacoEditor || !state.monacoEditor.hasTextFocus())) {
+      if (e.key === '/' && document.activeElement !== el.searchExercises && (!state.editor || !state.editor.isFocused())) {
         e.preventDefault();
-        el.searchExercises.focus();
+        el.curriculumDrawer.classList.add('open');
+        setTimeout(() => el.searchExercises.focus(), 100);
       }
     });
 
@@ -1168,7 +1026,7 @@ main()`
         setEditorCode(ex.code);
         delete state.userCodeCache[ex.id];
         localStorage.setItem('nyx_tour_code_cache', JSON.stringify(state.userCodeCache));
-        logTerminal('[Editor] Code reset to default exercise state.', 'term-info');
+        logTerminal('[Editor] Code reset to default template.', 'term-info');
       }
     });
 
@@ -1195,18 +1053,43 @@ main()`
       switchExercise(state.currentExerciseIndex + 1);
     });
 
-    // Sidebar Collapse
-    el.btnCollapseSidebar.addEventListener('click', () => {
-      const isCollapsed = el.sidebar.classList.toggle('collapsed');
-      el.btnCollapseSidebar.innerText = isCollapsed ? '▶' : '◀';
-      if (state.monacoEditor) {
-        setTimeout(() => state.monacoEditor.layout(), 250);
-      }
+    // Curriculum Drawer Open / Close
+    el.btnToggleDrawer.addEventListener('click', () => {
+      el.curriculumDrawer.classList.add('open');
+      setTimeout(() => el.searchExercises.focus(), 100);
+    });
+    el.btnCloseDrawer.addEventListener('click', () => {
+      el.curriculumDrawer.classList.remove('open');
     });
 
     // Search Filter
     el.searchExercises.addEventListener('input', (e) => {
       buildExerciseTree(e.target.value);
+    });
+
+    // Resizer Divider
+    let isDragging = false;
+    el.paneResizer.addEventListener('mousedown', () => {
+      isDragging = true;
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const rightPaneRect = document.querySelector('.right-pane').getBoundingClientRect();
+      const newHeight = rightPaneRect.bottom - e.clientY;
+      if (newHeight > 80 && newHeight < rightPaneRect.height - 120) {
+        el.terminalSection.style.height = `${newHeight}px`;
+        if (state.editor) state.editor.resize();
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (state.editor) state.editor.resize();
+      }
     });
 
     // Tabs: Terminal vs Canvas
@@ -1233,10 +1116,10 @@ main()`
       el.btnModeTour.classList.add('active');
       el.btnModePlayground.classList.remove('active');
       el.btnModeArcade.classList.remove('active');
-      el.sidebar.style.display = 'flex';
-      document.getElementById('lessonPanel').style.display = 'flex';
+      el.leftPane.style.display = 'flex';
       el.tabTerminal.click();
       switchExercise(state.currentExerciseIndex);
+      if (state.editor) setTimeout(() => state.editor.resize(), 100);
     });
 
     el.btnModePlayground.addEventListener('click', () => {
@@ -1244,16 +1127,13 @@ main()`
       el.btnModePlayground.classList.add('active');
       el.btnModeTour.classList.remove('active');
       el.btnModeArcade.classList.remove('active');
-      el.sidebar.style.display = 'none';
-      document.getElementById('lessonPanel').style.display = 'none';
+      el.leftPane.style.display = 'none';
 
       const tmpl = PLAYGROUND_TEMPLATES[0];
       el.editorFilename.innerText = 'scratchpad.nyx';
       setEditorCode(tmpl.code);
       el.tabTerminal.click();
-      if (state.monacoEditor) {
-        setTimeout(() => state.monacoEditor.layout(), 100);
-      }
+      if (state.editor) setTimeout(() => state.editor.resize(), 100);
     });
 
     el.btnModeArcade.addEventListener('click', () => {
@@ -1262,31 +1142,6 @@ main()`
       el.btnModeTour.classList.remove('active');
       el.btnModePlayground.classList.remove('active');
       el.tabCanvas.click();
-    });
-
-    // Workbench divider resizing
-    let isDragging = false;
-    el.workbenchDivider.addEventListener('mousedown', () => {
-      isDragging = true;
-      document.body.style.cursor = 'row-resize';
-      document.body.style.userSelect = 'none';
-    });
-    window.addEventListener('mousemove', (e) => {
-      if (!isDragging) return;
-      const workbenchRect = document.querySelector('.editor-workbench').getBoundingClientRect();
-      const newOutputHeight = workbenchRect.bottom - e.clientY;
-      if (newOutputHeight > 80 && newOutputHeight < workbenchRect.height - 120) {
-        document.querySelector('.output-section').style.height = `${newOutputHeight}px`;
-        if (state.monacoEditor) state.monacoEditor.layout();
-      }
-    });
-    window.addEventListener('mouseup', () => {
-      if (isDragging) {
-        isDragging = false;
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        if (state.monacoEditor) state.monacoEditor.layout();
-      }
     });
 
     // Install Modal
