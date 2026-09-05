@@ -219,5 +219,50 @@
       "}"
     ],
     "description": "Asynchronous function returning a Task<T>"
+  },
+  "Enum Definition": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:Name} {",
+      "\t${2:Variant1},",
+      "\t${3:Variant2}",
+      "}"
+    ],
+    "description": "Enumeration definition with variants"
+  },
+  "Type Alias": {
+    "prefix": "type",
+    "body": [
+      "type ${1:Alias} = ${2:ExistingType};"
+    ],
+    "description": "Type alias definition"
+  },
+  "Result Ok": {
+    "prefix": "ok",
+    "body": [
+      "return Ok(${1:value});"
+    ],
+    "description": "Return successful Result::Ok"
+  },
+  "Result Err": {
+    "prefix": "err",
+    "body": [
+      "return Err(\"${1:error message}\");"
+    ],
+    "description": "Return error Result::Err"
+  },
+  "Array Map": {
+    "prefix": "map",
+    "body": [
+      "map(${1:collection}, fn(x) = ${2:x})"
+    ],
+    "description": "Functional collection map transform"
+  },
+  "Array Filter": {
+    "prefix": "filter",
+    "body": [
+      "filter(${1:collection}, fn(x) = ${2:x > 0})"
+    ],
+    "description": "Functional collection filter predicate"
   }
 }

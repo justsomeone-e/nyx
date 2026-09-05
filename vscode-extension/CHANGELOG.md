@@ -1,9 +1,13 @@
 # Change Log
 
-## 4.0.0
+## 4.0.0 — Nirvana
 
-- Align the extension package with the Nirvana v4.0.0 compiler.
-- Refresh the canonical language and standard-library completion catalog.
+- Official release aligned with Nyx v4.0.0 Nirvana compiler and language specification.
+- Updated syntax grammar with full support for v4 built-ins (`args`, `map`, `filter`, `fold`, `contains`, `is_number`).
+- Added snippets for enums, type aliases, result handling (`Ok`/`Err`), and functional collection transforms (`map`/`filter`).
+- Synchronized canonical completion catalog and language surface metadata (`language-surface.json`).
+- Updated target options (`cpp`, `js`, `python`, `wasm`, `rust`, `react`, `asm`).
+- Verified zero-latency LSP diagnostics and persistent integrated console execution.
 
 ## 4.0.0-rc.2
 

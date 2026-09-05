@@ -603,12 +603,6 @@ The Nyx compiler, standard library, and associated tooling are licensed under th
 - **Trademark Protection (Section 6)**: The Apache 2.0 license explicitly protects the Nyx name, logo, and brand against unauthorized commercial hijacking, misrepresentation, or false endorsement.
 - **Patent Grant (Section 3)**: Grants an explicit, perpetual patent license covering contributor patents to protect users and downstream developers.
 
+
 See [`LICENSE`](LICENSE) for full legal terms.
 
----
-
-<div align="center">
-  <img src="assets/footer_animated.svg?v=4.0.0" width="98%" alt="nyx systems footer banner"/>
-  <br/><br/>
-  <sub>Designed for performance. Engineered for correctness. Built for the modern machine.</sub>
-</div>
