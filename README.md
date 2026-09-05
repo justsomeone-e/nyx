@@ -2,7 +2,7 @@
 
 <p align="left">
   <a href="VERSION"><img src="https://img.shields.io/badge/version-4.0.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
-  <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Release candidate"></a>
+  <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Stable Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
 </p>
@@ -30,10 +30,10 @@ underneath it.**
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx v4.0.0 "Nirvana"** establishes the stable v4 language and toolchain contract for `cpp`, `js`, and `python`. Rust, WebAssembly, React, and assembly retain their documented beta capability boundaries. The release includes JavaScript ESM output, WASI preview1, scalar-struct WebAssembly parameters, and the 81-exercise Tour of Nyx. Microcontroller firmware remains outside the v4 compiler-focused scope. See the [release checklist](docs/internals/RELEASE_AUDIT_v4.0.0.md) for publication status.
+> **Nyx v4.0.0 "Nirvana"** establishes the stable v4 language and toolchain contract for `cpp`, `js`, and `python`. Rust, WebAssembly, React, and assembly retain their documented beta capability boundaries. The release includes JavaScript ESM output, WASI preview1, scalar-struct WebAssembly parameters, and the complete 81-exercise Tour of Nyx across 20 topics. Microcontroller firmware remains outside the v4 compiler-focused scope. See the [release audit](docs/internals/RELEASE_AUDIT_v4.0.0.md) for verification evidence.
 
 <div align="center">
-  <img src="assets/terminal_animated.svg?v=4.0.0-rc1" width="92%" alt="nyx interactive live execution"/>
+  <img src="assets/terminal_animated.svg?v=4.0.0" width="92%" alt="nyx interactive live execution"/>
 </div>
 
 <p align="left">
@@ -204,7 +204,7 @@ Core v4 features: `let`/`var`/`const`, explicit `set`, `guard ... else`, `defer`
 The Nyx toolchain operates through an authoritative, deterministic middle-end:
 
 <div align="center">
-  <img src="assets/pipeline_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx compiler architecture pipeline"/>
+  <img src="assets/pipeline_animated.svg?v=4.0.0" width="98%" alt="nyx compiler architecture pipeline"/>
 </div>
 
 ```text
@@ -447,7 +447,7 @@ nyx doctor
 Modern languages demand exceptional developer tooling from day zero.
 
 <div align="center">
-  <img src="assets/features_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx features"/>
+  <img src="assets/features_animated.svg?v=4.0.0" width="98%" alt="nyx features"/>
 </div>
 
 ### Local Visual Studio Code Extension
@@ -518,7 +518,7 @@ The Nyx release lifecycle is bound to verifiable technical milestones rather tha
 | `v4.0.0-rc.1` | **Samsara** | *Cycle of Existence* | First cross-platform release candidate, verification battery, VSIX | Published |
 | `v4.0.0-rc.2` | **Bodhi** | *Awakening* | Browser host ABI, std/web, npm bundles, local dependencies | Published |
 | `v4.0.0-rc.3` | **Moksha** | *Liberation* | Backend-parity development work incorporated into Nirvana | Not published separately |
-| `v4.0.0` | **Nirvana** | *Stability* | Stable v4 language, toolchain, and ABI contract | Release preparation |
+| `v4.0.0` | **Nirvana** | *Stability* | Stable v4 language, toolchain, and ABI contract | Official Release |
 | `v4.5.0` | — | — | Compatible tooling, library, performance, and migration work toward v5 | Planned |
 | `v5.0.0` | **Aether** | *Upper Medium* | Portable C output, LLVM IR emitter, reference frontend | Future Target |
 
@@ -608,7 +608,7 @@ See [`LICENSE`](LICENSE) for full legal terms.
 ---
 
 <div align="center">
-  <img src="assets/footer_animated.svg?v=4.0.0-rc1" width="98%" alt="nyx systems footer banner"/>
+  <img src="assets/footer_animated.svg?v=4.0.0" width="98%" alt="nyx systems footer banner"/>
   <br/><br/>
   <sub>Designed for performance. Engineered for correctness. Built for the modern machine.</sub>
 </div>
