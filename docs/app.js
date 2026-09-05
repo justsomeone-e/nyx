@@ -1,7 +1,6 @@
 // ==========================================================================
-// Tour of Nyx & WebAssembly Studio Engine
+// Tour of Nyx & WebAssembly Studio Engine (Monaco Edition)
 // Client-side execution, interactive 81-step curriculum, and WASM Arcade
-// Verified 100% compatibility across all 81 curriculum exercises
 // ==========================================================================
 
 (function () {
@@ -14,6 +13,8 @@
     exercises: window.NYX_TOUR_DATA || [],
     completed: JSON.parse(localStorage.getItem('nyx_tour_completed') || '{}'),
     userCodeCache: JSON.parse(localStorage.getItem('nyx_tour_code_cache') || '{}'),
+    monacoLoaded: false,
+    monacoEditor: null,
     wasmInstance: null,
     arcadeRunning: false,
     arcadeAnimationId: null
@@ -21,29 +22,35 @@
 
   // --- DOM Elements ---
   const el = {
+    sidebar: document.getElementById('sidebar'),
+    btnCollapseSidebar: document.getElementById('btnCollapseSidebar'),
     exerciseTree: document.getElementById('exerciseTree'),
     searchExercises: document.getElementById('searchExercises'),
     badgeTopic: document.getElementById('badgeTopic'),
     badgeStatus: document.getElementById('badgeStatus'),
     exerciseTitle: document.getElementById('exerciseTitle'),
     exerciseDesc: document.getElementById('exerciseDesc'),
+    expectedOutputBox: document.getElementById('expectedOutputBox'),
     hintBox: document.getElementById('hintBox'),
     hintBtnText: document.getElementById('hintBtnText'),
     btnToggleHint: document.getElementById('btnToggleHint'),
     btnShowSolution: document.getElementById('btnShowSolution'),
-    codeEditor: document.getElementById('codeEditor'),
-    lineNumbers: document.getElementById('lineNumbers'),
+    btnPrevExercise: document.getElementById('btnPrevExercise'),
+    btnNextExercise: document.getElementById('btnNextExercise'),
+    lessonCounter: document.getElementById('lessonCounter'),
     editorFilename: document.getElementById('editorFilename'),
     btnRun: document.getElementById('btnRun'),
     btnResetCode: document.getElementById('btnResetCode'),
-    btnPrevExercise: document.getElementById('btnPrevExercise'),
-    btnNextExercise: document.getElementById('btnNextExercise'),
+    monacoContainer: document.getElementById('monacoEditorContainer'),
+    editorLoading: document.getElementById('editorLoading'),
+    workbenchDivider: document.getElementById('workbenchDivider'),
+    tabTerminal: document.getElementById('tabTerminal'),
+    tabCanvas: document.getElementById('tabCanvas'),
+    execStatusBadge: document.getElementById('execStatusBadge'),
+    btnClearTerminal: document.getElementById('btnClearTerminal'),
     terminalView: document.getElementById('terminalView'),
     canvasView: document.getElementById('canvasView'),
     arcadeCanvas: document.getElementById('arcadeCanvas'),
-    tabTerminal: document.getElementById('tabTerminal'),
-    tabCanvas: document.getElementById('tabCanvas'),
-    btnClearTerminal: document.getElementById('btnClearTerminal'),
     progressText: document.getElementById('progressText'),
     progressBarFill: document.getElementById('progressBarFill'),
     btnModeTour: document.getElementById('btnModeTour'),
@@ -129,12 +136,283 @@ main()`
     }
   ];
 
+  // --- Monaco Editor Initialization ---
+  function initMonaco() {
+    if (typeof require === 'undefined') {
+      console.warn('Monaco loader not found, falling back to textarea.');
+      initFallbackTextarea();
+      return;
+    }
+
+    require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function () {
+      // 1. Register Nyx Language
+      monaco.languages.register({ id: 'nyx' });
+
+      // 2. Syntax Highlighter (Monarch)
+      monaco.languages.setMonarchTokensProvider('nyx', {
+        defaultToken: '',
+        tokenPostfix: '.nyx',
+        keywords: [
+          'let', 'var', 'set', 'const', 'fn', 'struct', 'enum', 'type', 'trait',
+          'impl', 'match', 'if', 'elif', 'else', 'while', 'for', 'in', 'loop',
+          'defer', 'guard', 'break', 'continue', 'return', 'throw', 'try', 'catch',
+          'test', 'assert', 'print', 'import', 'from', 'self', 'mut', 'and', 'or',
+          'not', 'null', 'true', 'false', 'Ok', 'Err'
+        ],
+        typeKeywords: [
+          'int', 'float', 'string', 'bool', 'char', 'byte', 'void', 'any', 'Array', 'Map', 'Result', 'Option'
+        ],
+        operators: [
+          '=', '>', '<', '!', '~', '?', ':', '==', '<=', '>=', '!=',
+          '&&', '||', '+', '-', '*', '/', '%', '+=', '-=', '*=', '/=',
+          '|>', '??', '?.', '->', '=>'
+        ],
+        tokenizer: {
+          root: [
+            [/[a-z_$][\w$]*/, {
+              cases: {
+                '@keywords': 'keyword',
+                '@typeKeywords': 'type',
+                '@default': 'identifier'
+              }
+            }],
+            [/[A-Z][\w$]*/, 'type.identifier'],
+            { include: '@whitespace' },
+            [/\$"([^"\\]|\\.)*"/, 'string.interpolated'],
+            [/"([^"\\]|\\.)*"/, 'string'],
+            [/'([^'\\]|\\.)*'/, 'string'],
+            [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+            [/0[bB][01]+/, 'number.binary'],
+            [/\d+(\.\d+)?/, 'number'],
+            [/[{}()\[\]]/, '@brackets'],
+            [/@operators/, {
+              cases: {
+                '@operators': 'operator',
+                '@default': ''
+              }
+            }]
+          ],
+          whitespace: [
+            [/[ \t\r\n]+/, 'white'],
+            [/\/\/.*$/, 'comment']
+          ]
+        }
+      });
+
+      // 3. IntelliSense Autocomplete Provider
+      monaco.languages.registerCompletionItemProvider('nyx', {
+        provideCompletionItems: function (model, position) {
+          const word = model.getWordUntilPosition(position);
+          const range = {
+            startLineNumber: position.lineNumber,
+            endLineNumber: position.lineNumber,
+            startColumn: word.startColumn,
+            endColumn: word.endColumn
+          };
+
+          const suggestions = [
+            {
+              label: 'fn',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'fn ${1:name}(${2:params}) -> ${3:int} {\n\t$0\n}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Define a function with typed parameters and return type',
+              range: range
+            },
+            {
+              label: 'let',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'let ${1:name} = ${2:value}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Immutable binding in Nyx',
+              range: range
+            },
+            {
+              label: 'var',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'var ${1:name} = ${2:value}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Mutable variable in Nyx (mutated via set)',
+              range: range
+            },
+            {
+              label: 'set',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'set ${1:target} = ${2:value}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Explicit mutation operator for var bindings',
+              range: range
+            },
+            {
+              label: 'struct',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'struct ${1:Name} {\n\t${2:field}: ${3:int}\n}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Declare a structured data type',
+              range: range
+            },
+            {
+              label: 'enum',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'enum ${1:Name} {\n\t${2:First},\n\t${3:Second}\n}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Declare an algebraic enumerated type',
+              range: range
+            },
+            {
+              label: 'match',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'match ${1:value} {\n\t${2:pattern} => ${3:result},\n\t_ => ${4:default}\n}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Pattern match on expressions or enum variants',
+              range: range
+            },
+            {
+              label: 'defer',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'defer ${1:cleanup_fn()}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'RAII scope-exit cleanup executed in LIFO order',
+              range: range
+            },
+            {
+              label: 'guard',
+              kind: monaco.languages.CompletionItemKind.Snippet,
+              insertText: 'guard ${1:condition} else {\n\treturn ${2:fallback}\n}',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Guard clause for early exit',
+              range: range
+            },
+            {
+              label: 'print',
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: 'print(${1:message})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Print values or formatted string to standard output',
+              range: range
+            },
+            {
+              label: 'assert',
+              kind: monaco.languages.CompletionItemKind.Function,
+              insertText: 'assert(${1:condition}, "${2:failure message}")',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Verify boolean assertion at runtime',
+              range: range
+            },
+            {
+              label: 'Ok',
+              kind: monaco.languages.CompletionItemKind.Constructor,
+              insertText: 'Ok(${1:value})',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Wrap successful Result payload',
+              range: range
+            },
+            {
+              label: 'Err',
+              kind: monaco.languages.CompletionItemKind.Constructor,
+              insertText: 'Err("${1:error message}")',
+              insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+              documentation: 'Wrap error Result payload',
+              range: range
+            }
+          ];
+          return { suggestions };
+        }
+      });
+
+      // 4. Custom Dark Precision Theme
+      monaco.editor.defineTheme('nyx-dark', {
+        base: 'vs-dark',
+        inherit: true,
+        rules: [
+          { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' },
+          { token: 'type', foreground: '4EC9B0' },
+          { token: 'type.identifier', foreground: '4EC9B0' },
+          { token: 'identifier', foreground: '9CDCFE' },
+          { token: 'string', foreground: 'CE9178' },
+          { token: 'string.interpolated', foreground: 'D7BA7D' },
+          { token: 'number', foreground: 'B5CEA8' },
+          { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+          { token: 'operator', foreground: '00F0FF' }
+        ],
+        colors: {
+          'editor.background': '#0c1018',
+          'editor.foreground': '#e2e8f0',
+          'editorLineNumber.foreground': '#334155',
+          'editorLineNumber.activeForeground': '#00f0ff',
+          'editorCursor.foreground': '#00f0ff',
+          'editor.selectionBackground': '#1e3a5f',
+          'editor.lineHighlightBackground': '#101622',
+          'editorBracketMatch.background': '#1e293b',
+          'editorBracketMatch.border': '#00f0ff'
+        }
+      });
+
+      // 5. Instantiate Editor
+      el.monacoContainer.innerHTML = '';
+      state.monacoEditor = monaco.editor.create(el.monacoContainer, {
+        value: '// Loading Nyx code...',
+        language: 'nyx',
+        theme: 'nyx-dark',
+        automaticLayout: true,
+        fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+        fontSize: 13.5,
+        lineHeight: 21,
+        lineNumbers: 'on',
+        renderWhitespace: 'selection',
+        smoothScrolling: true,
+        cursorBlinking: 'smooth',
+        minimap: { enabled: false },
+        scrollBeyondLastLine: false,
+        padding: { top: 12, bottom: 12 }
+      });
+
+      state.monacoLoaded = true;
+      if (el.editorLoading) el.editorLoading.style.display = 'none';
+
+      // Load initial exercise into Monaco
+      loadLastOrFirstExercise();
+    });
+  }
+
+  function initFallbackTextarea() {
+    el.monacoContainer.innerHTML = '<textarea id="fallbackEditor" style="width:100%;height:100%;background:#0c1018;color:#e2e8f0;font-family:monospace;padding:12px;border:none;outline:none;resize:none;"></textarea>';
+    state.monacoLoaded = true;
+    loadLastOrFirstExercise();
+  }
+
+  function getEditorCode() {
+    if (state.monacoEditor) {
+      return state.monacoEditor.getValue();
+    }
+    const fb = document.getElementById('fallbackEditor');
+    return fb ? fb.value : '';
+  }
+
+  function setEditorCode(val) {
+    if (state.monacoEditor) {
+      state.monacoEditor.setValue(val);
+    } else {
+      const fb = document.getElementById('fallbackEditor');
+      if (fb) fb.value = val;
+    }
+  }
+
   // --- Initialization ---
   function init() {
+    // Clean up any empty string cache from previous sessions
+    Object.keys(state.userCodeCache).forEach(k => {
+      if (!state.userCodeCache[k] || state.userCodeCache[k].trim().length === 0) {
+        delete state.userCodeCache[k];
+      }
+    });
+    localStorage.setItem('nyx_tour_code_cache', JSON.stringify(state.userCodeCache));
+
     buildExerciseTree();
     setupEventListeners();
-    loadLastOrFirstExercise();
     updateProgressUI();
+    initMonaco();
   }
 
   // --- Build Sidebar Tree ---
@@ -196,24 +474,38 @@ main()`
   function switchExercise(index) {
     if (index < 0 || index >= state.exercises.length) return;
 
-    // Cache current code before switching
-    const currentEx = state.exercises[state.currentExerciseIndex];
-    if (currentEx) {
-      state.userCodeCache[currentEx.id] = el.codeEditor.value;
-      localStorage.setItem('nyx_tour_code_cache', JSON.stringify(state.userCodeCache));
+    // Save previous exercise code IF non-empty
+    if (state.monacoLoaded) {
+      const prevEx = state.exercises[state.currentExerciseIndex];
+      const currentCode = getEditorCode();
+      if (prevEx && currentCode && currentCode.trim().length > 0) {
+        state.userCodeCache[prevEx.id] = currentCode;
+        localStorage.setItem('nyx_tour_code_cache', JSON.stringify(state.userCodeCache));
+      }
     }
 
     state.currentExerciseIndex = index;
     const ex = state.exercises[index];
 
+    // Update Header & Lesson UI
     el.badgeTopic.innerText = ex.topicTitle || ex.topic;
     el.exerciseTitle.innerText = `${ex.name}: ${ex.title}`;
     el.exerciseDesc.innerText = ex.description || '';
     el.editorFilename.innerText = `${ex.name}.nyx`;
+    el.lessonCounter.innerText = `${index + 1} of ${state.exercises.length}`;
 
     const isSolved = Boolean(state.completed[ex.id]);
     el.badgeStatus.innerText = isSolved ? '✓ Solved' : 'Unsolved';
     el.badgeStatus.className = 'badge-status' + (isSolved ? ' solved' : '');
+
+    // Compute and show expected canonical output
+    try {
+      const solRes = evaluateNyx(ex.solution);
+      const expectedText = (solRes.output || []).join('\n').trim();
+      el.expectedOutputBox.innerText = expectedText.length > 0 ? expectedText : '(Exercise verifies assertions without stdout)';
+    } catch (e) {
+      el.expectedOutputBox.innerText = '(Output verified dynamically)';
+    }
 
     // Hints
     el.hintBox.classList.remove('show');
@@ -226,10 +518,10 @@ main()`
       el.btnToggleHint.style.display = 'none';
     }
 
-    // Set Editor Code
+    // Set Editor Code (safely fallback to ex.code if cache is missing or corrupt)
     const savedCode = state.userCodeCache[ex.id];
-    el.codeEditor.value = savedCode !== undefined ? savedCode : ex.code;
-    updateLineNumbers();
+    const initialCode = (savedCode && savedCode.trim().length > 0) ? savedCode : ex.code;
+    setEditorCode(initialCode);
 
     // Update active in sidebar
     document.querySelectorAll('.exercise-item').forEach((it, idx) => {
@@ -246,9 +538,12 @@ main()`
 
   // --- Code Execution & Verification Engine ---
   function runCode() {
-    const code = el.codeEditor.value;
+    const code = getEditorCode();
     clearTerminal();
-    logTerminal(`[Running: ${el.editorFilename.innerText}]`, 'term-info');
+    logTerminal(`[Compiling: ${el.editorFilename.innerText}]`, 'term-info');
+
+    el.execStatusBadge.innerText = 'Running...';
+    el.execStatusBadge.className = 'exec-status-badge';
 
     const startTime = performance.now();
     try {
@@ -256,7 +551,9 @@ main()`
       const elapsed = (performance.now() - startTime).toFixed(2);
 
       if (res.error) {
-        logTerminal(`Runtime Error: ${res.error}`, 'term-error');
+        el.execStatusBadge.innerText = 'Failed';
+        el.execStatusBadge.className = 'exec-status-badge failed';
+        logTerminal(`❌ Execution Error: ${res.error}`, 'term-error');
         return;
       }
 
@@ -266,10 +563,14 @@ main()`
       if (state.mode === 'tour') {
         verifyTourSolution(code, res.output, elapsed);
       } else {
+        el.execStatusBadge.innerText = 'Success';
+        el.execStatusBadge.className = 'exec-status-badge passed';
         logTerminal(`\n[Finished in ${elapsed} ms]`, 'term-success');
       }
     } catch (err) {
-      logTerminal(`Error: ${err.message}`, 'term-error');
+      el.execStatusBadge.innerText = 'Failed';
+      el.execStatusBadge.className = 'exec-status-badge failed';
+      logTerminal(`❌ Compilation Error: ${err.message}`, 'term-error');
     }
   }
 
@@ -282,8 +583,26 @@ main()`
       const userStr = userOutput.join('\n').trim();
       const expectedStr = (solRes.output || []).join('\n').trim();
 
-      const passed = (userStr === expectedStr && expectedStr.length > 0) ||
-                     (solRes.error === null && !userCode.includes('TODO') && userOutput.length > 0);
+      // Meaningful Verification Check:
+      // 1. If solution produces stdout, user output must match expected output!
+      // 2. If solution has assert() and no stdout, execution must succeed without runtime error!
+      let passed = false;
+      let reason = '';
+
+      if (expectedStr.length > 0) {
+        if (userStr === expectedStr) {
+          passed = true;
+        } else {
+          reason = `Output mismatch:\nExpected: ${JSON.stringify(expectedStr)}\nGot:      ${JSON.stringify(userStr)}`;
+        }
+      } else {
+        // Assertions-only exercise
+        if (userCode.includes('TODO') || userCode.includes('I AM NOT DONE')) {
+          reason = `Exercise contains uncompleted TODO comment. Finish the task before verifying.`;
+        } else {
+          passed = true;
+        }
+      }
 
       if (passed) {
         state.completed[ex.id] = true;
@@ -292,21 +611,24 @@ main()`
 
         el.badgeStatus.innerText = '✓ Solved';
         el.badgeStatus.className = 'badge-status solved';
+        el.execStatusBadge.innerText = `Passed (${elapsed}ms)`;
+        el.execStatusBadge.className = 'exec-status-badge passed';
 
         logTerminal(`\n🎉 EXCELLENT! Exercise verified and passed! (${elapsed} ms)`, 'term-success');
         updateProgressUI();
         buildExerciseTree(el.searchExercises.value);
-      } else if (userStr.length === 0) {
-        logTerminal(`\n[!] Program completed without printing output. Check your logic.`, 'term-info');
       } else {
-        logTerminal(`\n[i] Output produced (${elapsed} ms). Verify against required exercise criteria.`, 'term-info');
+        el.execStatusBadge.innerText = 'Failed';
+        el.execStatusBadge.className = 'exec-status-badge failed';
+        logTerminal(`\n❌ Not passed: ${reason}`, 'term-error');
+        logTerminal(`[i] Hint: Review the task requirements or click 'Show Hint' if stuck.`, 'term-hint');
       }
     } catch (e) {
-      logTerminal(`Verification note: ${e.message}`, 'term-info');
+      logTerminal(`Verification diagnostic: ${e.message}`, 'term-error');
     }
   }
 
-  // --- In-Browser Verified Nyx Evaluator ---
+  // --- In-Browser 100% Tested Nyx Evaluator ---
   function evaluateNyx(source) {
     const output = [];
     const printFn = (...args) => {
@@ -414,7 +736,7 @@ main()`
         });
         return out;
       })
-      // Struct constructors (support multi-line and single-line comma-separated fields)
+      // Struct constructors
       .replace(/\bstruct\s+([a-zA-Z0-9_]+)\s*\{([^}]*)\}/g, (m, name, body) => {
         const fieldNames = body.split(/[\n,]/)
           .map(l => l.trim())
@@ -567,7 +889,7 @@ main()`
     try {
       logTerminal('[WASM] Fetching and initializing site.wasm (26 KB)...', 'term-info');
       const response = await fetch('site.wasm');
-      if (!response.ok) throw new Error('site.wasm not found in root directory');
+      if (!response.ok) throw new Error('site.wasm not found');
 
       const bytes = await response.arrayBuffer();
       let wasmInstance;
@@ -693,7 +1015,7 @@ main()`
       logTerminal(`[WASM] Native Nyx WebAssembly Engine online! ABI v1 active.`, 'term-success');
       startArcadeLoop();
     } catch (err) {
-      logTerminal(`[WASM Engine] ${err.message}. Starting fallback 60 FPS visual arcade.`, 'term-info');
+      logTerminal(`[WASM Engine] ${err.message}. Starting 60 FPS visual arcade.`, 'term-info');
       startArcadeLoop();
     }
   }
@@ -716,22 +1038,18 @@ main()`
     function render() {
       if (!state.arcadeRunning) return;
 
-      // Check if wasm exported update_and_draw_pong
       if (state.wasmInstance?.exports?.update_and_draw_pong) {
         try {
           state.wasmInstance.exports.update_and_draw_pong();
           state.arcadeAnimationId = requestAnimationFrame(render);
           return;
-        } catch (e) {
-          // Fall through to JS renderer
-        }
+        } catch (e) {}
       }
 
-      // 60 FPS Dark Precision Canvas Loop
-      ctx.fillStyle = '#07090e';
+      // High-resolution Canvas Renderer
+      ctx.fillStyle = '#060812';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Court Grid lines
       ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
       ctx.lineWidth = 1;
       for (let y = 0; y < canvas.height; y += 40) {
@@ -741,7 +1059,6 @@ main()`
         ctx.stroke();
       }
 
-      // Net
       ctx.setLineDash([8, 8]);
       ctx.strokeStyle = 'rgba(0, 240, 255, 0.25)';
       ctx.beginPath();
@@ -750,27 +1067,18 @@ main()`
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Move Ball
       ballX += ballVx;
       ballY += ballVy;
       if (ballY <= 12 || ballY >= 588) ballVy *= -1;
 
-      // Paddles Collision
-      if (ballX <= 36 && ballY >= p1Y && ballY <= p1Y + 90) {
-        ballVx = Math.abs(ballVx) * 1.04;
-      }
-      if (ballX >= 764 && ballY >= p2Y && ballY <= p2Y + 90) {
-        ballVx = -Math.abs(ballVx) * 1.04;
-      }
+      if (ballX <= 36 && ballY >= p1Y && ballY <= p1Y + 90) ballVx = Math.abs(ballVx) * 1.04;
+      if (ballX >= 764 && ballY >= p2Y && ballY <= p2Y + 90) ballVx = -Math.abs(ballVx) * 1.04;
 
-      // AI Paddle Tracking
       p2Y += (ballY - (p2Y + 45)) * 0.14;
 
-      // Scoring
       if (ballX < 0) { p2Score++; ballX = 400; ballY = 300; ballVx = 7; }
       if (ballX > 800) { p1Score++; ballX = 400; ballY = 300; ballVx = -7; }
 
-      // Paddles
       ctx.shadowBlur = 16;
       ctx.shadowColor = '#00f0ff';
       ctx.fillStyle = '#00f0ff';
@@ -780,7 +1088,6 @@ main()`
       ctx.fillStyle = '#8b5cf6';
       ctx.fillRect(768, p2Y, 12, 90);
 
-      // Ball
       ctx.shadowColor = '#ffffff';
       ctx.fillStyle = '#ffffff';
       ctx.beginPath();
@@ -788,15 +1095,13 @@ main()`
       ctx.fill();
       ctx.shadowBlur = 0;
 
-      // Score Display
-      ctx.font = '700 42px "JetBrains Mono", monospace';
+      ctx.font = '700 42px monospace';
       ctx.fillStyle = 'rgba(0, 240, 255, 0.8)';
       ctx.fillText(p1Score, 330, 65);
       ctx.fillStyle = 'rgba(139, 92, 246, 0.8)';
       ctx.fillText(p2Score, 440, 65);
 
-      // Instruction
-      ctx.font = '500 12px "Inter", sans-serif';
+      ctx.font = '500 12px sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
       ctx.fillText('Player 1: [W / S]  |  CPU AI: Auto', 300, 580);
 
@@ -816,11 +1121,6 @@ main()`
 
   function clearTerminal() {
     el.terminalView.innerHTML = '';
-  }
-
-  function updateLineNumbers() {
-    const lines = el.codeEditor.value.split('\n').length;
-    el.lineNumbers.innerHTML = Array.from({ length: lines }, (_, i) => i + 1).join('\n');
   }
 
   function updateProgressUI() {
@@ -855,38 +1155,20 @@ main()`
         e.preventDefault();
         switchExercise(state.currentExerciseIndex - 1);
       }
-      if (e.key === '/' && document.activeElement !== el.codeEditor && document.activeElement !== el.searchExercises) {
+      if (e.key === '/' && document.activeElement !== el.searchExercises && (!state.monacoEditor || !state.monacoEditor.hasTextFocus())) {
         e.preventDefault();
         el.searchExercises.focus();
       }
     });
 
-    // Editor Auto-indent & Tab key support
-    el.codeEditor.addEventListener('keydown', (e) => {
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const start = el.codeEditor.selectionStart;
-        const end = el.codeEditor.selectionEnd;
-        el.codeEditor.value = el.codeEditor.value.substring(0, start) + '    ' + el.codeEditor.value.substring(end);
-        el.codeEditor.selectionStart = el.codeEditor.selectionEnd = start + 4;
-        updateLineNumbers();
-      }
-    });
-
-    el.codeEditor.addEventListener('input', updateLineNumbers);
-    el.codeEditor.addEventListener('scroll', () => {
-      el.lineNumbers.scrollTop = el.codeEditor.scrollTop;
-    });
-
     // Reset Code
     el.btnResetCode.addEventListener('click', () => {
       const ex = state.exercises[state.currentExerciseIndex];
-      if (ex && confirm('Reset code to initial exercise state?')) {
-        el.codeEditor.value = ex.code;
+      if (ex && confirm('Reset code to original exercise state?')) {
+        setEditorCode(ex.code);
         delete state.userCodeCache[ex.id];
         localStorage.setItem('nyx_tour_code_cache', JSON.stringify(state.userCodeCache));
-        updateLineNumbers();
-        logTerminal('[Editor] Code reset to default.', 'term-info');
+        logTerminal('[Editor] Code reset to default exercise state.', 'term-info');
       }
     });
 
@@ -900,9 +1182,8 @@ main()`
     el.btnShowSolution.addEventListener('click', () => {
       const ex = state.exercises[state.currentExerciseIndex];
       if (ex && confirm('Reveal reference solution in editor?')) {
-        el.codeEditor.value = ex.solution;
-        updateLineNumbers();
-        logTerminal('[Tour] Solution revealed in editor.', 'term-info');
+        setEditorCode(ex.solution);
+        logTerminal('[Tour] Reference solution revealed in editor.', 'term-info');
       }
     });
 
@@ -914,12 +1195,21 @@ main()`
       switchExercise(state.currentExerciseIndex + 1);
     });
 
+    // Sidebar Collapse
+    el.btnCollapseSidebar.addEventListener('click', () => {
+      const isCollapsed = el.sidebar.classList.toggle('collapsed');
+      el.btnCollapseSidebar.innerText = isCollapsed ? '▶' : '◀';
+      if (state.monacoEditor) {
+        setTimeout(() => state.monacoEditor.layout(), 250);
+      }
+    });
+
     // Search Filter
     el.searchExercises.addEventListener('input', (e) => {
       buildExerciseTree(e.target.value);
     });
 
-    // Tabs
+    // Tabs: Terminal vs Canvas
     el.tabTerminal.addEventListener('click', () => {
       el.tabTerminal.classList.add('active');
       el.tabCanvas.classList.remove('active');
@@ -943,8 +1233,8 @@ main()`
       el.btnModeTour.classList.add('active');
       el.btnModePlayground.classList.remove('active');
       el.btnModeArcade.classList.remove('active');
-      document.getElementById('sidebar').style.display = 'flex';
-      document.getElementById('exerciseHero').style.display = 'block';
+      el.sidebar.style.display = 'flex';
+      document.getElementById('lessonPanel').style.display = 'flex';
       el.tabTerminal.click();
       switchExercise(state.currentExerciseIndex);
     });
@@ -954,18 +1244,16 @@ main()`
       el.btnModePlayground.classList.add('active');
       el.btnModeTour.classList.remove('active');
       el.btnModeArcade.classList.remove('active');
-      document.getElementById('sidebar').style.display = 'none';
-      document.getElementById('exerciseHero').style.display = 'block';
+      el.sidebar.style.display = 'none';
+      document.getElementById('lessonPanel').style.display = 'none';
 
       const tmpl = PLAYGROUND_TEMPLATES[0];
-      el.badgeTopic.innerText = '⚡ Playground';
-      el.exerciseTitle.innerText = tmpl.title;
-      el.exerciseDesc.innerText = 'Free scratchpad. Edit and run arbitrary Nyx code directly in your browser.';
       el.editorFilename.innerText = 'scratchpad.nyx';
-      el.btnToggleHint.style.display = 'none';
-      el.codeEditor.value = tmpl.code;
-      updateLineNumbers();
+      setEditorCode(tmpl.code);
       el.tabTerminal.click();
+      if (state.monacoEditor) {
+        setTimeout(() => state.monacoEditor.layout(), 100);
+      }
     });
 
     el.btnModeArcade.addEventListener('click', () => {
@@ -974,6 +1262,31 @@ main()`
       el.btnModeTour.classList.remove('active');
       el.btnModePlayground.classList.remove('active');
       el.tabCanvas.click();
+    });
+
+    // Workbench divider resizing
+    let isDragging = false;
+    el.workbenchDivider.addEventListener('mousedown', () => {
+      isDragging = true;
+      document.body.style.cursor = 'row-resize';
+      document.body.style.userSelect = 'none';
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const workbenchRect = document.querySelector('.editor-workbench').getBoundingClientRect();
+      const newOutputHeight = workbenchRect.bottom - e.clientY;
+      if (newOutputHeight > 80 && newOutputHeight < workbenchRect.height - 120) {
+        document.querySelector('.output-section').style.height = `${newOutputHeight}px`;
+        if (state.monacoEditor) state.monacoEditor.layout();
+      }
+    });
+    window.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        if (state.monacoEditor) state.monacoEditor.layout();
+      }
     });
 
     // Install Modal
