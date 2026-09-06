@@ -39,23 +39,14 @@ A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.
 
 <p align="left">
   <a href="https://justsomeone-e.github.io/nyx/"><b>TRY ONLINE (TOUR &amp; PLAYGROUND)</b></a> •
-  
   <a href="#manifesto">MANIFESTO</a> •
-  
   <a href="#language-tour">LANGUAGE TOUR</a> •
-  
   <a href="#architecture">ARCHITECTURE</a> •
-  
   <a href="#targets">TARGETS</a> •
-  
   <a href="#bundle-abi">BUNDLE ABI</a> •
-  
   <a href="#verification">VERIFICATION</a> •
-  
   <a href="#install">INSTALL</a> •
-  
-  <a href="#tooling">TOOLING</a> •
-  
+  <a href="#tooling">TOOLING</a> • 
   <a href="#docs">DOCS</a>
 </p>
 
