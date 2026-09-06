@@ -145,8 +145,8 @@ function _nyxIntMod(left, right) {
     if (right === 0n) throw new RangeError("integer division by zero");
     return _nyxI64(left % right);
 }
-function _nyxF64Div(left, right) { return left / right; }
-function _nyxF64Mod(left, right) { return left % right; }
+function _nyxF64Div(left, right) { return Number(left) / Number(right); }
+function _nyxF64Mod(left, right) { return Number(left) % Number(right); }
 function _nyxNormalizeDecimal(text) {
     text = text.toLowerCase();
     if (text === "nan" || text === "infinity" || text === "-infinity") {
@@ -344,6 +344,71 @@ const _nyx_fs_append_string_result = (path, content) => {
 const _nyx_fs_remove_file_result = path => {
     try { _nyxFs.unlinkSync(path); return Ok(true); }
     catch (error) { return Err(`cannot remove file '${path}': ${error.message}`); }
+};
+
+const _nyx_path_normalize = p => p.replaceAll("\\", "/");
+const _nyx_path_join = (a, b) => {
+    const na = a.replaceAll("\\", "/");
+    const nb = b.replaceAll("\\", "/");
+    if (!na) return nb;
+    if (!nb) return na;
+    if (nb.startsWith("/") || (nb.length >= 2 && nb[1] === ":")) return nb;
+    if (na.endsWith("/")) return na + nb;
+    return na + "/" + nb;
+};
+const _nyx_path_basename = p => {
+    let s = p.replaceAll("\\", "/");
+    while (s.length > 1 && s.endsWith("/")) s = s.slice(0, -1);
+    const pos = s.lastIndexOf("/");
+    return pos < 0 ? s : s.slice(pos + 1);
+};
+const _nyx_path_dirname = p => {
+    let s = p.replaceAll("\\", "/");
+    while (s.length > 1 && s.endsWith("/")) s = s.slice(0, -1);
+    const pos = s.lastIndexOf("/");
+    if (pos < 0) return ".";
+    if (pos === 0) return "/";
+    if (pos === 2 && s.length >= 2 && s[1] === ":") return s.slice(0, 3);
+    return s.slice(0, pos);
+};
+const _nyx_path_extname = p => {
+    const base = _nyx_path_basename(p);
+    const pos = base.lastIndexOf(".");
+    if (pos <= 0) return "";
+    return base.slice(pos);
+};
+const _nyx_path_is_abs = p => {
+    const s = p.replaceAll("\\", "/");
+    if (!s) return false;
+    return s.startsWith("/") || (s.length >= 2 && s[1] === ":");
+};
+
+const _nyx_str_trim = s => s.trim();
+const _nyx_str_starts_with = (s, prefix) => s.startsWith(prefix);
+const _nyx_str_ends_with = (s, suffix) => s.endsWith(suffix);
+const _nyx_str_find_result = (s, sub) => {
+    const idx = s.indexOf(sub);
+    return idx >= 0 ? Ok(BigInt(idx)) : Err("substring not found");
+};
+const _nyx_str_to_upper = s => s.toUpperCase();
+const _nyx_str_to_lower = s => s.toLowerCase();
+const _nyx_str_replace = (s, from_str, to_str) => from_str === "" ? s : s.split(from_str).join(to_str);
+
+const _nyx_process_exec_cmd_result = command => {
+    try {
+        _nyxChildProcess.execSync(command, { stdio: "pipe" });
+        return Ok(0n);
+    } catch (error) {
+        if (typeof error.status === "number") {
+            return Ok(BigInt(error.status));
+        }
+        return Err(`failed to execute command: ${error.message}`);
+    }
+};
+const _nyx_process_get_env_result = name => {
+    const val = process.env[name];
+    if (val === undefined) return Err(`environment variable not found: ${name}`);
+    return Ok(val);
 };
 
 const _nyx_json_get_string = (document, key) => {
@@ -978,7 +1043,7 @@ class HIRJavaScriptEmitter:
 
     def _expr_as(self, node: IRExpr, expected: IRType | None) -> str:
         rendered = self._expr(node)
-        if expected is not None and expected.name == "float" and node.type.name == "int":
+        if expected is not None and expected.name == "float" and node.type.name in ("int", "any"):
             return f"Number({rendered})"
         return rendered
 

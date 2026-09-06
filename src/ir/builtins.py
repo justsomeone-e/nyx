@@ -116,6 +116,21 @@ INTRINSICS: Dict[str, BuiltinSignature] = {
     "_nyx_channel_create": _exact((), INT),
     "_nyx_channel_send": _exact((INT, STRING), VOID),
     "_nyx_channel_recv": _exact((INT,), STRING),
+    "_nyx_process_exec_cmd_result": _exact((STRING,), IRType("Result", (INT, STRING))),
+    "_nyx_process_get_env_result": _exact((STRING,), IRType("Result", (STRING, STRING))),
+    "_nyx_path_join": _exact((STRING, STRING), STRING),
+    "_nyx_path_basename": _exact((STRING,), STRING),
+    "_nyx_path_dirname": _exact((STRING,), STRING),
+    "_nyx_path_extname": _exact((STRING,), STRING),
+    "_nyx_path_is_abs": _exact((STRING,), BOOL),
+    "_nyx_path_normalize": _exact((STRING,), STRING),
+    "_nyx_str_trim": _exact((STRING,), STRING),
+    "_nyx_str_starts_with": _exact((STRING, STRING), BOOL),
+    "_nyx_str_ends_with": _exact((STRING, STRING), BOOL),
+    "_nyx_str_find_result": _exact((STRING, STRING), IRType("Result", (INT, STRING))),
+    "_nyx_str_to_upper": _exact((STRING,), STRING),
+    "_nyx_str_to_lower": _exact((STRING,), STRING),
+    "_nyx_str_replace": _exact((STRING, STRING, STRING), STRING),
 }
 
 

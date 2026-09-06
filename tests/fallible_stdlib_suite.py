@@ -51,6 +51,9 @@ import "std/fs"
 import "std/encoding"
 import "std/json_lite"
 import "std/time"
+import "std/path"
+import "std/str"
+import "std/process"
 fn main() {{
     print("write", write_string("{data_path}", "").unwrap())
     print("empty-bytes", len(read_to_string("{data_path}").unwrap()))
@@ -64,6 +67,14 @@ fn main() {{
     print("json-zero", get_int("{{\\\"count\\\":0}}", "count").unwrap())
     match get_string("{{\\\"name\\\":\\\"nyx\\\"}}", "missing") {{ Ok(value) => print("unexpected", value), Err(error) => print("json-error") }}
     match sleep_ms(-1) {{ Ok(value) => print("unexpected", value), Err(error) => print("time-error") }}
+    print("path-join", join("foo", "bar.nyx"))
+    print("path-base", basename("src/lib/test.nyx"))
+    print("path-dir", dirname("src/lib/test.nyx"))
+    print("path-ext", extname("src/lib/test.nyx"))
+    print("str-trim", trim("  nyx  "))
+    match find("hello world", "world") {{ Ok(idx) => print("str-find", idx), Err(err) => print("str-find-error") }}
+    match find("hello", "missing") {{ Ok(idx) => print("unexpected", idx), Err(err) => print("str-find-missing") }}
+    match get_env("NONEXISTENT_VAR_NYX_TEST") {{ Ok(val) => print("unexpected", val), Err(err) => print("env-missing") }}
 }}
 '''
         for target in ("cpp", "js", "python"):
@@ -76,7 +87,9 @@ fn main() {{
             assert return_code == 0, (target, output)
             assert [line.strip() for line in output.splitlines() if line.strip()] == [
                 "write true", "empty-bytes 0", "missing-error", "remove true",
-                "decoded Nyx", "base64-error", "json-zero 0", "json-error", "time-error"
+                "decoded Nyx", "base64-error", "json-zero 0", "json-error", "time-error",
+                "path-join foo/bar.nyx", "path-base test.nyx", "path-dir src/lib", "path-ext .nyx",
+                "str-trim nyx", "str-find 6", "str-find-missing", "env-missing"
             ], (target, output)
 
         listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

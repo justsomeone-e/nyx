@@ -763,3 +763,21 @@ body {
 .btn-copy:hover {
   color: var(--text-main);
 }
+
+.preview-notice { padding: 10px 16px; background: #282318; color: #f3d8a0; font-size: 12px; flex-shrink: 0; }
+.preview-notice a { color: inherit; text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 3px; }
+.btn-run:disabled { opacity: .6; cursor: wait; }
+@media (max-width: 800px) {
+  body { height: auto; min-height: 100vh; overflow: auto; }
+  .header { height: auto; padding: 12px; flex-wrap: wrap; gap: 12px; }
+  .header-left, .header-right { flex-wrap: wrap; gap: 10px; }
+  .workbench { flex-direction: column; overflow: visible; }
+  .left-pane { width: 100%; min-width: 0; max-width: none; max-height: 520px; }
+  .right-pane { min-height: 650px; width: 100%; }
+  .lesson-card-body { max-height: 340px; }
+  .editor-toolbar { flex-wrap: wrap; gap: 8px; }
+  .install-cmd-box { align-items: flex-start; gap: 8px; }
+  .install-cmd-box code { overflow-wrap: anywhere; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; } }

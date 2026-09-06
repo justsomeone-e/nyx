@@ -25,6 +25,7 @@ from src.ir.model import (
     IRFor,
     IRFunction,
     IRIf,
+    IRIndexAccess,
     IRLiteral,
     IRMatchExpression,
     IRMemberAccess,
@@ -184,7 +185,8 @@ class ModuleIR:
             "f64.neg", "f64.eq", "f64.ne", "f64.lt", "f64.gt", "f64.le",
             "f64.ge", "f64.convert_i32_s", "return", "drop", "memory.size",
             "memory.grow", "memory.copy", "unreachable",
-            "i32.load", "f64.load", "i32.store", "i32.wrap_i64", "i64.shr_u",
+            "i32.load", "f64.load", "i32.store", "f64.store", "i32.load8_u", "i32.wrap_i64", "i64.shr_u",
+            "i64.add", "i64.mul", "i64.gt_u",
         }
         for instruction in instructions:
             op = instruction.op
@@ -363,6 +365,7 @@ class ModuleIR:
             "f64.div": 0xA3, "i64.extend_i32_u": 0xAD,
             "f64.convert_i32_s": 0xB7, "i32.wrap_i64": 0xA7,
             "i64.or": 0x84, "i64.shl": 0x86, "i64.shr_u": 0x88,
+            "i64.add": 0x7C, "i64.mul": 0x7E, "i64.gt_u": 0x56,
         }
         for instruction in function.body:
             op = instruction.op
@@ -382,9 +385,13 @@ class ModuleIR:
                 output.append(0x28 if op == "i32.load" else 0x2B)
                 output.extend(_u32(2 if op == "i32.load" else 3))
                 output.extend(_u32(0))
-            elif op == "i32.store":
-                output.append(0x36)
-                output.extend(_u32(2))
+            elif op in ("i32.store", "f64.store"):
+                output.append(0x36 if op == "i32.store" else 0x39)
+                output.extend(_u32(2 if op == "i32.store" else 3))
+                output.extend(_u32(0))
+            elif op == "i32.load8_u":
+                output.append(0x2D)
+                output.extend(_u32(0))
                 output.extend(_u32(0))
             elif op in ("local.get", "local.set", "local.tee"):
                 output.append({"local.get": 0x20, "local.set": 0x21, "local.tee": 0x22}[op])
@@ -460,6 +467,10 @@ class BundleLowerer:
         self.label_counter = 0
         self.match_locals: Dict[int, str] = {}
         self.for_index_locals: Dict[int, str] = {}
+        self.array_load_types: set[str] = set()
+        self.array_store_types: set[str] = set()
+        self.string_index_used: bool = False
+        self.string_eq_used: bool = False
 
     def lower(self) -> ModuleIR:
         try:
@@ -470,6 +481,12 @@ class BundleLowerer:
         lowered = [self._lower_function(function) for function in self.user_functions]
         heap_start = _align8(self.next_data_offset)
         runtime = _runtime_functions()
+        runtime.extend(_array_index_function(value_type) for value_type in sorted(self.array_load_types))
+        runtime.extend(_array_set_function(value_type) for value_type in sorted(self.array_store_types))
+        if self.string_index_used:
+            runtime.append(_string_char_ptr_function())
+        if self.string_eq_used:
+            runtime.append(_string_eq_function())
         imports = [self._lower_import(item) for item in self.extern_functions.values()]
         if self.wasi:
             fd_write = next((item for item in imports if item.name == "fd_write"), None)
@@ -531,7 +548,7 @@ class BundleLowerer:
             value_type = self._type(parameter.type)
             if value_type == STRING:
                 params.extend((I32, I32))
-            elif value_type in (I32, F64):
+            elif value_type in (I32, I64, F64):
                 params.append(value_type)
             else:
                 raise BundleCompileError(
@@ -661,8 +678,19 @@ class BundleLowerer:
             return
 
         if isinstance(node, IRAssign):
+            if isinstance(node.target, IRIndexAccess):
+                array_type = self._expr_type(node.target.obj, context.symbols)
+                if array_type not in (ARRAY_I32, ARRAY_F64):
+                    raise BundleCompileError("WASM array element assignment currently supports Array<int> and Array<float>")
+                value_type = F64 if array_type == ARRAY_F64 else I32
+                self.array_store_types.add(value_type)
+                output.extend(self._emit_array_argument(node.target.obj, array_type, context.symbols))
+                output.extend(self._emit_expr_as(node.target.index, I32, context.symbols))
+                output.extend(self._emit_expr_as(node.expr, value_type, context.symbols))
+                output.append(Instruction("call", f"__nyx_array_set_{value_type}"))
+                return
             if not isinstance(node.target, IRReference):
-                raise BundleCompileError("Bundle assignment currently requires a local identifier target")
+                raise BundleCompileError("Bundle assignment currently requires a local identifier or array index target")
             target_type = context.symbols.get(node.target.name)
             if target_type not in (I32, F64):
                 raise BundleCompileError(f"Unknown or unsupported bundle assignment target '{node.target.name}'")
@@ -802,6 +830,8 @@ class BundleLowerer:
             return instructions
         if actual == I32 and expected == F64:
             return instructions + [Instruction("f64.convert_i32_s")]
+        if actual == I32 and expected == I64:
+            return instructions + [Instruction("i64.extend_i32_u")]
         raise BundleCompileError(f"Cannot lower implicit WASM conversion from '{actual}' to '{expected}'")
 
     def _emit_expr(self, node: IRExpr, symbols: Dict[str, str]) -> List[Instruction]:
@@ -818,6 +848,25 @@ class BundleLowerer:
             if value_type not in (I32, F64):
                 raise BundleCompileError(f"Identifier '{node.name}' is not a numeric WASM value")
             return [Instruction("global.get" if node.name in self.global_types else "local.get", node.name)]
+        if isinstance(node, IRIndexAccess):
+            owner_type = self._expr_type(node.obj, symbols)
+            if owner_type == STRING:
+                self.string_index_used = True
+                output = self._emit_string_argument(node.obj, symbols)
+                output.extend(self._emit_expr_as(node.index, I32, symbols))
+                output.extend((
+                    Instruction("call", "__nyx_string_char_ptr"),
+                    Instruction("i32.load8_u"),
+                ))
+                return output
+            if owner_type not in (ARRAY_I32, ARRAY_F64):
+                raise BundleCompileError("WASM indexing currently supports Array<int>, Array<float>, and string")
+            output = self._emit_array_argument(node.obj, owner_type, symbols)
+            output.extend(self._emit_expr_as(node.index, I32, symbols))
+            value_type = F64 if owner_type == ARRAY_F64 else I32
+            self.array_load_types.add(value_type)
+            output.append(Instruction("call", f"__nyx_array_get_{value_type}"))
+            return output
         if isinstance(node, IRMemberAccess):
             if not isinstance(node.obj, IRReference):
                 raise BundleCompileError("WASM struct field access requires a struct parameter reference")
@@ -847,6 +896,28 @@ class BundleLowerer:
                     return self._emit_expr(node.expr, symbols) + [Instruction("f64.neg")]
                 return [Instruction("i32.const", 0)] + self._emit_expr_as(node.expr, I32, symbols) + [Instruction("i32.sub")]
         if isinstance(node, IRBinary):
+            if node.op in ("==", "!="):
+                left_type = self._expr_type(node.left, symbols)
+                right_type = self._expr_type(node.right, symbols)
+                if left_type == STRING and right_type == STRING:
+                    self.string_eq_used = True
+                    output = self._emit_string_argument(node.left, symbols)
+                    output.extend(self._emit_string_argument(node.right, symbols))
+                    output.append(Instruction("call", "__nyx_string_eq"))
+                    if node.op == "!=":
+                        output.append(Instruction("i32.eqz"))
+                    return output
+            if node.op in ("and", "&&", "or", "||"):
+                output = self._emit_expr_as(node.left, I32, symbols)
+                output.append(Instruction("if_result", I32))
+                if node.op in ("and", "&&"):
+                    output.extend(self._emit_expr_as(node.right, I32, symbols))
+                    output.extend((Instruction("else"), Instruction("i32.const", 0)))
+                else:
+                    output.extend((Instruction("i32.const", 1), Instruction("else")))
+                    output.extend(self._emit_expr_as(node.right, I32, symbols))
+                output.append(Instruction("end"))
+                return output
             result_type = self._expr_type(node, symbols)
             operand_type = F64 if result_type == F64 else I32
             if node.op in ("==", "!=", "<", ">", "<=", ">="):
@@ -974,6 +1045,15 @@ class BundleLowerer:
                 Instruction("local.get", f"{node.name}_ptr"),
                 Instruction("local.get", f"{node.name}_len"),
             ]
+        if isinstance(node, IRIndexAccess):
+            owner_type = self._expr_type(node.obj, symbols)
+            if owner_type == STRING:
+                self.string_index_used = True
+                output = self._emit_string_argument(node.obj, symbols)
+                output.extend(self._emit_expr_as(node.index, I32, symbols))
+                output.append(Instruction("call", "__nyx_string_char_ptr"))
+                output.append(Instruction("i32.const", 1))
+                return output
         raise BundleCompileError(
             "WASM string arguments currently require a UTF-8 literal or string parameter"
         )
@@ -1011,6 +1091,14 @@ class BundleLowerer:
             and not node.args
         ):
             return I32
+        if isinstance(node, IRIndexAccess):
+            owner = self._expr_type(node.obj, symbols)
+            if owner == STRING:
+                return STRING
+            if owner == ARRAY_F64:
+                return F64
+            if owner == ARRAY_I32:
+                return I32
         return self._type(node.type)
 
     def _type(self, type_node: object) -> str:
@@ -1064,6 +1152,26 @@ class BundleLowerer:
             return
         if isinstance(expression, IRCall) and self._expr_type(expression, context.symbols) == STRING:
             output.extend(self._emit_call(expression, context.symbols))
+            return
+        if isinstance(expression, IRIndexAccess) and self._expr_type(expression.obj, context.symbols) == STRING:
+            self.string_index_used = True
+            output.extend((
+                Instruction("i32.const", 1),
+                Instruction("local.tee", "__nyx_out_len"),
+                Instruction("call", "__nyx_alloc"),
+                Instruction("local.tee", "__nyx_out_ptr"),
+            ))
+            output.extend(self._emit_string_argument(expression.obj, context.symbols))
+            output.extend(self._emit_expr_as(expression.index, I32, context.symbols))
+            output.extend((
+                Instruction("call", "__nyx_string_char_ptr"),
+                Instruction("i32.const", 1),
+                Instruction("memory.copy"),
+                Instruction("local.get", "__nyx_out_len"), Instruction("i64.extend_i32_u"),
+                Instruction("i64.const", 32), Instruction("i64.shl"),
+                Instruction("local.get", "__nyx_out_ptr"), Instruction("i64.extend_i32_u"),
+                Instruction("i64.or"),
+            ))
             return
         segments = self._flatten_string(expression, context.symbols)
         constant_length = sum(length for kind, _, length in segments if kind == "literal")
@@ -1188,6 +1296,141 @@ def _runtime_functions() -> List[FunctionIR]:
         ],
     )
     return [abi, alloc, free]
+
+
+def _array_index_function(value_type: str) -> FunctionIR:
+    """Load a borrowed ABI-v1 element after logical and memory bounds checks."""
+    stride = 8 if value_type == F64 else 4
+    return FunctionIR(
+        f"__nyx_array_get_{value_type}",
+        [("ptr", I32), ("len", I32), ("index", I32)],
+        value_type,
+        export=False,
+        body=[
+            Instruction("local.get", "index"), Instruction("i32.const", 0), Instruction("i32.lt_s"),
+            Instruction("local.get", "index"), Instruction("local.get", "len"), Instruction("i32.ge_s"),
+            Instruction("i32.or"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            # Widen before address arithmetic so an invalid host descriptor
+            # cannot wrap a wasm32 address back into valid linear memory.
+            Instruction("local.get", "ptr"), Instruction("i64.extend_i32_u"),
+            Instruction("local.get", "len"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.const", stride), Instruction("i64.mul"), Instruction("i64.add"),
+            Instruction("memory.size"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.const", 65536), Instruction("i64.mul"), Instruction("i64.gt_u"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            Instruction("local.get", "ptr"), Instruction("local.get", "index"),
+            Instruction("i32.const", stride), Instruction("i32.mul"), Instruction("i32.add"),
+            Instruction("f64.load" if value_type == F64 else "i32.load"),
+        ],
+    )
+
+
+def _array_set_function(value_type: str) -> FunctionIR:
+    """Store an element into a borrowed ABI-v1 array after logical and memory bounds checks."""
+    stride = 8 if value_type == F64 else 4
+    store_op = "f64.store" if value_type == F64 else "i32.store"
+    return FunctionIR(
+        f"__nyx_array_set_{value_type}",
+        [("ptr", I32), ("len", I32), ("index", I32), ("value", value_type)],
+        VOID,
+        export=False,
+        body=[
+            Instruction("local.get", "index"), Instruction("i32.const", 0), Instruction("i32.lt_s"),
+            Instruction("local.get", "index"), Instruction("local.get", "len"), Instruction("i32.ge_s"),
+            Instruction("i32.or"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            # Linear memory bounds check
+            Instruction("local.get", "ptr"), Instruction("i64.extend_i32_u"),
+            Instruction("local.get", "len"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.const", stride), Instruction("i64.mul"), Instruction("i64.add"),
+            Instruction("memory.size"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.const", 65536), Instruction("i64.mul"), Instruction("i64.gt_u"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            Instruction("local.get", "ptr"), Instruction("local.get", "index"),
+            Instruction("i32.const", stride), Instruction("i32.mul"), Instruction("i32.add"),
+            Instruction("local.get", "value"),
+            Instruction(store_op),
+        ],
+    )
+
+
+def _string_char_ptr_function() -> FunctionIR:
+    """Return the pointer to the character at index, trapping on bounds violation."""
+    return FunctionIR(
+        "__nyx_string_char_ptr",
+        [("ptr", I32), ("len", I32), ("index", I32)],
+        I32,
+        export=False,
+        body=[
+            Instruction("local.get", "index"), Instruction("i32.const", 0), Instruction("i32.lt_s"),
+            Instruction("local.get", "index"), Instruction("local.get", "len"), Instruction("i32.ge_s"),
+            Instruction("i32.or"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            # Linear memory bounds check
+            Instruction("local.get", "ptr"), Instruction("i64.extend_i32_u"),
+            Instruction("local.get", "len"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.add"),
+            Instruction("memory.size"), Instruction("i64.extend_i32_u"),
+            Instruction("i64.const", 65536), Instruction("i64.mul"), Instruction("i64.gt_u"),
+            Instruction("if"), Instruction("unreachable"), Instruction("end"),
+            Instruction("local.get", "ptr"),
+            Instruction("local.get", "index"),
+            Instruction("i32.add"),
+        ],
+    )
+
+
+def _string_eq_function() -> FunctionIR:
+    """Compare two borrowed UTF-8 slices byte-for-byte in linear memory."""
+    return FunctionIR(
+        "__nyx_string_eq",
+        [("ptr1", I32), ("len1", I32), ("ptr2", I32), ("len2", I32)],
+        I32,
+        locals=[("i", I32)],
+        export=False,
+        body=[
+            # If len1 != len2, return 0
+            Instruction("local.get", "len1"),
+            Instruction("local.get", "len2"),
+            Instruction("i32.ne"),
+            Instruction("if"),
+            Instruction("i32.const", 0),
+            Instruction("return"),
+            Instruction("end"),
+            # Loop i from 0 to len1
+            Instruction("i32.const", 0),
+            Instruction("local.set", "i"),
+            Instruction("block", "eq_break"),
+            Instruction("loop", "eq_loop"),
+            Instruction("local.get", "i"),
+            Instruction("local.get", "len1"),
+            Instruction("i32.ge_s"),
+            Instruction("br_if", "eq_break"),
+            Instruction("local.get", "ptr1"),
+            Instruction("local.get", "i"),
+            Instruction("i32.add"),
+            Instruction("i32.load8_u"),
+            Instruction("local.get", "ptr2"),
+            Instruction("local.get", "i"),
+            Instruction("i32.add"),
+            Instruction("i32.load8_u"),
+            Instruction("i32.ne"),
+            Instruction("if"),
+            Instruction("i32.const", 0),
+            Instruction("return"),
+            Instruction("end"),
+            Instruction("local.get", "i"),
+            Instruction("i32.const", 1),
+            Instruction("i32.add"),
+            Instruction("local.set", "i"),
+            Instruction("br", "eq_loop"),
+            Instruction("end"),
+            Instruction("end"),
+            Instruction("i32.const", 1),
+            Instruction("return"),
+        ],
+    )
 
 
 def _wasi_runtime_functions() -> List[FunctionIR]:

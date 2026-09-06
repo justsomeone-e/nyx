@@ -4,6 +4,107 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [4.5.0] - 2026-09-06 (Ivory)
+
+Nyx v4.5.0 establishes the stable bridge release toward v5, providing standard library
+parity, deterministic package management, import invalidation benchmarking, and experimental
+C17 and LLVM IR direct emitters while preserving full v4 backward compatibility.
+Verification evidence and test battery metrics are recorded in
+[v4.5 implementation audit](docs/internals/V4_5_IMPLEMENTATION_AUDIT.md).
+
+### Compiler and lowering
+
+* Preserve `int` HIR types for Array/string length methods and specialize
+  built-in Result match payloads in the Python and Nyx HIR lowerers.
+* Lower string indexing (`string[i]`) and `Iterator<T>` indexing with concrete
+  element types in both Python (`src/ir/lowering.py`) and self-hosted Nyx
+  (`compiler/hir_lowering.nyx`) lowerers, eliminating `any` type loss while
+  preserving 100% canonical byte parity.
+* Strengthen `IRVerifier` type contracts: reject member access on primitive
+  types (`int`, `float`, `bool`, `void`, `null`) with structured diagnostic
+  `HIR0006`, validate struct field existence and optionality, perform generic
+  type parameter substitution on struct member lookups, and verify string
+  and collection element indexing result types.
+* Add experimental C17 scalar emitter (`src/codegen/c17_scalar.py`) consuming
+  verified `IRModule`. Implements 64-bit wrapping integer arithmetic (`nyx_i64_add`,
+  `nyx_i64_sub`, etc.), safe division and modulus (aborting with exit code 1 on zero
+  divisor and wrapping `INT64_MIN / -1`), scalar control flow (`if`/`else`, `while`,
+  `break`, `continue`), float and boolean logic, and strict rejection of non-scalar
+  types with `C17EmissionError`.
+* Register experimental `"c"` target capability in `src/core/backend_capabilities.py`
+  and integrate compilation routing in `src/api.py`.
+* Lower numeric-array parameter reads (`values[index]`) to checked WASM loads.
+  Evaluate the index once, reject negative/out-of-range indices, and validate
+  descriptor byte ranges with widened arithmetic before loading memory.
+* Preserve short-circuit evaluation of WASM Boolean `and`/`or` expressions,
+  including bounds guards whose right-hand side must not execute.
+* Extend bundle runtime regressions for i32/f64 reads, nested/side-effecting
+  indices, invalid host descriptors, memory boundaries, and unsupported writes
+  and string indexing. WASM remains beta with the existing ABI-v1 i32 contract.
+* Implement 45-WASM capabilities: in-place numeric array mutations (`copyBackNumericArray`),
+  checked string character element reads, and WASI args/env/file capabilities.
+* Implement 45-RUST backend parity: array and struct value copying semantics, lexical
+  defer scope unwinding, payload enum variant extraction, Option/match expression arms,
+  Task/channel concurrency primitives, and crate import resolution.
+* Add experimental direct LLVM IR scalar emitter (`src/codegen/llvm_scalar.py`) targeting
+  `x86_64-w64-windows-gnu` (Clang 22). Implements direct `.ll` text emission, 64-bit wrapping
+  integer arithmetic, IEEE 754 float math, boolean logic, entry-block `alloca` memory
+  architecture, mem2reg-friendly phi-free branch merges, short-circuit `and`/`or` flow,
+  safe zero-division abort guard, and strict compile-time rejection of non-scalar constructs.
+* Register experimental `"llvm"` target capability in `src/core/backend_capabilities.py`
+  and integrate compilation routing in `src/api.py`.
+* Standard library parity (45-LIB): completed `std/str`, `std/path`, and `std/process`
+  modules with Result-wrapped fallible operations and cross-backend exact output parity
+  across C++20, JavaScript (Node.js), and Python 3.
+
+### Tooling and examples
+
+* Implement 45-LSP Language Server Protocol features (`src/toolchain/lsp_server.py`):
+  symbol index (`LspSymbolIndex`) with function scope, local variables, parameters,
+  and struct fields; `textDocument/references` respecting local function scopes and
+  lexical shadowing; `textDocument/prepareRename` returning exact token range and
+  placeholder; `textDocument/rename` generating workspace edits, rejecting reserved
+  keywords and builtins, and detecting scope collisions; and `textDocument/semanticTokens/full`
+  delta encoding across keywords, types, functions, variables, parameters, properties,
+  strings, numbers, and operators.
+* Preserve diagnostic help/expected/found/notes in LSP messages; correct UTF-16
+  positions, document-close cleanup, and unsupported-request responses.
+* Add a fixed-corpus Python stage-0 compiler timing/memory benchmark.
+* Performance baseline and import invalidation corpus (45-PERF): added multi-module
+  invalidation test corpus (`tests/fixtures/import_invalidation/`) and recorded
+  cold, warm, and invalidated timing/memory baselines without premature caching.
+* Package Manager (45-PKG): implemented Semantic Versioning range evaluator (`SemVerRange`)
+  supporting caret (`^`), tilde (`~`), wildcards, and compound ranges; mock registry protocol;
+  offline cache miss and hit handling; SHA-256 package checksum verification; and
+  deterministic lockfile generation and verification (`NyxLock`).
+* Add the Metrics CLI/JS/Python/WASM example, generated documentation-site
+  bundles and checksums, and isolated worker-based learning previews.
+* Rebuild Metrics/Pong artifacts after the WASM lowering correction.
+* Four comprehensive real-world consumer applications:
+  - `examples/file_inspector/`: Native CLI tool consuming `std/path`, `std/process`, and `std/str`.
+  - `examples/host_embedding/`: Polyglot data transformer module embedded in both Node.js (WASM ABI v1 package) and Python 3 hosts.
+  - `examples/wasm_interactive/`: Interactive WebAssembly arithmetic and combinatorics engine with browser UI.
+  - `examples/package_consumer/`: Real package consumer demonstrating `nyx.toml` local dependencies, deterministic `nyx.lock` verification, and native C++ filesystem foreign bindings.
+* VS Code Language Toolchain extension: synchronized canonical language surface metadata
+  (`vscode-extension/language-surface.json`) including the experimental `"llvm"` target,
+  verified with test contract suite.
+
+### Release validation
+
+* Remove the obsolete version-test requirement for the README footer that was
+  intentionally removed in `7a76cb3`; preserve active diagram and version checks.
+* Add C17 scalar regression suite (`tests/c17_scalar_suite.py`) validating strict
+  compilation under `clang -std=c17 -Wall -Wextra -Werror` with C++ oracle parity across
+  recursion (`fib`), loops, arithmetic wrapping, safe division, and non-scalar rejection.
+* Expand `tests/lsp_suite.py` to 7/7 conformance tests verifying references,
+  prepareRename, rename, semantic tokens, and live CLI wire JSON-RPC communication.
+
+### Planning
+
+* Define v4.5 compatibility gates and v5 C17/LLVM lowering, runtime, independent
+  frontend, and migration milestones. Planned backends and ABI v2 are not
+  implemented or promoted by this preparation work.
+
 ## [4.0.0] - Nirvana (release preparation)
 
 ### Nirvana stable v4 contract

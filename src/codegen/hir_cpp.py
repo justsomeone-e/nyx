@@ -360,6 +360,126 @@ inline bool _nyx_bootstrap_remove_file(const std::string& path) {
     std::exit(static_cast<int>(code));
 }
 
+inline NyxResult<int64_t, std::string> _nyx_process_exec_cmd_result(const std::string& command) {
+    int status = std::system(command.c_str());
+    #ifndef _WIN32
+    if (status != -1 && (status & 0x7f) == 0) {
+        status = (status >> 8) & 0xff;
+    }
+    #endif
+    if (status == -1) return {false, -1, "failed to start command processor"};
+    return {true, static_cast<int64_t>(status), {}};
+}
+
+inline NyxResult<std::string, std::string> _nyx_process_get_env_result(const std::string& name) {
+    const char* val = std::getenv(name.c_str());
+    if (!val) return {false, {}, "environment variable not found: " + name};
+    return {true, std::string(val), {}};
+}
+
+inline std::string _nyx_path_normalize(const std::string& p) {
+    std::string s = p;
+    for (size_t i = 0; i < s.length(); ++i) {
+        if (s[i] == '\\') s[i] = '/';
+    }
+    return s;
+}
+
+inline std::string _nyx_path_join(const std::string& a, const std::string& b) {
+    std::string na = _nyx_path_normalize(a);
+    std::string nb = _nyx_path_normalize(b);
+    if (na.empty()) return nb;
+    if (nb.empty()) return na;
+    if (nb[0] == '/' || (nb.length() >= 2 && nb[1] == ':')) return nb;
+    if (na.back() == '/') return na + nb;
+    return na + "/" + nb;
+}
+
+inline std::string _nyx_path_basename(const std::string& p) {
+    std::string s = _nyx_path_normalize(p);
+    while (s.length() > 1 && s.back() == '/') s.pop_back();
+    auto pos = s.rfind('/');
+    return pos == std::string::npos ? s : s.substr(pos + 1);
+}
+
+inline std::string _nyx_path_dirname(const std::string& p) {
+    std::string s = _nyx_path_normalize(p);
+    while (s.length() > 1 && s.back() == '/') s.pop_back();
+    auto pos = s.rfind('/');
+    if (pos == std::string::npos) return ".";
+    if (pos == 0) return "/";
+    if (pos == 2 && s.length() >= 2 && s[1] == ':') return s.substr(0, 3);
+    return s.substr(0, pos);
+}
+
+inline std::string _nyx_path_extname(const std::string& p) {
+    std::string base = _nyx_path_basename(p);
+    auto pos = base.rfind('.');
+    if (pos == std::string::npos || pos == 0) return "";
+    return base.substr(pos);
+}
+
+inline bool _nyx_path_is_abs(const std::string& p) {
+    std::string s = _nyx_path_normalize(p);
+    if (s.empty()) return false;
+    return s[0] == '/' || (s.length() >= 2 && s[1] == ':');
+}
+
+inline std::string _nyx_str_trim(const std::string& s) {
+    size_t start = 0;
+    while (start < s.length() && (s[start] == ' ' || s[start] == '\t' || s[start] == '\r' || s[start] == '\n')) {
+        start++;
+    }
+    if (start >= s.length()) return "";
+    size_t end = s.length() - 1;
+    while (end > start && (s[end] == ' ' || s[end] == '\t' || s[end] == '\r' || s[end] == '\n')) {
+        end--;
+    }
+    return s.substr(start, end - start + 1);
+}
+
+inline bool _nyx_str_starts_with(const std::string& s, const std::string& prefix) {
+    if (prefix.length() > s.length()) return false;
+    return s.compare(0, prefix.length(), prefix) == 0;
+}
+
+inline bool _nyx_str_ends_with(const std::string& s, const std::string& suffix) {
+    if (suffix.length() > s.length()) return false;
+    return s.compare(s.length() - suffix.length(), suffix.length(), suffix) == 0;
+}
+
+inline NyxResult<int64_t, std::string> _nyx_str_find_result(const std::string& s, const std::string& sub) {
+    auto pos = s.find(sub);
+    if (pos == std::string::npos) return {false, 0, "substring not found"};
+    return {true, static_cast<int64_t>(pos), {}};
+}
+
+inline std::string _nyx_str_to_upper(const std::string& s) {
+    std::string res = s;
+    std::transform(res.begin(), res.end(), res.begin(), [](unsigned char c) { return std::toupper(c); });
+    return res;
+}
+
+inline std::string _nyx_str_to_lower(const std::string& s) {
+    std::string res = s;
+    std::transform(res.begin(), res.end(), res.begin(), [](unsigned char c) { return std::tolower(c); });
+    return res;
+}
+
+inline std::string _nyx_str_replace(const std::string& s, const std::string& from_str, const std::string& to_str) {
+    if (from_str.empty()) return s;
+    std::string res;
+    size_t start = 0;
+    size_t pos;
+    while ((pos = s.find(from_str, start)) != std::string::npos) {
+        res.append(s, start, pos - start);
+        res.append(to_str);
+        start = pos + from_str.length();
+    }
+    res.append(s, start, std::string::npos);
+    return res;
+}
+
 inline std::string _nyx_toolchain_error;
 
 inline int _nyx_spawn_wait(const std::vector<std::string>& command) {

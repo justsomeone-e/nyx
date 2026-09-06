@@ -203,6 +203,22 @@ def run_bundle_suite() -> bool:
         )
         assert host_bundle.returncode == 0, host_bundle.stderr or host_bundle.stdout
 
+        for name, source, diagnostic in (
+            ("struct_index", "struct Point { x: int }\nfn at(p: Point, index: int) -> int { return p[index]; }", "cannot be indexed"),
+            ("struct_write", "struct Point { x: int }\nfn write(p: Point) -> void { set p.x = 3; }", "Bundle assignment currently requires"),
+        ):
+            rejected_source = os.path.join(output_dir, name + ".nyx")
+            rejected_output = os.path.join(output_dir, name + "_bundle")
+            with open(rejected_source, "w", encoding="utf-8") as source_file:
+                source_file.write(source + "\n")
+            rejected = subprocess.run(
+                [sys.executable, CLI_PATH, "bundle", rejected_source, "--output", rejected_output],
+                cwd=ROOT_DIR, capture_output=True, text=True, encoding="utf-8", errors="replace",
+            )
+            assert rejected.returncode != 0, f"bundle accepted unsupported {name}"
+            assert diagnostic in (rejected.stdout + rejected.stderr), rejected.stdout + rejected.stderr
+            assert not os.path.exists(rejected_output), f"failed {name} left partial artifacts"
+
         partial_source = os.path.join(output_dir, "partial_return.nyx")
         partial_output = os.path.join(output_dir, "partial_return_bundle")
         with open(partial_source, "w", encoding="utf-8") as source_file:
@@ -247,6 +263,35 @@ def run_bundle_suite() -> bool:
                 "if (api.sum_values(new Int32Array([1, 0, 2, 3])) !== 6) throw new Error('i32 array iteration failed');\n"
                 "if (api.sum_float_values([1.5, 2.25]) !== 3.75) throw new Error('f64 array iteration failed');\n"
                 "if (api.array_length([3, 4, 5]) !== 3) throw new Error('array method lowering failed');\n"
+                "if (api.int_at([-7, 0, 2147483647], 0) !== -7 || api.int_at([-7, 0, 2147483647], 2) !== 2147483647) throw new Error('i32 index failed');\n"
+                "if (api.float_at(new Float64Array([1.25, -2.5]), 1) !== -2.5) throw new Error('f64 index failed');\n"
+                "if (api.nested_at([10, 20], [1]) !== 20 || api.index_once([41, 99]) !== 42) throw new Error('index evaluation order failed');\n"
+                "for (const fn of [api.int_at, api.float_at]) { for (const [values, index] of [[[], 0], [[1], -1], [[1], 1], [[1], 2147483647], [[1], -2147483648]]) {\n"
+                "  let trapped = false; try { fn(values, index); } catch (error) { if (!(error instanceof WebAssembly.RuntimeError)) throw error; trapped = true; }\n"
+                "  if (!trapped) throw new Error('array bounds did not trap');\n"
+                "} }\n"
+                "if (api.guarded_at([], 0) || api.guarded_at([1], -1) || api.guarded_at([1], 1) || !api.guarded_at([1], 0)) throw new Error('and short circuit failed');\n"
+                "if (!api.empty_or_positive([]) || !api.empty_or_positive([1]) || api.empty_or_positive([-1])) throw new Error('or short circuit failed');\n"
+                "const { instance: raw } = await WebAssembly.instantiate(bytes);\n"
+                "const memoryBytes = raw.exports.memory.buffer.byteLength;\n"
+                "for (const fn of [raw.exports.int_at, raw.exports.float_at]) { for (const args of [[0, -1, 0], [memoryBytes - 2, 1, 0], [-4, 2, 1], [0, 1073741825, 0], [memoryBytes, 1, 0]]) {\n"
+                "  let trapped = false; try { fn(...args); } catch (error) { if (!(error instanceof WebAssembly.RuntimeError)) throw error; trapped = true; }\n"
+                "  if (!trapped) throw new Error('invalid array descriptor did not trap');\n"
+                "} }\n"
+                "new DataView(raw.exports.memory.buffer).setInt32(memoryBytes - 4, 123, true);\n"
+                "if (raw.exports.int_at(memoryBytes - 4, 1, 0) !== 123) throw new Error('last valid memory element failed');\n"
+                "const mutableInts = new Int32Array([10, 20, 30]);\n"
+                "api.set_int_at(mutableInts, 1, 99);\n"
+                "if (mutableInts[1] !== 99) throw new Error('set_int_at failed');\n"
+                "const mutableFloats = new Float64Array([1.5, 2.5, 3.5]);\n"
+                "api.set_float_at(mutableFloats, 0, 42.125);\n"
+                "if (mutableFloats[0] !== 42.125) throw new Error('set_float_at failed');\n"
+                "if (!api.char_matches('Nyx', 0, 'N') || !api.char_matches('Nyx', 2, 'x') || api.char_matches('Nyx', 1, 'z')) throw new Error('char_matches failed');\n"
+                "if (api.char_slice('hello', 0) !== 'h' || api.char_slice('hello', 4) !== 'o') throw new Error('char_slice failed');\n"
+                "let trappedSet = false; try { api.set_int_at(mutableInts, 10, 5); } catch (e) { if (e instanceof WebAssembly.RuntimeError) trappedSet = true; }\n"
+                "if (!trappedSet) throw new Error('set_int_at out of bounds did not trap');\n"
+                "let trappedChar = false; try { api.char_slice('abc', 5); } catch (e) { if (e instanceof WebAssembly.RuntimeError) trappedChar = true; }\n"
+                "if (!trappedChar) throw new Error('char_slice out of bounds did not trap');\n"
                 "if (api.string_length('İstanbul') !== 9) throw new Error('string method lowering failed');\n"
                 "if (api.choose_label(true, 'Nyx') !== 'enabled: Nyx' || api.choose_label(false, 'Nyx') !== 'disabled: Nyx') throw new Error('string conditional lowering failed');\n"
                 "if (api.greet_developer(unicodeInput) !== expected) throw new Error('UTF-8 string lowering failed');\n"
@@ -303,7 +348,7 @@ def run_bundle_suite() -> bool:
         assert "i32.mul" in wat
         assert "call $echo_inner" in wat
 
-    print("[PASS] Typed lowering, build/bundle artifacts, definite returns, UTF-8 ABI, isolated instances, and 100k allocation stress")
+    print("[PASS] Typed lowering, checked array reads and in-place writes, string indexing and char returns, lazy Boolean guards, build/bundle artifacts, definite returns, UTF-8 ABI, isolated instances, and 100k allocation stress")
     return True
 
 

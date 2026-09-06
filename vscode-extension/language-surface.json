@@ -188,7 +188,7 @@
   "stdlibModules": [
     {
       "name": "std/encoding",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/encoding.",
       "targets": [
         "asm",
@@ -199,7 +199,7 @@
     },
     {
       "name": "std/env",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/env.",
       "targets": [
         "asm",
@@ -208,7 +208,7 @@
     },
     {
       "name": "std/fs",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/fs.",
       "targets": [
         "asm",
@@ -219,7 +219,7 @@
     },
     {
       "name": "std/hash",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/hash.",
       "targets": [
         "asm",
@@ -230,7 +230,7 @@
     },
     {
       "name": "std/io",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/io.",
       "targets": [
         "asm",
@@ -240,7 +240,7 @@
     },
     {
       "name": "std/json",
-      "detail": "Nyx stdlib \u00b7 deprecated",
+      "detail": "Nyx stdlib · deprecated",
       "documentation": "Use std/json_lite.",
       "targets": [
         "asm",
@@ -251,7 +251,7 @@
     },
     {
       "name": "std/json_lite",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Flat top-level string/integer field extraction only; not a general JSON parser.",
       "targets": [
         "asm",
@@ -262,7 +262,7 @@
     },
     {
       "name": "std/math",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/math.",
       "targets": [
         "asm",
@@ -273,7 +273,7 @@
     },
     {
       "name": "std/memory",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/memory.",
       "targets": [
         "asm",
@@ -282,7 +282,7 @@
     },
     {
       "name": "std/net",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/net.",
       "targets": [
         "asm",
@@ -291,7 +291,7 @@
     },
     {
       "name": "std/os",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/os.",
       "targets": [
         "asm",
@@ -299,8 +299,19 @@
       ]
     },
     {
+      "name": "std/path",
+      "detail": "Nyx stdlib · stable",
+      "documentation": "Standard library module std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
       "name": "std/platform",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/platform.",
       "targets": [
         "asm",
@@ -309,16 +320,18 @@
     },
     {
       "name": "std/process",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/process.",
       "targets": [
         "asm",
-        "cpp"
+        "cpp",
+        "js",
+        "python"
       ]
     },
     {
       "name": "std/str",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/str.",
       "targets": [
         "asm",
@@ -330,7 +343,7 @@
     },
     {
       "name": "std/system",
-      "detail": "Nyx stdlib \u00b7 experimental",
+      "detail": "Nyx stdlib · experimental",
       "documentation": "Hosted OS inspection through the native platform ABI.",
       "targets": [
         "asm",
@@ -339,7 +352,7 @@
     },
     {
       "name": "std/terminal",
-      "detail": "Nyx stdlib \u00b7 experimental",
+      "detail": "Nyx stdlib · experimental",
       "documentation": "Terminal, cursor control, screen clearing, and keyboard input.",
       "targets": [
         "asm",
@@ -348,7 +361,7 @@
     },
     {
       "name": "std/thread",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/thread.",
       "targets": [
         "asm",
@@ -357,7 +370,7 @@
     },
     {
       "name": "std/time",
-      "detail": "Nyx stdlib \u00b7 stable",
+      "detail": "Nyx stdlib · stable",
       "documentation": "Standard library module std/time.",
       "targets": [
         "asm",
@@ -368,7 +381,7 @@
     },
     {
       "name": "std/web",
-      "detail": "Nyx stdlib \u00b7 experimental",
+      "detail": "Nyx stdlib · experimental",
       "documentation": "Typed browser host handles and DOM/canvas operations through nyx_host_v1.",
       "targets": [
         "wasm"
@@ -949,6 +962,84 @@
       ]
     },
     {
+      "label": "join",
+      "kind": "function",
+      "detail": "fn join(a: string, b: string) -> string",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "basename",
+      "kind": "function",
+      "detail": "fn basename(p: string) -> string",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "dirname",
+      "kind": "function",
+      "detail": "fn dirname(p: string) -> string",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "extname",
+      "kind": "function",
+      "detail": "fn extname(p: string) -> string",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "is_absolute",
+      "kind": "function",
+      "detail": "fn is_absolute(p: string) -> bool",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "normalize",
+      "kind": "function",
+      "detail": "fn normalize(p: string) -> string",
+      "module": "std/path",
+      "documentation": "Declared by std/path.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
       "label": "os_name",
       "kind": "function",
       "detail": "fn os_name() -> string",
@@ -1022,7 +1113,22 @@
       "documentation": "Declared by std/process.",
       "targets": [
         "asm",
-        "cpp"
+        "cpp",
+        "js",
+        "python"
+      ]
+    },
+    {
+      "label": "get_env",
+      "kind": "function",
+      "detail": "fn get_env(name: string) -> Result<string, string>",
+      "module": "std/process",
+      "documentation": "Declared by std/process.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python"
       ]
     },
     {
@@ -1033,7 +1139,9 @@
       "documentation": "Declared by std/process.",
       "targets": [
         "asm",
-        "cpp"
+        "cpp",
+        "js",
+        "python"
       ]
     },
     {
@@ -1082,6 +1190,104 @@
       "label": "contains_substring",
       "kind": "function",
       "detail": "fn contains_substring(s: string, sub: string) -> bool",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "trim",
+      "kind": "function",
+      "detail": "fn trim(s: string) -> string",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "starts_with",
+      "kind": "function",
+      "detail": "fn starts_with(s: string, prefix: string) -> bool",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "ends_with",
+      "kind": "function",
+      "detail": "fn ends_with(s: string, suffix: string) -> bool",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "find",
+      "kind": "function",
+      "detail": "fn find(s: string, sub: string) -> Result<int, string>",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "to_upper",
+      "kind": "function",
+      "detail": "fn to_upper(s: string) -> string",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "to_lower",
+      "kind": "function",
+      "detail": "fn to_lower(s: string) -> string",
+      "module": "std/str",
+      "documentation": "Declared by std/str.",
+      "targets": [
+        "asm",
+        "cpp",
+        "js",
+        "python",
+        "rust"
+      ]
+    },
+    {
+      "label": "replace",
+      "kind": "function",
+      "detail": "fn replace(s: string, from_str: string, to_str: string) -> string",
       "module": "std/str",
       "documentation": "Declared by std/str.",
       "targets": [
@@ -1596,37 +1802,47 @@
     {
       "name": "asm",
       "detail": "x86_64 Assembly",
-      "documentation": "assembly \u00b7 beta"
+      "documentation": "assembly · beta"
+    },
+    {
+      "name": "c",
+      "detail": "C17 Native (Scalar Experimental)",
+      "documentation": "c · experimental"
     },
     {
       "name": "cpp",
       "detail": "C++20 Native",
-      "documentation": "executable/library \u00b7 stable"
+      "documentation": "executable/library · stable"
     },
     {
       "name": "js",
       "detail": "Node.js ES2022",
-      "documentation": "javascript \u00b7 stable"
+      "documentation": "javascript · stable"
+    },
+    {
+      "name": "llvm",
+      "detail": "LLVM IR (Scalar Experimental)",
+      "documentation": "ll · experimental"
     },
     {
       "name": "python",
       "detail": "Python 3",
-      "documentation": "python \u00b7 stable"
+      "documentation": "python · stable"
     },
     {
       "name": "react",
       "detail": "React 19 TSX",
-      "documentation": "tsx \u00b7 beta"
+      "documentation": "tsx · beta"
     },
     {
       "name": "rust",
       "detail": "Rust 2021",
-      "documentation": "rust \u00b7 beta"
+      "documentation": "rust · beta"
     },
     {
       "name": "wasm",
       "detail": "WebAssembly",
-      "documentation": "wat/wasm \u00b7 beta"
+      "documentation": "wat/wasm · beta"
     }
   ],
   "boards": []

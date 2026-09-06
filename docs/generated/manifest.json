@@ -1,0 +1,54 @@
+{
+  "compilerVersion": "4.5.0",
+  "rebuild": "python -m src.toolchain.docs_site",
+  "artifacts": [
+    {
+      "path": "generated/metrics/metrics.d.ts",
+      "sha256": "3d8a342eec02f452a0320dc7d9323ad108fad76fed6880a8aad8ec269143b8d3"
+    },
+    {
+      "path": "generated/metrics/metrics.mjs",
+      "sha256": "0e4ccbd1cee039ccb5d399119c8e0f593a6a22409ba54519a8e7db4ffc12b0f5"
+    },
+    {
+      "path": "generated/metrics/metrics.nyx",
+      "sha256": "5e4a13ca3070e898565458d826d2b3db7243d3d72d4ef1d6191ca30c095742f9"
+    },
+    {
+      "path": "generated/metrics/metrics.wasm",
+      "sha256": "e9773d4311353a526f880df90419297d00d2a017667a4f8ff27dff82b8681ed1"
+    },
+    {
+      "path": "generated/metrics/metrics.wat",
+      "sha256": "828b1641df1e6ba5c403b1560dacdc5ca5a12aba5f8145f2ad2019b8c3453886"
+    },
+    {
+      "path": "generated/metrics/package.json",
+      "sha256": "a41370aa340a2607831af3de002fc6d6245e9f880914077be10f85e0516e6c40"
+    },
+    {
+      "path": "generated/pong/package.json",
+      "sha256": "ea47579118b1cfae6291cd3c0eea7cee83c14ab18bf595dd82c031163a4a39be"
+    },
+    {
+      "path": "generated/pong/pong.d.ts",
+      "sha256": "0b256872246b16f43c53b7504971927666328ed11ec212c8aef0ab7891edf011"
+    },
+    {
+      "path": "generated/pong/pong.mjs",
+      "sha256": "29fc82aff2035311b4a82ac66751787215d6a87ff4ed3638611d88a4c8ac8522"
+    },
+    {
+      "path": "generated/pong/pong.nyx",
+      "sha256": "00f26a7a6a423ccd257ad8b2a32b9300bf67e8e6d34631628e6d7d3ce4fda4fc"
+    },
+    {
+      "path": "generated/pong/pong.wasm",
+      "sha256": "ff249206fd24277b7769b9bdaba870ba943a111fcbe03bd2e78c0884454e235a"
+    },
+    {
+      "path": "generated/pong/pong.wat",
+      "sha256": "979d1aeaf65910cf367a0e37e20d4590b185ae0b41f8716733728eff3e26feb2"
+    }
+  ]
+}

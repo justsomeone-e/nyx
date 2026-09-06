@@ -41,7 +41,6 @@ def run_version_contract_suite() -> bool:
         "terminal_animated.svg",
         "pipeline_animated.svg",
         "features_animated.svg",
-        "footer_animated.svg",
     ):
         assert readme.count(animated_asset) == 1, animated_asset
 
@@ -59,7 +58,7 @@ def run_version_contract_suite() -> bool:
 
     print(
         f"[PASS] VERSION, CLI, native self-host, compiler source, VS Code, and "
-        f"README agree on {VERSION}; animated assets are preserved"
+        f"README agree on {VERSION}; active animated assets are preserved"
     )
     return True
 

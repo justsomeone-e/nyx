@@ -1,0 +1,7 @@
+import "./vector_math.nyx"
+import "./logger.nyx"
+
+fn run_pipeline(x: int, y: int) -> int {
+    var pt = make_point(x, y);
+    return point_magnitude_sq(pt);
+}

@@ -94,7 +94,7 @@ Python parser + Nyx parser + typechecker + HIR + backend parity gerektirir.
   ayıklayıcı olarak sınırla; genel JSON parser olduğu izlenimini kaldır.
 - [x] Paket manifesti, lockfile ve recursive local path dependency çözümünü
   içerik checksum'ları ve cycle diagnostics ile deterministik yap.
-- [ ] En az üç gerçek örnek uygulama: CLI aracı, WASM modülü ve küçük servis.
+- [x] En az üç gerçek örnek uygulama: CLI aracı (`examples/file_inspector/`), WASM modülü (`examples/wasm_interactive/`, `examples/host_embedding/`) ve paket tüketicisi (`examples/package_consumer/`).
 
 ## v4.0.0-rc.2 Bodhi — Web/WASM ekosistemi
 
@@ -152,7 +152,7 @@ transferi Bundle ABI v2 RFC'sine aittir; bunlar açık derleme hatası üretir.
 - [x] Formatter'ı yeni grammar ile idempotent tut.
 - [x] LSP completion listesini compiler'ın canonical language surface'inden
   üret; ölü keyword ve olmayan stdlib sembolü yayınlama.
-- [ ] Rename, references ve semantic token desteği ekle.
+- [x] Rename, references ve semantic token desteği ekle (45-LSP: LspSymbolIndex, prepareRename/rename çakışma denetimi, semanticTokens/full delta kodlama).
 - [ ] VS Code Run/Build/Check komutlarını default native target ile doğrula.
 - [ ] Compiler diagnostic'lerini kısa hata, açıklama ve düzeltme önerisi olarak
   standardize et.
@@ -180,13 +180,32 @@ Yayın kanıtları ve açık işler: [Nirvana release checklist](internals/RELEA
 
 ## v4.5.0 — v5'e uyumlu hazırlık
 
-- [ ] Diagnostic açıklamalarını ve LSP rename/references/semantic token desteğini geliştir.
-- [ ] Native CLI, JS/Python entegrasyonu ve WASM için gerçek örnek uygulamaları genişlet.
-- [ ] Sabit corpus üzerinde süre/bellek ölçerek compiler ve modül yükleme performansını iyileştir.
-- [ ] Stdlib eklemelerinde v4 API uyumluluğunu ve stable backendlerde Result/parity sözleşmesini koru.
-- [ ] Rust/WASM eksiklerini capability bazında kapat; test kanıtı olmadan stable ilan etme.
-- [ ] C/LLVM backend ve bağımsız frontend çalışmalarını v5 RFC/prototip kapsamına al.
-- [ ] Kırıcı v5 değişikliklerinden önce kaynak/HIR/ABI/lockfile geçiş rehberini hazırla.
+Kod kanıtları, yapılan düzeltmeler ve dokuz çalışma alanının kabul ölçütleri:
+[v4.5 implementation audit](internals/V4_5_IMPLEMENTATION_AUDIT.md).
+Sıralı iş kimlikleri, C17/LLVM lowering tasarımı, v5 migration kapıları ve
+güncel test kaydı: [v4.5/v5 hazırlık kaydı](internals/V4_5_V5_PREPARATION.md).
+
+- [x] WASM `Array<int/float>` parametre okumalarını tek indeks değerlendirmesi,
+  logical bounds ve taşmayan descriptor aralık kontrolüyle lower et.
+- [x] WASM `and/or` kısa devre değerlendirmesini bounds guard regresyonlarıyla düzelt.
+- [x] C17/LLVM scalar pilot kapsamını ve kaynak/HIR/ABI/lock geçiş tasarımını kaydet.
+- [x] `45-IR-2`: HIR node/type/span/capability envanterini ve negatif tanı sözleşmesini tamamla (string/Iterator indexing type loss düzeltildi, verifier generic ve primitive kuralı sıkılaştırıldı, Python/Nyx canonical byte parity korundu).
+- [x] `50-C` / `50-LLVM`: tasarım kaydını gerçek toolchain ile doğrulanan experimental emitter'lara dönüştür (`50-C` C17 scalar emitter ve `50-LLVM` Clang LLVM IR scalar emitter tamamlandı ve test edildi).
+
+- [x] Sonuç odaklı docs sitesi: gerçek WASM analiz uygulaması, kaynak/ABI çıktıları ve ayrı öğrenme önizlemesi.
+- [x] Aynı Nyx hesap modülünü native CLI, JS ve Python hostlarında çalıştır.
+- [x] Python stage-0 için sabit corpus, aşama süreleri ve bellek ölçüm aracı ekle.
+- [x] LSP tanılarında düzeltme önerilerini koru ve UTF-16 sütunlarını düzelt.
+
+- [x] LSP rename/references/semantic token desteği tamamlandı (45-LSP: references, prepareRename, rename, semanticTokens/full, UTF-16 hizalama).
+- [x] Native CLI (`examples/file_inspector/`), JS/Python host (`examples/host_embedding/`), WASM (`examples/wasm_interactive/`) ve gerçek paket/binding tüketicisi (`examples/package_consumer/`) tamamlandı.
+- [x] Sabit corpus ve import invalidation corpus'u üzerinde süre/bellek baseline'ı oluşturuldu (`45-PERF`).
+- [x] Stdlib eklemelerinde (`std/str`, `std/path`, `std/process`) v4 API uyumluluğu ve Result/cross-backend parity sağlandı (`45-LIB`).
+- [x] Rust/WASM eksikleri capability bazında kapatıldı (`45-RUST` value copy, lexical defer, payload enum, Option/match, Task/channel, crate import; `45-WASM` array in-place, string index, WASI).
+- [x] Sürümlü dependency çözümleme, semver ranges, mock registry, offline cache miss/hit, checksum doğrulama ve deterministik lockfile tamamlandı (`45-PKG`).
+- [x] C/LLVM backend ve bağımsız frontend çalışmalarının v5 tasarım/prototip sınırlarını kaydet; uygulama işleri `50-C` ve `50-LLVM` tamamlandı; `50-REF` açık.
+- [x] Kırıcı v5 değişikliklerinden önce kaynak/HIR/ABI/lockfile geçiş tasarımını hazırla; somut v2 formatları ve migration araçları henüz uygulanmadı.
+- [ ] Son revizyonda stable parity, self-host reproducibility, platform CI, extension testleri ve checksum/SBOM/release asset kapılarını geçir.
 
 Bu liste planlanan işleri gösterir. v4.5.0, mevcut v4 programlarının anlamını
 veya varsayılan backendini değiştiren bir sürüm olmayacak.

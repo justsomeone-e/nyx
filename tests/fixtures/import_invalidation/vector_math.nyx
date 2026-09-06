@@ -1,0 +1,5 @@
+import "./core_types.nyx"
+
+fn point_magnitude_sq(p: Point) -> int {
+    return (p.x * p.x) + (p.y * p.y)
+}

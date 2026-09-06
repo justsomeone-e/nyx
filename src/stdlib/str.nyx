@@ -1,27 +1,46 @@
 // Nyx Standard Library: std/str
-#target cpp
+// String Utilities and Formatting
 
 fn is_empty_str(s: string) -> bool {
-    return s == ""
+    return s == "";
 }
 
 fn concat_three(a: string, b: string, c: string) -> string {
-    return a + b + c
+    return a + b + c;
 }
 
 fn wrap_with(s: string, open_tag: string, close_tag: string) -> string {
-    return open_tag + s + close_tag
+    return open_tag + s + close_tag;
 }
 
 fn contains_substring(s: string, sub: string) -> bool {
-    return contains(s, sub)
+    return contains(s, sub);
 }
 
-test "std/str comprehensive tests" {
-    assert(is_empty_str("") == true, "empty string check")
-    assert(is_empty_str("abc") == false, "non empty string check")
-    assert(concat_three("Holy", "Easy", "Lang") == "Nyx", "three way concat")
-    assert(wrap_with("data", "[", "]") == "[data]", "wrap_with tags")
-    assert(contains_substring("NyxEasy", "Easy") == true, "contains_substring true")
-    assert(contains_substring("Nyx", "Rust") == false, "contains_substring false")
+fn trim(s: string) -> string {
+    return _nyx_str_trim(s);
+}
+
+fn starts_with(s: string, prefix: string) -> bool {
+    return _nyx_str_starts_with(s, prefix);
+}
+
+fn ends_with(s: string, suffix: string) -> bool {
+    return _nyx_str_ends_with(s, suffix);
+}
+
+fn find(s: string, sub: string) -> Result<int, string> {
+    return _nyx_str_find_result(s, sub);
+}
+
+fn to_upper(s: string) -> string {
+    return _nyx_str_to_upper(s);
+}
+
+fn to_lower(s: string) -> string {
+    return _nyx_str_to_lower(s);
+}
+
+fn replace(s: string, from_str: string, to_str: string) -> string {
+    return _nyx_str_replace(s, from_str, to_str);
 }

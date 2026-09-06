@@ -113,6 +113,10 @@ tests/**/*.py
 !tests/numeric_semantics_suite.py
 !tests/release_packaging_suite.py
 !tests/version_contract_suite.py
+!tests/docs_site_suite.py
+!tests/c17_scalar_suite.py
+!tests/package_manager_suite.py
+!tests/llvm_scalar_suite.py
 tests/**/*.rs
 tests/**/*.wat
 tests/**/*.bin

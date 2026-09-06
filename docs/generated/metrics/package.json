@@ -1,0 +1,25 @@
+{
+  "exports": {
+    ".": {
+      "default": "./metrics.mjs",
+      "import": "./metrics.mjs",
+      "types": "./metrics.d.ts"
+    }
+  },
+  "files": [
+    "metrics.wasm",
+    "metrics.mjs",
+    "metrics.d.ts"
+  ],
+  "name": "metrics",
+  "nyx": {
+    "abi": 1,
+    "hostAbi": 1,
+    "target": "wasm32"
+  },
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "types": "./metrics.d.ts",
+  "version": "0.0.0"
+}

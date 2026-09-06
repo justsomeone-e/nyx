@@ -41,6 +41,13 @@ them after decoding. Bounds and ABI mismatches fail explicitly.
 Changing value widths, packed-string layout, allocation ownership, or required
 exports requires Bundle ABI v2. Adding a new optional export is compatible.
 
+The current beta WASM lowerer also uses i32 for Nyx integer arithmetic; it does
+not claim the stable hosted backends' full signed-i64 contract. Numeric-array
+parameter reads check logical indices and descriptor memory ranges before
+loading; violations trap (`WebAssembly.RuntimeError` in JavaScript). This does
+not enable array assignment, owned arrays, or catchable Nyx exceptions. See
+the [v5 migration plan](V4_5_V5_PREPARATION.md) before changing integer widths.
+
 ## Browser host ABI v1
 
 Browser imports live under the `nyx_host_v1` WebAssembly namespace. Handles are

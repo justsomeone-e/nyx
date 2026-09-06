@@ -100,9 +100,20 @@ BACKENDS: Dict[str, BackendSpec] = {
     "wasm": BackendSpec(
         "wasm", "WebAssembly", "web", "wat/wasm", "beta",
         ("wat", "webassembly"), HIR_V1_FEATURES | frozenset({
-            "control_flow", "functions", "host_imports_v1", "numeric", "numeric_array_abi",
-            "string_abi", "unicode", "wasi_preview1", "wasm32", "web_dom",
+            "array_mutation", "control_flow", "functions", "host_imports_v1", "numeric",
+            "numeric_array_abi", "string_abi", "string_indexing", "unicode", "wasi_args",
+            "wasi_environ", "wasi_filesystem", "wasi_preview1", "wasm32", "web_dom",
         }),
+    ),
+    "c": BackendSpec(
+        "c", "C17 Native (Scalar Experimental)", "native", "c", "experimental",
+        ("c17",),
+        HIR_V1_FEATURES | V4_NUMERIC_FEATURES | frozenset({"control_flow", "functions", "scalar_c17"}),
+    ),
+    "llvm": BackendSpec(
+        "llvm", "LLVM IR (Scalar Experimental)", "native", "ll", "experimental",
+        ("ll",),
+        HIR_V1_FEATURES | V4_NUMERIC_FEATURES | frozenset({"control_flow", "functions", "scalar_llvm"}),
     ),
 }
 
@@ -142,13 +153,14 @@ STDLIB_CONTRACTS: Dict[str, StdlibContract] = {
     "json": StdlibContract("json", PARITY_HOSTS, "deprecated", "Use std/json_lite."),
     "math": StdlibContract("math", PARITY_HOSTS),
     "time": StdlibContract("time", PARITY_HOSTS),
+    "path": StdlibContract("path", PARITY_HOSTS),
     "str": StdlibContract("str", DYNAMIC_HOSTS),
     "io": StdlibContract("io", frozenset({"cpp", "asm", "python"})),
     "env": StdlibContract("env", CPP_HOSTS),
     "net": StdlibContract("net", CPP_HOSTS),
     "os": StdlibContract("os", CPP_HOSTS),
     "platform": StdlibContract("platform", CPP_HOSTS),
-    "process": StdlibContract("process", CPP_HOSTS),
+    "process": StdlibContract("process", PARITY_HOSTS),
     "system": StdlibContract(
         "system", CPP_HOSTS, "experimental",
         "Hosted OS inspection through the native platform ABI.",

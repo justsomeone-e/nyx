@@ -114,6 +114,26 @@ class IRVerifier:
             for item in module.items
             if isinstance(item, IRTypeAlias)
         }
+        self.structs: Dict[str, IRStruct] = {
+            item.name: item
+            for item in module.items
+            if isinstance(item, IRStruct)
+        }
+
+    def _substitute_generics(self, target: IRType, subs: Dict[str, IRType]) -> IRType:
+        if not subs:
+            return target
+        if target.name in subs:
+            res = subs[target.name]
+            if target.optional:
+                res = res.with_optional(True)
+            if target.pointer:
+                res = res.with_pointer(True)
+            return res
+        if target.arguments:
+            new_args = tuple(self._substitute_generics(arg, subs) for arg in target.arguments)
+            return IRType(target.name, new_args, target.optional, target.pointer)
+        return target
 
     def verify(self) -> IRModule:
         module_span = SourceSpan(self.module.source_name or "<unknown>", 1, 1)
@@ -906,12 +926,34 @@ class IRVerifier:
             self._visit_expr(expr.obj, active)
             if not expr.member:
                 self._issue("HIR0009", "Member name must not be empty", expr.span)
+            elif expr.obj.type.name in ("int", "float", "bool", "void", "null"):
+                self._issue("HIR0006", f"Type '{expr.obj.type}' cannot have members", expr.span)
+            elif expr.obj.type.name in self.structs:
+                struct_def = self.structs[expr.obj.type.name]
+                field_map = {f.name: f.type for f in struct_def.fields}
+                if expr.member not in field_map:
+                    self._issue("HIR0006", f"Struct '{expr.obj.type.name}' has no member '{expr.member}'", expr.span)
+                else:
+                    raw_expected = field_map[expr.member]
+                    subs = {}
+                    if struct_def.generic_params and len(struct_def.generic_params) == len(expr.obj.type.arguments):
+                        subs = dict(zip(struct_def.generic_params, expr.obj.type.arguments))
+                    expected_type = self._substitute_generics(raw_expected, subs)
+                    if expr.safe:
+                        expected_type = expected_type.with_optional(True)
+                    self._expect_compatible(expected_type, expr.type, expr.span, f"Member '{expr.member}'")
         elif isinstance(expr, IRIndexAccess):
             self._visit_expr(expr.obj, active)
             self._visit_expr(expr.index, active)
             self._expect_compatible(INT, expr.index.type, expr.index.span, "Index")
             if expr.obj.type.name not in ("Array", "Iterator", "string", "any"):
                 self._issue("HIR0006", f"Type '{expr.obj.type}' cannot be indexed", expr.obj.span)
+            elif expr.obj.type.name == "Array" and expr.obj.type.arguments:
+                self._expect_compatible(expr.obj.type.arguments[0], expr.type, expr.span, "Array index result")
+            elif expr.obj.type.name == "Iterator" and expr.obj.type.arguments:
+                self._expect_compatible(expr.obj.type.arguments[0], expr.type, expr.span, "Iterator index result")
+            elif expr.obj.type.name == "string":
+                self._expect_compatible(STRING, expr.type, expr.span, "String index result")
         elif isinstance(expr, IRArray):
             element_type = expr.type.arguments[0] if expr.type.name == "Array" and expr.type.arguments else ANY
             if expr.type.name != "Array" or len(expr.type.arguments) != 1:

@@ -833,6 +833,12 @@ class TypeChecker:
             foreign_callable = self._foreign_callable(node)
             if foreign_callable is not None:
                 inferred = foreign_callable.returns
+            elif isinstance(node.callee, MemberAccessNode) and node.callee.member in ("len", "length", "size") and not node.args:
+                receiver_type = self.infer_type(node.callee.obj)
+                if receiver_type == "string" or receiver_type.startswith("Array") or receiver_type.startswith("Iterator"):
+                    inferred = "int"
+                else:
+                    inferred = "any"
             elif node.callee in self.enum_variants:
                 variant = self.enum_variants[node.callee]
                 substitutions = {}
@@ -1001,6 +1007,20 @@ class TypeChecker:
             if pattern.name != "_":
                 self.declare(pattern.name, subject_type)
             return
+        if isinstance(pattern, FunctionCallNode) and pattern.callee in ("Ok", "Err"):
+            base, arguments = _generic_type_parts(subject_type)
+            if base == "Result" and len(arguments) == 2:
+                if len(pattern.args) != 1 or not isinstance(pattern.args[0], IdentifierNode):
+                    DiagnosticEmitter.emit_error(
+                        self.filepath, self.source, pattern.line, pattern.col,
+                        "E2035", "Result pattern requires one payload binding",
+                        expected="Ok(value) or Err(error)", found=str(len(pattern.args)),
+                        help_msg="Bind one name, or use _ to ignore the payload.",
+                    )
+                argument = pattern.args[0]
+                if argument.name != "_":
+                    self.declare(argument.name, arguments[0 if pattern.callee == "Ok" else 1])
+                return
         if not isinstance(pattern, FunctionCallNode) or pattern.callee not in self.enum_variants:
             return
         variant = self.enum_variants[pattern.callee]

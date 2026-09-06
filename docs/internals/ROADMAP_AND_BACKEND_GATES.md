@@ -1,8 +1,13 @@
-# Nyx v4 Nirvana, v4.5, and Backend Roadmap
+# Nyx v4 Nirvana, v4.5, v5 Aether, and Backend Roadmap
 
 This document is the release-planning source of truth for the v4 line. Backend
 capabilities exposed by the compiler remain machine-readable through
 `nyx targets --json`.
+
+The dated implementation changelog, ordered v4.5/v5 milestones, lowering
+research, migration design, and current validation are maintained in
+[V4_5_V5_PREPARATION.md](V4_5_V5_PREPARATION.md). The repository is still at
+`4.0.0`; future milestone names do not imply released implementations.
 
 ## Release decision
 
@@ -41,7 +46,7 @@ runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 | `cpp` | C++20 / native binary | stable | Yes | Keep native runtime and self-host parity green |
 | `js` | ES2022 / Node.js | stable | Yes | Keep exact hosted semantics green |
 | `python` | Python 3 | stable | Yes | Keep exact hosted semantics green |
-| `wasm` | WAT / WASM ABI v1 | beta | Yes | WASI preview1 and borrowed scalar-struct ABI conformance |
+| `wasm` | WAT / WASM ABI v1 | beta | Yes | i32 numeric profile; checked numeric-array reads, WASI preview1 and borrowed scalar-struct ABI |
 | `rust` | Rust 2021 | beta | Yes | Result propagation; keep other unsupported runtime features gated |
 | `react` | React 19 TSX | beta | No | Treat as web tooling, not semantic oracle |
 | `asm` | x86_64 assembly via C++ | beta | No | Keep beta |
@@ -173,6 +178,10 @@ without delaying the HIR migration or self-hosting chain.
 
 ## v4.5.0: preparation for v5
 
+The nine-track implementation audit and concrete acceptance criteria are in
+[V4_5_IMPLEMENTATION_AUDIT.md](V4_5_IMPLEMENTATION_AUDIT.md). It distinguishes
+implemented work from remaining LSP, runtime, package, and release gates.
+
 v4.5.0 is a compatible v4 milestone, not a rewrite or a blanket promotion of
 beta backends. v4.0.x remains the path for focused fixes after Nirvana.
 
@@ -190,10 +199,26 @@ beta backends. v4.0.x remains the path for focused fixes after Nirvana.
    remain experimental and cannot change v4 output or installation defaults.
 7. Publish the v5 migration design before changing source meaning, HIR schema,
    Bundle ABI, host namespaces, or package lockfile requirements.
+8. Extend deterministic local locks toward versioned dependency resolution,
+   remote registry design, typed bindings, offline operation, and checksum tests.
+9. Require final-revision source compatibility, stable backend parity, self-host
+   reproducibility, platform CI, extension tests, checksums, SBOM and release assets.
+
+Go/JVM/.NET/Lua backends, breaking syntax and declaring LLVM stable are outside
+v4.5. C17/LLVM prototypes stay experimental and do not become default backends.
 
 Completion requires the v4 regression corpus to remain valid, documented
 compatibility for every addition, and clean platform validation. Items are
 priorities for planning; they are not claims of implemented functionality.
+
+## v5.0.0 Aether implementation order
+
+The concrete v5 sequence is C17 scalar pilot, LLVM scalar pilot, measured
+shared-lowering needs, runtime/ownership conformance, migration tooling, and
+native bootstrap/platform release evidence. These are pending implementation;
+see the [v5 lowering design](V4_5_V5_PREPARATION.md).
+Neither a new public HIR schema nor a change of default backend is required
+merely to start the pilots.
 
 ## Primary references
 

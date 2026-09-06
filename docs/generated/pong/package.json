@@ -1,0 +1,25 @@
+{
+  "exports": {
+    ".": {
+      "default": "./pong.mjs",
+      "import": "./pong.mjs",
+      "types": "./pong.d.ts"
+    }
+  },
+  "files": [
+    "pong.wasm",
+    "pong.mjs",
+    "pong.d.ts"
+  ],
+  "name": "pong",
+  "nyx": {
+    "abi": 1,
+    "hostAbi": 1,
+    "target": "wasm32"
+  },
+  "private": true,
+  "sideEffects": false,
+  "type": "module",
+  "types": "./pong.d.ts",
+  "version": "0.0.0"
+}

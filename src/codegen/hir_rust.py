@@ -256,6 +256,22 @@ fn _nyx_string_index(value: &String, index: i64) -> String {
         .unwrap_or_default()
 }
 
+fn _nyx_str_trim(s: String) -> String { s.trim().to_string() }
+fn _nyx_str_starts_with(s: String, prefix: String) -> bool { s.starts_with(&prefix) }
+fn _nyx_str_ends_with(s: String, suffix: String) -> bool { s.ends_with(&suffix) }
+fn _nyx_str_find_result(s: String, sub: String) -> NyxResult<i64, String> {
+    match s.find(&sub) {
+        Some(idx) => NyxResult::Ok(idx as i64),
+        None => NyxResult::Err("substring not found".to_string()),
+    }
+}
+fn _nyx_str_to_upper(s: String) -> String { s.to_uppercase() }
+fn _nyx_str_to_lower(s: String) -> String { s.to_lowercase() }
+fn _nyx_str_replace(s: String, from_str: String, to_str: String) -> String {
+    if from_str.is_empty() { return s; }
+    s.replace(&from_str, &to_str)
+}
+
 fn _nyx_i64_div(left: i64, right: i64) -> i64 {
     if right == 0 { panic!("integer division by zero"); }
     if left == i64::MIN && right == -1 { i64::MIN } else { left / right }
@@ -462,6 +478,8 @@ class HIRRustEmitter:
                 lines.append(f"use {item.value};")
             elif item.kind == "raw":
                 lines.append(item.value)
+            elif item.kind in ("crate", "extern_crate"):
+                lines.append(f"extern crate {item.value};")
             elif item.kind in ("include", "link"):
                 raise RustEmissionError(
                     f"Rust target cannot consume C/C++ native directive '{item.kind}'; use #native use/raw"
@@ -799,6 +817,30 @@ class HIRRustEmitter:
                 keyword = "else if" if opened else "if"
                 lines.append(
                     f"{prefix}{keyword} let NyxResult::{variant}({binding}) = {temporary}.clone() {{"
+                )
+            elif isinstance(pattern, IRCall) and pattern.callee == "Some":
+                binding = self._temporary("match_value")
+                if pattern.args and isinstance(pattern.args[0], IRReference):
+                    binding = self._symbol(pattern.args[0].symbol, pattern.args[0].name)
+                keyword = "else if" if opened else "if"
+                lines.append(
+                    f"{prefix}{keyword} let Some({binding}) = {temporary}.clone() {{"
+                )
+            elif (isinstance(pattern, IRLiteral) and pattern.value is None) or (isinstance(pattern, IRReference) and pattern.name in ("None", "null")):
+                keyword = "else if" if opened else "if"
+                lines.append(f"{prefix}{keyword} {temporary}.is_none() {{")
+            elif isinstance(pattern, IRCall):
+                variant = self._identifier(pattern.callee)
+                bindings = []
+                for index, arg in enumerate(pattern.args):
+                    if isinstance(arg, IRReference):
+                        bindings.append(self._symbol(arg.symbol, arg.name))
+                    else:
+                        bindings.append(self._temporary(f"arg_{index}"))
+                binding_str = f"({', '.join(bindings)})" if bindings else ""
+                keyword = "else if" if opened else "if"
+                lines.append(
+                    f"{prefix}{keyword} let {variant}{binding_str} = {temporary}.clone() {{"
                 )
             else:
                 keyword = "else if" if opened else "if"

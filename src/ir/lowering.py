@@ -429,11 +429,15 @@ class HIRLowerer:
             start = self._lower_expr(node.start_expr) if node.start_expr is not None else None
             end = self._lower_expr(node.end_expr) if node.end_expr is not None else None
             collection = self._lower_expr(node.collection_expr) if node.collection_expr is not None else None
-            item_type = INT
-            if collection is not None and collection.type.name in ("Array", "Iterator") and collection.type.arguments:
-                item_type = collection.type.arguments[0]
-            elif collection is not None and collection.type.name == "string":
-                item_type = STRING
+            if collection is not None:
+                if collection.type.name in ("Array", "Iterator") and collection.type.arguments:
+                    item_type = collection.type.arguments[0]
+                elif collection.type.name == "string":
+                    item_type = STRING
+                else:
+                    item_type = ANY
+            else:
+                item_type = INT
             self.scopes.push()
             try:
                 symbol = _Symbol(node.var_name, self._next_symbol(node.var_name), item_type, "loop-variable")
@@ -570,6 +574,13 @@ class HIRLowerer:
             if isinstance(node.callee, ast.MemberAccessNode):
                 receiver = self._lower_expr(node.callee.obj)
                 result_type = from_inferred_name(getattr(node, "inferred_type", None), ANY)
+                if (
+                    result_type == ANY
+                    and receiver.type.name in ("Array", "string", "Iterator")
+                    and node.callee.member in ("len", "length", "size")
+                    and len(args) == 0
+                ):
+                    result_type = INT
                 method_symbol = f"method::{receiver.type.canonical()}::{node.callee.member}"
                 return IRCall(
                     span,
@@ -615,7 +626,14 @@ class HIRLowerer:
         if isinstance(node, ast.IndexAccessNode):
             obj = self._lower_expr(node.obj)
             index = self._lower_expr(node.index_expr)
-            value_type = obj.type.arguments[0] if obj.type.name == "Array" and obj.type.arguments else ANY
+            if obj.type.name == "Array" and obj.type.arguments:
+                value_type = obj.type.arguments[0]
+            elif obj.type.name == "Iterator" and obj.type.arguments:
+                value_type = obj.type.arguments[0]
+            elif obj.type.name == "string":
+                value_type = STRING
+            else:
+                value_type = ANY
             return IRIndexAccess(span, value_type, obj, index)
         if isinstance(node, ast.ArrayNode):
             elements = tuple(self._lower_expr(element) for element in node.elements)

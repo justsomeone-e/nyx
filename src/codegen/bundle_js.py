@@ -224,6 +224,17 @@ def emit_mjs(
         "    return { ptr, len: length, size };",
         "  }",
         "",
+        "  function copyBackNumericArray(value, boxed, kind) {",
+        "    if (!boxed || boxed.ptr === 0 || boxed.len === 0) return;",
+        "    const stride = kind === 'f64' ? 8 : 4;",
+        "    const view = memoryView();",
+        "    if (boxed.ptr > view.byteLength || boxed.size > view.byteLength - boxed.ptr) return;",
+        "    const data = new DataView(view.buffer, view.byteOffset + boxed.ptr, boxed.size);",
+        "    for (let index = 0; index < boxed.len; index++) {",
+        "      value[index] = kind === 'f64' ? data.getFloat64(index * stride, true) : data.getInt32(index * stride, true);",
+        "    }",
+        "  }",
+        "",
         "  function passScalarStruct(value, size, fields) {",
         "    if (value === null || typeof value !== 'object' || Array.isArray(value)) throw new TypeError('Nyx WASM struct arguments require an object');",
         "    const ptr = alloc(size) >>> 0;",
@@ -312,6 +323,7 @@ def _api_method(
     lines = [f"    {function.name}({params}) {{"]
     call_args: List[str] = []
     cleanups: List[str] = []
+    write_backs: List[str] = []
     for parameter in function.params:
         parameter_type = getattr(parameter.type_annot, "name", "int") if parameter.type_annot else "int"
         if parameter_type == "string":
@@ -326,6 +338,7 @@ def _api_method(
             boxed = f"_{parameter.name}Boxed"
             lines.append(f"      const {boxed} = passNumericArray({parameter.name}, '{kind}');")
             call_args.extend((f"{boxed}.ptr", f"{boxed}.len"))
+            write_backs.append(f"copyBackNumericArray({parameter.name}, {boxed}, '{kind}');")
             cleanups.append(f"if ({boxed}.ptr !== 0) dealloc({boxed}.ptr, {boxed}.size);")
         elif parameter_type in struct_map:
             size, fields = _struct_layout(struct_map[parameter_type], alias_map)
@@ -350,14 +363,28 @@ def _api_method(
     result_type = _return_type(function)
     if cleanups:
         lines.append("      try {")
-        if result_type == "string":
-            lines.append(f"        return readPackedString({call});")
-        elif result_type == "void":
-            lines.append(f"        {call};")
-        elif result_type == "bool":
-            lines.append(f"        return Boolean({call});")
+        if write_backs:
+            if result_type == "string":
+                lines.append(f"        const _result = readPackedString({call});")
+            elif result_type == "void":
+                lines.append(f"        {call};")
+            elif result_type == "bool":
+                lines.append(f"        const _result = Boolean({call});")
+            else:
+                lines.append(f"        const _result = {call};")
+            for wb in write_backs:
+                lines.append(f"        {wb}")
+            if result_type != "void":
+                lines.append("        return _result;")
         else:
-            lines.append(f"        return {call};")
+            if result_type == "string":
+                lines.append(f"        return readPackedString({call});")
+            elif result_type == "void":
+                lines.append(f"        {call};")
+            elif result_type == "bool":
+                lines.append(f"        return Boolean({call});")
+            else:
+                lines.append(f"        return {call};")
         lines.append("      } finally {")
         for cleanup in reversed(cleanups):
             lines.append(f"        {cleanup}")

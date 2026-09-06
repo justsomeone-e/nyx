@@ -1,0 +1,6 @@
+import "./pipeline.nyx"
+
+fn main() {
+    var res = run_pipeline(3, 4);
+    print(res);
+}

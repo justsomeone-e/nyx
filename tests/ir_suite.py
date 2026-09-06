@@ -26,12 +26,18 @@ from src.ir import (
     IRBreak,
     IRFunction,
     IRIf,
+    IRIndexAccess,
     IRLiteral,
+    IRMemberAccess,
     IRModule,
+    IRParameter,
     IRReference,
     IRReturn,
+    IRStruct,
+    IRType,
     IRVarDecl,
     SourceSpan,
+    array_of,
     collect_hir_issues,
     fingerprint,
     lower_to_hir,
@@ -256,6 +262,10 @@ def _run_nyx_authored_hir_parity() -> int:
             "trait_impl",
             'trait Show { fn show(self) -> string { return "" } } struct Item { name: string } impl Show for Item { fn show(self) -> string { return self.name } }\n',
         ),
+        (
+            "string_and_iterator_indexing",
+            'fn first_char(text: string) -> string { return text[0] }\n',
+        ),
     ]
     for path in _program_corpus_files():
         relative_name = path.relative_to(ROOT_DIR).as_posix()
@@ -416,6 +426,134 @@ def _run_negative_verifier_checks() -> None:
     await_issues = collect_hir_issues(invalid_await)
     assert any(issue.code == "HIR0007" and "outside an async" in issue.message for issue in await_issues)
     assert any(issue.code == "HIR0006" and "Task<T>" in issue.message for issue in await_issues)
+
+    mismatched_index = IRModule(
+        "<invalid-hir>",
+        "cpp",
+        (
+            IRVarDecl(
+                span,
+                "bad_elem",
+                "local::bad_elem",
+                STRING,
+                IRIndexAccess(
+                    span,
+                    STRING,
+                    IRLiteral(span, array_of(INT), (1, 2)),
+                    IRLiteral(span, INT, 0),
+                ),
+            ),
+        ),
+    )
+    assert any(
+        issue.code == "HIR0006" and "Array index result" in issue.message
+        for issue in collect_hir_issues(mismatched_index)
+    )
+
+    mismatched_string_index = IRModule(
+        "<invalid-hir>",
+        "cpp",
+        (
+            IRVarDecl(
+                span,
+                "bad_char",
+                "local::bad_char",
+                INT,
+                IRIndexAccess(
+                    span,
+                    INT,
+                    IRLiteral(span, STRING, "hello"),
+                    IRLiteral(span, INT, 0),
+                ),
+            ),
+        ),
+    )
+    assert any(
+        issue.code == "HIR0006" and "String index result" in issue.message
+        for issue in collect_hir_issues(mismatched_string_index)
+    )
+
+    primitive_member = IRModule(
+        "<invalid-hir>",
+        "cpp",
+        (
+            IRVarDecl(
+                span,
+                "val",
+                "local::val",
+                INT,
+                IRMemberAccess(
+                    span,
+                    INT,
+                    IRLiteral(span, INT, 42),
+                    "length",
+                ),
+            ),
+        ),
+    )
+    assert any(
+        issue.code == "HIR0006" and "cannot have members" in issue.message
+        for issue in collect_hir_issues(primitive_member)
+    )
+
+    point_struct = IRStruct(
+        span,
+        "Point",
+        "type::struct::Point",
+        (
+            IRParameter("x", "type::struct::Point::field::x", INT),
+            IRParameter("y", "type::struct::Point::field::y", INT),
+        ),
+    )
+    missing_member = IRModule(
+        "<invalid-hir>",
+        "cpp",
+        (
+            point_struct,
+            IRVarDecl(span, "p", "local::p", IRType("Point"), IRLiteral(span, IRType("Point"), None)),
+            IRVarDecl(
+                span,
+                "val",
+                "local::val",
+                INT,
+                IRMemberAccess(
+                    span,
+                    INT,
+                    IRReference(span, IRType("Point"), "p", "local::p"),
+                    "z",
+                ),
+            ),
+        ),
+    )
+    assert any(
+        issue.code == "HIR0006" and "has no member 'z'" in issue.message
+        for issue in collect_hir_issues(missing_member)
+    )
+
+    mismatched_member_type = IRModule(
+        "<invalid-hir>",
+        "cpp",
+        (
+            point_struct,
+            IRVarDecl(span, "p", "local::p", IRType("Point"), IRLiteral(span, IRType("Point"), None)),
+            IRVarDecl(
+                span,
+                "val",
+                "local::val",
+                STRING,
+                IRMemberAccess(
+                    span,
+                    STRING,
+                    IRReference(span, IRType("Point"), "p", "local::p"),
+                    "x",
+                ),
+            ),
+        ),
+    )
+    assert any(
+        issue.code == "HIR0006" and "Member 'x'" in issue.message
+        for issue in collect_hir_issues(mismatched_member_type)
+    )
 
 
 def _run_optimizer_checks() -> None:

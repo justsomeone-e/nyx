@@ -1,0 +1,52 @@
+// Shared latency analysis for native, JavaScript, Python and WASM hosts.
+// Hosts validate finite, nonnegative samples and supply milliseconds.
+fn sample_count(values: Array<float>) -> int {
+    return values.len()
+}
+
+fn total(values: Array<float>) -> float {
+    var result: float = 0.0
+    for value in values { set result = result + value }
+    return result
+}
+
+fn average(values: Array<float>) -> float {
+    if values.len() == 0 { return 0.0 }
+    return total(values) / values.len()
+}
+
+fn minimum(values: Array<float>) -> float {
+    if values.len() == 0 { return 0.0 }
+    var result: float = 0.0
+    var first: bool = true
+    for value in values {
+        if first or value < result { set result = value }
+        set first = false
+    }
+    return result
+}
+
+fn maximum(values: Array<float>) -> float {
+    if values.len() == 0 { return 0.0 }
+    var result: float = 0.0
+    for value in values {
+        if value > result { set result = value }
+    }
+    return result
+}
+
+fn count_over(values: Array<float>, budget: float) -> int {
+    var result: int = 0
+    for value in values {
+        if value > budget { set result = result + 1 }
+    }
+    return result
+}
+
+fn count_between(values: Array<float>, lower: float, upper: float) -> int {
+    var result: int = 0
+    for value in values {
+        if value >= lower and value < upper { set result = result + 1 }
+    }
+    return result
+}

@@ -395,6 +395,21 @@ impl HIRLowerer {
         self.declare_callable("intrinsic", "_nyx_channel_create", no_types, int_type, node)
         self.declare_callable("intrinsic", "_nyx_channel_send", [int_type, string_type], void_type, node)
         self.declare_callable("intrinsic", "_nyx_channel_recv", [int_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_process_exec_cmd_result", [string_type], hir_type_from_name("Result<int, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_process_get_env_result", [string_type], hir_type_from_name("Result<string, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_path_join", [string_type, string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_path_basename", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_path_dirname", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_path_extname", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_path_is_abs", [string_type], bool_type, node)
+        self.declare_callable("intrinsic", "_nyx_path_normalize", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_trim", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_starts_with", [string_type, string_type], bool_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_ends_with", [string_type, string_type], bool_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_find_result", [string_type, string_type], hir_type_from_name("Result<int, string>"), node)
+        self.declare_callable("intrinsic", "_nyx_str_to_upper", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_to_lower", [string_type], string_type, node)
+        self.declare_callable("intrinsic", "_nyx_str_replace", [string_type, string_type, string_type], string_type, node)
     }
 
     fn predeclare_top_level(self, program: ASTNode) {
@@ -883,8 +898,13 @@ impl HIRLowerer {
             if len(node.children) >= 2 and node.children[1].kind == "Null" and node.children[1].value == "" {
                 var collection = self.lower_expr(node.children[0])
                 collection_nodes = [collection]
+                item_type = hir_type("any")
                 if collection.type_info.name == "Array" and len(collection.type_info.arguments) > 0 {
                     item_type = collection.type_info.arguments[0]
+                } elif collection.type_info.name == "Iterator" and len(collection.type_info.arguments) > 0 {
+                    item_type = collection.type_info.arguments[0]
+                } elif collection.type_info.name == "string" {
+                    item_type = hir_type("string")
                 }
             } else {
                 if len(node.children) > 0 { start_nodes = [self.lower_expr(node.children[0])] }
@@ -1389,7 +1409,13 @@ impl HIRLowerer {
                 call.symbol = "method::" + receiver.type_info.canonical() + "::" + node.name
                 call.first = args
                 call.second = [receiver]
-                call.type_info = hir_type("any")
+                var call_type = hir_type("any")
+                if (receiver.type_info.name == "Array" or receiver.type_info.name == "string" or receiver.type_info.name == "Iterator") and
+                    (node.name == "len" or node.name == "length" or node.name == "size") and
+                    len(args) == 0 {
+                    call_type = hir_type("int")
+                }
+                call.type_info = call_type
                 call.has_type = true
                 return call
             }
@@ -1409,6 +1435,10 @@ impl HIRLowerer {
             var value_type = hir_type("any")
             if obj.type_info.name == "Array" and len(obj.type_info.arguments) > 0 {
                 value_type = obj.type_info.arguments[0]
+            } elif obj.type_info.name == "Iterator" and len(obj.type_info.arguments) > 0 {
+                value_type = obj.type_info.arguments[0]
+            } elif obj.type_info.name == "string" {
+                value_type = hir_type("string")
             }
             var result = hir_empty_node("IRIndexAccess", span)
             result.first = [obj]

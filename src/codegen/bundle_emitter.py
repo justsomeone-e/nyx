@@ -25,7 +25,7 @@ class BundleEmitter:
     Nyx Polyglot Bundle Emitter - ABI v1 Compliant.
     Guarantees:
       - Distinct caller-owned return buffer allocations with byte copying.
-      - Strict memory bounds checking (RangeError on out-of-bounds).
+      - JS buffer bounds checks (RangeError) and numeric index checks (WASM trap).
       - Double-free protection (zero-pointer guards).
       - URL-keyed singleton Promise caching for React 19 Suspense.
     """

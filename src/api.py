@@ -16,6 +16,8 @@ from src.codegen.hir_javascript import JavaScriptEmissionError, emit_javascript
 from src.codegen.hir_python import PythonEmissionError, emit_python
 from src.codegen.hir_rust import RustEmissionError, emit_rust
 from src.codegen.wasm_ir import BundleCompileError
+from src.codegen.c17_scalar import C17EmissionError
+from src.codegen.llvm_scalar import LLVMEmissionError
 from src.core.ast_nodes import ProgramNode
 from src.core.backend_capabilities import BACKENDS, normalize_backend_name, resolve_backend
 from src.core.diagnostics import DiagnosticEmitter, DiagnosticError
@@ -44,7 +46,7 @@ from src.plugins import CompilerPlugin, PluginContext, PluginExecutionError
 
 
 _ANSI_ESCAPE = re.compile(r"\x1b\[[0-9;]*m")
-_HIR_AUTHORITATIVE_TARGETS = frozenset(("cpp", "js", "python", "rust", "wasm"))
+_HIR_AUTHORITATIVE_TARGETS = frozenset(("cpp", "js", "python", "rust", "wasm", "c", "llvm"))
 
 
 class BackendCapabilityError(RuntimeError):
@@ -349,8 +351,10 @@ class NyxCompiler:
         except (
             BackendCapabilityError,
             BundleCompileError,
+            C17EmissionError,
             CppEmissionError,
             JavaScriptEmissionError,
+            LLVMEmissionError,
             PythonEmissionError,
             RustEmissionError,
         ) as error:
@@ -520,6 +524,14 @@ class NyxCompiler:
             module_name = source_basename if source_basename and not source_basename.startswith("<") else "nyx_module"
             wat = BundleLowerer(hir, module_name).lower().to_wat()
             return SourceArtifact(target, "webassembly-text", ".wat", "application/wasm-text", wat)
+        if target == "c":
+            from src.codegen.c17_scalar import emit_c17
+
+            return SourceArtifact(target, "c17", ".c", "text/x-csrc", emit_c17(hir))
+        if target == "llvm":
+            from src.codegen.llvm_scalar import emit_llvm
+
+            return SourceArtifact(target, "llvm-ir", ".ll", "text/x-llvm", emit_llvm(hir))
 
         raise ValueError(f"No source emitter registered for target '{target}'")
 

@@ -601,6 +601,105 @@ def _nyx_fs_remove_file_result(path):
         return Err(f"cannot remove file '{path}': {error}")
 
 
+def _nyx_path_normalize(p):
+    return p.replace("\\", "/")
+
+
+def _nyx_path_join(a, b):
+    na = a.replace("\\", "/")
+    nb = b.replace("\\", "/")
+    if not na:
+        return nb
+    if not nb:
+        return na
+    if nb.startswith("/") or (len(nb) >= 2 and nb[1] == ":"):
+        return nb
+    if na.endswith("/"):
+        return na + nb
+    return na + "/" + nb
+
+
+def _nyx_path_basename(p):
+    s = p.replace("\\", "/")
+    while len(s) > 1 and s.endswith("/"):
+        s = s[:-1]
+    idx = s.rfind("/")
+    return s if idx == -1 else s[idx + 1:]
+
+
+def _nyx_path_dirname(p):
+    s = p.replace("\\", "/")
+    while len(s) > 1 and s.endswith("/"):
+        s = s[:-1]
+    idx = s.rfind("/")
+    if idx == -1:
+        return "."
+    if idx == 0:
+        return "/"
+    if idx == 2 and len(s) >= 2 and s[1] == ":":
+        return s[:3]
+    return s[:idx]
+
+
+def _nyx_path_extname(p):
+    base = _nyx_path_basename(p)
+    idx = base.rfind(".")
+    if idx <= 0:
+        return ""
+    return base[idx:]
+
+
+def _nyx_path_is_abs(p):
+    s = p.replace("\\", "/")
+    if not s:
+        return False
+    return s.startswith("/") or (len(s) >= 2 and s[1] == ":")
+
+
+def _nyx_str_trim(s):
+    return s.strip()
+
+
+def _nyx_str_starts_with(s, prefix):
+    return s.startswith(prefix)
+
+
+def _nyx_str_ends_with(s, suffix):
+    return s.endswith(suffix)
+
+
+def _nyx_str_find_result(s, sub):
+    idx = s.find(sub)
+    return Ok(_nyx_i64(idx)) if idx >= 0 else Err("substring not found")
+
+
+def _nyx_str_to_upper(s):
+    return s.upper()
+
+
+def _nyx_str_to_lower(s):
+    return s.lower()
+
+
+def _nyx_str_replace(s, from_str, to_str):
+    return s.replace(from_str, to_str)
+
+
+def _nyx_process_exec_cmd_result(command):
+    try:
+        proc = _nyx_subprocess.run(command, shell=True, capture_output=True)
+        return Ok(_nyx_i64(proc.returncode))
+    except Exception as error:
+        return Err(f"failed to execute command: {error}")
+
+
+def _nyx_process_get_env_result(name):
+    val = _nyx_os.environ.get(name)
+    if val is None:
+        return Err(f"environment variable not found: {name}")
+    return Ok(val)
+
+
 def _nyx_json_get_string(document, key):
     marker = f'"{key}":'
     start = document.find(marker)

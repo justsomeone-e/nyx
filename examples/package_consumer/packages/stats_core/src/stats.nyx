@@ -1,0 +1,26 @@
+// Statistics Core Package (stats_core v1.0.0)
+
+fn clamp(val: int, low: int, high: int) -> int {
+    if val < low {
+        return low;
+    }
+    if val > high {
+        return high;
+    }
+    return val;
+}
+
+fn sum_ints(data: Array<int>) -> int {
+    var total = 0;
+    for x in data {
+        total = total + x;
+    }
+    return total;
+}
+
+fn max_int(a: int, b: int) -> int {
+    if a > b {
+        return a;
+    }
+    return b;
+}
