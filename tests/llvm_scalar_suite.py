@@ -31,7 +31,7 @@ def _compile_and_run_llvm(source: str, temp_dir: str, name: str = "prog") -> tup
     assert result.artifact.kind == "llvm-ir"
 
     ll_path = os.path.join(temp_dir, f"{name}.ll")
-    exe_path = os.path.join(temp_dir, f"{name}.exe")
+    exe_path = os.path.join(temp_dir, f"{name}.exe" if sys.platform == "win32" else name)
     with open(ll_path, "w", encoding="utf-8") as f:
         f.write(result.artifact.content)
 
@@ -42,6 +42,8 @@ def _compile_and_run_llvm(source: str, temp_dir: str, name: str = "prog") -> tup
         "-o",
         exe_path,
     ]
+    if sys.platform != "win32":
+        compile_cmd.append("-lm")
     proc = subprocess.run(compile_cmd, capture_output=True, text=True, timeout=30)
     assert proc.returncode == 0, f"clang compilation failed:\n{proc.stderr}\nIR:\n{result.artifact.content}"
 
@@ -56,7 +58,7 @@ def _run_cpp_oracle(source: str) -> str:
     assert result.success, f"CPP oracle compilation failed: {result.diagnostics}"
     with tempfile.TemporaryDirectory(prefix="llvm_oracle_") as d:
         cpp_file = os.path.join(d, "oracle.cpp")
-        exe_file = os.path.join(d, "oracle.exe")
+        exe_file = os.path.join(d, "oracle.exe" if sys.platform == "win32" else "oracle")
         with open(cpp_file, "w", encoding="utf-8") as f:
             f.write(result.artifact.content)
         ok, msg = CppToolchain.compile_cpp(cpp_file, exe_file)

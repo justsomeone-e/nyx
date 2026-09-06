@@ -40,12 +40,9 @@ from src.ir.types import IRType
 _IDENTIFIER_CHARS = re.compile(r"[^0-9A-Za-z_]")
 
 _LLVM_PRELUDE = """; Nyx Direct LLVM IR Emitter (Experimental Native Scalar)
-target triple = "x86_64-w64-windows-gnu"
 
 declare i32 @printf(ptr, ...)
 declare void @exit(i32)
-declare i32 @SetConsoleOutputCP(i32)
-declare i32 @SetConsoleCP(i32)
 declare double @fmod(double, double)
 
 @__nyx_fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\\0A\\00"
@@ -421,9 +418,6 @@ class LLVMScalarEmitter:
 
         entry_block = BasicBlock("entry")
         self.blocks.append(entry_block)
-
-        entry_block.emit("  call i32 @SetConsoleOutputCP(i32 65001)")
-        entry_block.emit("  call i32 @SetConsoleCP(i32 65001)")
 
         current = entry_block
         for stmt in top_statements:
