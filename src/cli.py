@@ -593,7 +593,7 @@ def cmd_bundle(
 
     # 1. Emit WebAssembly Text (.wat)
     wat_path = os.path.join(bundle_dir, f"{base_name}.wat")
-    with open(wat_path, "w", encoding="utf-8") as f:
+    with open(wat_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(wat_code)
 
     # 2. Emit WebAssembly Binary (.wasm)
@@ -603,12 +603,12 @@ def cmd_bundle(
 
     # 3. Emit ES Module Wrapper (.mjs)
     mjs_path = os.path.join(bundle_dir, f"{base_name}.mjs")
-    with open(mjs_path, "w", encoding="utf-8") as f:
+    with open(mjs_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(mjs_code)
 
     # 4. Emit TypeScript Type Declarations (.d.ts)
     dts_path = os.path.join(bundle_dir, f"{base_name}.d.ts")
-    with open(dts_path, "w", encoding="utf-8") as f:
+    with open(dts_path, "w", encoding="utf-8", newline="\n") as f:
         f.write(dts_code)
 
     profile = "WASI preview1 executable" if wasi else "Polyglot Web/WASM Package"
@@ -621,7 +621,7 @@ def cmd_bundle(
     # 5. Conditionally Emit React 19 Custom Hook (.react.tsx)
     if emit_react:
         react_path = os.path.join(bundle_dir, f"{base_name}.react.tsx")
-        with open(react_path, "w", encoding="utf-8") as f:
+        with open(react_path, "w", encoding="utf-8", newline="\n") as f:
             f.write(react_code or "")
         print(f"\033[92m  [+] React 19 useNyxModule: {react_path}\033[0m")
 

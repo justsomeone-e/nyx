@@ -4,11 +4,11 @@
   "artifacts": [
     {
       "path": "generated/metrics/metrics.d.ts",
-      "sha256": "3d8a342eec02f452a0320dc7d9323ad108fad76fed6880a8aad8ec269143b8d3"
+      "sha256": "0d446f830e86bef7f8f6dcfb6599917654e8e6954290a97cd3800c67808a8800"
     },
     {
       "path": "generated/metrics/metrics.mjs",
-      "sha256": "0e4ccbd1cee039ccb5d399119c8e0f593a6a22409ba54519a8e7db4ffc12b0f5"
+      "sha256": "6ec2f8d824c52c1e8c476e558227829849efdb971a646b56f98ea6c33a95efc3"
     },
     {
       "path": "generated/metrics/metrics.nyx",
@@ -20,7 +20,7 @@
     },
     {
       "path": "generated/metrics/metrics.wat",
-      "sha256": "828b1641df1e6ba5c403b1560dacdc5ca5a12aba5f8145f2ad2019b8c3453886"
+      "sha256": "2ce3a4fa3395feaea3e477b29e35df0367ddb810ddff0666452f2cf4e17de700"
     },
     {
       "path": "generated/metrics/package.json",
@@ -32,11 +32,11 @@
     },
     {
       "path": "generated/pong/pong.d.ts",
-      "sha256": "0b256872246b16f43c53b7504971927666328ed11ec212c8aef0ab7891edf011"
+      "sha256": "fa0c73df8f42b1e7b92bcfd23519409fd3a38f6b3afe3b2dbc4ce3f9c39c3666"
     },
     {
       "path": "generated/pong/pong.mjs",
-      "sha256": "29fc82aff2035311b4a82ac66751787215d6a87ff4ed3638611d88a4c8ac8522"
+      "sha256": "adbe1fd3d46a4be1d0ee96d1c0b51b0a49df49377836448c6f7ec6b66336b1a9"
     },
     {
       "path": "generated/pong/pong.nyx",
@@ -48,7 +48,7 @@
     },
     {
       "path": "generated/pong/pong.wat",
-      "sha256": "979d1aeaf65910cf367a0e37e20d4590b185ae0b41f8716733728eff3e26feb2"
+      "sha256": "3365b067ce6ea61fb5bed97c1db7f82c1d22002d4130170ec642c5676d443017"
     }
   ]
 }

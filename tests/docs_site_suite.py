@@ -34,6 +34,13 @@ class Links(HTMLParser):
                 self.links.append(attrs[key])
 
 
+def _artifact_bytes(path: Path) -> bytes:
+    data = path.read_bytes()
+    if path.suffix in (".d", ".ts", ".mjs", ".js", ".nyx", ".wat", ".json", ".html", ".css", ".md"):
+        return data.replace(b"\r\n", b"\n")
+    return data
+
+
 def static_integrity():
     docs = ROOT / "docs"
     for page in docs.rglob("*.html"):
@@ -52,9 +59,9 @@ def static_integrity():
     manifest = json.loads((docs / "generated/manifest.json").read_text())
     assert manifest["compilerVersion"] == (ROOT / "VERSION").read_text().strip()
     for artifact in manifest["artifacts"]:
-        assert hashlib.sha256((docs / artifact["path"]).read_bytes()).hexdigest() == artifact["sha256"]
+        assert hashlib.sha256(_artifact_bytes(docs / artifact["path"])).hexdigest() == artifact["sha256"]
     for name, source in (("metrics", "examples/metrics/metrics.nyx"), ("pong", "examples/web_pong/pong.nyx")):
-        assert (ROOT / source).read_bytes() == (docs / "generated" / name / f"{name}.nyx").read_bytes()
+        assert _artifact_bytes(ROOT / source) == _artifact_bytes(docs / "generated" / name / f"{name}.nyx")
 
 
 def run_docs_site_suite():

@@ -60,3 +60,7 @@ src/** -linguist-vendored
 compiler/** -linguist-vendored
 tests/** -linguist-vendored
 examples/** -linguist-vendored -linguist-documentation
+
+# Enforce deterministic LF line endings for documentation assets and manifests
+docs/generated/** text eol=lf
+docs/examples/** text eol=lf
