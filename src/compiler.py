@@ -1,4 +1,4 @@
-import os, sys
+import os, shutil, subprocess, sys
 try:
     from src.core import Lexer, Parser, TypeChecker, DiagnosticEmitter
     from .codegen import UniversalCodeGen
@@ -58,6 +58,42 @@ class Compiler:
                 f.write(wat_out)
             print(f"[*] Nyx Compiling: {self.filepath} -> [Target: wasm]")
             print(f"[+] Output generated: {out_file}")
+
+        elif target in ("c", "llvm"):
+            from src.api import NyxCompiler
+
+            result = NyxCompiler(os.path.dirname(os.path.abspath(self.filepath))).compile_source(
+                source,
+                filename=self.filepath,
+                target=target,
+            )
+            if not result.success or result.artifact is None:
+                for diagnostic in result.diagnostics:
+                    print(diagnostic.rendered)
+                return 1
+            out_file = base_name + result.artifact.extension
+            with open(out_file, "w", encoding="utf-8") as f:
+                f.write(result.artifact.content)
+            print(f"[*] Nyx Compiling: {self.filepath} -> [Target: {target}]")
+            print(f"[+] Output generated: {out_file}")
+            if not run_immediately:
+                return 0
+            clang = shutil.which("clang")
+            if not clang:
+                print("Runtime Execution Error: Clang was not found on PATH.")
+                return 1
+            executable = base_name + (".exe" if sys.platform == "win32" else "")
+            command = [clang, "-O2"]
+            if target == "c":
+                command.append("-std=c17")
+            command.extend([out_file, "-o", executable])
+            if sys.platform != "win32":
+                command.append("-lm")
+            compiled = subprocess.run(command, capture_output=True, text=True)
+            if compiled.returncode != 0:
+                print(f"Runtime Compilation Error: {compiled.stderr or compiled.stdout}")
+                return compiled.returncode or 1
+            return subprocess.run([os.path.abspath(executable)]).returncode
 
         elif target == "python":
             py_out = codegen.gen_python()

@@ -1,256 +1,309 @@
-# Nyx v4.5.0 ve v5.0.0 hazırlık kaydı
+# Nyx v4.5.0 and v5.0.0 preparation log
 
-Güncelleme: 2026-09-06. İncelenen taban commit: `a49e413`; çalışma ağacı kirli.
-`VERSION` ve `nyx.toml`: `4.0.0`. Bu kayıt yayın veya tamamlanmış v5 iddiası değildir.
-İşlerin sırası takvime değil bağımlılıklara ve doğrulanabilir çıkış kapılarına bağlıdır.
+Updated: September 6, 2026. Initial reviewed base commit: `a49e413`; the working
+tree was dirty. `VERSION` and `nyx.toml` were `4.0.0` when the preparation work
+began and were later synchronized to `4.5.0`. This record is not evidence of a
+release or a completed v5. Work is ordered
+by dependencies and verifiable exit gates rather than dates.
 
-Genel sürüm politikası [ROADMAP_AND_BACKEND_GATES.md](ROADMAP_AND_BACKEND_GATES.md),
-değişiklik geçmişi [CHANGELOG.md](../../CHANGELOG.md), görev özeti
-[TODO.md](../TODO.md) dosyasındadır. Bu dosya iki sürümün ayrıntılı lowering ve
-geçiş planını, araştırma kararlarını ve bu çalışmanın doğrulama kaydını tutar.
+The general release policy is in
+[ROADMAP_AND_BACKEND_GATES.md](ROADMAP_AND_BACKEND_GATES.md), the change history
+is in [CHANGELOG.md](../../CHANGELOG.md), and [TODO.md](../TODO.md) summarizes
+tasks. This document records the detailed lowering and migration plan, research
+decisions, implementation changes, and validation evidence for both releases.
 
-## Mevcut kaynakta doğrulanan durum
+## State verified in the source tree
 
-| Bileşen | Kaynak | Gerçek durum |
+| Component | Source | Actual state |
 |---|---|---|
-| Typed HIR | `src/ir/model.py`, `types.py`, `serialization.py` | Immutable, ağaç biçimli HIR; schema v1, canonical JSON ve fingerprint var; SSA değildir |
-| Lowering | `src/ir/lowering.py`, `compiler/hir_lowering.nyx` | Python ve Nyx frontend yolları var; değişikliklerin canonical byte parity kapısı var |
-| Pass/verifier | `src/ir/passes.py`, `verifier.py` | Deterministik dönüşüm ve HIR doğrulaması mevcut |
-| WASM | `src/codegen/wasm_ir.py` | HIR → ortak instruction graph → WAT ve binary; ayrı elle yazılmış iki codegen yolu kullanılmıyor |
-| Native self-host | `compiler/`, `tests/self_host_suite.py` | Native compiler C++ üretir; C/LLVM self-host yolu henüz yok |
-| Backend sicili | `src/core/backend_capabilities.py` | C++/JS/Python stable; Rust/WASM/React/ASM beta; `c` (C17 scalar) ve `llvm` (LLVM IR scalar) experimental kayıtlı |
-| Benchmark | `src/toolchain/compiler_benchmark.py` | Python stage-0 ölçümü; native compiler hızlanması kanıtı değil |
+| Typed HIR | `src/ir/model.py`, `types.py`, `serialization.py` | Immutable tree-shaped HIR with schema v1, canonical JSON, and fingerprints; not SSA |
+| Lowering | `src/ir/lowering.py`, `compiler/hir_lowering.nyx` | Python and Nyx frontend paths with a canonical byte-parity gate |
+| Passes/verifier | `src/ir/passes.py`, `verifier.py` | Deterministic transformations and HIR validation |
+| WASM | `src/codegen/wasm_ir.py` | HIR to a shared instruction graph to WAT and binary; not two independently handwritten codegen paths |
+| Native self-host | `compiler/`, `tests/self_host_suite.py` | Native compiler emits C++; no C/LLVM self-host path yet |
+| Backend registry | `src/core/backend_capabilities.py` | C++/JS/Python stable; Rust/WASM/React/ASM beta; `c` (C17 scalar) and `llvm` (LLVM IR scalar) registered as experimental |
+| Benchmark | `src/toolchain/compiler_benchmark.py` | Measures Python stage 0; not evidence of native compiler acceleration |
 
-WASM'ın `int` aritmetiği ve Array<int> elemanları mevcut uygulamada i32'dir.
-Bu, stable C++/JS/Python signed-i64 semantiğine tam eşdeğer değildir; sicil WASM
-için `int64_wrap` ilan etmiyor. v4.5 içinde ABI v1 genişliklerini sessizce
-değiştirmek yerine bu sınır belgelenir. i64 iç temsil ve ABI v2 ayrı v5 kararıdır.
+WASM `int` arithmetic and `Array<int>` elements are currently i32. This is not
+fully equivalent to the stable C++/JS/Python signed-i64 contract, and the
+registry does not advertise `int64_wrap` for WASM. v4.5 documents this limit
+instead of silently changing ABI v1 widths. An i64 internal representation and
+ABI v2 remain separate v5 decisions.
 
-## Güncel uygulama changelog'u
+## Implementation changelog
 
-### Oturum başında mevcut olan çalışmalar
+### Work already present when the session began
 
-- Array/string `len`, `length`, `size` dönüşleri HIR'da `int`; built-in
-  `Result<T,E>` match payload'ları `T`/`E` olarak lower ediliyor.
-- Python typechecker'da Result pattern binding türü ve kapsamı düzeltilmiş.
-- LSP UTF-16 ve tanı alanları, kapanan belge ve bilinmeyen istek davranışı için
-  düzeltmeler mevcut. References/rename/semantic tokens henüz tamamlanmış değil.
-- Metrics örneği, docs bundle üretimi, preview worker ve stage-0 benchmark mevcut.
-  Bunlar önceki yerel değişikliklerdir; bu oturumda sıfırdan yazılmış sayılmaz.
+- Array/string `len`, `length`, and `size` return `int` in HIR; built-in
+  `Result<T,E>` match payloads lower as `T`/`E`.
+- Result-pattern binding type and scope were corrected in the Python type checker.
+- LSP fixes existed for UTF-16 positions, diagnostic fields, closed documents,
+  and unknown requests. References, rename, and semantic tokens were not yet
+  complete at that point.
+- The Metrics example, docs bundle generation, preview worker, and stage-0
+  benchmark already existed. They were not created from scratch in this session.
 
-### Bu araştırmadan sonra düzeltilenler
+### Corrections made after the initial investigation
 
-1. **WASM sayısal dizi okuma lowering'i:** `IRIndexAccess` artık borrowed
-   `Array<int>` ve `Array<float>` parametreleri için derlenir. Önceden bundle
-   komutu `Unsupported expression 'IRIndexAccess'` ile duruyordu.
-2. **Tek değerlendirme ve sınır kontrolü:** indeks helper parametresi olarak
-   bir kez hesaplanır. Negatif indeks, boş dizi, `index >= length` ve geçersiz
-   descriptor aralığı yükleme öncesi trap üretir. `ptr + length * stride`
-   hesabı i64 ile yapılır; wasm32 adres taşmasıyla kontrol atlanmaz.
-3. **Lazy Boolean lowering:** `and`/`or` ve eşdeğer operatörleri `if (result i32)`
-   dallarına iner. Bitwise `i32.and/or` ile iki operandı çalıştırma hatası kapatıldı.
-4. **Regresyonlar:** ilk/son eleman, negatif/boş/uzunluğa eşit indeks, i32/f64,
-   nested erişim, yan etkili indeks, kısa devre, bozuk ham ABI descriptor'ı ve
-   belleğin son geçerli elemanı yürütülür. String indeksleme ve diziye yazma
-   desteklenmeyen yollar olarak reddedilir; başarısız bundle artifact bırakmaz.
-5. **Üretilen örnekler:** lowering çıktısı değiştiği için Metrics/Pong bundle'ları
-   mevcut `python -m src.toolchain.docs_site` komutuyla tekrar üretilir; hash
-   manifesti eşlenir. Üretilmiş dosyalar elle düzenlenmez.
-6. **Eski release-test beklentisi:** `7a76cb3` commit'i README footer'ını bilinçli
-   kaldırmış, `tests/version_contract_suite.py` hâlâ zorunlu tutuyordu. Eski
-   footer assertion'ı kaldırıldı; üç aktif diagram ve tüm sürüm eşleme kontrolleri
-   korundu. README tasarımı değiştirilmedi.
+1. **WASM numeric-array read lowering:** `IRIndexAccess` now compiles for borrowed
+   `Array<int>` and `Array<float>` parameters. Previously, bundling stopped with
+   `Unsupported expression 'IRIndexAccess'`.
+2. **Single evaluation and bounds checks:** the index is evaluated once as a
+   helper parameter. Negative indices, empty arrays, `index >= length`, and
+   invalid descriptor ranges trap before loading. `ptr + length * stride` is
+   calculated as i64 so wasm32 address overflow cannot bypass the check.
+3. **Lazy Boolean lowering:** `and`/`or` and equivalent operators lower to
+   `if (result i32)` branches. The incorrect eager evaluation through bitwise
+   `i32.and/or` was removed.
+4. **Regressions:** tests execute first/last elements, negative/empty/equal-to-length
+   indices, i32/f64, nested access, side-effecting indices, short-circuiting,
+   malformed raw ABI descriptors, and the last valid memory element. Unsupported
+   string indexing and array-write paths reject compilation without leaving a
+   failed bundle artifact.
+5. **Generated examples:** Metrics/Pong bundles are regenerated with
+   `python -m src.toolchain.docs_site` after lowering changes, and the hash
+   manifest is kept aligned. Generated files are not edited manually.
+6. **Stale release-test expectation:** commit `7a76cb3` intentionally removed the
+   README footer while `tests/version_contract_suite.py` still required it. The
+   obsolete footer assertion was removed; checks for the three active diagrams
+   and all version mappings remain. The README design was not changed.
 
-Kod: `src/codegen/wasm_ir.py`. Testler: `tests/test_bundle.nyx`,
-`tests/bundle_suite.py`. HIR şeması, ABI sürümü ve varsayılan hedef değişmedi.
-Bu okuma desteği owned array, array assignment, string indexing veya tam WASM
-runtime parity anlamına gelmez. Ham descriptor kontrolü linear-memory aralığını
-doğrular; allocation sahipliğini kanıtlamaz. Trap, JavaScript'te
-`WebAssembly.RuntimeError` olarak görülür; catch edilebilir Nyx exception desteği değildir.
+Code: `src/codegen/wasm_ir.py`. Tests: `tests/test_bundle.nyx` and
+`tests/bundle_suite.py`. The HIR schema, ABI version, and default target were
+unchanged. Numeric-array reads do not imply owned arrays, array assignment,
+string indexing, or full WASM runtime parity. Raw descriptor validation checks
+the linear-memory range; it does not prove allocation ownership. A trap appears
+in JavaScript as `WebAssembly.RuntimeError`, not as a catchable Nyx exception.
 
-## v4.5.0: sıralı ve uyumlu geliştirme
+## v4.5.0: ordered, compatible development
 
-| ID | Öncelik / bağımlılık | Teslimat | Kapanma ölçütü / durum |
+| ID | Priority / dependency | Deliverable | Exit criterion / state |
 |---|---|---|---|
-| 45-IR-1 | P0, ilk adım | Numeric array read ve lazy Boolean WASM lowering | Bu çalışmada uygulandı; bundle runtime regresyonu geçti |
-| 45-IR-2 | P0, IR-1 sonrası | HIR node/type/span/capability envanteri | Uygulandı; string/Iterator indexing type loss giderildi, verifier generic ve primitive kuralı sıkılaştırıldı, Python/Nyx canonical byte parity korundu |
-| 45-LSP | P1, sembol/span envanteri sonrası | Kaynak sembol indeksi, references → prepareRename/rename → semantic tokens | Uygulandı; LspSymbolIndex ile shadowing, UTF-16, function/struct scope, prepareRename/rename çakışma denetimi ve semanticTokens/full delta kodlama eklendi; lsp_suite 7/7 geçti |
-| 45-PERF | P1, correctness yeşilken | Native frontend/codegen süre ve bellek baseline'ı | Uygulandı; src/toolchain/compiler_benchmark.py ve compiler_benchmark.json ile 4 kaynaklık sabit korpus üzerinde aşama bazlı süre/RSS/bellek baseline raporu (build/compiler-benchmark.json) üretildi |
-| 45-LIB | P1 | Stdlib string/path/process API envanteri ve gerçek tüketici örnekleri | Her ek API'de hata/boş değer ayrımı, Result ve C++/JS/Python exact çıktı; açık |
-| 45-WASM | P1, IR-1 sonrası | Ayrı capability işleri: assignment/ownership, string index, WASI args/env/files | Her iş için ABI kararı, pozitif/negatif runtime testleri; tamamlanmayan yetenek kapalı; açık |
-| 45-RUST | P1 | Defer/Result/value-copy kapsamı, payload enum ve async/runtime boşlukları | Her açılan capability için rustc ile runtime parity; beta etiketi kanıtsız kalkmaz; açık |
-| 45-PKG | P1 | Semver/registry/offline RFC ve deterministik resolver | Yerel lock ile remote resolution ayrılır; range/cycle/checksum/offline negatif corpus; açık |
-| 45-V5 | P1 | Aşağıdaki C17/LLVM ve migration tasarımını prototipe dönüştür | C17 scalar pilotu tamamlandı (src/codegen/c17_scalar.py, tests/c17_scalar_suite.py, 'c' backend); LLVM IR ve migration araçları sonraki adım |
-| 45-REL | Son, kapsamı dondurulmuş tüm işler sonrası | Release adayı ve platform kanıtı | Aynı revizyonda tam test, self-host, dört OS/arch işi, extension, checksum/SBOM ve paketleme; açık |
+| 45-IR-1 | P0, first | Numeric-array reads and lazy Boolean WASM lowering | Implemented; bundle runtime regressions passed |
+| 45-IR-2 | P0, after IR-1 | HIR node/type/span/capability inventory | Implemented; string/Iterator indexing type loss fixed, verifier generic/primitive rules tightened, Python/Nyx canonical byte parity preserved |
+| 45-LSP | P1, after symbol/span inventory | Source symbol index, references, prepareRename/rename, semantic tokens | Implemented; `LspSymbolIndex` covers shadowing, UTF-16, function/struct scopes, rename collision checks, and semanticTokens/full delta encoding; `lsp_suite` 7/7 passed |
+| 45-PERF | P1, after correctness is green | Native frontend/codegen time and memory baseline | Implemented; `src/toolchain/compiler_benchmark.py` and `compiler_benchmark.json` record stage time/RSS/memory on a fixed four-source corpus in `build/compiler-benchmark.json` |
+| 45-LIB | P1 | Stdlib string/path/process API inventory and real consumer examples | Distinguish errors from empty values for every added API; require Result and exact C++/JS/Python output; open |
+| 45-WASM | P1, after IR-1 | Separate capability tasks: assignment/ownership, string indexing, and WASI args/env/files | ABI decision and positive/negative runtime tests for each task; unfinished capabilities remain disabled; open |
+| 45-RUST | P1 | Defer/Result/value-copy coverage, payload enums, and async/runtime gaps | rustc runtime parity for every enabled capability; beta maturity does not change without evidence; open |
+| 45-PKG | P1 | SemVer/registry/offline RFC and deterministic resolver | Keep local locks distinct from remote resolution; range/cycle/checksum/offline negative corpus; open |
+| 45-V5 | P1 | Turn the C17/LLVM and migration design below into prototypes | C17 scalar pilot completed (`src/codegen/c17_scalar.py`, `tests/c17_scalar_suite.py`, backend `c`); LLVM IR and migration tools are next |
+| 45-REL | Last, after all frozen-scope work | Release candidate and platform evidence | Full tests, self-hosting, four OS/architecture jobs, extension tests, checksums/SBOM, and packaging from the same revision; open |
 
-45-IR-2 sırasında öncelikli denetimler: string/member/index result türlerinin
-gereksiz `any` olmaması, lexical symbol identity'nin emitter'da korunması,
-destructuring/default-argument tek değerlendirmesi, erken dönüşte defer sırası,
-pass öncesi/sonrası davranış, destek dışı HIR'ın output üretmeden reddi.
-Bu başlıklar tamamlanmış hata düzeltmeleri olarak işaretlenmemelidir.
+Priority audits during 45-IR-2 included avoiding unnecessary `any` for
+string/member/index results, preserving lexical symbol identity in emitters,
+single evaluation for destructuring/default arguments, defer order on early
+exit, behavior before/after passes, and rejecting unsupported HIR before output
+is emitted. These must not be marked as fixed without implementation evidence.
 
-45-PERF için ölçüm notu: `tests/bootstrap_typechecker_test.py` native test
-programını her semantik örnekte yeniden derliyor. Bu koşunun uzunluğu doğrudan
-Nyx frontend latency ölçüsü değildir. Test hızlandırması ele alınırsa önce
-harness derleme süresiyle örnek yürütme süresi ayrılır; tek harness reuse/cache
-değişikliği aynı acceptance/rejection corpus'u koruyarak ayrıca ölçülür.
+For 45-PERF, `tests/bootstrap_typechecker_test.py` recompiles the native test
+program for each semantic case. Its total duration is not direct Nyx frontend
+latency. Any harness optimization must first separate compilation from case
+execution, then measure single-harness reuse/cache against the same
+acceptance/rejection corpus.
 
-v4.5 RC'ye girişte yayın kapsamındaki P1 işleri açıkça seçilip dondurulur.
-Yetişmeyen feature açıkça sonraki sürüme taşınır; kısmi implementation stable
-diye yayınlanmaz. P0 correctness ve release kapıları ertelenmez.
+At entry to a v4.5 release candidate, the selected P1 scope must be frozen.
+Unfinished features move explicitly to a later release and are not presented as
+stable. P0 correctness and release gates cannot be deferred.
 
-## v5.0.0 Aether: lowering ve backend tasarım kaydı
+## v5.0.0 Daydream: lowering and backend design record
 
-Durum: **tasarım / uygulama bekliyor**. C17 veya LLVM emitter eklenmiş değildir.
-v4 HIR'ı tamamen yeniden yazmak başlangıç koşulu değildir.
+Status: **design / implementation pending**. No C17 or LLVM emitter has been
+added. Rewriting the entire v4 HIR is not a prerequisite.
 
-Önerilen sıra:
+Recommended order:
 
 ```text
-v4.5 canonical HIR ve semantik fixture'ları
-    -> C17 scalar pilotu
-    -> LLVM scalar pilotu ve explicit control flow
-    -> ortak lowering ihtiyacı ölçülür; gerekiyorsa dar bir internal LIR
-    -> runtime, ownership, Result/defer, ABI ve platform conformance
-    -> migration araçları + native bootstrap kanıtı
-    -> v5 RC ve release kapısı
+v4.5 canonical HIR and semantic fixtures
+    -> C17 scalar pilot
+    -> LLVM scalar pilot and explicit control flow
+    -> measure shared-lowering needs; add a narrow internal LIR only if justified
+    -> runtime, ownership, Result/defer, ABI, and platform conformance
+    -> migration tools and native bootstrap evidence
+    -> v5 release candidate and release gate
 ```
 
-### 50-C: C17 experimental pilot
+### 50-C: experimental C17 pilot
 
-Durum: **C17 scalar pilotu uygulandı** (kod: `src/codegen/c17_scalar.py`, test: `tests/c17_scalar_suite.py`, backend: `c`). `clang -std=c17 -Wall -Wextra -Werror` ile C++ oracle parity doğrulandı.
+Status: **the C17 scalar pilot is implemented** in
+`src/codegen/c17_scalar.py`, tested by `tests/c17_scalar_suite.py`, and registered
+as backend `c`. It was checked with `clang -std=c17 -Wall -Wextra -Werror`
+against the C++ oracle.
 
-- Girdi yalnız verified HIR; ilk kapsam `int`, `float`, `bool`, local,
-  arithmetic/comparison, direct call, if/while ve return. String/Array/Struct,
-  exception/Task, foreign binding desteği ayrıca uygulanana kadar reddedilir.
-- Kaynak signed-i64 wrap semantiğini C signed overflow'una bırakma. Unsigned
-  aritmetik ve tanımlı signed dönüş helper'ları kullan; division/remainder
-  sıfır ve minimum-i64/-1 yollarını Nyx sözleşmesine göre dallandır.
-- Üretilen C17'yi gerçek C toolchain ile derle; aynı fixture'ı C++/JS/Python
-  oracle'larıyla karşılaştır. O0/O2 sonuçları aynı olmalı; platform/toolchain
-  sürümü raporda tutulmalı. C17 kaynak üretimi tek başına native self-host değildir.
-- Gate 1–7 geçmeden beta, sekiz kapı tamamlanmadan stable değerlendirmesi yok.
+- Input is verified HIR only. Initial coverage is `int`, `float`, `bool`, locals,
+  arithmetic/comparison, direct calls, if/while, and return. String/Array/Struct,
+  exceptions/Task, and foreign bindings are rejected until implemented.
+- Do not rely on C signed overflow for Nyx signed-i64 wrapping. Use unsigned
+  arithmetic and defined signed-conversion helpers; branch explicitly for zero
+  division/remainder and minimum-i64 divided by -1.
+- Compile generated C17 with a real C toolchain and compare the same fixture
+  against C++/JS/Python oracles. O0 and O2 results must agree, and reports must
+  record platform/toolchain versions. C17 source generation alone is not native
+  self-hosting.
+- Do not consider beta before gates 1–7 pass or stable before all eight pass.
 
-### 50-LLVM: direct LLVM IR experimental pilot
+### 50-LLVM: experimental direct LLVM IR pilot
 
-- İlk pilotun HIR kapsamı 50-C ile aynı; C++ ara kaynak adımı olmadan `.ll`
-  üretimi ve gerçek LLVM doğrulama/derleme komutları gerekir. Kullanılacak LLVM
-  sürümü pilot başında pinlenir; makinedeki Clang sürümü ürün sürüm taahhüdü değildir.
-- Local değişkenleri ilk aşamada entry-block alloca/load/store ile temsil
-  etmek mümkün; erken bir özel SSA sistemi zorunlu değil. Branch/terminator,
-  type ve return doğruluğu LLVM verifier ile denetlenir. SSA dönüşümü ölçüm ve
-  resmi pass pipeline üzerinden değerlendirilir.
-- Nyx wrap aritmetiğinde kanıtsız `nsw/nuw` kullanılmaz. Division/remainder,
-  shift-count sınırları ve lazy Boolean ifadeleri açık lowering ister.
-- Float için varsayılan olarak fast-math yok; NaN, signed zero ve binary64
-  fixture'ları korunur. Target triple/data layout hedef toolchain'den alınır;
-  başka platformun pointer/alignment değerleri kopyalanmaz.
-- HIR'da kaynak span/symbol identity tutulur; debug metadata sonraki ayrı
-  teslimattır. Üretilmiş `.ll` dosyasının bulunması debugger desteği değildir.
+The first v5 development slice extends the direct emitter with scalar-field
+structs represented as named LLVM aggregate types. Constructors, field reads,
+direct local field writes, value copies, parameters, and returns are validated
+against the C++ oracle by `tests/llvm_scalar_suite.py`. Aggregate fields,
+generic structs, optional/safe access, and Arrays remain gated until their
+layout, ownership, and cleanup contracts are implemented.
 
-### 50-LIR / 50-RUNTIME: ortaklaştırma sınırı
+The second slice adds stack-owned `Array<int>`, `Array<float>`, and `Array<bool>`
+locals using typed `{ length, data }` LLVM descriptors. Literal initialization,
+bounds-checked reads and writes, and independent local copies are tested against
+the C++ oracle. Scalar Arrays cross function-input boundaries by value: the
+callee dynamically allocates stack storage and copies bytes with LLVM's memcpy
+intrinsic, so mutations do not alias caller storage. `for value in array` lowers
+to explicit condition/body/step/exit blocks with correct `break` and `continue`
+targets. Array returns, rebinding, nested Arrays, and non-scalar elements remain
+rejected until the ownership and cleanup ABI is defined.
 
-İkinci emitter aynı semantik dönüşümü tekrarlamaya başladığında ihtiyaç
-kanıtlanırsa internal LIR eklenir. Başlangıçta bütün hosted emitter'ları bu
-katmana geçirmek gerekmez. Public HIR JSON ile internal LIR formatı ayrıdır.
+The public CLI now exposes the same path: `nyx build program.nyx --target llvm`
+writes `build/llvm/program.ll` and compiles that exact LLVM IR artifact to a
+native executable with the host Clang toolchain. `nyx run ... --target llvm`
+uses the same direct path. No generated C++ source participates in either command.
 
-LIR kabul ölçütü: typed values, unique symbol/block kimlikleri, her block'ta
-tek terminator, doğru branch hedefleri, single evaluation ve kaynak span
-taşıma. Result `?`/return/break/continue için lexical defer cleanup yolları ve
-Array/Struct copy/borrow kuralları ayrı fixture'larla doğrulanır. Exceptions,
-Task/channel ve closure capture runtime tasarımı olmadan emüle edilmiş sayılmaz.
+- Initial HIR coverage matches 50-C and emits `.ll` without a C++ source hop.
+  Validation requires real LLVM parsing/compilation. The supported LLVM major
+  version must be pinned; the locally installed Clang version is not a product
+  compatibility promise.
+- Locals initially use entry-block alloca/load/store. A custom early SSA system
+  is unnecessary. LLVM verification checks branches, terminators, types, and
+  returns; SSA conversion is evaluated through measured official passes.
+- Nyx wrapping arithmetic does not use unproven `nsw`/`nuw`. Division/remainder,
+  shift-count bounds, and lazy Boolean expressions require explicit lowering.
+- Fast-math is off by default. Preserve NaN, signed zero, and binary64 fixtures.
+  Obtain target triples/data layouts from the target toolchain rather than
+  copying pointer/alignment values from another platform.
+- Preserve source spans and symbol identity in HIR. Debug metadata is a separate
+  deliverable; producing `.ll` alone is not debugger support.
 
-### 50-REF / 50-BOOT: bağımsız doğrulama ve native dağıtım
+### 50-LIR / 50-RUNTIME: sharing boundary
 
-- OCaml reference frontend yalnız frozen grammar → canonical HIR/diagnostics
-  doğrulayıcısıdır; yeni production compiler zorunluluğu değildir. Mevcut
-  Python/Nyx parity corpus'u bağımsız parse ve diagnostic karşılaştırmasında kullanılır.
-- Native `nyxc` için yeni backend erişimi ayrı iştir. Python tabanlı pilot
-  emitter yazmak native compiler'ın C/LLVM desteklediği anlamına gelmez.
-- Stage1 → Stage2 → Stage3 kanıtı, temiz kurulum ve paketleme testleri korunur.
-  Default backend değişikliği için ayrı release kararı gerekir.
+If a second emitter starts repeating the same semantic transformations, add an
+internal LIR only after evidence demonstrates the need. There is no requirement
+to migrate every hosted emitter initially. Public HIR JSON and internal LIR are
+separate formats.
 
-## Migration kapısı: hangi değişiklik hangi sürümü gerektirir?
+LIR acceptance criteria are typed values, unique symbol/block identities, one
+terminator per block, valid branch targets, single evaluation, and source spans.
+Fixtures separately verify lexical defer cleanup paths for Result
+`?`/return/break/continue and Array/Struct copy/borrow rules. Exceptions,
+Task/channel, and closure capture are not considered implemented without a
+runtime design.
 
-| Yüzey | v4.5 kuralı | v5 için uygulanacak geçiş |
+### 50-REF / 50-BOOT: independent validation and native distribution
+
+- The OCaml reference frontend is only a frozen grammar to canonical
+  HIR/diagnostics validator, not a mandatory replacement production compiler.
+  It reuses the existing Python/Nyx parity corpus for independent parse and
+  diagnostic comparisons.
+- Exposing a new backend through native `nyxc` is separate work. A Python-based
+  pilot emitter does not mean the native compiler supports C/LLVM.
+- Preserve Stage1 -> Stage2 -> Stage3 evidence, clean installation, and packaging
+  tests. Changing the default backend requires a separate release decision.
+
+## Migration gate: which change requires which release?
+
+| Surface | v4.5 rule | Migration required for v5 |
 |---|---|---|
-| Nyx kaynak semantiği | Geçerli v4 kodun anlamı korunur | Kırıcı öneri varsa önce/sonra örnekleri, tanı ve dönüşüm kılavuzu; otomatik sessiz reinterpretation yok |
-| HIR JSON / plugin API | Schema v1 ve canonical parity korunur | Alan kaldırma/anlam değiştirme HIR v2; okuyucu sürümü doğrular, v1 geçiş fixture'ları gerekir |
-| Internal LIR | Henüz yok; public HIR yerine geçirilmez | Gerekirse ayrı internal sürüm/fingerprint; plugin sözleşmesine kendiliğinden eklenmez |
-| WASM Bundle ABI | v1 i32/UTF-8 ptr-len/borrow sözleşmesi korunur | i64 genişliği, owned array/struct dönüşü gibi değişiklikler ABI v2 ve loader/types migration gerektirir |
-| Host importları | `nyx_host_v1` korunur | Signature/lifetime değişikliği yeni namespace; yanlış host sürümü reddedilir |
-| Package lock | Mevcut local lock davranışı korunur | Registry kimliği, range çözümü ve zorunlu alanlar için format kararı ve deterministik migration; bilinmeyen format reddedilir |
+| Nyx source semantics | Preserve the meaning of valid v4 code | For breaking proposals, provide before/after examples, diagnostics, and a conversion guide; never silently reinterpret source |
+| HIR JSON / plugin API | Preserve schema v1 and canonical parity | Removing fields or changing meaning requires HIR v2, reader-side version checks, and v1 migration fixtures |
+| Internal LIR | Does not yet exist and cannot replace public HIR | If needed, give it a separate internal version/fingerprint; it does not automatically enter the plugin contract |
+| WASM Bundle ABI | Preserve v1 i32/UTF-8 ptr-len/borrow rules | i64 widths and owned Array/Struct returns require ABI v2 plus loader/type migration |
+| Host imports | Preserve `nyx_host_v1` | Signature/lifetime changes require a new namespace and rejection of incompatible host versions |
+| Package lock | Preserve current local-lock behavior | Registry identity, range resolution, and new required fields require a format decision, deterministic migration, and rejection of unknown formats |
 
-Her v5 kırıcı değişiklik için örnek kaynak + eski/yeni artifact + kullanıcı
-etkisi + dönüştürme yolu + negatif test kaydı gerekir. Bir sürüm numarası
-değiştirmek migration değildir. v5 yayın şartı seçilmiş kapsamın sekiz backend
-kapısını karşılamasıdır; C/LLVM'nin ikisini de stable ilan etmek zorunlu hedef değildir.
-Go/JVM/.NET/Lua bu hazırlık çalışmasının teslimatı değildir.
+Every breaking v5 change requires example source, old/new artifacts, user
+impact, a conversion path, and a negative regression test. Changing a version
+number is not migration. v5 release readiness requires the selected scope to
+pass all eight backend gates; both C and LLVM do not have to become stable.
+Go/JVM/.NET/Lua are outside this preparation effort.
 
-## Araştırma kaynakları ve Nyx'e etkisi
+## Research sources and their effect on Nyx
 
-2026-09-06 tarihinde resmi kaynaklarla kontrol edildi. Aşağıdaki uygulama
-kararları Nyx tasarım önerisidir; standardın Nyx'e otomatik dayattığı kurallar değildir.
+Checked against official sources on September 6, 2026. The implementation
+decisions below are Nyx design choices, not rules automatically imposed on Nyx
+by the referenced standards.
 
 - [WebAssembly instruction semantics](https://webassembly.github.io/spec/core/exec/instructions.html):
-  `unreachable` trap üretir; `if` yalnız seçilen dalı yürütür. Load'un linear-memory
-  sınırı Nyx dizi uzunluğunu bilmez. Bu nedenle logical bounds ve widened
-  descriptor kontrolü yüklemeden önce yapılır. Yeni bir WASM 3.0 feature bağımlılığı eklenmedi.
-- [LLVM add semantics](https://llvm.org/docs/LangRef.html#add-instruction) ve
-  [sdiv semantics](https://llvm.org/docs/LangRef.html#sdiv-instruction): wrap ile
-  `nsw/nuw` poison farklıdır; zero/overflow division guard ister. Shift ve
-  target-layout kuralları aynı Language Reference üzerinden pilotta uygulanır.
-- [LLVM UB manual](https://llvm.org/docs/UndefinedBehavior.html): poison/UB
-  optimizasyon altında davranışı değiştirebilir; output'un parse olması yeterli test değildir.
+  `unreachable` traps and `if` executes only the selected branch. A load's
+  linear-memory bound does not know the Nyx logical array length, so logical
+  bounds and widened descriptor checks occur before loading. No new WASM 3.0
+  feature dependency was introduced.
+- [LLVM add semantics](https://llvm.org/docs/LangRef.html#add-instruction) and
+  [sdiv semantics](https://llvm.org/docs/LangRef.html#sdiv-instruction): wrapping
+  differs from `nsw`/`nuw` poison; zero and overflow division need guards. Shift
+  and target-layout rules come from the same Language Reference.
+- [LLVM UB manual](https://llvm.org/docs/UndefinedBehavior.html): poison/UB can
+  change behavior under optimization; successful parsing is insufficient.
 - [WG14 N1570](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf),
-  §6.2.5, §6.5, §6.5.7: unsigned modulo, signed overflow ve shift kurallarının
-  açık erişimli C11 metni. Bu dosya C17 final standardı diye sunulmaz;
-  [WG14 sürüm listesi](https://open-std.org/jtc1/sc22/wg14/www/projects.html)
-  C17'yi ISO/IEC 9899:2018 olarak listeler. C17 pilotu gerçek C17 modunda doğrulanır.
+  sections 6.2.5, 6.5, and 6.5.7, is the openly available C11 wording for
+  unsigned modulo, signed overflow, and shifts. It is not presented as the C17
+  final standard; the [WG14 project list](https://open-std.org/jtc1/sc22/wg14/www/projects.html)
+  identifies C17 as ISO/IEC 9899:2018. The pilot is validated in real C17 mode.
 
-## Bu revizyonun doğrulama kaydı
+## Validation record for this revision
 
-- TESTED: `python tests/c17_scalar_suite.py`; C17 experimental scalar pilotu `clang -std=c17 -Wall -Wextra -Werror` altında sıfır uyarı/hata ile derlendi ve yürütüldü. 64-bit integer wrapping, güvenli sıfıra bölme / `INT64_MIN / -1` abort/wrap, scalar kontrol akışı ve özyineleme (`fib`), C++ oracle çıktısıyla birebir eşlendi; skalar olmayan veri yapıları (`Array`, `Struct`) derleme zamanında reddedildi.
-- TESTED: `python tests/ir_suite.py`; 162 program, 18 stdlib modülü, 196-case Nyx/Python canonical HIR byte parity, string indexing ve negatif `IRVerifier` testleri (primitif member erişimi `HIR0006`, struct generic/optional alan doğrulaması, array/string indeks türü) geçti.
-- TESTED: `python tests/bundle_suite.py`; düzeltme öncesi yeni fixture
-  `IRIndexAccess` hatasını yeniden üretti, düzeltme sonrası geçti. 100.000
-  allocation stress, yeni bounds/short-circuit ve negatif compile senaryoları dahil.
-- TESTED: `python -m src.toolchain.docs_site`; Metrics/Pong yeniden üretildi.
-- Tam batarya ilk koşuda yeni lowering ile eski `docs/generated/metrics/metrics.wasm`
-  arasındaki byte farkını yakaladı. Artifactlar kaynak komutuyla yenilendi;
-  sonraki koşuda docs-site doğrulaması geçti.
-- TESTED: birleşik bataryada self-host reproducibility, 197-case Python/Nyx
-  canonical HIR parity, 162-program corpus, C++/JS/Python runtime ve Rust
-  metadata/runtime kapıları, language/numeric/Maya surface ve deterministik
-  ZIP/TAR paketleme geçti.
-- İkinci birleşik koşu, önceden var olan README footer assertion'ında durdu.
-  Commit geçmişinden kaldırmanın kasıtlı olduğu doğrulanıp test düzeltildi.
-  `run_version_contract_suite` geçti; bataryanın bu noktadan sonraki 23 suite'i
-  aynı runner fonksiyonlarıyla ayrıca yürütüldü ve 23/23 `True`, process exit 0
-  döndü. Böylece runner'ın bütün bileşenleri iki bölümde doğrulandı; tek
-  kesintisiz full-suite başarısı olarak raporlanmaz. Son eklenen bundle negatif
-  testleri ayrıca `python tests/bundle_suite.py` ile geçti.
-- TESTED: kalan grupta installer, module/LSP/smoke, 530 fuzz vakası (0 unhandled
-  crash), differential ve JS/Rust/C++ e2e, FFI/library/manifest/link/platform/SDK/
-  interop, bootstrap lexer/parser/typechecker ve 138/138 regresyon geçti.
-- TESTED: `npm --prefix vscode-extension test` geçti.
-- VALIDATED: değişikliklerin `git diff --check` kontrolü ve altı plan/changelog
-  belgesindeki yerel Markdown bağlantıları geçti.
-- Ortam: Windows, Python 3.12.10, Node.js 24.19.0, Clang 22.1.8.
-- NOT TESTED: Linux/macOS CI, bağımsız WAT assembler, platform-native dağıtım
-  paketlerinin temiz makine/yayın doğrulaması ve v5 C17/LLVM runtime; bu pilotlar
-  henüz uygulanmadı. Bu çalışma commit/tag/push/yayın yapmaz.
+- TESTED: `python tests/c17_scalar_suite.py`; the experimental C17 scalar pilot
+  compiled and ran under `clang -std=c17 -Wall -Wextra -Werror` without warnings
+  or errors. Signed-i64 wrapping, safe zero division and `INT64_MIN / -1`
+  abort/wrap behavior, scalar control flow, recursion (`fib`), and strict
+  compile-time rejection of non-scalar data (`Array`, `Struct`) matched the C++
+  oracle exactly.
+- TESTED: `python tests/ir_suite.py`; 162 programs, 18 stdlib modules, 196-case
+  Nyx/Python canonical HIR byte parity, string indexing, and negative
+  `IRVerifier` tests passed, including primitive member access (`HIR0006`) and
+  struct generic/optional field validation.
+- TESTED: `python tests/bundle_suite.py`; the new fixture reproduced the old
+  `IRIndexAccess` failure and passed after the fix, including 100,000-allocation
+  stress, bounds/short-circuit regressions, and negative compilation scenarios.
+- TESTED: `python -m src.toolchain.docs_site`; Metrics/Pong outputs were regenerated.
+- The first full-battery run caught a byte mismatch between the new lowering and
+  the stale `docs/generated/metrics/metrics.wasm`. The artifacts were regenerated
+  through the source command and the next docs-site validation passed.
+- TESTED: the combined battery passed self-host reproducibility, 197-case
+  Python/Nyx canonical HIR parity, the 162-program corpus, C++/JS/Python runtime
+  and Rust metadata/runtime gates, language/numeric/Maya surfaces, and
+  deterministic ZIP/TAR packaging.
+- The second combined run stopped at the pre-existing README footer assertion.
+  Commit history confirmed that the footer had been removed intentionally, and
+  the test was corrected. `run_version_contract_suite` passed; the 23 suites
+  after that point were then executed through the same runner functions and
+  returned 23/23 `True` with process exit 0. This verifies every runner component
+  in two sections, not as one uninterrupted full-suite pass. The newly added
+  bundle negative tests also passed separately through
+  `python tests/bundle_suite.py`.
+- TESTED: the remaining group passed installer, module/LSP/smoke, 530 fuzz cases
+  with zero unhandled crashes, differential and JS/Rust/C++ end-to-end, FFI,
+  library, manifest, link, platform, SDK, interop, bootstrap lexer/parser/type
+  checker, and the 138/138 regression battery.
+- TESTED: `npm --prefix vscode-extension test` passed.
+- VALIDATED: `git diff --check` and local Markdown links across six
+  planning/changelog documents passed.
+- Environment: Windows, Python 3.12.10, Node.js 24.19.0, Clang 22.1.8.
+- NOT TESTED: Linux/macOS CI, independent WAT assembly, clean-machine validation
+  of platform-native release packages, and the v5 C17/LLVM runtime. The pilots
+  had not yet been implemented at the time of this record. This work did not
+  commit, tag, push, or publish a release.
 
-Sonraki revizyonda tek komutla tekrar kontrol: `python -u tests/run_all_tests.py`.
-WASM codegen değişirse önce `python -m src.toolchain.docs_site` ile site
-artifactlarını eşle, ardından bundle/docs-site ve tam batarya kontrollerini çalıştır.
+Rerun everything on the next revision with
+`python -u tests/run_all_tests.py`.
 
-## Sonraki oturumun başlangıç noktası
+If WASM code generation changes, first regenerate site artifacts with
+`python -m src.toolchain.docs_site`, then run bundle/docs-site tests and the full
+battery.
 
-1. `git status --short` ile bu kayıttan sonraki değişiklikleri kontrol et.
-2. Bu dosyanın doğrulama kaydı ve 45-IR-2 envanterinden devam et; bitmiş array
-   read/lazy Boolean işini tekrar tasarlama.
-3. Yeni lowering tür bilgisini değiştiriyorsa Python ve Nyx lowerer'ları birlikte
-   güncelle; HIR byte parity ve self-host koşusunu tamamla.
-4. Yeni işi ID'siyle bu dosyaya ve `CHANGELOG.md` Unreleased bölümüne işle;
-   TESTED/REVIEWED/NOT TESTED ayrımını, komutu ve varsa açık hata kaydını koru.
+## Starting point for the next session
+
+1. Run `git status --short` and inspect changes made after this record.
+2. Continue from this validation record and the 45-IR-2 inventory; do not redesign
+   completed array-read or lazy-Boolean work.
+3. If new lowering changes type information, update the Python and Nyx lowerers
+   together and run HIR byte parity plus self-host validation.
+4. Record each new task ID in this file and in the `CHANGELOG.md` Unreleased
+   section. Preserve exact commands, TESTED/REVIEWED/NOT TESTED distinctions,
+   and any open defects.

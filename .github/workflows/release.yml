@@ -1,4 +1,4 @@
-name: Nyx v4.0.0 — Nirvana
+name: Nyx Release
 
 on:
   push:
@@ -252,7 +252,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "Nyx ${{ github.ref_name }} — Nirvana"
+          name: "Nyx ${{ github.ref_name }}"
           draft: false
           prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'rc') || contains(github.ref_name, 'alpha') }}
           files: |

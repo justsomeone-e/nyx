@@ -75,7 +75,8 @@ System & Diagnostics:
   nyx help                           Display this help message
 
 Target Backends (--target):
-  cpp (C++20 Native) | python (Python) | js (Node.js) | rust (Rust 2021)
+  cpp (C++20 Native) | c (C17 Experimental) | llvm (LLVM IR Experimental)
+  python (Python) | js (Node.js) | rust (Rust 2021) | wasm (WebAssembly)
 ===================================================================""")
 
 def parse_nyx_toml():
@@ -250,6 +251,23 @@ def _compile_canonical_artifact(
     ]
     return _CanonicalArtifactAdapter(content, links)
 
+
+def _compile_experimental_native(source_path: str, output_path: str, target: str) -> tuple[bool, str]:
+    """Compile a generated C17 or LLVM IR artifact with the host Clang toolchain."""
+    clang = shutil.which("clang")
+    if not clang:
+        return False, "Clang was not found on PATH; the source artifact was still generated"
+    command = [clang, "-O2"]
+    if target == "c":
+        command.append("-std=c17")
+    command.extend([source_path, "-o", output_path])
+    if sys.platform != "win32":
+        command.append("-lm")
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        return False, result.stderr or result.stdout or f"Clang exited with {result.returncode}"
+    return True, ""
+
 def cmd_check(entry_file, target=None) -> int:
     if not entry_file or not os.path.exists(entry_file):
         print(f"\033[91m[!] Error: File not found '{entry_file}'\033[0m")
@@ -340,6 +358,24 @@ def cmd_build(
                 print(f"    ({msg})")
                 return 1
             
+    elif target in ("c", "llvm"):
+        extension = ".c" if target == "c" else ".ll"
+        label = "C17 Source" if target == "c" else "Direct LLVM IR"
+        out_source = os.path.join(build_dir, f"{base_name}{extension}")
+        with open(out_source, "w", encoding="utf-8") as f:
+            f.write(codegen.content)
+        print(f"\033[96m[*] Generated {label}:\033[0m {out_source}")
+
+        executable_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
+        out_exe = os.path.join(build_dir, executable_name)
+        ok, message = _compile_experimental_native(out_source, out_exe, target)
+        if ok:
+            print(f"\033[92m[OK] Compiled Experimental Native Binary:\033[0m {out_exe}")
+            print(f"\033[96m[>] Run:\033[0m nyx run \"{entry_file}\" --target {target}")
+            return 0
+        print(f"\033[93m[!] Native compilation failed; generated source was preserved:\033[0m {message}")
+        return 1
+
     elif target == "asm":
         cpp_code = codegen.gen_cpp()
         temp_cpp = os.path.join(build_dir, f"{base_name}_temp.cpp")
@@ -505,6 +541,24 @@ def cmd_run(entry_file, target) -> int:
             return res.returncode or 1
         print("\033[91m[!] Rust compiler not found on system PATH.\033[0m")
         return 1
+    elif target in ("c", "llvm"):
+        extension = ".c" if target == "c" else ".ll"
+        label = "C17 Source" if target == "c" else "Direct LLVM IR"
+        out_source = os.path.join(build_dir, f"{base_name}{extension}")
+        executable_name = f"{base_name}.exe" if sys.platform == "win32" else base_name
+        out_exe = os.path.join(build_dir, executable_name)
+        with open(out_source, "w", encoding="utf-8") as f:
+            f.write(codegen.content)
+        ok, message = _compile_experimental_native(out_source, out_exe, target)
+        if not ok:
+            print(f"\033[91m[!] {label} native compilation failed:\033[0m\n{message}")
+            return 1
+        print(f"\033[96m[*] Target [{label}]:\033[0m {out_source}")
+        print(f"\033[92m[OK] Compiled Native Binary:\033[0m {out_exe}")
+        print("\033[90m--------------------------------------------------\033[0m")
+        result = subprocess.run([out_exe])
+        print("\033[90m--------------------------------------------------\033[0m")
+        return result.returncode
     elif target == "react":
         out_tsx = os.path.join(build_dir, f"{base_name}.tsx")
         react_code = codegen.gen_react()

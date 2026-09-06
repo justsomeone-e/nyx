@@ -23,7 +23,12 @@ def _clang_available() -> bool:
         return False
 
 
-def _compile_and_run_llvm(source: str, temp_dir: str, name: str = "prog") -> tuple[int, str]:
+def _compile_and_run_llvm(
+    source: str,
+    temp_dir: str,
+    name: str = "prog",
+    optimization: str = "-O2",
+) -> tuple[int, str]:
     result = compile_source(source, target="llvm", filename=f"<{name}>")
     assert result.success, f"LLVM compilation failed: {result.diagnostics}"
     assert result.artifact is not None
@@ -37,7 +42,7 @@ def _compile_and_run_llvm(source: str, temp_dir: str, name: str = "prog") -> tup
 
     compile_cmd = [
         "clang",
-        "-O2",
+        optimization,
         ll_path,
         "-o",
         exe_path,
@@ -81,6 +86,9 @@ def run_llvm_scalar_suite() -> bool:
     assert "scalar_llvm" in llvm_backend.features
     assert "typed_hir_v1" in llvm_backend.features
     assert "int64_wrap" in llvm_backend.features
+    assert "array_iteration" in llvm_backend.features
+    assert "scalar_arrays" in llvm_backend.features
+    assert "scalar_structs" in llvm_backend.features
 
     if not _clang_available():
         print("[SKIP] clang compiler not found in PATH")
@@ -92,6 +100,14 @@ def run_llvm_scalar_suite() -> bool:
         rc, out = _compile_and_run_llvm(basic_src, temp_dir, "basic")
         assert rc == 0
         assert out.strip() == "42"
+
+        multi_print_src = 'fn main() { print("answer", 42, true, 2.5) }\n'
+        rc, out = _compile_and_run_llvm(multi_print_src, temp_dir, "multi_print")
+        assert rc == 0
+        multi_print_oracle = _run_cpp_oracle(multi_print_src)
+        assert out == multi_print_oracle, (
+            f"Multi-argument print parity mismatch:\nLLVM: {out!r}\nCPP: {multi_print_oracle!r}"
+        )
 
         # 3. Arithmetic, signed 64-bit wrapping overflow, and INT64_MIN / -1
         math_src = (
@@ -179,10 +195,110 @@ def run_llvm_scalar_suite() -> bool:
         oracle_out = _run_cpp_oracle(float_bool_src)
         assert out == oracle_out, f"Float/bool parity mismatch:\nLLVM: {out}\nCPP: {oracle_out}"
 
-        # 7. Rejection of unsupported non-scalar constructs
+        # 7. Scalar-field structs are LLVM aggregate values and cross function
+        # boundaries by value.
+        struct_src = (
+            "struct Point { x: int, y: float, active: bool }\n"
+            "fn score(p: Point) -> float {\n"
+            "    if p.active { return p.x + p.y }\n"
+            "    return 0.0\n"
+            "}\n"
+            "fn main() {\n"
+            "    var original: Point = Point(40, 1.5, true);\n"
+            "    var copied: Point = original;\n"
+            "    copied.x = 99;\n"
+            "    print(original.x);\n"
+            "    print(copied.x);\n"
+            "    print(score(copied));\n"
+            "}\n"
+        )
+        rc, out = _compile_and_run_llvm(struct_src, temp_dir, "struct_value")
+        assert rc == 0
+        oracle_out = _run_cpp_oracle(struct_src)
+        assert out == oracle_out, f"Struct value parity mismatch:\nLLVM: {out}\nCPP: {oracle_out}"
+
+        # 8. Stack-owned scalar arrays use checked indexing and deep local copies.
+        array_src = (
+            "fn mutate_copy(values: Array<int>) -> int {\n"
+            "    values[0] = 77;\n"
+            "    var second: Array<int> = values;\n"
+            "    second[1] = 88;\n"
+            "    return values[0] + second[1]\n"
+            "}\n"
+            "fn sum_selected(values: Array<int>) -> int {\n"
+            "    var total: int = 0;\n"
+            "    for value in values {\n"
+            "        if value == 2 { continue }\n"
+            "        if value > 3 { break }\n"
+            "        set total = total + value;\n"
+            "    }\n"
+            "    return total\n"
+            "}\n"
+            "fn main() {\n"
+            "    var original: Array<int> = [10, 20, 30];\n"
+            "    var copied: Array<int> = original;\n"
+            "    copied[1] = 99;\n"
+            "    print(original[1]);\n"
+            "    print(copied[1]);\n"
+            "    print(copied.len());\n"
+            "    print(mutate_copy(original));\n"
+            "    print(original[0]);\n"
+            "    var selected: Array<int> = [1, 2, 3, 4, 5];\n"
+            "    print(sum_selected(selected));\n"
+            "    var weights: Array<float> = [1.5, 2.25];\n"
+            "    print(weights[0] + weights[1]);\n"
+            "    var flags: Array<bool> = [true, false];\n"
+            "    print(flags[0]);\n"
+            "}\n"
+        )
+        rc, out = _compile_and_run_llvm(array_src, temp_dir, "array_value")
+        assert rc == 0
+        oracle_out = _run_cpp_oracle(array_src)
+        assert out == oracle_out, f"Array value parity mismatch:\nLLVM: {out}\nCPP: {oracle_out}"
+        rc_o0, out_o0 = _compile_and_run_llvm(array_src, temp_dir, "array_value_o0", "-O0")
+        assert rc_o0 == 0
+        assert out_o0 == oracle_out, f"Array O0 parity mismatch:\nLLVM: {out_o0}\nCPP: {oracle_out}"
+
+        for name, index in (("negative", -1), ("past_end", 3)):
+            bounds_src = f"fn main() {{ var values: Array<int> = [1, 2, 3]; print(values[{index}]); }}\n"
+            rc, _ = _compile_and_run_llvm(bounds_src, temp_dir, f"array_{name}")
+            assert rc != 0, f"Expected non-zero exit code for {name} Array index"
+
+        # 9. The public CLI writes .ll and compiles that exact artifact to native code.
+        cli_source = os.path.join(temp_dir, "cli_llvm.nyx")
+        with open(cli_source, "w", encoding="utf-8") as handle:
+            handle.write("fn main() { print(42) }\n")
+        cli = subprocess.run(
+            [
+                sys.executable,
+                os.path.join(ROOT_DIR, "src", "cli.py"),
+                "build",
+                cli_source,
+                "--target",
+                "llvm",
+            ],
+            cwd=temp_dir,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        assert cli.returncode == 0, f"CLI LLVM build failed:\n{cli.stdout}\n{cli.stderr}"
+        cli_build_dir = os.path.join(temp_dir, "build", "llvm")
+        assert os.path.isfile(os.path.join(cli_build_dir, "cli_llvm.ll"))
+        cli_executable = os.path.join(
+            cli_build_dir,
+            "cli_llvm.exe" if sys.platform == "win32" else "cli_llvm",
+        )
+        assert os.path.isfile(cli_executable)
+        cli_run = subprocess.run([cli_executable], capture_output=True, text=True, timeout=15)
+        assert cli_run.returncode == 0
+        assert cli_run.stdout.strip() == "42"
+
+        # 10. Rejection of unsupported aggregate/runtime constructs
         unsupported_cases = [
-            ("array", "fn main() { var arr = [1, 2, 3]; }\n"),
-            ("struct", "struct Point { x: int } fn main() {}\n"),
+            ("array_return", "fn make() -> Array<int> { return [1, 2] } fn main() {}\n"),
+            ("nested_array", "fn main() { var matrix = [[1, 2], [3, 4]]; }\n"),
+            ("aggregate_struct", "struct Named { name: string } fn main() { var n = Named(\"nyx\"); }\n"),
             ("task", "async fn compute() -> int { return 1 }\nfn main() { var t = compute(); }\n"),
             ("exception", "fn main() { throw 42; }\n"),
             ("try_catch", "fn main() { try { print(1) } catch e { print(2) } }\n"),
@@ -192,7 +308,7 @@ def run_llvm_scalar_suite() -> bool:
             assert not res.success, f"LLVM silently accepted unsupported construct '{label}'"
             assert res.diagnostics and res.diagnostics[0].code == "E3001"
 
-    print("[PASS] Capability spec, scalar primitives, int64_wrap, control flow, clang LLVM IR build, and strict rejection")
+    print("[PASS] Capability spec, scalar primitives, scalar Arrays/Structs, int64_wrap, control flow, clang LLVM IR build, and strict rejection")
     return True
 
 

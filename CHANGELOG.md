@@ -4,6 +4,34 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [5.0.0-rc.1] - 2026-09-06 (Daydream)
+
+### Experimental LLVM backend
+
+* Add scalar-field Nyx structs to the direct LLVM IR backend as named LLVM
+  aggregate types.
+* Pass and return supported structs by value, lower constructors with
+  `insertvalue`, lower field reads with `extractvalue`, and lower direct local
+  field writes with typed `getelementptr` operations.
+* Verify independent struct-copy behavior and function-boundary parity against
+  the C++ backend with a real Clang execution test. Arrays, strings in structs,
+  nested aggregate fields, generic structs, and safe member access remain
+  explicitly unsupported.
+* Add stack-owned `Array<int>`, `Array<float>`, and `Array<bool>` locals to the
+  direct LLVM backend. Array literals use typed descriptors, reads and writes
+  perform signed logical bounds checks, and local copies duplicate every element
+  instead of aliasing storage. `len()`, `length()`, and `size()` read the shared
+  descriptor length as i64.
+* Pass scalar Arrays to functions by value. Function entry uses a dynamic stack
+  allocation and `llvm.memcpy` so mutations cannot alias caller storage.
+* Lower `for value in array` to explicit condition/body/step/exit blocks. Array
+  iteration supports `break` and routes `continue` through the increment block.
+* Keep Array returns, rebinding, nested arrays, and non-scalar elements
+  explicitly gated until the v5 ownership and cleanup ABI is defined.
+* Wire the experimental C17 and LLVM targets into `nyx build` and `nyx run`.
+  LLVM builds now preserve the generated `.ll`, compile that exact IR with the
+  host Clang toolchain, and produce a native executable without a C++ source hop.
+
 ## [4.5.0] - 2026-09-06 (Ivory)
 
 Nyx v4.5.0 establishes the stable bridge release toward v5, providing standard library
