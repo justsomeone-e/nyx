@@ -2,7 +2,7 @@
 
 <p align="left">
   <a href="https://justsomeone-e.github.io/nyx/"><img src="https://img.shields.io/badge/interactive%20tour-try%20in%20browser-00F0FF?style=for-the-badge&amp;logoColor=05070A&amp;labelColor=0E1318" alt="Try Tour of Nyx Online"></a>
-  <a href="VERSION"><img src="https://img.shields.io/badge/version-4.5.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-5.0.0--rc.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
   <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Stable Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
@@ -31,10 +31,10 @@ underneath it.**
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx v4.5.0 "Ivory"** establishes the stable v4.5 language and toolchain contract for `cpp`, `js`, and `python`, alongside library parity, package manager, and experimental scalar C17 and LLVM IR emitters. Rust, WebAssembly, React, and assembly retain their documented beta capability boundaries. The release includes JavaScript ESM output, WASI preview1, scalar-struct WebAssembly parameters, and the complete 81-exercise Tour of Nyx across 20 topics. Microcontroller firmware remains outside the v4 compiler-focused scope. See the [v4.5 implementation audit](docs/internals/V4_5_IMPLEMENTATION_AUDIT.md) for verification evidence.
+> **Nyx `v5.0.0-rc.1` "Daydream"** is the first v5 release candidate. It expands the experimental direct LLVM IR backend from scalar programs to scalar-field structs and stack-owned scalar arrays, and connects LLVM to the canonical compiler API plus `nyx build` and `nyx run`. C++20, JavaScript, and Python remain the stable backends; LLVM stays experimental while its ownership, runtime, and language-surface coverage grows.
 
 <div align="center">
-  <img src="assets/terminal_animated.svg?v=4.5.0" width="92%" alt="nyx interactive live execution"/>
+  <img src="assets/terminal_animated.svg?v=5.0.0-rc.1" width="92%" alt="nyx interactive live execution"/>
 </div>
 
 <p align="left">
@@ -522,7 +522,10 @@ The Nyx release lifecycle is bound to verifiable technical milestones rather tha
 | `v4.0.0-rc.3` | **Moksha** | *Liberation* | Backend-parity development work incorporated into Nirvana | Not published separately |
 | `v4.0.0` | **Nirvana** | *Stability* | Stable v4 language, toolchain, and ABI contract | Official Release |
 | `v4.5.0` | **Ivory** | *Purity / Bridge* | Compatible tooling, library parity, package manager, and experimental C17/LLVM IR emitters | Release |
-| `v5.0.0` | **Aether** | *Upper Medium* | Portable C output, LLVM IR emitter, reference frontend | Future Target |
+| `v5.0.0` | **Daydream** | *The next form imagined* | LLVM aggregate/runtime expansion, migration tooling, native bootstrap | In Development |
+| `v6.0.0` | **Sepia** | *Memory / Preservation* | Future compiler milestone | Planned |
+| `v7.0.0` | **Solace** | *Calm after complexity* | Future ecosystem milestone | Planned |
+| `v8.0.0` | **Last Signal** | *The final transmission* | Long-term language-platform milestone | Long-term |
 
 The [v4.5 plan](docs/internals/ROADMAP_AND_BACKEND_GATES.md#v450-preparation-for-v5)
 preserves v4 source and ABI compatibility. New backends begin experimental;

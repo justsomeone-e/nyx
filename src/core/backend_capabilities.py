@@ -111,9 +111,9 @@ BACKENDS: Dict[str, BackendSpec] = {
         HIR_V1_FEATURES | V4_NUMERIC_FEATURES | frozenset({"control_flow", "functions", "scalar_c17"}),
     ),
     "llvm": BackendSpec(
-        "llvm", "LLVM IR (Scalar Experimental)", "native", "ll", "experimental",
+        "llvm", "LLVM IR (Scalar + Aggregate Experimental)", "native", "ll", "experimental",
         ("ll",),
-        HIR_V1_FEATURES | V4_NUMERIC_FEATURES | frozenset({"control_flow", "functions", "scalar_llvm"}),
+        HIR_V1_FEATURES | V4_NUMERIC_FEATURES | frozenset({"array_iteration", "control_flow", "functions", "scalar_arrays", "scalar_llvm", "scalar_structs"}),
     ),
 }
 

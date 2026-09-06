@@ -1,10 +1,12 @@
 """Experimental LLVM IR native scalar emitter for Nyx HIR.
 
 Consumes verified IRModule and emits standard LLVM IR text (.ll) for scalar primitives
-(int64, double, bool, void), signed 64-bit integer arithmetic with wrapping overflow,
-safe division/modulo guards, scalar control flow, recursion, and direct calls.
+(int64, double, bool, void), scalar-field structs, signed 64-bit integer arithmetic
+with wrapping overflow, safe division/modulo guards, scalar control flow, recursion,
+and direct calls.
 
-Rejects all non-scalar constructs (arrays, structs, exceptions, tasks, closures).
+Supports stack-owned scalar arrays with checked indexing and independent local
+copies. Rejects escaping arrays, aggregate fields, exceptions, tasks, and closures.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 from src.ir.model import (
     IRAssign,
+    IRArray,
     IRBinary,
     IRBreak,
     IRCall,
@@ -21,15 +24,19 @@ from src.ir.model import (
     IRContinue,
     IRExpr,
     IRExprStatement,
+    IRFor,
     IRFunction,
     IRIf,
+    IRIndexAccess,
     IRLiteral,
+    IRMemberAccess,
     IRModule,
     IRNode,
     IRParameter,
     IRReference,
     IRReturn,
     IRStatement,
+    IRStruct,
     IRUnary,
     IRVarDecl,
     IRWhile,
@@ -44,14 +51,24 @@ _LLVM_PRELUDE = """; Nyx Direct LLVM IR Emitter (Experimental Native Scalar)
 declare i32 @printf(ptr, ...)
 declare void @exit(i32)
 declare double @fmod(double, double)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 @__nyx_fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\\0A\\00"
 @__nyx_fmt_f64_int = private unnamed_addr constant [6 x i8] c"%.1f\\0A\\00"
 @__nyx_fmt_f64_gen = private unnamed_addr constant [7 x i8] c"%.16g\\0A\\00"
 @__nyx_str_true = private unnamed_addr constant [6 x i8] c"true\\0A\\00"
 @__nyx_str_false = private unnamed_addr constant [7 x i8] c"false\\0A\\00"
+@__nyx_write_true = private unnamed_addr constant [5 x i8] c"true\\00"
+@__nyx_write_false = private unnamed_addr constant [6 x i8] c"false\\00"
 @__nyx_fmt_str = private unnamed_addr constant [4 x i8] c"%s\\0A\\00"
+@__nyx_write_i64 = private unnamed_addr constant [5 x i8] c"%lld\\00"
+@__nyx_write_f64_int = private unnamed_addr constant [5 x i8] c"%.1f\\00"
+@__nyx_write_f64_gen = private unnamed_addr constant [6 x i8] c"%.16g\\00"
+@__nyx_write_str = private unnamed_addr constant [3 x i8] c"%s\\00"
+@__nyx_space = private unnamed_addr constant [2 x i8] c" \\00"
+@__nyx_newline = private unnamed_addr constant [2 x i8] c"\\0A\\00"
 @__nyx_err_div_zero = private unnamed_addr constant [26 x i8] c"integer division by zero\\0A\\00"
+@__nyx_err_bounds = private unnamed_addr constant [27 x i8] c"array index out of bounds\\0A\\00"
 
 define void @nyx_print_i64(i64 %v) {
 entry:
@@ -91,6 +108,47 @@ print_f:
 define void @nyx_print_str(ptr %v) {
 entry:
   %c = call i32 (ptr, ...) @printf(ptr @__nyx_fmt_str, ptr %v)
+  ret void
+}
+
+define void @nyx_write_i64(i64 %v) {
+entry:
+  %0 = call i32 (ptr, ...) @printf(ptr @__nyx_write_i64, i64 %v)
+  ret void
+}
+
+define void @nyx_write_f64(double %v) {
+entry:
+  %v_i64 = fptosi double %v to i64
+  %v_round = sitofp i64 %v_i64 to double
+  %is_int = fcmp oeq double %v, %v_round
+  br i1 %is_int, label %write_int_fmt, label %write_gen_fmt
+
+write_int_fmt:
+  %call1 = call i32 (ptr, ...) @printf(ptr @__nyx_write_f64_int, double %v)
+  ret void
+
+write_gen_fmt:
+  %call2 = call i32 (ptr, ...) @printf(ptr @__nyx_write_f64_gen, double %v)
+  ret void
+}
+
+define void @nyx_write_bool(i1 %v) {
+entry:
+  br i1 %v, label %write_t, label %write_f
+
+write_t:
+  %c1 = call i32 (ptr, ...) @printf(ptr @__nyx_write_str, ptr @__nyx_write_true)
+  ret void
+
+write_f:
+  %c2 = call i32 (ptr, ...) @printf(ptr @__nyx_write_str, ptr @__nyx_write_false)
+  ret void
+}
+
+define void @nyx_write_str(ptr %v) {
+entry:
+  %c = call i32 (ptr, ...) @printf(ptr @__nyx_write_str, ptr %v)
   ret void
 }
 
@@ -141,6 +199,22 @@ normal_mod:
   %res = srem i64 %a, %b
   ret i64 %res
 }
+
+define void @__nyx_array_check(i64 %index, i64 %length) {
+entry:
+  %negative = icmp slt i64 %index, 0
+  %past_end = icmp sge i64 %index, %length
+  %invalid = or i1 %negative, %past_end
+  br i1 %invalid, label %bounds_error, label %valid
+
+bounds_error:
+  %err_call = call i32 (ptr, ...) @printf(ptr @__nyx_err_bounds)
+  call void @exit(i32 1)
+  unreachable
+
+valid:
+  ret void
+}
 """
 
 
@@ -172,12 +246,16 @@ class BasicBlock:
 
 
 class LLVMScalarEmitter:
-    """Direct LLVM IR text emitter from verified scalar Nyx HIR."""
+    """Direct LLVM IR text emitter from verified scalar and scalar-struct Nyx HIR."""
 
     def __init__(self, module: IRModule):
         self.module = module
         self.symbol_names: Dict[str, str] = {}
         self.function_map: Dict[str, IRFunction] = {}
+        self.struct_map: Dict[str, IRStruct] = {
+            item.name: item for item in module.items if isinstance(item, IRStruct)
+        }
+        self.array_types: Set[str] = set()
         self.string_constants: List[Tuple[str, str, int]] = []  # (global_name, escaped_str, byte_len)
         self.string_map: Dict[str, str] = {}
 
@@ -185,6 +263,7 @@ class LLVMScalarEmitter:
         self.blocks: List[BasicBlock] = []
         self.entry_allocas: List[str] = []
         self.local_ptrs: Dict[str, Tuple[str, str]] = {}  # symbol -> (ptr_name, llvm_type)
+        self.array_locals: Dict[str, Tuple[str, str, str]] = {}
         self.loop_stack: List[Tuple[str, str]] = []  # (continue_label, break_label)
         self.temp_counter: int = 0
         self.label_counter: int = 0
@@ -192,6 +271,7 @@ class LLVMScalarEmitter:
     def emit(self) -> str:
         self._validate_module()
 
+        structs = [item for item in self.module.items if isinstance(item, IRStruct)]
         functions = [item for item in self.module.items if isinstance(item, IRFunction)]
         top_statements = [item for item in self.module.items if isinstance(item, IRStatement)]
 
@@ -214,6 +294,19 @@ class LLVMScalarEmitter:
         # Assemble file
         lines: List[str] = [_LLVM_PRELUDE]
 
+        if structs:
+            lines.append("; Nyx Struct Types")
+            for struct in structs:
+                fields = ", ".join(self._llvm_type(field.type) for field in struct.fields)
+                lines.append(f"{self._llvm_struct_type(struct.name)} = type {{ {fields} }}")
+            lines.append("")
+
+        if self.array_types:
+            lines.append("; Nyx Stack Array Descriptors")
+            for element_type in sorted(self.array_types):
+                lines.append(f"{self._llvm_array_type_name(element_type)} = type {{ i64, ptr }}")
+            lines.append("")
+
         # String constants
         if self.string_constants:
             lines.append("; String Constants")
@@ -229,15 +322,32 @@ class LLVMScalarEmitter:
             self._validate_node(item)
 
     def _validate_node(self, node: IRNode) -> None:
-        if isinstance(node, IRFunction):
+        if isinstance(node, IRStruct):
+            if node.generic_params:
+                raise LLVMEmissionError("LLVM struct pilot does not support generic structs", node.span)
+            for field in node.fields:
+                if field.type.name not in ("int", "int64", "float", "float64", "bool"):
+                    raise LLVMEmissionError(
+                        f"LLVM struct pilot requires scalar fields; field '{field.name}' has type '{field.type}'",
+                        node.span,
+                    )
+                self._check_scalar_type(field.type, node.span, f"Struct field '{field.name}'")
+        elif isinstance(node, IRFunction):
+            if node.return_type.name == "Array":
+                raise LLVMEmissionError("LLVM array pilot does not support Array return values yet", node.span)
             self._check_scalar_type(node.return_type, node.span, "Function return")
             for param in node.params:
                 self._check_scalar_type(param.type, param.default.span if param.default else node.span, "Parameter")
             for stmt in node.body:
                 self._validate_node(stmt)
-        elif isinstance(node, (IRVarDecl, IRAssign, IRExprStatement, IRReturn, IRIf, IRWhile, IRBreak, IRContinue)):
+        elif isinstance(node, (IRVarDecl, IRAssign, IRExprStatement, IRReturn, IRIf, IRWhile, IRFor, IRBreak, IRContinue)):
             if isinstance(node, IRVarDecl):
                 self._check_scalar_type(node.type, node.span, "Variable")
+                if node.type.name == "Array" and not isinstance(node.expr, (IRArray, IRReference)):
+                    raise LLVMEmissionError(
+                        "LLVM array locals must be initialized from an array literal or local Array value",
+                        node.span,
+                    )
                 self._validate_expr(node.expr)
             elif isinstance(node, IRAssign):
                 self._validate_expr(node.target)
@@ -260,6 +370,16 @@ class LLVMScalarEmitter:
                         self._validate_node(s)
             elif isinstance(node, IRWhile):
                 self._validate_expr(node.condition)
+                for s in node.body:
+                    self._validate_node(s)
+            elif isinstance(node, IRFor):
+                if node.collection_expr is None or node.collection_expr.type.name != "Array":
+                    raise LLVMEmissionError(
+                        "LLVM aggregate pilot currently supports only for-in Array loops",
+                        node.span,
+                    )
+                self._array_element_llvm_type(node.collection_expr.type, node.span)
+                self._validate_expr(node.collection_expr)
                 for s in node.body:
                     self._validate_node(s)
         else:
@@ -288,9 +408,38 @@ class LLVMScalarEmitter:
             self._validate_expr(expr.else_expr)
         elif isinstance(expr, IRCall):
             if expr.receiver is not None:
-                raise LLVMEmissionError("LLVM scalar emitter does not support method calls with receivers", expr.span)
+                if not (
+                    expr.receiver.type.name == "Array"
+                    and expr.callee in ("len", "length", "size")
+                    and not expr.args
+                ):
+                    raise LLVMEmissionError(
+                        "LLVM aggregate pilot supports only zero-argument Array len/length/size methods",
+                        expr.span,
+                    )
+                self._validate_expr(expr.receiver)
             for arg in expr.args:
                 self._validate_expr(arg)
+        elif isinstance(expr, IRMemberAccess):
+            if expr.safe:
+                raise LLVMEmissionError("LLVM struct pilot does not support safe member access", expr.span)
+            self._validate_expr(expr.obj)
+            struct = self.struct_map.get(expr.obj.type.name)
+            if struct is None or expr.member not in {field.name for field in struct.fields}:
+                raise LLVMEmissionError(
+                    f"LLVM struct pilot cannot resolve member '{expr.member}' on '{expr.obj.type}'",
+                    expr.span,
+                )
+        elif isinstance(expr, IRArray):
+            self._array_element_llvm_type(expr.type, expr.span)
+            for element in expr.elements:
+                self._validate_expr(element)
+        elif isinstance(expr, IRIndexAccess):
+            if expr.obj.type.name != "Array":
+                raise LLVMEmissionError("LLVM array pilot only supports Array indexing", expr.span)
+            self._array_element_llvm_type(expr.obj.type, expr.span)
+            self._validate_expr(expr.obj)
+            self._validate_expr(expr.index)
         else:
             raise LLVMEmissionError(
                 f"LLVM scalar emitter does not support expression '{type(expr).__name__}'",
@@ -298,7 +447,9 @@ class LLVMScalarEmitter:
             )
 
     def _check_scalar_type(self, t: IRType, span: SourceSpan, context: str) -> None:
-        if t.name not in ("int", "int64", "float", "float64", "bool", "void", "string", "any"):
+        if t.name == "Array":
+            self._array_element_llvm_type(t, span)
+        elif t.name not in ("int", "int64", "float", "float64", "bool", "void", "string", "any") and t.name not in self.struct_map:
             raise LLVMEmissionError(f"LLVM scalar emitter does not support {context} type '{t}'", span)
         if t.optional or t.pointer:
             raise LLVMEmissionError(f"LLVM scalar emitter does not support optional/pointer type '{t}'", span)
@@ -341,7 +492,40 @@ class LLVMScalarEmitter:
             return "ptr"
         if name == "any":
             return "i64"
+        if name == "Array":
+            element_type = self._array_element_llvm_type(t, SourceSpan("<llvm>", 1, 1))
+            self.array_types.add(element_type)
+            return self._llvm_array_type_name(element_type)
+        if name in self.struct_map:
+            return self._llvm_struct_type(name)
         raise LLVMEmissionError(f"Unsupported IR type '{t}' in LLVM emission", SourceSpan("<llvm>", 1, 1))
+
+    def _llvm_struct_type(self, name: str) -> str:
+        return f"%nyx.struct.{self._identifier(name)}"
+
+    @staticmethod
+    def _llvm_array_type_name(element_type: str) -> str:
+        suffix = {"i64": "i64", "double": "f64", "i1": "bool"}[element_type]
+        return f"%nyx.array.{suffix}"
+
+    def _array_element_llvm_type(self, array_type: IRType, span: SourceSpan) -> str:
+        if array_type.name != "Array" or len(array_type.arguments) != 1:
+            raise LLVMEmissionError(f"Malformed Array type '{array_type}'", span)
+        element = array_type.arguments[0]
+        if element.name in ("int", "int64") and not element.optional and not element.pointer:
+            return "i64"
+        if element.name in ("float", "float64") and not element.optional and not element.pointer:
+            return "double"
+        if element.name == "bool" and not element.optional and not element.pointer:
+            return "i1"
+        raise LLVMEmissionError(
+            f"LLVM array pilot supports only Array<int>, Array<float>, and Array<bool>; found '{array_type}'",
+            span,
+        )
+
+    @staticmethod
+    def _array_element_size(element_type: str) -> int:
+        return {"i64": 8, "double": 8, "i1": 1}[element_type]
 
     def _temp(self, prefix: str = "t") -> str:
         self.temp_counter += 1
@@ -371,6 +555,7 @@ class LLVMScalarEmitter:
         self.blocks = []
         self.entry_allocas = []
         self.local_ptrs = {}
+        self.array_locals = {}
         self.loop_stack = []
         self.temp_counter = 0
         self.label_counter = 0
@@ -391,7 +576,29 @@ class LLVMScalarEmitter:
             # Entry alloca
             addr_name = f"%alloca_{self._identifier(param.name)}_{len(self.entry_allocas)}"
             self.entry_allocas.append(f"  {addr_name} = alloca {ptype}")
-            self.entry_allocas.append(f"  store {ptype} {arg_name}, ptr {addr_name}")
+            if param.type.name == "Array":
+                element_type = self._array_element_llvm_type(param.type, fn.span)
+                length = self._temp("array_param_len")
+                source_data = self._temp("array_param_source")
+                cloned_data = self._temp("array_param_data")
+                byte_length = self._temp("array_param_bytes")
+                descriptor_0 = self._temp("array_param_desc")
+                descriptor_1 = self._temp("array_param_desc")
+                self.entry_allocas.extend(
+                    [
+                        f"  {length} = extractvalue {ptype} {arg_name}, 0",
+                        f"  {source_data} = extractvalue {ptype} {arg_name}, 1",
+                        f"  {cloned_data} = alloca {element_type}, i64 {length}",
+                        f"  {byte_length} = mul i64 {length}, {self._array_element_size(element_type)}",
+                        f"  call void @llvm.memcpy.p0.p0.i64(ptr {cloned_data}, ptr {source_data}, i64 {byte_length}, i1 false)",
+                        f"  {descriptor_0} = insertvalue {ptype} poison, i64 {length}, 0",
+                        f"  {descriptor_1} = insertvalue {ptype} {descriptor_0}, ptr {cloned_data}, 1",
+                        f"  store {ptype} {descriptor_1}, ptr {addr_name}",
+                    ]
+                )
+                self.array_locals[param.symbol] = (addr_name, element_type, length)
+            else:
+                self.entry_allocas.append(f"  store {ptype} {arg_name}, ptr {addr_name}")
             self.local_ptrs[param.symbol] = (addr_name, ptype)
 
         current = entry_block
@@ -412,6 +619,7 @@ class LLVMScalarEmitter:
         self.blocks = []
         self.entry_allocas = []
         self.local_ptrs = {}
+        self.array_locals = {}
         self.loop_stack = []
         self.temp_counter = 0
         self.label_counter = 0
@@ -467,6 +675,8 @@ class LLVMScalarEmitter:
             self.blocks.append(block)
 
         if isinstance(stmt, IRVarDecl):
+            if stmt.type.name == "Array":
+                return self._emit_array_var_decl(stmt, block)
             vtype = self._llvm_type(stmt.type)
             clean_name = self._identifier(stmt.name)
             addr_name = f"%alloca_{clean_name}_{self.label_counter}_{len(self.entry_allocas)}"
@@ -479,15 +689,66 @@ class LLVMScalarEmitter:
             return block
 
         if isinstance(stmt, IRAssign):
-            if not isinstance(stmt.target, IRReference):
-                raise LLVMEmissionError(f"Assignment target must be reference, got {type(stmt.target).__name__}", stmt.span)
-            if stmt.target.symbol not in self.local_ptrs:
-                raise LLVMEmissionError(f"Undefined variable in assignment: {stmt.target.name}", stmt.span)
-            addr_name, vtype = self.local_ptrs[stmt.target.symbol]
-            val, val_type, block = self._emit_expr(stmt.expr, block)
-            val = self._coerce(val, val_type, vtype, block)
-            block.emit(f"  store {vtype} {val}, ptr {addr_name}")
-            return block
+            if isinstance(stmt.target, IRIndexAccess):
+                element_ptr, element_type, block = self._emit_array_element_ptr(
+                    stmt.target.obj,
+                    stmt.target.index,
+                    block,
+                    stmt.span,
+                )
+                value, value_type, block = self._emit_expr(stmt.expr, block)
+                value = self._coerce(value, value_type, element_type, block)
+                block.emit(f"  store {element_type} {value}, ptr {element_ptr}")
+                return block
+
+            if isinstance(stmt.target, IRReference):
+                if stmt.target.type.name == "Array":
+                    raise LLVMEmissionError(
+                        "LLVM array pilot does not support rebinding an existing Array yet",
+                        stmt.span,
+                    )
+                if stmt.target.symbol not in self.local_ptrs:
+                    raise LLVMEmissionError(f"Undefined variable in assignment: {stmt.target.name}", stmt.span)
+                addr_name, vtype = self.local_ptrs[stmt.target.symbol]
+                val, val_type, block = self._emit_expr(stmt.expr, block)
+                val = self._coerce(val, val_type, vtype, block)
+                block.emit(f"  store {vtype} {val}, ptr {addr_name}")
+                return block
+
+            if isinstance(stmt.target, IRMemberAccess) and isinstance(stmt.target.obj, IRReference):
+                owner = stmt.target.obj
+                local = self.local_ptrs.get(owner.symbol)
+                struct = self.struct_map.get(owner.type.name)
+                if local is None or struct is None:
+                    raise LLVMEmissionError(
+                        f"LLVM struct pilot cannot assign member '{stmt.target.member}' on this value",
+                        stmt.span,
+                    )
+                field_index = next(
+                    (index for index, field in enumerate(struct.fields) if field.name == stmt.target.member),
+                    None,
+                )
+                if field_index is None:
+                    raise LLVMEmissionError(
+                        f"LLVM struct pilot cannot resolve member '{stmt.target.member}' on '{owner.type}'",
+                        stmt.span,
+                    )
+                owner_ptr, owner_ty = local
+                field_ty = self._llvm_type(struct.fields[field_index].type)
+                field_ptr = self._temp("field_ptr")
+                block.emit(
+                    f"  {field_ptr} = getelementptr inbounds {owner_ty}, ptr {owner_ptr}, "
+                    f"i32 0, i32 {field_index}"
+                )
+                val, val_type, block = self._emit_expr(stmt.expr, block)
+                val = self._coerce(val, val_type, field_ty, block)
+                block.emit(f"  store {field_ty} {val}, ptr {field_ptr}")
+                return block
+
+            raise LLVMEmissionError(
+                f"Assignment target must be a local reference or direct struct member, got {type(stmt.target).__name__}",
+                stmt.span,
+            )
 
         if isinstance(stmt, IRExprStatement):
             _, _, block = self._emit_expr(stmt.expr, block)
@@ -514,6 +775,70 @@ class LLVMScalarEmitter:
             cond_lbl, _ = self.loop_stack[-1]
             block.terminate(f"  br label %{cond_lbl}")
             return block
+
+        if isinstance(stmt, IRFor):
+            if stmt.collection_expr is None or stmt.collection_expr.type.name != "Array":
+                raise LLVMEmissionError(
+                    "LLVM aggregate pilot currently supports only for-in Array loops",
+                    stmt.span,
+                )
+
+            descriptor, descriptor_type, block = self._emit_expr(stmt.collection_expr, block)
+            element_type = self._array_element_llvm_type(stmt.collection_expr.type, stmt.span)
+            length = self._temp("for_len")
+            data = self._temp("for_data")
+            block.emit(f"  {length} = extractvalue {descriptor_type} {descriptor}, 0")
+            block.emit(f"  {data} = extractvalue {descriptor_type} {descriptor}, 1")
+
+            index_ptr = f"%alloca_for_index_{self.label_counter}_{len(self.entry_allocas)}"
+            value_ptr = f"%alloca_{self._identifier(stmt.var_name)}_{self.label_counter}_{len(self.entry_allocas) + 1}"
+            self.entry_allocas.append(f"  {index_ptr} = alloca i64")
+            self.entry_allocas.append(f"  {value_ptr} = alloca {element_type}")
+            self.local_ptrs[stmt.symbol] = (value_ptr, element_type)
+            block.emit(f"  store i64 0, ptr {index_ptr}")
+
+            cond_block = BasicBlock(self._label("for.cond"))
+            body_block = BasicBlock(self._label("for.body"))
+            step_block = BasicBlock(self._label("for.step"))
+            exit_block = BasicBlock(self._label("for.exit"))
+            block.terminate(f"  br label %{cond_block.label}")
+
+            self.blocks.append(cond_block)
+            index = self._temp("for_index")
+            cond_block.emit(f"  {index} = load i64, ptr {index_ptr}")
+            has_next = self._temp("for_has_next")
+            cond_block.emit(f"  {has_next} = icmp slt i64 {index}, {length}")
+            cond_block.terminate(
+                f"  br i1 {has_next}, label %{body_block.label}, label %{exit_block.label}"
+            )
+
+            self.blocks.append(body_block)
+            element_ptr = self._temp("for_element_ptr")
+            body_block.emit(
+                f"  {element_ptr} = getelementptr inbounds {element_type}, ptr {data}, i64 {index}"
+            )
+            element = self._temp("for_element")
+            body_block.emit(f"  {element} = load {element_type}, ptr {element_ptr}")
+            body_block.emit(f"  store {element_type} {element}, ptr {value_ptr}")
+
+            self.loop_stack.append((step_block.label, exit_block.label))
+            current = body_block
+            for nested in stmt.body:
+                current = self._emit_statement(nested, current)
+            self.loop_stack.pop()
+            if not current.terminated:
+                current.terminate(f"  br label %{step_block.label}")
+
+            self.blocks.append(step_block)
+            current_index = self._temp("for_step_index")
+            step_block.emit(f"  {current_index} = load i64, ptr {index_ptr}")
+            next_index = self._temp("for_next_index")
+            step_block.emit(f"  {next_index} = add i64 {current_index}, 1")
+            step_block.emit(f"  store i64 {next_index}, ptr {index_ptr}")
+            step_block.terminate(f"  br label %{cond_block.label}")
+
+            self.blocks.append(exit_block)
+            return exit_block
 
         if isinstance(stmt, IRWhile):
             cond_block = BasicBlock(self._label("while.cond"))
@@ -597,6 +922,84 @@ class LLVMScalarEmitter:
 
         raise LLVMEmissionError(f"Unsupported statement type '{type(stmt).__name__}'", stmt.span)
 
+    def _emit_array_var_decl(self, stmt: IRVarDecl, block: BasicBlock) -> BasicBlock:
+        descriptor_type = self._llvm_type(stmt.type)
+        element_type = self._array_element_llvm_type(stmt.type, stmt.span)
+        descriptor_ptr = f"%alloca_{self._identifier(stmt.name)}_{self.label_counter}_{len(self.entry_allocas)}"
+        self.entry_allocas.append(f"  {descriptor_ptr} = alloca {descriptor_type}")
+
+        if isinstance(stmt.expr, IRArray):
+            length = str(len(stmt.expr.elements))
+            data_ptr = f"%array_data_{self._identifier(stmt.name)}_{len(self.entry_allocas)}"
+            self.entry_allocas.append(f"  {data_ptr} = alloca {element_type}, i64 {length}")
+            for index, element in enumerate(stmt.expr.elements):
+                value, value_type, block = self._emit_expr(element, block)
+                value = self._coerce(value, value_type, element_type, block)
+                slot = self._temp("array_slot")
+                block.emit(f"  {slot} = getelementptr inbounds {element_type}, ptr {data_ptr}, i64 {index}")
+                block.emit(f"  store {element_type} {value}, ptr {slot}")
+        elif isinstance(stmt.expr, IRReference):
+            source = self.array_locals.get(stmt.expr.symbol)
+            if source is None:
+                raise LLVMEmissionError(
+                    "LLVM array pilot can copy only a local or parameter Array value",
+                    stmt.span,
+                )
+            source_descriptor_ptr, source_element_type, length = source
+            if source_element_type != element_type:
+                raise LLVMEmissionError("LLVM Array copy element types do not match", stmt.span)
+            data_ptr = f"%array_data_{self._identifier(stmt.name)}_{len(self.entry_allocas)}"
+            self.entry_allocas.append(f"  {data_ptr} = alloca {element_type}, i64 {length}")
+            source_descriptor = self._temp("array_source")
+            block.emit(f"  {source_descriptor} = load {descriptor_type}, ptr {source_descriptor_ptr}")
+            source_data = self._temp("array_source_data")
+            block.emit(f"  {source_data} = extractvalue {descriptor_type} {source_descriptor}, 1")
+            byte_length = self._temp("array_copy_bytes")
+            block.emit(f"  {byte_length} = mul i64 {length}, {self._array_element_size(element_type)}")
+            block.emit(
+                f"  call void @llvm.memcpy.p0.p0.i64(ptr {data_ptr}, ptr {source_data}, "
+                f"i64 {byte_length}, i1 false)"
+            )
+        else:
+            raise LLVMEmissionError(
+                "LLVM array locals must be initialized from an array literal or local Array value",
+                stmt.span,
+            )
+
+        descriptor_0 = self._temp("array_desc")
+        block.emit(f"  {descriptor_0} = insertvalue {descriptor_type} poison, i64 {length}, 0")
+        descriptor_1 = self._temp("array_desc")
+        block.emit(f"  {descriptor_1} = insertvalue {descriptor_type} {descriptor_0}, ptr {data_ptr}, 1")
+        block.emit(f"  store {descriptor_type} {descriptor_1}, ptr {descriptor_ptr}")
+        self.local_ptrs[stmt.symbol] = (descriptor_ptr, descriptor_type)
+        self.array_locals[stmt.symbol] = (descriptor_ptr, element_type, length)
+        return block
+
+    def _emit_array_element_ptr(
+        self,
+        array_expr: IRExpr,
+        index_expr: IRExpr,
+        block: BasicBlock,
+        span: SourceSpan,
+    ) -> Tuple[str, str, BasicBlock]:
+        if array_expr.type.name != "Array":
+            raise LLVMEmissionError("LLVM array indexing requires an Array value", span)
+        element_type = self._array_element_llvm_type(array_expr.type, span)
+        descriptor_type = self._llvm_type(array_expr.type)
+        descriptor, actual_type, block = self._emit_expr(array_expr, block)
+        if actual_type != descriptor_type:
+            raise LLVMEmissionError("LLVM Array descriptor type mismatch", span)
+        index, index_type, block = self._emit_expr(index_expr, block)
+        index = self._coerce(index, index_type, "i64", block)
+        length = self._temp("array_len")
+        block.emit(f"  {length} = extractvalue {descriptor_type} {descriptor}, 0")
+        block.emit(f"  call void @__nyx_array_check(i64 {index}, i64 {length})")
+        data = self._temp("array_data")
+        block.emit(f"  {data} = extractvalue {descriptor_type} {descriptor}, 1")
+        element_ptr = self._temp("array_element")
+        block.emit(f"  {element_ptr} = getelementptr inbounds {element_type}, ptr {data}, i64 {index}")
+        return element_ptr, element_type, block
+
     def _emit_expr(self, expr: IRExpr, block: BasicBlock) -> Tuple[str, str, BasicBlock]:
         if isinstance(expr, IRLiteral):
             if isinstance(expr.value, bool):
@@ -620,6 +1023,45 @@ class LLVMScalarEmitter:
             res = self._temp("val")
             block.emit(f"  {res} = load {vtype}, ptr {addr_name}")
             return res, vtype, block
+
+        if isinstance(expr, IRMemberAccess):
+            obj_val, obj_ty, block = self._emit_expr(expr.obj, block)
+            struct = self.struct_map.get(expr.obj.type.name)
+            if struct is None:
+                raise LLVMEmissionError(
+                    f"LLVM struct pilot cannot read member '{expr.member}' from '{expr.obj.type}'",
+                    expr.span,
+                )
+            field_index = next(
+                (index for index, field in enumerate(struct.fields) if field.name == expr.member),
+                None,
+            )
+            if field_index is None:
+                raise LLVMEmissionError(
+                    f"LLVM struct pilot cannot resolve member '{expr.member}' on '{expr.obj.type}'",
+                    expr.span,
+                )
+            field_ty = self._llvm_type(struct.fields[field_index].type)
+            result = self._temp("field")
+            block.emit(f"  {result} = extractvalue {obj_ty} {obj_val}, {field_index}")
+            return result, field_ty, block
+
+        if isinstance(expr, IRIndexAccess):
+            element_ptr, element_type, block = self._emit_array_element_ptr(
+                expr.obj,
+                expr.index,
+                block,
+                expr.span,
+            )
+            result = self._temp("array_value")
+            block.emit(f"  {result} = load {element_type}, ptr {element_ptr}")
+            return result, element_type, block
+
+        if isinstance(expr, IRArray):
+            raise LLVMEmissionError(
+                "LLVM array literals are currently supported only as direct local initializers",
+                expr.span,
+            )
 
         if isinstance(expr, IRUnary):
             inner_val, inner_ty, block = self._emit_expr(expr.expr, block)
@@ -765,19 +1207,52 @@ class LLVMScalarEmitter:
             return final_res, res_ty, merge_block
 
         if isinstance(expr, IRCall):
-            if expr.callee == "print" and len(expr.args) == 1:
-                arg_val, arg_ty, block = self._emit_expr(expr.args[0], block)
-                if arg_ty == "i64":
-                    block.emit(f"  call void @nyx_print_i64(i64 {arg_val})")
-                elif arg_ty == "double":
-                    block.emit(f"  call void @nyx_print_f64(double {arg_val})")
-                elif arg_ty == "i1":
-                    block.emit(f"  call void @nyx_print_bool(i1 {arg_val})")
-                elif arg_ty == "ptr":
-                    block.emit(f"  call void @nyx_print_str(ptr {arg_val})")
-                else:
-                    block.emit(f"  call void @nyx_print_i64(i64 {arg_val})")
+            if (
+                expr.receiver is not None
+                and expr.receiver.type.name == "Array"
+                and expr.callee in ("len", "length", "size")
+                and not expr.args
+            ):
+                descriptor, descriptor_type, block = self._emit_expr(expr.receiver, block)
+                length = self._temp("array_len")
+                block.emit(f"  {length} = extractvalue {descriptor_type} {descriptor}, 0")
+                return length, "i64", block
+
+            if expr.callee == "print":
+                for index, argument in enumerate(expr.args):
+                    if index:
+                        block.emit("  call i32 (ptr, ...) @printf(ptr @__nyx_space)")
+                    arg_val, arg_ty, block = self._emit_expr(argument, block)
+                    writer = {
+                        "i64": "nyx_write_i64",
+                        "double": "nyx_write_f64",
+                        "i1": "nyx_write_bool",
+                        "ptr": "nyx_write_str",
+                    }.get(arg_ty)
+                    if writer is None:
+                        raise LLVMEmissionError(
+                            f"LLVM print does not support value type '{arg_ty}'",
+                            argument.span,
+                        )
+                    block.emit(f"  call void @{writer}({arg_ty} {arg_val})")
+                block.emit("  call i32 (ptr, ...) @printf(ptr @__nyx_newline)")
                 return "", "void", block
+
+            struct = self.struct_map.get(expr.callee)
+            if struct is not None and expr.callee_symbol == struct.symbol:
+                struct_ty = self._llvm_struct_type(struct.name)
+                aggregate = "poison"
+                for index, (argument, field) in enumerate(zip(expr.args, struct.fields)):
+                    arg_val, arg_ty, block = self._emit_expr(argument, block)
+                    field_ty = self._llvm_type(field.type)
+                    arg_val = self._coerce(arg_val, arg_ty, field_ty, block)
+                    inserted = self._temp("struct")
+                    block.emit(
+                        f"  {inserted} = insertvalue {struct_ty} {aggregate}, "
+                        f"{field_ty} {arg_val}, {index}"
+                    )
+                    aggregate = inserted
+                return aggregate, struct_ty, block
 
             target_name = self.symbol_names.get(expr.callee_symbol, self._identifier(expr.callee))
             target_fn = self.function_map.get(expr.callee)

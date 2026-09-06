@@ -7,6 +7,7 @@ from .hir_javascript import (
     JavaScriptEmissionError,
     emit_javascript,
 )
+from .llvm_scalar import LLVMEmissionError, LLVMScalarEmitter, emit_llvm
 
 __all__ = [
     "UniversalCodeGen",
@@ -22,4 +23,7 @@ __all__ = [
     "HIRJavaScriptEmitter",
     "JavaScriptEmissionError",
     "emit_javascript",
+    "LLVMEmissionError",
+    "LLVMScalarEmitter",
+    "emit_llvm",
 ]

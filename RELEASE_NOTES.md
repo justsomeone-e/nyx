@@ -1,93 +1,48 @@
-# Nyx v4.0.0 — Nirvana
+# Nyx v5.0.0-rc.1 — Daydream
 
-Nyx v4.0.0 establishes the stable language and toolchain contract for the
-compiler-focused v4 line. It incorporates the unpublished RC3 work into Nirvana.
-The stable semantic set is C++20/native, JavaScript, and Python. Rust,
-WebAssembly, React, and assembly remain available under their explicit beta
-capability contracts; this release does not promote those backends to stable.
-
-These notes are prepared for publication. The exact release revision, platform
-validation, and artifact evidence are tracked in the
-[Nirvana release checklist](docs/internals/RELEASE_AUDIT_v4.0.0.md).
+Daydream is the first release candidate for the Nyx v5 compiler line. It keeps
+the stable C++20, JavaScript, and Python contracts intact while moving direct
+LLVM IR generation from an isolated scalar pilot into the canonical compiler
+and CLI pipeline.
 
 ## Highlights
 
-- Self-host lexing decodes the source into code points once, avoiding repeated
-  whole-source scans. Generated C++ string literals retain their full UTF-8
-  byte length, including combining characters and embedded NULs.
-- Stable backends agree on empty/out-of-range string indexing and code-point
-  length methods, backed by focused runtime regressions.
-- Nyx-authored lexer, parser, type checker, typed-HIR lowerer, and C++ emitter
-  remain reproducible through the native stage-1 -> stage-2 -> stage-3 chain.
-- Rust 2021 now lowers postfix `?` through typed HIR and runs active `defer`
-  expressions in LIFO order before an early `Err` return.
-- JavaScript builds support import-safe ES2022 `.mjs` output with explicit
-  exports and no implicit `main()` side effect.
-- WebAssembly adds deterministic borrowed scalar-struct parameters, typed JS
-  object marshalling, generated TypeScript interfaces, and explicit
-  array/struct ABI capability metadata.
-- `nyx build --target wasm --wasi` emits WASI preview1 executables with
-  `fd_write`, `_start`, and UTF-8 string stdout support.
-- Unsupported advanced semantics are rejected through capability-derived
-  `E3001` diagnostics instead of target-specific silent approximations.
-- Tour of Nyx grows from 67 to 81 verified exercises across 21 modules, adding
-  payload enums, Result propagation, collection transforms, async task
-  semantics, Unicode expressions, and real standard-library boundaries.
-- The browser example suite expands the typed `std/web` Canvas surface while
-  keeping generated adapters as the host bridge.
-- The stable HIR runtime trio (`cpp`, `js`, `python`) retains shared typed-HIR
-  semantics, including independent Array/Struct value copies and code-point
-  based Unicode string length, indexing, and iteration. Rust, WASM, React, and
-  assembly remain governed by their explicit capability contracts.
-- The release includes native-first installers, a local VS Code `.vsix`,
-  deterministic source archives, checksums, an SPDX SBOM, and GitHub provenance
-  attestations once the tagged workflow completes.
+- The LLVM build command emits the exact .ll artifact passed to Clang and
+  produces a native executable without a C++ source-code hop.
+- The LLVM run command compiles and executes that LLVM IR through the host
+  Clang toolchain.
+- The experimental LLVM backend supports signed 64-bit wrapping arithmetic,
+  IEEE binary64 values, booleans, functions, recursion, structured control
+  flow, scalar-field structs, and stack-owned scalar arrays.
+- Supported Arrays have checked indexing, independent local copies,
+  function-boundary value copies through llvm.memcpy, length methods, and
+  for iteration with break and continue.
+- Multi-argument print lowers to valid LLVM IR with C++-backend output parity.
+- Unsupported LLVM constructs fail through compiler diagnostics instead of
+  silently falling back to C++.
 
-## Scope
+## Maturity and limits
 
-The Maya scope reset remains in force. Microcontroller/freestanding firmware,
-board profiles, flashing, and physical HAL modules are not part of Nyx v4.
-The active scope is compiler correctness, HIR parity, self-hosting, native and
-WebAssembly output, readable syntax, diagnostics, and deterministic tooling.
+LLVM and C17 remain experimental backends. The default backend is still C++20.
+The LLVM path does not yet cover escaping or returned Arrays, nested aggregates,
+aggregate fields, exceptions, tasks, closures, complete standard-library
+bindings, or the native self-hosted emitter. Python remains the stage-0
+orchestration frontend for this experimental backend.
 
-## Install Nirvana
-
-The following pinned commands become available when the `v4.0.0` tag and
-matching release assets are published.
+## Install
 
 ### Windows PowerShell
 
-```powershell
-$env:NYX_RELEASE_TAG = 'v4.0.0'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.ps1 | iex
-```
+    $env:NYX_RELEASE_TAG = 'v5.0.0-rc.1'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v5.0.0-rc.1/install.ps1 | iex
 
 ### Linux / macOS
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.sh | NYX_RELEASE_TAG=v4.0.0 bash
-```
-
-For a reviewed installation path, download the matching release archive, inspect
-the installer, verify `SHA256SUMS`, then run it locally.
+    curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v5.0.0-rc.1/install.sh | NYX_RELEASE_TAG=v5.0.0-rc.1 bash
 
 ## Validation
 
-- The maintainer reported 48/48 suites and the 138/138 regression battery
-  passing after the self-host UTF-8 fixes. Later string boundary and length
-  method fixes passed targeted C++/JavaScript/Python runtime tests. The full
-  suite must be rerun on the final release revision; these are separate results.
-- Release gates include the 138-point regression battery, 530-case fuzz corpus,
-  Python/Nyx HIR byte parity, Rust/JS/WASM backend conformance, Bundle/host ABI
-  runtime conformance, all 81 Tour exercises, deterministic package locks, and
-  native self-host reproducibility.
-- The tagged GitHub Actions workflow validates the release on Windows, Linux,
-  Intel macOS, and ARM macOS and
-  produces the platform artifacts. Treat published checksums and attestations
-  from that workflow as the release evidence.
-
-## After Nirvana
-
-v4.0.x carries compatible fixes. v4.5.0 prepares tooling, libraries, measured
-performance improvements, and v5 migration guidance while preserving the v4
-source, HIR, and ABI contracts. New backend experiments and breaking designs
-are tracked separately from the stable v4 promise.
+The compiler API suite, direct LLVM suite, Python syntax checks, and real CLI
+LLVM build/run smoke test passed locally. The tagged GitHub Actions workflow is
+the authoritative source for the full regression battery, native self-host
+reproducibility, four-platform binaries, VSIX, checksums, SBOM, and provenance.
+Do not treat this release candidate as a stable LLVM backend.

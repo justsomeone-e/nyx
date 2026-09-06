@@ -1,4 +1,4 @@
-# Nyx v4 Nirvana, v4.5, v5 Aether, and Backend Roadmap
+# Nyx v4 Nirvana, v4.5 Ivory, v5 Daydream, and Backend Roadmap
 
 This document is the release-planning source of truth for the v4 line. Backend
 capabilities exposed by the compiler remain machine-readable through
@@ -15,7 +15,7 @@ research, migration design, and current validation are maintained in
 - Current release preparation: `v4.0.0 Nirvana`. The maintainer selected stable
   v4 as the next release; the unpublished RC3 work is included in Nirvana.
 - Next development milestone: `v4.5.0`, preserving v4 compatibility while
-  preparing the tooling and migration work for `v5.0.0 Aether`.
+  preparing the tooling and migration work for `v5.0.0 Daydream`.
 - Version alignment is not publication evidence. Record final-revision tests,
   platform results, and artifacts in the [release checklist](RELEASE_AUDIT_v4.0.0.md).
 - Python remains a stage-0 bootstrap and optional orchestration tool, not a
@@ -117,11 +117,11 @@ Release names do not create artificial releases; unused RC names are skipped.
 | `v4.0.0-rc.2` | Bodhi |
 | `v4.0.0-rc.3` (unpublished; included in Nirvana) | Moksha |
 | `v4.0.0` | Nirvana |
-| `v4.5.0` | No separate codename assigned |
-| `v5.0.0` | Aether |
-| `v6.0.0` | Eclipse |
-| `v7.0.0` | Apotheosis |
-| `v8.0.0` | Elysium |
+| `v4.5.0` | Ivory |
+| `v5.0.0` | Daydream |
+| `v6.0.0` | Sepia |
+| `v7.0.0` | Solace |
+| `v8.0.0` | Last Signal |
 
 ## New target order after RC1
 
@@ -211,7 +211,7 @@ Completion requires the v4 regression corpus to remain valid, documented
 compatibility for every addition, and clean platform validation. Items are
 priorities for planning; they are not claims of implemented functionality.
 
-## v5.0.0 Aether implementation order
+## v5.0.0 Daydream implementation order
 
 The concrete v5 sequence is C17 scalar pilot, LLVM scalar pilot, measured
 shared-lowering needs, runtime/ownership conformance, migration tooling, and
