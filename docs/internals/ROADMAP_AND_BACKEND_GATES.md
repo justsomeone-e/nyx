@@ -1,21 +1,22 @@
 # Nyx v4 Nirvana, v4.5 Ivory, v5 Daydream, and Backend Roadmap
 
-This document is the release-planning source of truth for the v4 line. Backend
+This document is the release-planning source of truth for the Nyx compiler. Backend
 capabilities exposed by the compiler remain machine-readable through
 `nyx targets --json`.
 
 The dated implementation changelog, ordered v4.5/v5 milestones, lowering
 research, migration design, and current validation are maintained in
-[V4_5_V5_PREPARATION.md](V4_5_V5_PREPARATION.md). The repository is still at
-`4.0.0`; future milestone names do not imply released implementations.
+[V4_5_V5_PREPARATION.md](V4_5_V5_PREPARATION.md). The current stable release is
+`v5.0.0 Daydream`; future milestone names do not imply implemented features.
 
 ## Release decision
 
-- Published releases: `v4.0.0-rc.1` and `v4.0.0-rc.2`.
-- Current release preparation: `v4.0.0 Nirvana`. The maintainer selected stable
-  v4 as the next release; the unpublished RC3 work is included in Nirvana.
-- Next development milestone: `v4.5.0`, preserving v4 compatibility while
-  preparing the tooling and migration work for `v5.0.0 Daydream`.
+- Published stable releases: `v4.0.0 Nirvana`, `v4.5.0 Ivory`, and
+  `v5.0.0 Daydream`.
+- The unpublished v4 RC3 work was incorporated into Nirvana; Ivory then
+  preserved v4 compatibility while preparing the v5 compiler pipeline.
+- Daydream promotes the v5 language and toolchain line, not every backend:
+  direct LLVM IR and C17 remain experimental capability-gated targets.
 - Version alignment is not publication evidence. Record final-revision tests,
   platform results, and artifacts in the [release checklist](RELEASE_AUDIT_v4.0.0.md).
 - Python remains a stage-0 bootstrap and optional orchestration tool, not a
@@ -41,7 +42,7 @@ runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 
 ## Current backend status
 
-| Target | Artifact | Registry maturity | HIR authority | v4 contract |
+| Target | Artifact | Registry maturity | HIR authority | v5 contract |
 |---|---|---:|---:|---|
 | `cpp` | C++20 / native binary | stable | Yes | Keep native runtime and self-host parity green |
 | `js` | ES2022 / Node.js | stable | Yes | Keep exact hosted semantics green |
@@ -50,6 +51,8 @@ runtime parity, and cross-platform Gate 8 evidence are intentionally incomplete.
 | `rust` | Rust 2021 | beta | Yes | Result propagation; keep other unsupported runtime features gated |
 | `react` | React 19 TSX | beta | No | Treat as web tooling, not semantic oracle |
 | `asm` | x86_64 assembly via C++ | beta | No | Keep beta |
+| `c` | ISO C17 source / native binary | experimental | Yes | Scalar subset with strict rejection |
+| `llvm` | LLVM IR / native binary | experimental | Yes | Scalar, scalar-field struct, and stack-owned scalar-array subset |
 
 ## Eight backend gates
 
@@ -211,14 +214,14 @@ Completion requires the v4 regression corpus to remain valid, documented
 compatibility for every addition, and clean platform validation. Items are
 priorities for planning; they are not claims of implemented functionality.
 
-## v5.0.0 Daydream implementation order
+## v5.0.0 Daydream delivered scope
 
-The concrete v5 sequence is C17 scalar pilot, LLVM scalar pilot, measured
-shared-lowering needs, runtime/ownership conformance, migration tooling, and
-native bootstrap/platform release evidence. These are pending implementation;
-see the [v5 lowering design](V4_5_V5_PREPARATION.md).
-Neither a new public HIR schema nor a change of default backend is required
-merely to start the pilots.
+Daydream delivers the C17 scalar pilot, direct LLVM scalar and aggregate pilot,
+canonical compiler API integration, and `nyx build`/`nyx run` LLVM workflows.
+The LLVM runtime/ownership surface, complete standard-library lowering, and a
+direct native self-host emitter remain post-v5 experimental work; see the
+[v5 lowering design](V4_5_V5_PREPARATION.md). C++20 remains the default backend
+until replacement bootstrap and parity evidence exists.
 
 ## Primary references
 

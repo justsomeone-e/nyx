@@ -1,9 +1,9 @@
-# Nyx v4 Development TODO
+# Nyx Compiler Roadmap
 
-Bu dosya Nyx v4 geliştirme hattının aktif görev listesidir. `v4.0.0-rc.1
-Samsara` ve `v4.0.0-rc.2 Bodhi` yayınlandı; hazırlanan sürüm `v4.0.0
-Nirvana`dır. Ayrı yayınlanmayan RC3 çalışmaları Nirvana'ya dahil edildi.
-Sonraki geliştirme hedefi, v4 uyumluluğunu koruyarak v5'e hazırlanan `v4.5.0`dır.
+Bu dosya Nyx'in tamamlanan v4/v4.5 çalışmalarını ve v5 sonrası açık mühendislik
+işlerini izler. `v4.0.0 Nirvana` ve `v4.5.0 Ivory` yayımlandı. Güncel kararlı
+sürüm `v5.0.0 Daydream`dır; C++20, JavaScript ve Python kararlı kalırken C17 ve
+doğrudan LLVM IR backendleri deneysel capability sözleşmeleriyle sunulur.
 
 ## Yön kararları
 
@@ -207,5 +207,6 @@ güncel test kaydı: [v4.5/v5 hazırlık kaydı](internals/V4_5_V5_PREPARATION.m
 - [x] Kırıcı v5 değişikliklerinden önce kaynak/HIR/ABI/lockfile geçiş tasarımını hazırla; somut v2 formatları ve migration araçları henüz uygulanmadı.
 - [ ] Son revizyonda stable parity, self-host reproducibility, platform CI, extension testleri ve checksum/SBOM/release asset kapılarını geçir.
 
-Bu liste planlanan işleri gösterir. v4.5.0, mevcut v4 programlarının anlamını
-veya varsayılan backendini değiştiren bir sürüm olmayacak.
+Bu bölüm v4.5.0 Ivory ile tamamlanan uyumluluk köprüsünün tarihsel kaydıdır.
+Güncel açık işler backend capability matrisi ve v5 sonrası roadmap üzerinden
+izlenir.

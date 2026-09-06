@@ -4,6 +4,28 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [5.0.0] - 2026-09-07 (Daydream)
+
+Nyx v5.0.0 promotes the Daydream language and toolchain line to stable while
+preserving the established C++20, JavaScript, Python, Typed HIR v1, and Bundle
+ABI v1 contracts. The direct LLVM IR and C17 paths ship as experimental
+backends with strict capability rejection; their presence does not imply full
+language or standard-library parity.
+
+### Release status
+
+* Promote the compiler, native self-host banner, package manifests, VS Code
+  extension, documentation site, and release metadata to `5.0.0`.
+* Keep C++20 as the default native backend and retain JavaScript and Python as
+  stable parity targets.
+* Ship the direct LLVM IR pipeline and C17 emitter under their existing
+  experimental maturity contracts.
+* Preserve Stage1 → Stage2 → Stage3 reproducibility and Python/Nyx canonical
+  Typed HIR parity as release gates.
+* Publish platform-native compiler binaries, deterministic source archives,
+  VSIX, SHA-256 manifests, SBOM, and provenance only after the tagged workflow
+  passes.
+
 ## [5.0.0-rc.1] - 2026-09-06 (Daydream)
 
 ### Experimental LLVM backend

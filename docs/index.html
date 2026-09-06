@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nyx — From source to something useful</title>
-  <meta name="description" content="Real Nyx applications. Analyze your data with compiled WebAssembly, explore native and hosted tools, and follow the v5.0 release candidate roadmap.">
+  <meta name="description" content="Nyx v5.0 Daydream is the stable systems toolchain release: native applications, direct LLVM IR, JavaScript, Python, Rust, and WebAssembly from one Typed HIR.">
   <link rel="stylesheet" href="home.css"><script type="module" src="home.js"></script>
 </head>
 <body>
 <a class="skip-link" href="#main">Skip to content</a>
 <header class="site-header wrap">
   <a class="wordmark" href="index.html" aria-label="Nyx home">nyx<span class="brand-dot">.</span></a>
-  <nav aria-label="Main navigation"><a href="#applications">Applications</a><a href="#targets">Targets</a><a href="#roadmap">v5.0 roadmap</a><a href="studio.html">Learn</a></nav>
+  <nav aria-label="Main navigation"><a href="#applications">Applications</a><a href="#targets">Targets</a><a href="#release">v5.0 release</a><a href="studio.html">Learn</a></nav>
   <a class="repo-link" href="https://github.com/justsomeone-e/nyx">Source ↗</a>
 </header>
 <main id="main">
@@ -60,21 +60,21 @@ python -m http.server 8080 --directory docs</code></pre></div></details>
   <div><div class="eyebrow">03 / KNOW YOUR TARGET</div><h2 id="targets-title">One frontend.<br>Explicit contracts.</h2><p>Backend maturity is declared in the compiler registry. A beta label matters: check the supported capability before building around it.</p><a class="text-link" href="internals/ROADMAP_AND_BACKEND_GATES.md">Read the backend gates ↗</a></div>
   <div class="table-scroll"><table><caption>Current v5 backend contracts</caption><thead><tr><th scope="col">Target</th><th scope="col">Output</th><th scope="col">Status</th></tr></thead><tbody><tr><th scope="row">C++</th><td>C++20 / native binary</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">JavaScript</th><td>ES2022 / Node.js</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">Python</th><td>Python 3</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">WebAssembly</th><td>WASM / Bundle ABI v1</td><td><span class="maturity beta">Beta</span></td></tr><tr><th scope="row">Rust</th><td>Rust 2021</td><td><span class="maturity beta">Beta</span></td></tr><tr><th scope="row">LLVM IR</th><td>Native scalar + structs/arrays</td><td><span class="maturity beta">Experimental</span></td></tr><tr><th scope="row">React / ASM</th><td>TSX / x86_64 via C++</td><td><span class="maturity beta">Beta</span></td></tr></tbody></table></div>
 </section>
-<section class="wrap roadmap-section" id="roadmap" aria-labelledby="roadmap-title">
-  <div class="section-heading"><div><div class="eyebrow">04 / WHAT COMES NEXT</div><h2 id="roadmap-title">v5.0 is a plan. Evidence makes a release.</h2></div><span class="label">RELEASE CANDIDATE</span></div>
-  <p class="section-intro">The repository version is 5.0.0-rc.1 (Daydream). Following the stable v4.5 Ivory bridge release, v5 expands direct LLVM IR emission to aggregate types, establishes native self-hosting paths, and connects LLVM directly to the CLI while preserving Typed HIR v1 compatibility.</p>
+<section class="wrap roadmap-section" id="release" aria-labelledby="release-title">
+  <div class="section-heading"><div><div class="eyebrow">04 / RELEASE STATUS</div><h2 id="release-title">v5.0 Daydream has shipped.</h2></div><span class="label">STABLE RELEASE</span></div>
+  <p class="section-intro">Nyx v5.0.0 is the stable Daydream language and toolchain release. It preserves the C++20, JavaScript, Python, Typed HIR v1, and Bundle ABI v1 contracts while adding direct LLVM IR generation as an explicitly experimental backend.</p>
   <ol class="roadmap-list">
     <li><span>Direct LLVM IR pipeline</span><p>Native scalar arithmetic, IEEE double, structured control flow, and Clang compilation without C++ hops.</p></li>
     <li><span>LLVM aggregate types</span><p>Value-semantic structs, stack-owned scalar arrays, bounds verification, element copy semantics, and for-loop iteration.</p></li>
     <li><span>C17 scalar backend</span><p>Portable ISO C17 emission, wrapping signed integer arithmetic, safe division aborts, and strict conformance.</p></li>
     <li><span>Toolchain integration</span><p>Direct <code>nyx build -t llvm</code> and <code>nyx run -t llvm</code> workflows compiling directly to native binaries via host Clang.</p></li>
-    <li><span>Memory &amp; ownership</span><p>Heap descriptors, escaping arrays, string runtime, memory cleanup CFG, and safe boundary transitions.</p></li>
-    <li><span>Standard library in LLVM</span><p>Direct lowering of string, collection, path, and process standard library APIs with Result parity.</p></li>
-    <li><span>Reference frontend</span><p>Independent AST and Typed HIR frontend design decoupled from host runtime specifics.</p></li>
-    <li><span>Native self-host bootstrap</span><p>Bootstrapping the self-hosted Nyx compiler through direct native code rather than C++ transpilation.</p></li>
-    <li><span>Release verification gates</span><p>Cross-platform CI matrix (Linux, Windows, macOS ARM/Intel), full regression battery, deterministic SBOM, and release provenance.</p></li>
+    <li><span>Preserved stable contracts</span><p>C++20 remains the default native path; JavaScript and Python remain stable, while WASM, Rust, React, ASM, LLVM, and C17 keep their declared narrower maturity levels.</p></li>
+    <li><span>Explicit LLVM limits</span><p>Escaping arrays, nested aggregates, exceptions, tasks, closures, complete standard-library bindings, and a native LLVM self-host emitter remain outside the stable LLVM contract.</p></li>
+    <li><span>Canonical compiler model</span><p>All public backend paths continue through checked Typed HIR and reject unsupported constructs instead of silently falling back to another backend.</p></li>
+    <li><span>Native self-hosting</span><p>The reproducible Stage1 → Stage2 → Stage3 compiler path remains part of the release verification contract; Python is the stage-0 orchestration frontend.</p></li>
+    <li><span>Release evidence</span><p>Tagged builds produce platform binaries, deterministic archives, VSIX, checksums, SBOM, and provenance after the complete release workflow passes.</p></li>
   </ol>
-  <div class="roadmap-footer"><p>Outside v5.0: Go, JVM, .NET and Lua backends, breaking syntax, and retiring C++ before self-host bootstrapping is proven.</p><a class="text-link" href="internals/V4_5_V5_PREPARATION.md">Read the v5 preparation log ↗</a></div>
+  <div class="roadmap-footer"><p>LLVM and C17 are included for experimentation, not promoted to stable backends. Go, JVM, .NET, Lua, and retiring the C++ bootstrap path remain future work.</p><a class="text-link" href="https://github.com/justsomeone-e/nyx/releases/tag/v5.0.0">Download v5.0.0 Daydream ↗</a></div>
 </section>
 <section class="wrap closing"><h2>Build something.<br>Then look under the hood.</h2><div class="actions"><a class="button primary" href="https://github.com/justsomeone-e/nyx/blob/main/INSTALLATION.md">Install the toolchain ↗</a><a class="text-link" href="studio.html">Explore the language tour →</a></div></section>
 </main>

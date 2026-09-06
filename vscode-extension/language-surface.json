@@ -1821,7 +1821,7 @@
     },
     {
       "name": "llvm",
-      "detail": "LLVM IR (Scalar Experimental)",
+      "detail": "LLVM IR (Scalar + Aggregate Experimental)",
       "documentation": "ll · experimental"
     },
     {
