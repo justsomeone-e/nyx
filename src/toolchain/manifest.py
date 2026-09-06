@@ -480,7 +480,7 @@ class NyxLock:
 
     @staticmethod
     def resolve_local_dependencies(manifest: NyxManifest) -> Dict[str, Dict[str, str]]:
-        project_root = os.path.dirname(os.path.abspath(manifest.filepath or "nyx.toml"))
+        project_root = os.path.realpath(os.path.dirname(os.path.abspath(manifest.filepath or "nyx.toml")))
         resolved: Dict[str, Dict[str, str]] = {}
 
         def visit(name: str, spec: Any, owner_root: str, stack: List[str]) -> None:

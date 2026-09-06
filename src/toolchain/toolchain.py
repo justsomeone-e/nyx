@@ -369,7 +369,8 @@ class PackageManager:
             return 1
         dependency: Any = version
         if local_path is not None:
-            dependency_root = os.path.realpath(os.path.join(os.getcwd(), local_path))
+            base_cwd = os.path.realpath(os.getcwd())
+            dependency_root = os.path.realpath(os.path.join(base_cwd, local_path))
             dependency_manifest = os.path.join(dependency_root, "nyx.toml")
             if not os.path.isfile(dependency_manifest):
                 print(f"\033[91m[!] Local dependency has no nyx.toml: {dependency_root}\033[0m")
@@ -385,7 +386,7 @@ class PackageManager:
                 return 1
             version = child_version
             dependency = {
-                "path": os.path.relpath(dependency_root, os.getcwd()).replace("\\", "/"),
+                "path": os.path.relpath(dependency_root, base_cwd).replace("\\", "/"),
                 "version": version,
             }
         print(f"\033[96m[*] Adding dependency:\033[0m {pkg_name} @ {version}...")
