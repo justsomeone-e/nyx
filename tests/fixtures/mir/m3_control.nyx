@@ -1,0 +1,35 @@
+fn mark(value: bool, label: string) -> bool {
+    print(label)
+    return value
+}
+
+fn checked(ok: bool) -> Result<int, string> {
+    defer print("checked-cleanup")
+    if ok { return Ok(7) }
+    return Err("bad")
+}
+
+fn use_checked(ok: bool) -> Result<int, string> {
+    defer print("use-cleanup")
+    var value: int = checked(ok)?
+    return Ok(value + 1)
+}
+
+fn main() {
+    print(false and mark(true, "wrong-and"))
+    print(true or mark(false, "wrong-or"))
+
+    var choice: int = if true { 10 } else { 20 }
+    print(choice)
+    var label: string = match 2 { 1 => "one", 2 => "two", _ => "other" }
+    print(label)
+
+    var total: int = 0
+    for i in 0..5 { set total = total + i }
+    guard total == 10 else { print("guard-failed"); return }
+    print(total)
+
+    try { throw "boom" } catch err { print("caught", err) }
+    print(use_checked(true))
+    print(use_checked(false))
+}

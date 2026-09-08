@@ -5,7 +5,8 @@ not redirect any existing Typed HIR backend.
 """
 
 from .builder import MIRFunctionBuilder
-from .lowering import MIRLoweringError, lower_hir_skeleton
+from .interpreter import MIRExecutionResult, MIRInterpreter, MIRTrap
+from .lowering import MIRLoweringError, lower_hir_skeleton, lower_hir_to_mir
 from .model import *
 from .passes import MIRPass, MIRPassManager, MIRPassRecord, MIRPassResult
 from .printer import print_mir

@@ -119,6 +119,8 @@ tests/**/*.py
 !tests/llvm_scalar_suite.py
 !tests/feature_manifest_suite.py
 !tests/mir_suite.py
+!tests/mir_lowering_suite.py
+!tests/mir_cleanup_suite.py
 tests/**/*.rs
 tests/**/*.wat
 tests/**/*.bin

@@ -49,7 +49,7 @@ Project & Development Commands:
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
   nyx targets [--json]               Inspect backend and stdlib capability contracts
-  nyx emit mir <file.nyx> [--json]   Emit experimental M1 MIR (empty function bodies only)
+  nyx emit mir <file.nyx> [--json]   Emit experimental verified MIR
   nyx verify mir <file.mir.json>     Verify serialized experimental MIR
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
@@ -1077,7 +1077,7 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
         return 1
 
     from src.api import NyxCompiler
-    from src.mir import MIRLoweringError, lower_hir_skeleton, print_mir, to_json
+    from src.mir import MIRLoweringError, lower_hir_to_mir, print_mir, to_json
 
     target = get_target_from_args(default_target, entry_file=source_path, arguments=arguments[1:])
     result = NyxCompiler(os.path.dirname(os.path.abspath(source_path))).check_file(
@@ -1089,7 +1089,7 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
             print(diagnostic.rendered)
         return 1
     try:
-        mir = lower_hir_skeleton(result.hir)
+        mir = lower_hir_to_mir(result.hir)
     except MIRLoweringError as error:
         print(f"error[MIRL0001]: {error.message}")
         print(f"  --> {error.span.source}:{error.span.line}:{error.span.column}")

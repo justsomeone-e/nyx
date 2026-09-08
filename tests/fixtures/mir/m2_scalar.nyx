@@ -1,0 +1,18 @@
+fn sum_without_two(limit: int) -> int {
+    var total: int = 0
+    var i: int = 0
+    while i < limit {
+        if i == 2 {
+            set i = i + 1
+            continue
+        }
+        set total = total + i
+        if total > 100 { break }
+        set i = i + 1
+    }
+    return total
+}
+
+fn main() {
+    print(sum_without_two(6))
+}

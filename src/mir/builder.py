@@ -55,6 +55,9 @@ class MIRFunctionBuilder:
             raise ValueError(f"Block {block} already has a terminator")
         open_block.terminator = terminator
 
+    def is_terminated(self, block: int) -> bool:
+        return self._block(block).terminator is not None
+
     def finish(self) -> MIRFunction:
         if not self._blocks:
             raise ValueError("MIR function requires an entry block")

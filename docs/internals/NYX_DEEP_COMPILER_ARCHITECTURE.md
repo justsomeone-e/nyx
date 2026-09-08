@@ -1597,9 +1597,10 @@ No MIR implementation has changed default compiler output.
 Implementation status (2026-09-09): complete for the M1 boundary. The
 experimental implementation lives in `src/mir/`; `tests/mir_suite.py` covers
 construction, malformed CFG rejection, canonical round-tripping, printing,
-fingerprints, pass validation, and CLI subprocess behavior. `nyx emit mir`
-deliberately accepts only empty function bodies; executable lowering remains an
-M2 task and the default HIR-to-backend route is unchanged.
+fingerprints, pass validation, and CLI subprocess behavior. The original
+semantics-free skeleton remains available as `lower_hir_skeleton`; `nyx emit
+mir` now uses the subsequently completed executable lowering path. The default
+HIR-to-backend route remains unchanged.
 
 Purpose: create the representation without migrating production codegen.
 
@@ -1634,6 +1635,13 @@ The normal compiler path remains byte-for-byte unaffected where promised.
 
 ### M2: scalar and structured-control lowering
 
+Implementation status (2026-09-09): complete for the scalar boundary.
+`src/mir/lowering.py` constructs explicit CFG for scalar expressions, calls,
+top-level code, branches, and loops. `src/mir/interpreter.py` is the executable
+reference semantics. `tests/mir_lowering_suite.py` checks evaluation order,
+i64 wrapping and division traps, malformed CFG rejection, and observed parity
+with the existing C++ and LLVM oracles.
+
 Purpose: prove the basic HIR-to-MIR path before ownership or async complexity.
 
 Work:
@@ -1655,6 +1663,15 @@ Malformed control-flow graphs are rejected before emission.
 ```
 
 ### M3: canonical desugaring and cleanup
+
+Implementation status (2026-09-09): complete for the currently typed HIR
+surface. Short-circuit/value control flow, null coalescing, literal match,
+range iteration, guards, Result propagation, lexical defer chains, and
+try/catch unwind edges are represented canonically in MIR.
+`tests/mir_cleanup_suite.py` checks successful and error exits and verifies that
+required cleanups execute once. Aggregate patterns, collection iteration, and
+projected safe navigation are completed by M4 because they require aggregate
+places and variant payloads.
 
 Purpose: remove repeated semantic lowering from individual emitters.
 

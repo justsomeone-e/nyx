@@ -5,20 +5,26 @@ from __future__ import annotations
 from .model import (
     AssertTerminator,
     AssignStatement,
+    AggregateRValue,
     BinaryRValue,
+    CastRValue,
     CallTerminator,
     ConstOperand,
     CopyOperand,
+    DiscriminantRValue,
     DropTerminator,
     GotoTerminator,
     MIRModule,
     MoveOperand,
     NopStatement,
     Place,
+    PayloadRValue,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
     SwitchIntTerminator,
+    SwitchValueTerminator,
+    ThrowTerminator,
     UnaryRValue,
     UnreachableTerminator,
     UseRValue,
@@ -55,6 +61,15 @@ def _rvalue(value: object) -> str:
         return f"{value.op}({_operand(value.left)}, {_operand(value.right)}): {value.type}"
     if isinstance(value, UnaryRValue):
         return f"{value.op}({_operand(value.operand)}): {value.type}"
+    if isinstance(value, CastRValue):
+        return f"cast[{value.kind}]({_operand(value.operand)}): {value.type}"
+    if isinstance(value, AggregateRValue):
+        operands = ", ".join(_operand(item) for item in value.operands)
+        return f"aggregate[{value.kind} {value.name}]({operands}): {value.type}"
+    if isinstance(value, DiscriminantRValue):
+        return f"discriminant({_operand(value.operand)}): {value.type}"
+    if isinstance(value, PayloadRValue):
+        return f"payload[{value.index}]({_operand(value.operand)}): {value.type}"
     raise TypeError(f"Unknown MIR rvalue {type(value).__name__}")
 
 
@@ -76,6 +91,9 @@ def _terminator(value: object) -> str:
     if isinstance(value, SwitchIntTerminator):
         targets = ", ".join(f"{key}: bb{target}" for key, target in value.targets)
         return f"switchInt({_operand(value.discriminator)}) -> [{targets}, otherwise: bb{value.otherwise}]"
+    if isinstance(value, SwitchValueTerminator):
+        targets = ", ".join(f"{key!r}: bb{target}" for key, target in value.targets)
+        return f"switchValue({_operand(value.discriminator)}) -> [{targets}, otherwise: bb{value.otherwise}]"
     if isinstance(value, ReturnTerminator):
         return "return"
     if isinstance(value, CallTerminator):
@@ -95,6 +113,11 @@ def _terminator(value: object) -> str:
         )
     if isinstance(value, UnreachableTerminator):
         return "unreachable"
+    if isinstance(value, ThrowTerminator):
+        if value.target is None:
+            return f"throw {_operand(value.value)} -> unwind"
+        destination = _place(value.destination) if value.destination is not None else "_"
+        return f"throw {_operand(value.value)} -> {destination}, bb{value.target}"
     raise TypeError(f"Unknown MIR terminator {type(value).__name__}")
 
 

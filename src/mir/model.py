@@ -85,7 +85,43 @@ class UnaryRValue:
     type: MIRType
 
 
-RValue = UseRValue | BinaryRValue | UnaryRValue
+@dataclass(frozen=True, slots=True)
+class CastRValue:
+    kind: str
+    operand: Operand
+    type: MIRType
+
+
+@dataclass(frozen=True, slots=True)
+class AggregateRValue:
+    kind: str
+    name: str
+    operands: Tuple[Operand, ...]
+    type: MIRType
+
+
+@dataclass(frozen=True, slots=True)
+class DiscriminantRValue:
+    operand: Operand
+    type: MIRType
+
+
+@dataclass(frozen=True, slots=True)
+class PayloadRValue:
+    operand: Operand
+    index: int
+    type: MIRType
+
+
+RValue = (
+    UseRValue
+    | BinaryRValue
+    | UnaryRValue
+    | CastRValue
+    | AggregateRValue
+    | DiscriminantRValue
+    | PayloadRValue
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -130,6 +166,14 @@ class SwitchIntTerminator:
 
 
 @dataclass(frozen=True, slots=True)
+class SwitchValueTerminator:
+    discriminator: Operand
+    targets: Tuple[Tuple[object, int], ...]
+    otherwise: int
+    span: MIRSpan
+
+
+@dataclass(frozen=True, slots=True)
 class ReturnTerminator:
     span: MIRSpan
 
@@ -142,6 +186,7 @@ class CallTerminator:
     target: int | None
     unwind: int | None
     span: MIRSpan
+    error_destination: Place | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,14 +212,24 @@ class UnreachableTerminator:
     span: MIRSpan
 
 
+@dataclass(frozen=True, slots=True)
+class ThrowTerminator:
+    value: Operand
+    target: int | None
+    destination: Place | None
+    span: MIRSpan
+
+
 Terminator = (
     GotoTerminator
     | SwitchIntTerminator
+    | SwitchValueTerminator
     | ReturnTerminator
     | CallTerminator
     | DropTerminator
     | AssertTerminator
     | UnreachableTerminator
+    | ThrowTerminator
 )
 
 

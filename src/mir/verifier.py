@@ -7,11 +7,14 @@ from typing import Iterable
 
 from .model import (
     AssertTerminator,
+    AggregateRValue,
     AssignStatement,
     BinaryRValue,
+    CastRValue,
     CallTerminator,
     ConstOperand,
     CopyOperand,
+    DiscriminantRValue,
     DropTerminator,
     DerefProjection,
     FieldProjection,
@@ -24,10 +27,13 @@ from .model import (
     MoveOperand,
     Operand,
     Place,
+    PayloadRValue,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
     SwitchIntTerminator,
+    SwitchValueTerminator,
+    ThrowTerminator,
     UnaryRValue,
     UnreachableTerminator,
     UseRValue,
@@ -140,6 +146,14 @@ class MIRVerifier:
             for _, target in terminator.targets:
                 self._require_block(target, valid_blocks, span)
             self._require_block(terminator.otherwise, valid_blocks, span)
+        elif isinstance(terminator, SwitchValueTerminator):
+            self._operand_type(terminator.discriminator, locals_by_id, span)
+            values = [repr(value) for value, _ in terminator.targets]
+            if len(values) != len(set(values)):
+                self._issue("MIR0404", "Switch values must be unique", span)
+            for _, target in terminator.targets:
+                self._require_block(target, valid_blocks, span)
+            self._require_block(terminator.otherwise, valid_blocks, span)
         elif isinstance(terminator, CallTerminator):
             for argument in terminator.arguments:
                 self._operand_type(argument, locals_by_id, span)
@@ -151,6 +165,10 @@ class MIRVerifier:
                 self._require_block(terminator.target, valid_blocks, span)
             if terminator.unwind is not None:
                 self._require_block(terminator.unwind, valid_blocks, span)
+                if terminator.error_destination is None:
+                    self._issue("MIR0405", "Unwind edge requires an error destination", span)
+            if terminator.error_destination is not None:
+                self._place_type(terminator.error_destination, locals_by_id, span)
         elif isinstance(terminator, DropTerminator):
             self._place_type(terminator.place, locals_by_id, span)
             self._require_block(terminator.target, valid_blocks, span)
@@ -163,6 +181,14 @@ class MIRVerifier:
             self._require_block(terminator.target, valid_blocks, span)
             if terminator.unwind is not None:
                 self._require_block(terminator.unwind, valid_blocks, span)
+        elif isinstance(terminator, ThrowTerminator):
+            self._operand_type(terminator.value, locals_by_id, span)
+            if terminator.target is not None:
+                self._require_block(terminator.target, valid_blocks, span)
+                if terminator.destination is None:
+                    self._issue("MIR0406", "Caught throw requires an error destination", span)
+            if terminator.destination is not None:
+                self._place_type(terminator.destination, locals_by_id, span)
         elif not isinstance(terminator, (ReturnTerminator, UnreachableTerminator)):
             self._issue("MIR0403", "Block requires exactly one known terminator", span)
 
@@ -175,6 +201,21 @@ class MIRVerifier:
             return value.type
         if isinstance(value, UnaryRValue):
             self._operand_type(value.operand, locals_by_id, span)
+            return value.type
+        if isinstance(value, CastRValue):
+            self._operand_type(value.operand, locals_by_id, span)
+            return value.type
+        if isinstance(value, AggregateRValue):
+            for operand in value.operands:
+                self._operand_type(operand, locals_by_id, span)
+            return value.type
+        if isinstance(value, DiscriminantRValue):
+            self._operand_type(value.operand, locals_by_id, span)
+            return value.type
+        if isinstance(value, PayloadRValue):
+            self._operand_type(value.operand, locals_by_id, span)
+            if value.index < 0:
+                self._issue("MIR0503", "Payload index must be non-negative", span)
             return value.type
         self._issue("MIR0500", f"Unknown rvalue {type(value).__name__}", span)
         return None
