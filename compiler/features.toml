@@ -1,0 +1,648 @@
+[metadata]
+schema_version = 1
+language_version = "5.0.1"
+default_backend = "cpp"
+capability_schema_version = 1
+hir_schema_version = 1
+bundle_abi_version = 1
+lockfile_version = 1
+
+[semantic_policies]
+unsupported_feature = "rejected"
+wasm_bounds_violation = "trapped"
+native_memory_access = "unsafe-only"
+host_platform_behavior = "implementation-defined"
+
+[language]
+stable_keywords = [
+  "var", "let", "set", "const", "fn", "struct", "trait", "impl", "type", "enum", "extern",
+  "if", "elif", "else", "for", "in", "loop", "while", "match", "try", "catch", "throw",
+  "yield", "return", "break", "continue", "await", "defer", "guard", "unsafe", "spawn", "async",
+  "use", "import", "from", "as", "test", "assert", "and", "or", "not", "true", "false", "null",
+]
+experimental_keywords = []
+reserved_keywords = []
+types = [
+  "int", "i8", "i16", "i32", "i64", "u8", "u16", "u32", "u64", "float", "f32", "f64",
+  "bool", "string", "char", "uintptr", "void", "any", "Array", "Iterator", "Option", "Result",
+  "Channel", "Task",
+]
+builtins = [
+  "Err", "Ok", "addr", "args", "channel", "contains", "delay_ms", "filter", "fold", "input",
+  "is_number", "len", "map", "memdump", "peek", "print", "to_int", "to_string",
+]
+intrinsics = [
+  "_nyx_base64_decode", "_nyx_base64_decode_result", "_nyx_base64_encode",
+  "_nyx_bootstrap_file_exists", "_nyx_bootstrap_read_file", "_nyx_bootstrap_remove_file",
+  "_nyx_bootstrap_write_file", "_nyx_channel_create", "_nyx_channel_recv", "_nyx_channel_send",
+  "_nyx_destructure_check", "_nyx_fs_append_string", "_nyx_fs_append_string_result", "_nyx_fs_exists",
+  "_nyx_fs_read_to_string", "_nyx_fs_read_to_string_result", "_nyx_fs_remove_file",
+  "_nyx_fs_remove_file_result", "_nyx_fs_write_string", "_nyx_fs_write_string_result",
+  "_nyx_hash_fnv1a_64_hex", "_nyx_json_escape", "_nyx_json_get_bool_full", "_nyx_json_get_int",
+  "_nyx_json_get_int_full", "_nyx_json_get_int_result", "_nyx_json_get_string",
+  "_nyx_json_get_string_full", "_nyx_json_get_string_result", "_nyx_json_has_key", "_nyx_math_abs",
+  "_nyx_math_ceil", "_nyx_math_clamp", "_nyx_math_cos", "_nyx_math_floor", "_nyx_math_pow",
+  "_nyx_math_round", "_nyx_math_sin", "_nyx_math_sqrt", "_nyx_math_tan", "_nyx_mutex_create",
+  "_nyx_mutex_lock", "_nyx_mutex_unlock", "_nyx_net_tcp_close", "_nyx_net_tcp_close_result",
+  "_nyx_net_tcp_connect", "_nyx_net_tcp_connect_result", "_nyx_net_tcp_recv",
+  "_nyx_net_tcp_recv_result", "_nyx_net_tcp_send", "_nyx_net_tcp_send_result", "_nyx_path_basename",
+  "_nyx_path_dirname", "_nyx_path_extname", "_nyx_path_is_abs", "_nyx_path_join",
+  "_nyx_path_normalize", "_nyx_process_exec_cmd_result", "_nyx_process_exit",
+  "_nyx_process_get_env_result", "_nyx_str_ends_with", "_nyx_str_find_result", "_nyx_str_replace",
+  "_nyx_str_starts_with", "_nyx_str_to_lower", "_nyx_str_to_upper", "_nyx_str_trim",
+  "_nyx_time_now_ms", "_nyx_time_now_us", "_nyx_time_sleep_ms", "_nyx_toolchain_compile_cpp",
+  "_nyx_toolchain_last_error", "_nyx_utf8_from_codepoint",
+]
+
+[diagnostics]
+codes = [
+  "E0001", "E1000", "E1001", "E1002", "E1003", "E1004", "E1005", "E1006", "E1010", "E1011",
+  "E1012", "E1013", "E1014", "E1015", "E1016", "E1024", "E1050", "E1300", "E1301", "E1302",
+  "E1400", "E1401", "E1402", "E1410", "E1411", "E1412", "E1413", "E1420", "E2001", "E2002",
+  "E2003", "E2004", "E2005", "E2006", "E2007", "E2010", "E2011", "E2012", "E2013", "E2014",
+  "E2015", "E2024", "E2030", "E2031", "E2032", "E2033", "E2034", "E2035", "E2036", "E2037",
+  "E2038", "E2039", "E2040", "E2041", "E2042", "E2043", "E2044", "E2045", "E2046", "E2047",
+  "E2048", "E2049", "E2050", "E3001", "E9001",
+]
+
+[[pipeline_stages]]
+id = "lexer"
+status = "stable"
+authority = "src/core/lexer.py"
+evidence = ["tests/bootstrap_lexer_test.py", "tests/language_surface_suite.py"]
+
+[[pipeline_stages]]
+id = "parser"
+status = "stable"
+authority = "src/core/parser.py"
+evidence = ["tests/bootstrap_parser_test.py", "tests/bootstrap_parser_corpus_test.py"]
+
+[[pipeline_stages]]
+id = "type_checker"
+status = "stable"
+authority = "src/core/type_checker.py"
+evidence = ["tests/bootstrap_typechecker_test.py", "tests/negative_tests.py"]
+
+[[pipeline_stages]]
+id = "typed_hir"
+status = "stable"
+authority = "src/ir/model.py"
+evidence = ["tests/ir_suite.py"]
+
+[[pipeline_stages]]
+id = "hir_verifier"
+status = "stable"
+authority = "src/ir/verifier.py"
+evidence = ["tests/ir_suite.py"]
+
+[[pipeline_stages]]
+id = "runtime"
+status = "stable"
+authority = "src/runtime"
+evidence = ["tests/numeric_semantics_suite.py", "tests/cpp_e2e_suite.py", "tests/js_e2e_suite.py"]
+
+[[pipeline_stages]]
+id = "backends"
+status = "stable"
+authority = "src/core/backend_capabilities.py"
+evidence = ["tests/capability_suite.py"]
+
+[[pipeline_stages]]
+id = "mir"
+status = "planned"
+authority = "none"
+evidence = ["docs/internals/NYX_DEEP_COMPILER_ARCHITECTURE.md"]
+
+[[effects]]
+id = "control-transfer"
+classification = "defined"
+operations = ["return", "break", "continue", "throw", "yield"]
+
+[[effects]]
+id = "deferred-cleanup"
+classification = "defined"
+operations = ["defer"]
+
+[[effects]]
+id = "suspension-and-concurrency"
+classification = "defined"
+operations = ["async", "await", "spawn", "channel", "delay_ms"]
+
+[[effects]]
+id = "host-io"
+classification = "implementation-defined"
+operations = ["print", "input", "args"]
+
+[[effects]]
+id = "raw-memory"
+classification = "unsafe-only"
+operations = ["unsafe", "addr", "peek", "memdump"]
+
+[feature_stage_profiles.core_language]
+features = [
+  "arrays", "async_tasks", "channels", "collection_combinators", "control_flow", "exceptions", "functions",
+  "iterator_yield", "optionals", "pattern_match", "payload_enums", "result_propagation", "spawn", "strings",
+  "structs", "unicode", "unsafe_memory",
+]
+parser = "implemented"
+checker = "implemented"
+hir = "implemented"
+runtime = "implemented"
+backend = "implemented"
+
+[feature_stage_profiles.runtime_capability]
+features = [
+  "canonical_scalar_text", "encoding", "filesystem", "float64_ieee", "hash", "int64_wrap", "json_lite",
+  "math", "native_ffi", "native_linking", "sockets", "threads", "time",
+]
+parser = "not-applicable"
+checker = "not-applicable"
+hir = "implemented"
+runtime = "implemented"
+backend = "implemented"
+
+[feature_stage_profiles.react_surface]
+features = ["components", "react19", "tsx"]
+parser = "implemented"
+checker = "implemented"
+hir = "not-applicable"
+runtime = "external"
+backend = "implemented"
+
+[feature_stage_profiles.wasm_contract]
+features = [
+  "array_mutation", "host_imports_v1", "numeric", "numeric_array_abi", "string_abi", "string_indexing",
+  "wasi_args", "wasi_environ", "wasi_filesystem", "wasi_preview1", "wasm32", "web_dom",
+]
+parser = "not-applicable"
+checker = "partial"
+hir = "partial"
+runtime = "implemented"
+backend = "implemented"
+
+[feature_stage_profiles.experimental_native]
+features = ["array_iteration", "scalar_arrays", "scalar_c17", "scalar_llvm", "scalar_structs"]
+parser = "implemented"
+checker = "implemented"
+hir = "implemented"
+runtime = "partial"
+backend = "experimental"
+
+[feature_stage_profiles.hir_contract]
+features = ["typed_hir_v1"]
+parser = "not-applicable"
+checker = "implemented"
+hir = "implemented"
+runtime = "not-applicable"
+backend = "implemented"
+
+[inventory]
+type_forms = ["named", "generic", "optional", "pointer", "function"]
+ast_nodes = [
+  "ProgramNode", "TypeNode", "FunctionParam", "EnumMember", "VarDeclNode", "DestructureDeclNode", "AssignNode", "NumberNode",
+  "StringNode", "BooleanNode", "NullNode", "IdentifierNode", "BinaryOpNode", "UnaryOpNode", "AwaitNode",
+  "ResultPropagateNode", "FunctionDefNode", "LambdaNode", "StructDefNode", "TraitDefNode", "ImplBlockNode",
+  "TypeAliasNode", "EnumDefNode", "UnsafeBlockNode", "SpawnNode", "TestBlockNode", "AssertNode",
+  "MatchNode", "MatchExprNode", "TryCatchNode", "MemberAccessNode", "NullCoalesceNode",
+  "ConditionalExprNode", "ArrayNode", "IndexAccessNode", "IfNode", "WhileNode", "ForNode", "ReturnNode",
+  "ThrowNode", "YieldNode", "BreakNode", "ContinueNode", "DeferNode", "GuardNode", "FunctionCallNode",
+  "ImportNode", "NativeIncludeNode", "NativeLinkNode", "NativeRawNode", "NativeUseNode", "ExternFnDeclNode",
+]
+hir_nodes = [
+  "IRLiteral", "IRReference", "IRBinary", "IRUnary", "IRAwait", "IRResultPropagate", "IRCall",
+  "IRMemberAccess", "IRIndexAccess", "IRArray", "IRNullCoalesce", "IRConditional", "IRMatchExpressionCase",
+  "IRMatchExpression", "IRLambda", "IRVarDecl", "IRAssign", "IRExprStatement", "IRReturn", "IRThrow",
+  "IRYield", "IRIf", "IRWhile", "IRFor", "IRBreak", "IRContinue", "IRDefer", "IRGuard", "IRUnsafeBlock",
+  "IRSpawn", "IRAssert", "IRMatchCase", "IRMatch", "IRTryCatch", "IRTestBlock", "IRParameter", "IRFunction",
+  "IRStruct", "IRTrait", "IRImpl", "IRTypeAlias", "IREnumMember", "IREnum", "IRExternFunction",
+  "IRNativeDirective", "IRForeignImport", "IRModule",
+]
+
+[effect_model]
+unknown_calls = "effectful"
+pure_calls_require_explicit_classification = true
+note = "M0 is conservative: calls and host interactions are effectful unless a later effect registry proves purity."
+
+[[backends]]
+name = "cpp"
+display_name = "C++20 Native"
+family = "native"
+artifact = "executable/library"
+maturity = "stable"
+aliases = ["c++", "native", "desktop"]
+features = ["arrays", "async_tasks", "canonical_scalar_text", "channels", "collection_combinators", "control_flow", "exceptions", "filesystem", "float64_ieee", "functions", "int64_wrap", "iterator_yield", "native_ffi", "native_linking", "optionals", "pattern_match", "payload_enums", "result_propagation", "sockets", "spawn", "strings", "structs", "threads", "typed_hir_v1", "unicode", "unsafe_memory"]
+
+[[backends]]
+name = "asm"
+display_name = "x86_64 Assembly"
+family = "native"
+artifact = "assembly"
+maturity = "beta"
+aliases = ["assembly"]
+features = ["arrays", "channels", "control_flow", "filesystem", "functions", "native_ffi", "native_linking", "optionals", "pattern_match", "sockets", "spawn", "strings", "structs", "threads", "unicode", "unsafe_memory"]
+
+[[backends]]
+name = "js"
+display_name = "Node.js ES2022"
+family = "hosted"
+artifact = "javascript"
+maturity = "stable"
+aliases = ["node", "nodejs"]
+features = ["arrays", "async_tasks", "canonical_scalar_text", "channels", "collection_combinators", "control_flow", "encoding", "exceptions", "filesystem", "float64_ieee", "functions", "hash", "int64_wrap", "iterator_yield", "json_lite", "math", "optionals", "pattern_match", "payload_enums", "result_propagation", "spawn", "strings", "structs", "time", "typed_hir_v1", "unicode"]
+
+[[backends]]
+name = "python"
+display_name = "Python 3"
+family = "hosted"
+artifact = "python"
+maturity = "stable"
+aliases = ["py", "python3"]
+features = ["arrays", "async_tasks", "canonical_scalar_text", "channels", "collection_combinators", "control_flow", "encoding", "exceptions", "filesystem", "float64_ieee", "functions", "hash", "int64_wrap", "iterator_yield", "json_lite", "math", "optionals", "pattern_match", "payload_enums", "result_propagation", "spawn", "strings", "structs", "time", "typed_hir_v1", "unicode"]
+
+[[backends]]
+name = "rust"
+display_name = "Rust 2021"
+family = "native"
+artifact = "rust"
+maturity = "beta"
+aliases = ["rs"]
+features = ["arrays", "control_flow", "functions", "optionals", "pattern_match", "result_propagation", "strings", "structs", "typed_hir_v1", "unicode", "unsafe_memory"]
+
+[[backends]]
+name = "react"
+display_name = "React 19 TSX"
+family = "web"
+artifact = "tsx"
+maturity = "beta"
+aliases = ["tsx"]
+features = ["components", "react19", "tsx", "unicode"]
+
+[[backends]]
+name = "wasm"
+display_name = "WebAssembly"
+family = "web"
+artifact = "wat/wasm"
+maturity = "beta"
+aliases = ["wat", "webassembly"]
+features = ["array_mutation", "control_flow", "functions", "host_imports_v1", "numeric", "numeric_array_abi", "string_abi", "string_indexing", "typed_hir_v1", "unicode", "wasi_args", "wasi_environ", "wasi_filesystem", "wasi_preview1", "wasm32", "web_dom"]
+
+[[backends]]
+name = "c"
+display_name = "C17 Native (Scalar Experimental)"
+family = "native"
+artifact = "c"
+maturity = "experimental"
+aliases = ["c17"]
+features = ["canonical_scalar_text", "control_flow", "float64_ieee", "functions", "int64_wrap", "scalar_c17", "typed_hir_v1"]
+
+[[backends]]
+name = "llvm"
+display_name = "LLVM IR (Scalar + Aggregate Experimental)"
+family = "native"
+artifact = "ll"
+maturity = "experimental"
+aliases = ["ll"]
+features = ["array_iteration", "canonical_scalar_text", "control_flow", "float64_ieee", "functions", "int64_wrap", "scalar_arrays", "scalar_llvm", "scalar_structs", "typed_hir_v1"]
+
+[[stdlib]]
+module = "encoding"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "fs"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "hash"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "json_lite"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "json"
+maturity = "deprecated"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "math"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "time"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "path"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "str"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python", "rust"]
+[[stdlib]]
+module = "io"
+maturity = "stable"
+targets = ["asm", "cpp", "python"]
+[[stdlib]]
+module = "env"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "net"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "os"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "platform"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "process"
+maturity = "stable"
+targets = ["asm", "cpp", "js", "python"]
+[[stdlib]]
+module = "system"
+maturity = "experimental"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "terminal"
+maturity = "experimental"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "thread"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "memory"
+maturity = "stable"
+targets = ["asm", "cpp"]
+[[stdlib]]
+module = "web"
+maturity = "experimental"
+targets = ["wasm"]
+
+# A feature is listed once here, then referenced by backend contracts above.
+# `semantics` uses the M0 vocabulary: defined, implementation-defined,
+# rejected, trapped, or unsafe-only. Evidence paths are executable contracts.
+[[features]]
+id = "array_iteration"
+maturity = "experimental"
+semantics = "defined"
+evidence = ["tests/llvm_scalar_suite.py"]
+[[features]]
+id = "array_mutation"
+maturity = "beta"
+semantics = "defined"
+failure = "trapped"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "arrays"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "async_tasks"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "canonical_scalar_text"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/numeric_semantics_suite.py"]
+[[features]]
+id = "channels"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "collection_combinators"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/collection_api_suite.py"]
+[[features]]
+id = "components"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/test_react_target.py"]
+[[features]]
+id = "control_flow"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "encoding"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "exceptions"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "filesystem"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/fallible_stdlib_suite.py"]
+[[features]]
+id = "float64_ieee"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/numeric_semantics_suite.py"]
+[[features]]
+id = "functions"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/ir_suite.py"]
+[[features]]
+id = "hash"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "host_imports_v1"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/web_bundle_suite.py"]
+[[features]]
+id = "int64_wrap"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/numeric_semantics_suite.py"]
+[[features]]
+id = "iterator_yield"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "json_lite"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "math"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "native_ffi"
+maturity = "stable"
+semantics = "unsafe-only"
+evidence = ["tests/ffi_suite.py"]
+[[features]]
+id = "native_linking"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/linking_suite.py"]
+[[features]]
+id = "numeric"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "numeric_array_abi"
+maturity = "beta"
+semantics = "defined"
+failure = "trapped"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "optionals"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/hir_cpp_suite.py"]
+[[features]]
+id = "pattern_match"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "payload_enums"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/payload_enum_suite.py"]
+[[features]]
+id = "react19"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/test_react_target.py"]
+[[features]]
+id = "result_propagation"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/result_propagation_suite.py"]
+[[features]]
+id = "scalar_arrays"
+maturity = "experimental"
+semantics = "defined"
+evidence = ["tests/llvm_scalar_suite.py"]
+[[features]]
+id = "scalar_c17"
+maturity = "experimental"
+semantics = "defined"
+evidence = ["tests/c17_scalar_suite.py"]
+[[features]]
+id = "scalar_llvm"
+maturity = "experimental"
+semantics = "defined"
+evidence = ["tests/llvm_scalar_suite.py"]
+[[features]]
+id = "scalar_structs"
+maturity = "experimental"
+semantics = "defined"
+evidence = ["tests/llvm_scalar_suite.py"]
+[[features]]
+id = "sockets"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/fallible_stdlib_suite.py"]
+[[features]]
+id = "spawn"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "string_abi"
+maturity = "beta"
+semantics = "defined"
+failure = "trapped"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "string_indexing"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "strings"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "structs"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/ir_suite.py"]
+[[features]]
+id = "threads"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/platform_suite.py"]
+[[features]]
+id = "time"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/capability_suite.py"]
+[[features]]
+id = "tsx"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/test_react_target.py"]
+[[features]]
+id = "typed_hir_v1"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/ir_suite.py"]
+[[features]]
+id = "unicode"
+maturity = "stable"
+semantics = "defined"
+evidence = ["tests/language_surface_suite.py"]
+[[features]]
+id = "unsafe_memory"
+maturity = "stable"
+semantics = "unsafe-only"
+evidence = ["tests/cpp_e2e_suite.py"]
+[[features]]
+id = "wasi_args"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "wasi_environ"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "wasi_filesystem"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "wasi_preview1"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "wasm32"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/bundle_suite.py"]
+[[features]]
+id = "web_dom"
+maturity = "beta"
+semantics = "defined"
+evidence = ["tests/web_bundle_suite.py"]

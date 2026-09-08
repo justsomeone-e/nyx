@@ -161,6 +161,7 @@ from tests.version_contract_suite import run_version_contract_suite
 from tests.toolchain_cli_suite import run_toolchain_cli_suite
 from tests.package_manager_suite import run_package_manager_suite
 from tests.llvm_scalar_suite import run_llvm_scalar_suite
+from tests.feature_manifest_suite import run_feature_manifest_suite
 
 def main():
     print("=" * 70)
@@ -237,6 +238,9 @@ def main():
 
     print()
     llvm_scalar_ok = run_llvm_scalar_suite()
+
+    print()
+    feature_manifest_ok = run_feature_manifest_suite()
 
     print()
     language_surface_ok = run_language_surface_suite()
@@ -319,7 +323,7 @@ def main():
     print("\n[*] Executing 138-Point Exhaustive Regression Battery...")
     battery_ok = run_battery138()
     
-    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and web_bundle_ok and self_host_ok and capability_ok and foreign_import_ok and payload_enum_ok and result_propagation_ok and collection_api_ok and fallible_stdlib_ok and default_arguments_ok and destructuring_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and c17_scalar_ok and pkg_mgr_ok and llvm_scalar_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
+    all_passed = (cli_ok and toolchain_cli_ok and bundle_ok and web_bundle_ok and self_host_ok and capability_ok and foreign_import_ok and payload_enum_ok and result_propagation_ok and collection_api_ok and fallible_stdlib_ok and default_arguments_ok and destructuring_ok and compiler_api_ok and ir_ok and hir_python_ok and hir_javascript_ok and hir_cpp_ok and hir_rust_ok and c17_scalar_ok and pkg_mgr_ok and llvm_scalar_ok and feature_manifest_ok and language_surface_ok and numeric_semantics_ok and maya_surface_ok and release_packaging_ok and version_contract_ok and installer_ok and mod_ok and lsp_ok and smoke_ok and neg_ok and fuzz_ok and
                   diff_ok and js_ok and rs_ok and e2e_ok and ffi_ok and
                   natlib_ok and man_ok and link_ok and plat_ok and sdk_ok and interop_ok and boot_lex_ok and boot_parse_ok and boot_corpus_ok and boot_tc_ok and battery_ok)
     print("=" * 70)
