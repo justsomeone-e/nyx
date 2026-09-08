@@ -63,6 +63,10 @@ codes = [
   "E2015", "E2024", "E2030", "E2031", "E2032", "E2033", "E2034", "E2035", "E2036", "E2037",
   "E2038", "E2039", "E2040", "E2041", "E2042", "E2043", "E2044", "E2045", "E2046", "E2047",
   "E2048", "E2049", "E2050", "E3001", "E9001",
+  "MIR0000", "MIR0001", "MIR0002", "MIR0100", "MIR0101", "MIR0102", "MIR0103", "MIR0104",
+  "MIR0105", "MIR0106", "MIR0200", "MIR0201", "MIR0300", "MIR0301", "MIR0400", "MIR0401",
+  "MIR0402", "MIR0403", "MIR0500", "MIR0501", "MIR0502", "MIR0600", "MIR0601", "MIR0602",
+  "MIR0700", "MIR0701", "MIRL0001", "MIRV0001",
 ]
 
 [[pipeline_stages]]
@@ -109,9 +113,9 @@ evidence = ["tests/capability_suite.py"]
 
 [[pipeline_stages]]
 id = "mir"
-status = "planned"
-authority = "none"
-evidence = ["docs/internals/NYX_DEEP_COMPILER_ARCHITECTURE.md"]
+status = "experimental"
+authority = "src/mir/model.py"
+evidence = ["tests/mir_suite.py"]
 
 [[effects]]
 id = "control-transfer"

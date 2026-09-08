@@ -118,6 +118,7 @@ tests/**/*.py
 !tests/package_manager_suite.py
 !tests/llvm_scalar_suite.py
 !tests/feature_manifest_suite.py
+!tests/mir_suite.py
 tests/**/*.rs
 tests/**/*.wat
 tests/**/*.bin

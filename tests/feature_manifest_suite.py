@@ -66,7 +66,12 @@ def run_feature_manifest_suite() -> bool:
     for directory, patterns in ((ROOT / "src", ("*.py",)), (ROOT / "compiler", ("*.nyx",))):
         for pattern in patterns:
             for source_path in directory.rglob(pattern):
-                diagnostic_codes.update(re.findall(r"\bE\d{4}\b", source_path.read_text(encoding="utf-8")))
+                diagnostic_codes.update(
+                    re.findall(
+                        r"\b(?:E\d{4}|MIR[A-Z]?\d{4})\b",
+                        source_path.read_text(encoding="utf-8"),
+                    )
+                )
     assert set(manifest["diagnostics"]["codes"]) == diagnostic_codes
 
     ast_class_names = _defined_classes(ast_nodes, "", {"ASTNode"})

@@ -12,7 +12,7 @@
 - 44 stable keywords
 - 52 AST node kinds
 - 47 Typed HIR node kinds
-- 65 diagnostic codes
+- 93 diagnostic codes
 - 18 builtins and 73 intrinsics
 
 ## Backends
@@ -40,7 +40,7 @@
 | `hir_verifier` | stable | `src/ir/verifier.py` | `tests/ir_suite.py` |
 | `runtime` | stable | `src/runtime` | `tests/numeric_semantics_suite.py`<br>`tests/cpp_e2e_suite.py`<br>`tests/js_e2e_suite.py` |
 | `backends` | stable | `src/core/backend_capabilities.py` | `tests/capability_suite.py` |
-| `mir` | planned | `none` | `docs/internals/NYX_DEEP_COMPILER_ARCHITECTURE.md` |
+| `mir` | experimental | `src/mir/model.py` | `tests/mir_suite.py` |
 
 ## Feature contracts
 

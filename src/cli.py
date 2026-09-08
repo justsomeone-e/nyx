@@ -49,6 +49,8 @@ Project & Development Commands:
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
   nyx targets [--json]               Inspect backend and stdlib capability contracts
+  nyx emit mir <file.nyx> [--json]   Emit experimental M1 MIR (empty function bodies only)
+  nyx verify mir <file.mir.json>     Verify serialized experimental MIR
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
   nyx test [file.nyx | all]          Execute in-file unit tests or test framework
@@ -1049,6 +1051,85 @@ def cmd_targets(as_json: bool = False) -> int:
     return 0
 
 
+def _mir_argument_path(arguments: list[str], suffix: str) -> Optional[str]:
+    for argument in arguments[1:]:
+        if not argument.startswith("-") and argument.lower().endswith(suffix):
+            return argument
+    return None
+
+
+def _mir_output_path(arguments: list[str]) -> Optional[str]:
+    for index, argument in enumerate(arguments):
+        if argument in ("-o", "--output") and index + 1 < len(arguments):
+            return arguments[index + 1]
+        if argument.startswith("--output="):
+            return argument.split("=", 1)[1]
+    return None
+
+
+def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
+    if not arguments or arguments[0].lower() != "mir":
+        print("Usage: nyx emit mir <file.nyx> [--json] [-o output]")
+        return 1
+    source_path = _mir_argument_path(arguments, ".nyx")
+    if not source_path or not os.path.isfile(source_path):
+        print(f"[!] MIR source file not found: {source_path or '<missing>'}")
+        return 1
+
+    from src.api import NyxCompiler
+    from src.mir import MIRLoweringError, lower_hir_skeleton, print_mir, to_json
+
+    target = get_target_from_args(default_target, entry_file=source_path, arguments=arguments[1:])
+    result = NyxCompiler(os.path.dirname(os.path.abspath(source_path))).check_file(
+        source_path,
+        target=target,
+    )
+    if not result.success or result.hir is None:
+        for diagnostic in result.diagnostics:
+            print(diagnostic.rendered)
+        return 1
+    try:
+        mir = lower_hir_skeleton(result.hir)
+    except MIRLoweringError as error:
+        print(f"error[MIRL0001]: {error.message}")
+        print(f"  --> {error.span.source}:{error.span.line}:{error.span.column}")
+        return 1
+
+    content = to_json(mir, indent=2) + "\n" if "--json" in arguments else print_mir(mir)
+    output_path = _mir_output_path(arguments)
+    if output_path:
+        output = os.path.abspath(output_path)
+        os.makedirs(os.path.dirname(output), exist_ok=True)
+        with open(output, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(content)
+        print(f"[OK] Experimental MIR written: {output}")
+    else:
+        print(content, end="")
+    return 0
+
+
+def cmd_verify_mir(arguments: list[str]) -> int:
+    if not arguments or arguments[0].lower() != "mir":
+        print("Usage: nyx verify mir <file.mir.json>")
+        return 1
+    input_path = _mir_argument_path(arguments, ".json")
+    if not input_path or not os.path.isfile(input_path):
+        print(f"[!] Serialized MIR file not found: {input_path or '<missing>'}")
+        return 1
+
+    from src.mir import MIRVerificationError, from_json, verify_mir
+
+    try:
+        with open(input_path, "r", encoding="utf-8") as handle:
+            module = from_json(handle.read())
+        verify_mir(module)
+    except (OSError, ValueError, MIRVerificationError) as error:
+        print(f"error[MIRV0001]: Invalid experimental MIR: {error}")
+        return 1
+    print(f"[OK] Experimental MIR verified: {os.path.abspath(input_path)}")
+    return 0
+
+
 def cmd_repl():
     print_banner()
     print("\033[92m[*] Nyx Interactive Polyglot REPL (v3.0.0)\033[0m")
@@ -1240,6 +1321,10 @@ def main():
         cmd_doctor()
     elif cmd == "targets":
         sys.exit(cmd_targets("--json" in sys.argv))
+    elif cmd == "emit":
+        sys.exit(cmd_emit_mir(sys.argv[2:], config.get("target", "cpp")))
+    elif cmd == "verify":
+        sys.exit(cmd_verify_mir(sys.argv[2:]))
     elif cmd == "repl":
         cmd_repl()
     elif cmd == "tutorial":

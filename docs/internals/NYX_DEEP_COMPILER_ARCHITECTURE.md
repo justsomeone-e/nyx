@@ -1594,6 +1594,13 @@ No MIR implementation has changed default compiler output.
 
 ### M1: MIR skeleton and tooling
 
+Implementation status (2026-09-09): complete for the M1 boundary. The
+experimental implementation lives in `src/mir/`; `tests/mir_suite.py` covers
+construction, malformed CFG rejection, canonical round-tripping, printing,
+fingerprints, pass validation, and CLI subprocess behavior. `nyx emit mir`
+deliberately accepts only empty function bodies; executable lowering remains an
+M2 task and the default HIR-to-backend route is unchanged.
+
 Purpose: create the representation without migrating production codegen.
 
 Work:
