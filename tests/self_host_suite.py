@@ -12,6 +12,72 @@ if ROOT_DIR not in sys.path:
 from src.codegen.cpp_toolchain import CppToolchain
 
 
+def _run_reported_example_regressions(native_compiler: str, temp_dir: str) -> None:
+    """Exercise the Windows failures reported in GitHub issue #6."""
+    environment = os.environ.copy()
+    environment["NYX_NO_PAUSE"] = "1"
+    suffix = ".exe" if os.name == "nt" else ""
+    cases = (
+        (
+            "07_foreign_cpp.nyx",
+            "foreign",
+            ("C++ filesystem current path:", "Current directory name:"),
+        ),
+        (
+            "03_null_safety.nyx",
+            "null_safety",
+            (
+                "User Profile: Anonymous Guest",
+                "Access Level: Guest",
+                "Verified User: Alice",
+                "Verified Role: Engineer",
+            ),
+        ),
+        (
+            "04_in_file_tests.nyx",
+            "in_file_tests",
+            (
+                '[PASS] add(10, 20) == 30',
+                '[PASS] concat_str("Holy", "Easy") == "Holy Easy"',
+                "[PASS] numbers[1] == 200",
+            ),
+        ),
+    )
+
+    for example_name, output_name, expected_lines in cases:
+        source_path = os.path.join(ROOT_DIR, "examples", example_name)
+        executable_path = os.path.join(temp_dir, output_name + suffix)
+        compiled = subprocess.run(
+            [native_compiler, "compile", source_path, "-o", executable_path],
+            cwd=ROOT_DIR,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=120,
+        )
+        compiler_output = compiled.stdout + compiled.stderr
+        assert compiled.returncode == 0, compiler_output
+        assert "NYX_BUILD_OK" in compiler_output, compiler_output
+        assert "warning:" not in compiler_output.lower(), compiler_output
+
+        executed = subprocess.run(
+            [executable_path],
+            cwd=ROOT_DIR,
+            env=environment,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+        runtime_output = executed.stdout + executed.stderr
+        assert executed.returncode == 0, runtime_output
+        for expected in expected_lines:
+            assert expected in runtime_output, (example_name, expected, runtime_output)
+
+
 def run_self_host_suite() -> bool:
     print("=" * 70)
     print("NYX NATIVE STAGE-1 -> STAGE-2 SELF-HOST CONFORMANCE")
@@ -28,6 +94,21 @@ def run_self_host_suite() -> bool:
     assert verify.returncode == 0, verify.stderr or verify.stdout
 
     with tempfile.TemporaryDirectory(prefix="nyx_self_host_suite_") as temp_dir:
+        native_compiler = os.path.join(
+            temp_dir, "nyxc.exe" if os.name == "nt" else "nyxc"
+        )
+        native_build = subprocess.run(
+            [sys.executable, CLI_PATH, "self-host", "build", "-o", native_compiler],
+            cwd=ROOT_DIR,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=300,
+        )
+        assert native_build.returncode == 0, native_build.stderr or native_build.stdout
+        _run_reported_example_regressions(native_compiler, temp_dir)
+
         source_path = os.path.join(temp_dir, "sample.nyx")
         output_path = os.path.join(temp_dir, "sample.cpp")
         with open(source_path, "w", encoding="utf-8") as source:
@@ -85,7 +166,10 @@ def run_self_host_suite() -> bool:
             "84\n-9223372036854775808\n42\ncaught: async boom\n3.5\nmetric failed"
         )
 
-    print("[PASS] Nyx-authored frontend, native stage-2 bootstrap, and output reproducibility verified")
+    print(
+        "[PASS] Nyx-authored frontend, native stage-2 bootstrap, reported examples, "
+        "and output reproducibility verified"
+    )
     return True
 
 

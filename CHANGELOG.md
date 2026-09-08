@@ -4,6 +4,20 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [5.0.1] - 2026-09-08 (Daydream)
+
+### Fixed
+
+* Register foreign-import aliases in the Nyx-authored type checker before
+  checking function bodies, so native `nyxc` accepts C++ namespace imports.
+* Emit `std::nullopt` when a Nyx `null` initializes, assigns, or returns an
+  optional value in the self-hosted C++ backend.
+* Suppress MSVC's legacy `getenv` deprecation diagnostics in generated C++ and
+  prefer `npm.cmd`/`npm.exe` when PowerShell execution policy blocks `npm.ps1`.
+* Correct the intentionally failing string assertion in the in-file test
+  example and document the distinction between release `nyxc.exe` and the
+  installer-created `nyx.cmd` wrapper.
+
 ## [5.0.0] - 2026-09-07 (Daydream)
 
 Nyx v5.0.0 promotes the Daydream language and toolchain line to stable while

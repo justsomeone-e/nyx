@@ -6,8 +6,11 @@ This guide walks you through installing and configuring Nyx across Windows, Linu
 
 ## 1. Prerequisites
 
-Nyx core requires **Python 3.10+**. 
-To compile native executables (`cpp`), a modern C++20 compiler (`clang++` or `g++`) is recommended.
+The release binary `nyxc` performs native `check`, `emit-cpp`, `compile`, and
+target discovery without Python. The unified `nyx` command uses Python 3.10+
+for orchestration features such as the REPL, formatter, package manager, and
+language server. To compile native executables (`cpp`), install a modern C++20
+compiler (`clang++`, `g++`, or MSVC `cl`).
 
 | Platform | Recommended Toolchain | Quick Install Command |
 | :--- | :--- | :--- |
@@ -25,7 +28,14 @@ Run in an elevated or standard PowerShell terminal:
 ```powershell
 irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
 ```
-This clones/downloads the toolchain to `~/.nyx` and appends `~/.nyx/bin` to your User `PATH`.
+This downloads the toolchain to `~/.nyx` and appends `~/.nyx/bin` to your User
+`PATH`. GitHub Releases provide the standalone compiler as `nyxc.exe`; the
+installer creates `nyx.cmd` as the unified Windows command. A separate
+`nyx.exe` release asset is therefore not expected.
+
+The VS Code extension is optional. If PowerShell blocks an `npm.ps1` shim, the
+installer prefers `npm.cmd`/`npm.exe`; an editor-install failure no longer
+prevents the core compiler from being installed.
 
 ### Linux / macOS (Bash)
 ```bash

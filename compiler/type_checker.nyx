@@ -543,6 +543,20 @@ impl TypeChecker {
             return
         }
 
+        if node.kind == "Import" {
+            if node.name != "" {
+                var mod_type = "any"
+                if node.op != "" {
+                    mod_type = "foreign-module::" + node.op + "::" + node.value
+                }
+                self.register_symbol(node.name, mod_type)
+            }
+            for i in 0..len(node.generic_args)-1 {
+                self.register_symbol(node.generic_args[i], "any")
+            }
+            return
+        }
+
         if node.kind == "StructDef" {
             for i in 0..len(node.params)-1 {
                 self.register_struct_field(node.name, node.params[i].name, node.params[i].type_annot)
@@ -710,8 +724,18 @@ impl TypeChecker {
         self.register_symbol("peek", "int")
         self.register_symbol("args", "Array<string>")
 
+        // Foreign aliases are declarations: make them visible while function
+        // bodies are checked regardless of where the import appears.
         for i in 0..len(ast.children)-1 {
-            self.check_statement(ast.children[i])
+            if ast.children[i].kind == "Import" {
+                self.check_statement(ast.children[i])
+            }
+        }
+
+        for i in 0..len(ast.children)-1 {
+            if ast.children[i].kind != "Import" {
+                self.check_statement(ast.children[i])
+            }
         }
         return not self.has_error
     }

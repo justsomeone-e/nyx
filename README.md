@@ -2,7 +2,7 @@
 
 <p align="left">
   <a href="https://justsomeone-e.github.io/nyx/"><img src="https://img.shields.io/badge/interactive%20tour-try%20in%20browser-00F0FF?style=for-the-badge&amp;logoColor=05070A&amp;labelColor=0E1318" alt="Try Tour of Nyx Online"></a>
-  <a href="VERSION"><img src="https://img.shields.io/badge/version-5.0.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
+  <a href="VERSION"><img src="https://img.shields.io/badge/version-5.0.1-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Version"></a>
   <a href="https://github.com/justsomeone-e/nyx/releases"><img src="https://img.shields.io/badge/status-stable-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Stable Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-0E1318?style=for-the-badge&amp;logoColor=00F0FF&amp;labelColor=05070A" alt="Apache 2.0 License"></a>
   <a href="#backends"><img src="https://img.shields.io/badge/platforms-linux%20%7C%20win%20%7C%20macos-0E1318?style=for-the-badge&amp;labelColor=05070A" alt="Platforms"></a>
@@ -31,10 +31,10 @@ underneath it.**
 A single compiler model lowers to native C++20, WebAssembly (WASM ABI v1), Node.js, and Python through an authoritative typed intermediate representation (**Typed HIR v1**) with byte-identical native self-hosting.
 
 > [!IMPORTANT]
-> **Nyx `v5.0.0` "Daydream"** is the stable v5 language and toolchain release. It adds an experimental direct LLVM IR path for scalar programs, scalar-field structs, and stack-owned scalar arrays, connected to the canonical compiler API plus `nyx build` and `nyx run`. C++20, JavaScript, and Python remain the stable backends; LLVM and C17 remain explicitly experimental.
+> **Nyx `v5.0.1` "Daydream"** is the stable v5 language and toolchain release. This patch fixes Windows installer and native self-host regressions without changing the v5 language, Typed HIR v1, or backend maturity contracts. C++20, JavaScript, and Python remain the stable backends; LLVM and C17 remain explicitly experimental.
 
 <div align="center">
-  <img src="assets/terminal_animated.svg?v=5.0.0" width="92%" alt="nyx interactive live execution"/>
+  <img src="assets/terminal_animated.svg?v=5.0.1" width="92%" alt="nyx interactive live execution"/>
 </div>
 
 <p align="left">
@@ -396,7 +396,10 @@ error[E1302]: ambiguous symbol collision
 
 ## `08` — Installation
 
-Standalone native installers are provided for Windows, Linux, and macOS. Releases bundle the precompiled native `nyxc` compiler.
+Standalone native installers are provided for Windows, Linux, and macOS.
+Releases bundle the precompiled `nyxc` compiler (`nyxc.exe` on Windows). The
+documented `nyx` command is an installer-created wrapper (`nyx.cmd` on Windows),
+not a separate `nyx.exe` release asset.
 
 ### Windows (PowerShell)
 
@@ -408,7 +411,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 *Or install directly via the release script:*
 
 ```powershell
-$env:NYX_RELEASE_TAG = 'v4.0.0'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.ps1 | iex
+$env:NYX_RELEASE_TAG = 'v5.0.1'; irm https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.ps1 | iex
 ```
 
 ### Linux & macOS (Bash)
@@ -421,7 +424,7 @@ chmod +x install.sh
 *Or install directly via curl:*
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/v4.0.0/install.sh | NYX_RELEASE_TAG=v4.0.0 bash
+curl -fsSL https://raw.githubusercontent.com/justsomeone-e/nyx/main/install.sh | NYX_RELEASE_TAG=v5.0.1 bash
 ```
 
 ### Toolchain Dependencies
@@ -523,6 +526,7 @@ The Nyx release lifecycle is bound to verifiable technical milestones rather tha
 | `v4.0.0` | **Nirvana** | *Stability* | Stable v4 language, toolchain, and ABI contract | Official Release |
 | `v4.5.0` | **Ivory** | *Purity / Bridge* | Compatible tooling, library parity, package manager, and experimental C17/LLVM IR emitters | Release |
 | `v5.0.0` | **Daydream** | *The next form imagined* | Direct LLVM pipeline, aggregate lowering, CLI integration, and preserved stable backend contracts | Official Release |
+| `v5.0.1` | **Daydream** | *Reliability patch* | Windows installer resilience, native foreign imports, optional-null lowering, and corrected examples | Official Patch |
 | `v6.0.0` | **Sepia** | *Memory / Preservation* | Future compiler milestone | Planned |
 | `v7.0.0` | **Solace** | *Calm after complexity* | Future ecosystem milestone | Planned |
 | `v8.0.0` | **Last Signal** | *The final transmission* | Long-term language-platform milestone | Long-term |

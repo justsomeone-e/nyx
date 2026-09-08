@@ -232,6 +232,9 @@ def run_installer_suite() -> bool:
     assert "$nativeCommands" in windows_source
     assert '"nyx_commands.js"' in windows_source
     assert 'vscode-extension\\*' not in windows_source
+    assert 'Get-Command "npm.cmd", "npm.exe"' in windows_source
+    assert 'cmd.exe /c npm ci --omit=dev --ignore-scripts' in windows_source
+    assert "VS Code extension installation skipped" in windows_source
 
     with open(RELEASE_WORKFLOW, "r", encoding="utf-8") as handle:
         release_source = handle.read()

@@ -2,7 +2,7 @@
 $ErrorActionPreference = "Stop"
 
 Write-Host "===================================================================" -ForegroundColor Cyan
-Write-Host "Installing nyx native toolchain (v4 development channel)..." -ForegroundColor Cyan
+Write-Host "Installing Nyx native toolchain..." -ForegroundColor Cyan
 Write-Host "===================================================================" -ForegroundColor Cyan
 
 $InstallDir = if ($env:NYX_INSTALL_DIR) {
@@ -333,18 +333,31 @@ exit 2
 
     $VsCodeExtDir = Join-Path $HOME ".vscode\extensions\nyx-lang-support"
     if ($env:NYX_SKIP_EDITOR_INSTALL -ne "1" -and (Test-Path -LiteralPath $ExtensionDir -PathType Container)) {
-        $NpmCommand = Get-Command npm -ErrorAction SilentlyContinue
-        if ($NpmCommand) {
+        # Prefer npm.cmd or npm.exe over npm.ps1 to avoid PowerShell script execution policy restrictions
+        $NpmCandidate = Get-Command "npm.cmd", "npm.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $NpmCandidate) {
+            $NpmCandidate = Get-Command "npm" -ErrorAction SilentlyContinue
+        }
+        if ($NpmCandidate) {
             Push-Location $ExtensionDir
             try {
-                & $NpmCommand.Source ci --omit=dev --ignore-scripts | Out-Null
-                if ($LASTEXITCODE -ne 0) { throw "npm ci failed for the VS Code language client." }
+                if ($NpmCandidate.Source.EndsWith(".ps1", [System.StringComparison]::OrdinalIgnoreCase)) {
+                    cmd.exe /c npm ci --omit=dev --ignore-scripts | Out-Null
+                } else {
+                    & $NpmCandidate.Source ci --omit=dev --ignore-scripts | Out-Null
+                }
+                if ($LASTEXITCODE -eq 0) {
+                    New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
+                    Copy-Item -Path (Join-Path $ExtensionDir "*") -Destination $VsCodeExtDir -Recurse -Force
+                    Write-Host "[OK] Synced nyx VS Code extension to $VsCodeExtDir" -ForegroundColor Green
+                } else {
+                    Write-Host "[!] npm ci failed; VS Code extension installation skipped." -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Host "[!] VS Code extension installation skipped ($($_.Exception.Message))." -ForegroundColor Yellow
             } finally {
                 Pop-Location
             }
-            New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null
-            Copy-Item -Path (Join-Path $ExtensionDir "*") -Destination $VsCodeExtDir -Recurse -Force
-            Write-Host "[OK] Synced nyx VS Code extension to $VsCodeExtDir" -ForegroundColor Green
         } else {
             Write-Host "[!] npm not found; VS Code extension installation skipped." -ForegroundColor Yellow
         }
