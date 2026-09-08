@@ -233,8 +233,13 @@ def run_installer_suite() -> bool:
     assert '"nyx_commands.js"' in windows_source
     assert 'vscode-extension\\*' not in windows_source
     assert 'Get-Command "npm.cmd", "npm.exe"' in windows_source
+    assert "$NpmCandidate.Path, $NpmCandidate.Source, $NpmCandidate.Definition" in windows_source
+    assert "$NpmCandidate.Source.EndsWith" not in windows_source
     assert 'cmd.exe /c npm ci --omit=dev --ignore-scripts' in windows_source
     assert "VS Code extension installation skipped" in windows_source
+    assert "[string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture" in windows_source
+    assert '[string]$env:PROCESSOR_ARCHITECTURE' in windows_source
+    assert '$_ -in @("x64", "amd64")' in windows_source
 
     with open(RELEASE_WORKFLOW, "r", encoding="utf-8") as handle:
         release_source = handle.read()

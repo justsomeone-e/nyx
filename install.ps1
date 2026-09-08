@@ -164,9 +164,13 @@ try {
     }
 
     if (-not $NativeInstalled -and $Release) {
-        $architecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+        $runtimeArchitecture = [string][System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture
+        if (-not $runtimeArchitecture) {
+            $runtimeArchitecture = [string]$env:PROCESSOR_ARCHITECTURE
+        }
+        $architecture = $runtimeArchitecture.ToLowerInvariant()
         $assetArchitecture = switch ($architecture) {
-            "x64" { "x86_64" }
+            { $_ -in @("x64", "amd64") } { "x86_64"; break }
             "arm64" { "arm64" }
             default { $null }
         }
@@ -338,13 +342,20 @@ exit 2
         if (-not $NpmCandidate) {
             $NpmCandidate = Get-Command "npm" -ErrorAction SilentlyContinue
         }
-        if ($NpmCandidate) {
+        $NpmPath = if ($NpmCandidate) {
+            @($NpmCandidate.Path, $NpmCandidate.Source, $NpmCandidate.Definition) |
+                Where-Object { $_ -and (Test-Path -LiteralPath $_ -PathType Leaf) } |
+                Select-Object -First 1
+        } else {
+            $null
+        }
+        if ($NpmPath) {
             Push-Location $ExtensionDir
             try {
-                if ($NpmCandidate.Source.EndsWith(".ps1", [System.StringComparison]::OrdinalIgnoreCase)) {
+                if ([System.IO.Path]::GetExtension($NpmPath) -ieq ".ps1") {
                     cmd.exe /c npm ci --omit=dev --ignore-scripts | Out-Null
                 } else {
-                    & $NpmCandidate.Source ci --omit=dev --ignore-scripts | Out-Null
+                    & $NpmPath ci --omit=dev --ignore-scripts | Out-Null
                 }
                 if ($LASTEXITCODE -eq 0) {
                     New-Item -ItemType Directory -Path $VsCodeExtDir -Force | Out-Null

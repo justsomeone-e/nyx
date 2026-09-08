@@ -4,6 +4,13 @@ All notable changes to the Nyx compiler, toolchain, and standard library are doc
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+* Make Windows architecture detection and npm executable discovery null-safe
+  for Windows PowerShell environments where command/runtime metadata is absent.
+
 ## [5.0.1] - 2026-09-08 (Daydream)
 
 ### Fixed
