@@ -2,7 +2,8 @@
 
 Legalization is a hard gate: a backend may only receive operations explicitly
 listed by its profile. M5 currently migrates C++ and LLVM plus deliberately
-bounded WebAssembly and Rust pilots; later targets remain profile-only.
+bounded WebAssembly, Rust, and JavaScript pilots; later targets remain
+profile-only.
 """
 
 from __future__ import annotations
@@ -175,7 +176,7 @@ MIR_BACKEND_PROFILES = {
         threads=False, ownership="rust-values", abi="rust-2021",
     ),
     "js": _profile(
-        "js", 5, status="profile-only", integer_width=64, exceptions=True,
+        "js", 5, status="pilot", integer_width=64, exceptions=True,
         threads=False, ownership="garbage-collected", abi="node-es2022",
     ),
     "python": _profile(
@@ -232,6 +233,15 @@ MIR_BACKEND_PROFILES["wasm"] = replace(
 # aggregates, explicit cleanup, and target runtime bindings out of the pilot.
 MIR_BACKEND_PROFILES["rust"] = replace(
     MIR_BACKEND_PROFILES["rust"],
+    legal_rvalues=frozenset({
+        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+    }),
+)
+
+# JavaScript uses BigInt for the Nyx i64 contract. Casts and heap/aggregate
+# values remain excluded until their host representation is versioned.
+MIR_BACKEND_PROFILES["js"] = replace(
+    MIR_BACKEND_PROFILES["js"],
     legal_rvalues=frozenset({
         BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
     }),

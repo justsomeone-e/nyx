@@ -38,6 +38,7 @@ from src.mir import (
     UseRValue,
     collect_legalization_issues,
     emit_legalized_cpp,
+    emit_legalized_javascript,
     emit_legalized_llvm,
     emit_legalized_rust,
     emit_legalized_wasm,
@@ -135,6 +136,20 @@ def _compile_and_run_rust(source: str) -> str:
         return executed.stdout.replace("\r\n", "\n")
 
 
+def _run_javascript(source: str) -> str:
+    node = shutil.which("node")
+    assert node is not None, "Node.js is required by the JavaScript MIR runtime gate"
+    with tempfile.TemporaryDirectory(prefix="nyx_mir_js_") as temporary:
+        source_path = Path(temporary) / "program.mjs"
+        source_path.write_text(source, encoding="utf-8", newline="\n")
+        executed = subprocess.run(
+            [node, str(source_path)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30,
+        )
+        assert executed.returncode == 0, executed.stdout + executed.stderr + "\n" + source
+        return executed.stdout.replace("\r\n", "\n")
+
+
 def _run_wasm_export(
     wasm: bytes,
     function: str,
@@ -216,11 +231,11 @@ def run_mir_legalization_suite() -> bool:
     assert tuple(profile["target"] for profile in manifest["profiles"]) == MIR_BACKEND_MIGRATION_ORDER
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "pilot"
-        for target in ("cpp", "llvm", "wasm", "rust")
+        for target in ("cpp", "llvm", "wasm", "rust", "js")
     )
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "profile-only"
-        for target in MIR_BACKEND_MIGRATION_ORDER[4:]
+        for target in MIR_BACKEND_MIGRATION_ORDER[5:]
     )
 
     scalar = _lower(SCALAR_FIXTURE)
@@ -252,6 +267,7 @@ def run_mir_legalization_suite() -> bool:
     assert _compile_and_run_cpp(emit_legalized_cpp(numeric)) == expected_numeric
     assert _compile_and_run_llvm(emit_legalized_llvm(numeric)) == expected_numeric
     assert _compile_and_run_rust(emit_legalized_rust(numeric)) == expected_numeric
+    assert _run_javascript(emit_legalized_javascript(numeric)) == expected_numeric
 
     unknown = collect_legalization_issues(scalar, "moonvm")
     assert {issue.code for issue in unknown} == {"MIRG1000"}, unknown
@@ -259,7 +275,7 @@ def run_mir_legalization_suite() -> bool:
     unprofiled = collect_legalization_issues(scalar, "asm")
     assert {issue.code for issue in unprofiled} == {"MIRG1001"}, unprofiled
 
-    pending = collect_legalization_issues(scalar, "js", require_emitter=True)
+    pending = collect_legalization_issues(scalar, "python", require_emitter=True)
     assert {issue.code for issue in pending} == {"MIRG1009"}, pending
 
     wasm = _lower_source(
@@ -309,6 +325,8 @@ def run_mir_legalization_suite() -> bool:
 
     assert not collect_legalization_issues(scalar, "rust", require_emitter=True)
     assert _compile_and_run_rust(emit_legalized_rust(scalar)) == "13\n"
+    assert not collect_legalization_issues(scalar, "js", require_emitter=True)
+    assert _run_javascript(emit_legalized_javascript(scalar)) == "13\n"
 
     ownership = _ownership_module()
     assert not collect_legalization_issues(ownership, "cpp", require_emitter=True)
@@ -333,7 +351,7 @@ def run_mir_legalization_suite() -> bool:
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "executable Wasm/Rust CFG pilots, and legacy C++ oracle"
+        "executable Wasm/Rust/JavaScript CFG pilots, and legacy C++ oracle"
     )
     return True
 
