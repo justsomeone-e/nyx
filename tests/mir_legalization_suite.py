@@ -40,6 +40,7 @@ from src.mir import (
     emit_legalized_cpp,
     emit_legalized_javascript,
     emit_legalized_llvm,
+    emit_legalized_python,
     emit_legalized_rust,
     emit_legalized_wasm,
     emit_legalized_wat,
@@ -150,6 +151,18 @@ def _run_javascript(source: str) -> str:
         return executed.stdout.replace("\r\n", "\n")
 
 
+def _run_python(source: str) -> str:
+    with tempfile.TemporaryDirectory(prefix="nyx_mir_python_") as temporary:
+        source_path = Path(temporary) / "program.py"
+        source_path.write_text(source, encoding="utf-8", newline="\n")
+        executed = subprocess.run(
+            [sys.executable, str(source_path)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30,
+        )
+        assert executed.returncode == 0, executed.stdout + executed.stderr + "\n" + source
+        return executed.stdout.replace("\r\n", "\n")
+
+
 def _run_wasm_export(
     wasm: bytes,
     function: str,
@@ -231,11 +244,11 @@ def run_mir_legalization_suite() -> bool:
     assert tuple(profile["target"] for profile in manifest["profiles"]) == MIR_BACKEND_MIGRATION_ORDER
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "pilot"
-        for target in ("cpp", "llvm", "wasm", "rust", "js")
+        for target in ("cpp", "llvm", "wasm", "rust", "js", "python")
     )
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "profile-only"
-        for target in MIR_BACKEND_MIGRATION_ORDER[5:]
+        for target in MIR_BACKEND_MIGRATION_ORDER[6:]
     )
 
     scalar = _lower(SCALAR_FIXTURE)
@@ -256,18 +269,38 @@ def run_mir_legalization_suite() -> bool:
     numeric = _lower_source(
         "fn compute(x: float, y: float) -> float { return (x * y) + 1.25 }\n"
         "fn main() {\n"
+        "  let min: int = -9223372036854775808\n"
         "  print(9223372036854775807 + 1)\n"
         "  print(-7 / 3, -7 % 3)\n"
+        "  print(\"min-divmod\", min / -1, min % -1)\n"
+        "  print(\"bits\", 1 << 64, -1 >> 65)\n"
         "  print(\"answer\", compute(2.5, 4.0), true)\n"
         "}\n",
         "m5-numeric.nyx",
     )
     expected_numeric = "\n".join(MIRInterpreter(numeric).run().output) + "\n"
-    assert expected_numeric == "-9223372036854775808\n-2 -1\nanswer 11.25 true\n"
+    assert expected_numeric == (
+        "-9223372036854775808\n-2 -1\n"
+        "min-divmod -9223372036854775808 0\n"
+        "bits 1 -1\nanswer 11.25 true\n"
+    )
     assert _compile_and_run_cpp(emit_legalized_cpp(numeric)) == expected_numeric
     assert _compile_and_run_llvm(emit_legalized_llvm(numeric)) == expected_numeric
     assert _compile_and_run_rust(emit_legalized_rust(numeric)) == expected_numeric
     assert _run_javascript(emit_legalized_javascript(numeric)) == expected_numeric
+    assert _run_python(emit_legalized_python(numeric)) == expected_numeric
+
+    floating = _lower_source(
+        "fn main() { print(1.0 / 0.0, 0.0 / 0.0, -7.5 % 2.0) }\n",
+        "m5-floating.nyx",
+    )
+    expected_floating = "inf nan -1.5\n"
+    assert "\n".join(MIRInterpreter(floating).run().output) + "\n" == expected_floating
+    assert _compile_and_run_cpp(emit_legalized_cpp(floating)) == expected_floating
+    assert _compile_and_run_llvm(emit_legalized_llvm(floating)) == expected_floating
+    assert _compile_and_run_rust(emit_legalized_rust(floating)) == expected_floating
+    assert _run_javascript(emit_legalized_javascript(floating)) == expected_floating
+    assert _run_python(emit_legalized_python(floating)) == expected_floating
 
     unknown = collect_legalization_issues(scalar, "moonvm")
     assert {issue.code for issue in unknown} == {"MIRG1000"}, unknown
@@ -275,7 +308,7 @@ def run_mir_legalization_suite() -> bool:
     unprofiled = collect_legalization_issues(scalar, "asm")
     assert {issue.code for issue in unprofiled} == {"MIRG1001"}, unprofiled
 
-    pending = collect_legalization_issues(scalar, "python", require_emitter=True)
+    pending = collect_legalization_issues(scalar, "c", require_emitter=True)
     assert {issue.code for issue in pending} == {"MIRG1009"}, pending
 
     wasm = _lower_source(
@@ -327,6 +360,8 @@ def run_mir_legalization_suite() -> bool:
     assert _compile_and_run_rust(emit_legalized_rust(scalar)) == "13\n"
     assert not collect_legalization_issues(scalar, "js", require_emitter=True)
     assert _run_javascript(emit_legalized_javascript(scalar)) == "13\n"
+    assert not collect_legalization_issues(scalar, "python", require_emitter=True)
+    assert _run_python(emit_legalized_python(scalar)) == "13\n"
 
     ownership = _ownership_module()
     assert not collect_legalization_issues(ownership, "cpp", require_emitter=True)
@@ -351,7 +386,7 @@ def run_mir_legalization_suite() -> bool:
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "executable Wasm/Rust/JavaScript CFG pilots, and legacy C++ oracle"
+        "executable Wasm/Rust/JavaScript/Python CFG pilots, and legacy C++ oracle"
     )
     return True
 

@@ -420,14 +420,34 @@ class MIRInterpreter:
         elif op == "*":
             result = left * right
         elif op == "/":
-            if right == 0:
-                raise MIRTrap("division by zero")
-            result = left / right if result_type in ("float", "f32", "f64") else math.trunc(left / right)
+            if result_type in ("float", "f32", "f64"):
+                left = float(left)
+                right = float(right)
+                if right != 0.0:
+                    result = left / right
+                elif left == 0.0 or math.isnan(left):
+                    result = math.nan
+                else:
+                    negative = math.copysign(1.0, left) != math.copysign(1.0, right)
+                    result = -math.inf if negative else math.inf
+            else:
+                if right == 0:
+                    raise MIRTrap("division by zero")
+                quotient = abs(int(left)) // abs(int(right))
+                result = -quotient if (left < 0) != (right < 0) else quotient
         elif op == "%":
-            if right == 0:
-                raise MIRTrap("remainder by zero")
-            quotient = math.trunc(left / right)
-            result = left - quotient * right
+            if result_type in ("float", "f32", "f64"):
+                try:
+                    result = math.fmod(float(left), float(right))
+                except ValueError:
+                    result = math.nan
+            else:
+                if right == 0:
+                    raise MIRTrap("remainder by zero")
+                quotient = abs(int(left)) // abs(int(right))
+                if (left < 0) != (right < 0):
+                    quotient = -quotient
+                result = int(left) - quotient * int(right)
         elif op == "==":
             return left == right
         elif op == "!=":
@@ -443,7 +463,8 @@ class MIRInterpreter:
         elif op in ("&", "|", "^"):
             result = {"&": int(left) & int(right), "|": int(left) | int(right), "^": int(left) ^ int(right)}[op]
         elif op in ("<<", ">>"):
-            result = int(left) << int(right) if op == "<<" else int(left) >> int(right)
+            amount = int(right) & 63
+            result = int(left) << amount if op == "<<" else int(left) >> amount
         else:
             raise MIRTrap(f"Unsupported binary operation '{op}'")
         if result_type == "int" or result_type.startswith(("i", "u")):

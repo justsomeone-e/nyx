@@ -2,7 +2,7 @@
 
 Legalization is a hard gate: a backend may only receive operations explicitly
 listed by its profile. M5 currently migrates C++ and LLVM plus deliberately
-bounded WebAssembly, Rust, and JavaScript pilots; later targets remain
+bounded WebAssembly, Rust, JavaScript, and Python pilots; later targets remain
 profile-only.
 """
 
@@ -180,7 +180,7 @@ MIR_BACKEND_PROFILES = {
         threads=False, ownership="garbage-collected", abi="node-es2022",
     ),
     "python": _profile(
-        "python", 6, status="profile-only", integer_width=64, exceptions=True,
+        "python", 6, status="pilot", integer_width=64, exceptions=True,
         threads=False, ownership="garbage-collected", abi="python-3",
     ),
     "c": _profile(
@@ -242,6 +242,15 @@ MIR_BACKEND_PROFILES["rust"] = replace(
 # values remain excluded until their host representation is versioned.
 MIR_BACKEND_PROFILES["js"] = replace(
     MIR_BACKEND_PROFILES["js"],
+    legal_rvalues=frozenset({
+        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+    }),
+)
+
+# Python has arbitrary-precision integers, so the emitter inserts explicit
+# signed-i64 normalization. Casts and aggregate values remain gated.
+MIR_BACKEND_PROFILES["python"] = replace(
+    MIR_BACKEND_PROFILES["python"],
     legal_rvalues=frozenset({
         BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
     }),

@@ -96,6 +96,7 @@ class _CppEmitter:
             "// The production Typed HIR C++ backend remains the parity oracle.",
             "#include <any>",
             "#include <bit>",
+            "#include <cmath>",
             "#include <cstddef>",
             "#include <cstdint>",
             "#include <iostream>",
@@ -439,6 +440,8 @@ void print(const Values&... values) {
         if value.op in ("+", "-", "*", "/", "%") and (
             left_type.name in _FLOAT_TYPES or right_type.name in _FLOAT_TYPES
         ):
+            if value.op == "%":
+                return f"std::fmod({left}, {right})"
             return f"({left} {value.op} {right})"
         if value.op == "+" and (left_type.name == "string" or right_type.name == "string"):
             return f"({left} + {right})"
