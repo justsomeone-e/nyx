@@ -18,6 +18,20 @@ from .abi import (
     classify_function_abi,
 )
 from .interpreter import MIRExecutionResult, MIRInterpreter, MIRTrap
+from .codegen_cpp import MIRCodegenError, emit_legalized_cpp
+from .codegen_llvm import emit_legalized_llvm
+from .legalization import (
+    MIR_BACKEND_MIGRATION_ORDER,
+    MIR_BACKEND_PROFILES,
+    MIR_LEGALIZATION_SCHEMA_VERSION,
+    MIRBackendProfile,
+    MIRLegalizationError,
+    MIRLegalizationIssue,
+    collect_legalization_issues,
+    legalize_mir,
+    mir_backend_manifest,
+    resolve_mir_backend_profile,
+)
 from .layout import (
     FieldLayout,
     HOSTED_X64,

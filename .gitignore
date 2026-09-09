@@ -122,6 +122,7 @@ tests/**/*.py
 !tests/mir_lowering_suite.py
 !tests/mir_cleanup_suite.py
 !tests/mir_memory_abi_suite.py
+!tests/mir_legalization_suite.py
 tests/**/*.rs
 tests/**/*.wat
 tests/**/*.bin

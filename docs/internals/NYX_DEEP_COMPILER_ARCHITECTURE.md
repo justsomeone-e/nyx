@@ -1757,6 +1757,30 @@ Every migrated backend passes positive, negative, runtime, and parity corpora.
 Fallback to approximate target semantics is impossible.
 ```
 
+Implementation status (2026-09-09):
+
+- `src/mir/legalization.py` publishes versioned operation, type, runtime,
+  ownership, effect, and ABI profiles in the required migration order;
+- stable `MIRG1000`-`MIRG1010` diagnostics reject unknown targets, missing
+  profiles, illegal types/operations/projections, unsupported runtime calls,
+  unwind edges, unavailable emitters, and emitter-contract violations;
+- `src/mir/codegen_cpp.py` and `src/mir/codegen_llvm.py` are the first real
+  consumers of legalized MIR. Their shared pilot scope is scalar values,
+  explicit CFG control flow, calls, assertions, wrapping `int64` arithmetic,
+  division traps, strings, floats, and canonical `print` output;
+- `nyx emit mir <file> --codegen --target cpp|llvm` exposes the pilots without
+  changing the default Typed HIR compilation route;
+- C++ and LLVM pilot output is compiled and executed against both the MIR
+  interpreter and the legacy C++ backend oracle in
+  `tests/mir_legalization_suite.py`;
+- aggregate/projection/ownership lowering and the Wasm, Rust, JavaScript,
+  Python, and C17 emitters remain open M5 work. Their published profiles are
+  explicitly `profile-only`, so the CLI cannot pretend that they have migrated.
+
+Therefore M5 infrastructure and the first narrow C++ slice are implemented,
+but the M5 exit gate remains open until the full MIR surface and each listed
+backend complete differential parity.
+
 ### M6: vertical language-surface expansion
 
 Purpose: resume source-language growth without recreating backend duplication.

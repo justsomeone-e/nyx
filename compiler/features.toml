@@ -69,7 +69,9 @@ codes = [
   "MIR0402", "MIR0403", "MIR0404", "MIR0405", "MIR0406", "MIR0500", "MIR0501", "MIR0502",
   "MIR0503", "MIR0504", "MIR0505", "MIR0506", "MIR0507", "MIR0600", "MIR0601", "MIR0602",
   "MIR0603", "MIR0604", "MIR0605", "MIR0606", "MIR0607", "MIR0608", "MIR0609", "MIR0610",
-  "MIR0700", "MIR0701", "MIR0800", "MIR0801", "MIR0802", "MIR0803", "MIR0804", "MIRL0001",
+  "MIR0700", "MIR0701", "MIR0800", "MIR0801", "MIR0802", "MIR0803", "MIR0804",
+  "MIRG1000", "MIRG1001", "MIRG1002", "MIRG1003", "MIRG1004", "MIRG1005",
+  "MIRG1006", "MIRG1007", "MIRG1008", "MIRG1009", "MIRG1010", "MIRL0001",
   "MIRV0001",
 ]
 
@@ -119,7 +121,13 @@ evidence = ["tests/capability_suite.py"]
 id = "mir"
 status = "experimental"
 authority = "src/mir/model.py"
-evidence = ["tests/mir_suite.py"]
+evidence = ["tests/mir_suite.py", "tests/mir_lowering_suite.py", "tests/mir_cleanup_suite.py", "tests/mir_memory_abi_suite.py"]
+
+[[pipeline_stages]]
+id = "mir_legalization"
+status = "experimental"
+authority = "src/mir/legalization.py"
+evidence = ["tests/mir_legalization_suite.py"]
 
 [[effects]]
 id = "control-transfer"

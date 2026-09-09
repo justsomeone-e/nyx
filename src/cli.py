@@ -74,8 +74,9 @@ Project & Development Commands:
   nyx self-host verify               Verify the native stage-1 -> stage-2 bootstrap
   nyx self-host compile <file.nyx>   Emit C++ through the stage-1 compiler
   nyx self-host build                Build the standalone native nyxc frontend
-  nyx targets [--json]               Inspect backend and stdlib capability contracts
+  nyx targets [--json] [--mir]       Inspect backend, stdlib and MIR legality contracts
   nyx emit mir <file.nyx> [--json]   Emit experimental verified MIR
+             [--codegen]             Emit target source through legalized MIR (C++/LLVM pilots)
   nyx verify mir <file.mir.json>     Verify serialized experimental MIR
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
@@ -1056,7 +1057,26 @@ def cmd_version():
     print(f"  • Python Reference:     {sys.executable} (v{sys.version.split()[0]})")
     print("===================================================================")
 
-def cmd_targets(as_json: bool = False) -> int:
+def cmd_targets(as_json: bool = False, mir: bool = False) -> int:
+    if mir:
+        from src.mir import mir_backend_manifest
+
+        manifest = mir_backend_manifest()
+        if as_json:
+            print(json.dumps(manifest, ensure_ascii=False, sort_keys=True))
+            return 0
+        print_banner()
+        print(f"MIR Legalization Contract v{manifest['schema_version']}:")
+        for profile in manifest["profiles"]:
+            print(
+                f"  {profile['migration_rank']}. {profile['target']:<8} "
+                f"status={profile['migration_status']:<12} abi={profile['abi']}"
+            )
+        print("\n'pilot' means a target source emitter currently consumes legalized MIR.")
+        print("Use 'nyx targets --mir --json' for complete legal operation sets.")
+        print("===================================================================")
+        return 0
+
     manifest = capability_manifest()
     if as_json:
         print(json.dumps(manifest, ensure_ascii=False, sort_keys=True))
@@ -1095,7 +1115,7 @@ def _mir_output_path(arguments: list[str]) -> Optional[str]:
 
 def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
     if not arguments or arguments[0].lower() != "mir":
-        print("Usage: nyx emit mir <file.nyx> [--json] [-o output]")
+        print("Usage: nyx emit mir <file.nyx> [--json | --codegen] [--target t] [-o output]")
         return 1
     source_path = _mir_argument_path(arguments, ".nyx")
     if not source_path or not os.path.isfile(source_path):
@@ -1103,7 +1123,17 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
         return 1
 
     from src.api import NyxCompiler
-    from src.mir import MIRLoweringError, lower_hir_to_mir, print_mir, to_json
+    from src.mir import (
+        MIRCodegenError,
+        MIRLegalizationError,
+        MIRLoweringError,
+        emit_legalized_cpp,
+        emit_legalized_llvm,
+        legalize_mir,
+        lower_hir_to_mir,
+        print_mir,
+        to_json,
+    )
 
     target = get_target_from_args(default_target, entry_file=source_path, arguments=arguments[1:])
     result = NyxCompiler(os.path.dirname(os.path.abspath(source_path))).check_file(
@@ -1121,14 +1151,33 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
         print(f"  --> {error.span.source}:{error.span.line}:{error.span.column}")
         return 1
 
-    content = to_json(mir, indent=2) + "\n" if "--json" in arguments else print_mir(mir)
+    if "--codegen" in arguments:
+        try:
+            if target == "cpp":
+                content = emit_legalized_cpp(mir)
+            elif target == "llvm":
+                content = emit_legalized_llvm(mir)
+            else:
+                legalize_mir(mir, target, require_emitter=True)
+                raise MIRCodegenError(f"no MIR source emitter registered for target '{target}'")
+        except MIRLegalizationError as error:
+            for issue in error.issues:
+                print(f"error[{issue.code}]: {issue.message}")
+                print(f"  --> {issue.span.source}:{issue.span.line}:{issue.span.column}")
+            return 1
+        except MIRCodegenError as error:
+            print(f"error[{error.code}]: {str(error).split(': ', 1)[-1]}")
+            return 1
+    else:
+        content = to_json(mir, indent=2) + "\n" if "--json" in arguments else print_mir(mir)
     output_path = _mir_output_path(arguments)
     if output_path:
         output = os.path.abspath(output_path)
         os.makedirs(os.path.dirname(output), exist_ok=True)
         with open(output, "w", encoding="utf-8", newline="\n") as handle:
             handle.write(content)
-        print(f"[OK] Experimental MIR written: {output}")
+        label = "Legalized MIR target source" if "--codegen" in arguments else "Experimental MIR"
+        print(f"[OK] {label} written: {output}")
     else:
         print(content, end="")
     return 0
@@ -1346,7 +1395,7 @@ def main():
     elif cmd == "doctor":
         cmd_doctor()
     elif cmd == "targets":
-        sys.exit(cmd_targets("--json" in sys.argv))
+        sys.exit(cmd_targets("--json" in sys.argv, "--mir" in sys.argv))
     elif cmd == "emit":
         sys.exit(cmd_emit_mir(sys.argv[2:], config.get("target", "cpp")))
     elif cmd == "verify":
