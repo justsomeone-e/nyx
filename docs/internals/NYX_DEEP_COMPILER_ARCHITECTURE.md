@@ -1766,8 +1766,8 @@ Implementation status (2026-09-09):
   unwind edges, unavailable emitters, and emitter-contract violations;
 - `src/mir/codegen_cpp.py`, `src/mir/codegen_llvm.py`, and
   `src/mir/codegen_wasm.py`, `src/mir/codegen_rust.py`,
-  `src/mir/codegen_javascript.py`, plus `src/mir/codegen_python.py` are real
-  consumers of legalized MIR. The C++
+  `src/mir/codegen_javascript.py`, `src/mir/codegen_python.py`, plus
+  `src/mir/codegen_c17.py` are real consumers of legalized MIR. The C++
   and LLVM shared pilot scope is scalar values,
   explicit CFG control flow, calls, assertions, wrapping `int64` arithmetic,
   division traps, strings, floats, and canonical `print` output. The C++ pilot
@@ -1781,7 +1781,7 @@ Implementation status (2026-09-09):
   strings, host calls, casts, heap values, aggregates, and unresolved shift
   semantics at legalization. Checked division/remainder helpers preserve Nyx's
   divide-by-zero trap and signed `MIN / -1` wrapping contract;
-- `nyx emit mir <file> --codegen --target cpp|llvm|wasm|rust|js|python` exposes the
+- `nyx emit mir <file> --codegen --target cpp|llvm|wasm|rust|js|python|c` exposes the
   textual pilot artifacts without changing the default Typed HIR compilation
   route;
 - C++ and LLVM pilot output is compiled and executed against both the MIR
@@ -1799,13 +1799,16 @@ Implementation status (2026-09-09):
 - the Python 3 pilot explicitly normalizes arbitrary-precision Python integers
   to Nyx signed i64 after arithmetic, preserves truncating signed division and
   remainder, and executes scalar CFG, user calls, and canonical output;
+- the C17 pilot uses explicit unsigned-bit conversion for defined signed-i64
+  wrapping, masks shifts, handles the signed division edge, tracks temporary
+  concatenated strings, and compiles real scalar CFG with Clang in C17 mode;
 - drop unwind edges, the remaining Wasm/Rust aggregate and ownership surfaces,
-  the JavaScript/Python aggregate and runtime surfaces, and the C17 emitter
-  remain open M5 work. C17 remains explicitly `profile-only`, so the CLI cannot
-  pretend it migrated.
+  and the JavaScript/Python/C17 aggregate and broader runtime surfaces remain
+  open M5 work. Every migration-order target now has a bounded executable pilot;
+  none of those pilots imply full backend parity.
 
 Therefore M5 infrastructure, the broad C++ slice, LLVM scalar path, and first
-executable Wasm, Rust, JavaScript, and Python slices are implemented. The M5 exit gate
+executable Wasm, Rust, JavaScript, Python, and C17 slices are implemented. The M5 exit gate
 remains open until the full MIR surface and each listed backend complete
 differential parity.
 

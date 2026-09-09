@@ -18,6 +18,7 @@ from .abi import (
     classify_function_abi,
 )
 from .interpreter import MIRExecutionResult, MIRInterpreter, MIRTrap
+from .codegen_c17 import emit_legalized_c17
 from .codegen_cpp import MIRCodegenError, emit_legalized_cpp
 from .codegen_javascript import emit_legalized_javascript
 from .codegen_llvm import emit_legalized_llvm
