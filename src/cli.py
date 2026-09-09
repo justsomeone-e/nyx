@@ -76,7 +76,7 @@ Project & Development Commands:
   nyx self-host build                Build the standalone native nyxc frontend
   nyx targets [--json] [--mir]       Inspect backend, stdlib and MIR legality contracts
   nyx emit mir <file.nyx> [--json]   Emit experimental verified MIR
-             [--codegen]             Emit target source through legalized MIR (C++/LLVM/Wasm pilots)
+             [--codegen]             Emit target source through legalized MIR (C++/LLVM/Wasm/Rust pilots)
   nyx verify mir <file.mir.json>     Verify serialized experimental MIR
   nyx run [file.nyx] [--target t]    Compile and run project / file immediately
   nyx repl                           Launch Interactive Polyglot REPL
@@ -1129,6 +1129,7 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
         MIRLoweringError,
         emit_legalized_cpp,
         emit_legalized_llvm,
+        emit_legalized_rust,
         emit_legalized_wat,
         legalize_mir,
         lower_hir_to_mir,
@@ -1160,6 +1161,8 @@ def cmd_emit_mir(arguments: list[str], default_target: str = "cpp") -> int:
                 content = emit_legalized_llvm(mir)
             elif target == "wasm":
                 content = emit_legalized_wat(mir)
+            elif target == "rust":
+                content = emit_legalized_rust(mir)
             else:
                 legalize_mir(mir, target, require_emitter=True)
                 raise MIRCodegenError(f"no MIR source emitter registered for target '{target}'")

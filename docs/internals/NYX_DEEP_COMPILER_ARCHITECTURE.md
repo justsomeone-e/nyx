@@ -1765,8 +1765,8 @@ Implementation status (2026-09-09):
   profiles, illegal types/operations/projections, unsupported runtime calls,
   unwind edges, unavailable emitters, and emitter-contract violations;
 - `src/mir/codegen_cpp.py`, `src/mir/codegen_llvm.py`, and
-  `src/mir/codegen_wasm.py` are real consumers of legalized MIR. The C++ and
-  LLVM shared pilot scope is scalar values,
+  `src/mir/codegen_wasm.py`, plus `src/mir/codegen_rust.py` are real consumers
+  of legalized MIR. The C++ and LLVM shared pilot scope is scalar values,
   explicit CFG control flow, calls, assertions, wrapping `int64` arithmetic,
   division traps, strings, floats, and canonical `print` output. The C++ pilot
   additionally legalizes arrays, checked index projections, structs, fields,
@@ -1779,20 +1779,25 @@ Implementation status (2026-09-09):
   strings, host calls, casts, heap values, aggregates, and unresolved shift
   semantics at legalization. Checked division/remainder helpers preserve Nyx's
   divide-by-zero trap and signed `MIN / -1` wrapping contract;
-- `nyx emit mir <file> --codegen --target cpp|llvm|wasm` exposes the textual
+- `nyx emit mir <file> --codegen --target cpp|llvm|wasm|rust` exposes the textual
   pilot artifacts without changing the default Typed HIR compilation route;
 - C++ and LLVM pilot output is compiled and executed against both the MIR
   interpreter and the legacy C++ backend oracle in
   `tests/mir_legalization_suite.py`;
 - Wasm binary output is instantiated and executed by Node's WebAssembly engine
   against the MIR interpreter. The established Bundle ABI suite remains green;
-- drop unwind edges, the remaining Wasm runtime/aggregate surface, and the Rust,
-  JavaScript, Python, and C17 emitters remain open M5 work. The latter targets
-  remain explicitly `profile-only`, so the CLI cannot pretend they migrated.
+- the Rust 2021 pilot maps scalar values, strings, copy/move operands, wrapping
+  integer arithmetic, user calls, `print`, and MIR CFG through a Rust `match`
+  dispatcher. Generated source is compiled and executed by `rustc` against the
+  MIR interpreter and the shared numeric corpus;
+- drop unwind edges, the remaining Wasm/Rust aggregate and ownership surfaces,
+  and the JavaScript, Python, and C17 emitters remain open M5 work. The latter
+  targets remain explicitly `profile-only`, so the CLI cannot pretend they
+  migrated.
 
 Therefore M5 infrastructure, the broad C++ slice, LLVM scalar path, and first
-executable Wasm slice are implemented. The M5 exit gate remains open until the
-full MIR surface and each listed backend complete differential parity.
+executable Wasm and Rust slices are implemented. The M5 exit gate remains open
+until the full MIR surface and each listed backend complete differential parity.
 
 ### M6: vertical language-surface expansion
 

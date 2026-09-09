@@ -1,8 +1,8 @@
 """Target legalization contracts for the experimental MIR pipeline.
 
 Legalization is a hard gate: a backend may only receive operations explicitly
-listed by its profile. M5 currently migrates C++ and LLVM plus a deliberately
-pure integer/control-flow WebAssembly pilot; later targets remain profile-only.
+listed by its profile. M5 currently migrates C++ and LLVM plus deliberately
+bounded WebAssembly and Rust pilots; later targets remain profile-only.
 """
 
 from __future__ import annotations
@@ -171,7 +171,7 @@ MIR_BACKEND_PROFILES = {
         threads=False, ownership="linear-memory-runtime", abi="bundle-v1-wasm32",
     ),
     "rust": _profile(
-        "rust", 4, status="profile-only", integer_width=64, exceptions=False,
+        "rust", 4, status="pilot", integer_width=64, exceptions=False,
         threads=False, ownership="rust-values", abi="rust-2021",
     ),
     "js": _profile(
@@ -226,6 +226,15 @@ MIR_BACKEND_PROFILES["wasm"] = replace(
     }),
     legal_types=frozenset({"void", "bool", "int"}),
     legal_runtime_calls=frozenset(),
+)
+
+# Rust starts with the full scalar/control-flow surface but keeps casts,
+# aggregates, explicit cleanup, and target runtime bindings out of the pilot.
+MIR_BACKEND_PROFILES["rust"] = replace(
+    MIR_BACKEND_PROFILES["rust"],
+    legal_rvalues=frozenset({
+        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+    }),
 )
 
 
@@ -417,6 +426,12 @@ class _Legalizer:
                 )
         elif isinstance(value, AssertTerminator):
             self._operand(value.condition, value.span)
+            if value.unwind is not None:
+                self._issue(
+                    "MIRG1008",
+                    f"Unwind edges are not legalized by the '{self.target}' MIR pilot",
+                    value.span,
+                )
         elif isinstance(value, ThrowTerminator):
             self._operand(value.value, value.span)
             if value.destination is not None:

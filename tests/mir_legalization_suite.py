@@ -39,6 +39,7 @@ from src.mir import (
     collect_legalization_issues,
     emit_legalized_cpp,
     emit_legalized_llvm,
+    emit_legalized_rust,
     emit_legalized_wasm,
     emit_legalized_wat,
     legalize_mir,
@@ -109,6 +110,26 @@ def _compile_and_run_llvm(source: str) -> str:
         assert compiled.returncode == 0, compiled.stdout + compiled.stderr + "\n" + source
         executed = subprocess.run(
             [str(executable)], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30
+        )
+        assert executed.returncode == 0, executed.stdout + executed.stderr
+        return executed.stdout.replace("\r\n", "\n")
+
+
+def _compile_and_run_rust(source: str) -> str:
+    rustc = shutil.which("rustc")
+    assert rustc is not None, "rustc is required by the Rust MIR runtime gate"
+    with tempfile.TemporaryDirectory(prefix="nyx_mir_rust_") as temporary:
+        source_path = Path(temporary) / "program.rs"
+        executable = Path(temporary) / ("program.exe" if os.name == "nt" else "program")
+        source_path.write_text(source, encoding="utf-8", newline="\n")
+        compiled = subprocess.run(
+            [rustc, "--edition=2021", "-O", str(source_path), "-o", str(executable)],
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+        )
+        assert compiled.returncode == 0, compiled.stdout + compiled.stderr + "\n" + source
+        executed = subprocess.run(
+            [str(executable)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30,
         )
         assert executed.returncode == 0, executed.stdout + executed.stderr
         return executed.stdout.replace("\r\n", "\n")
@@ -195,11 +216,11 @@ def run_mir_legalization_suite() -> bool:
     assert tuple(profile["target"] for profile in manifest["profiles"]) == MIR_BACKEND_MIGRATION_ORDER
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "pilot"
-        for target in ("cpp", "llvm", "wasm")
+        for target in ("cpp", "llvm", "wasm", "rust")
     )
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "profile-only"
-        for target in MIR_BACKEND_MIGRATION_ORDER[3:]
+        for target in MIR_BACKEND_MIGRATION_ORDER[4:]
     )
 
     scalar = _lower(SCALAR_FIXTURE)
@@ -230,6 +251,7 @@ def run_mir_legalization_suite() -> bool:
     assert expected_numeric == "-9223372036854775808\n-2 -1\nanswer 11.25 true\n"
     assert _compile_and_run_cpp(emit_legalized_cpp(numeric)) == expected_numeric
     assert _compile_and_run_llvm(emit_legalized_llvm(numeric)) == expected_numeric
+    assert _compile_and_run_rust(emit_legalized_rust(numeric)) == expected_numeric
 
     unknown = collect_legalization_issues(scalar, "moonvm")
     assert {issue.code for issue in unknown} == {"MIRG1000"}, unknown
@@ -237,7 +259,7 @@ def run_mir_legalization_suite() -> bool:
     unprofiled = collect_legalization_issues(scalar, "asm")
     assert {issue.code for issue in unprofiled} == {"MIRG1001"}, unprofiled
 
-    pending = collect_legalization_issues(scalar, "rust", require_emitter=True)
+    pending = collect_legalization_issues(scalar, "js", require_emitter=True)
     assert {issue.code for issue in pending} == {"MIRG1009"}, pending
 
     wasm = _lower_source(
@@ -285,6 +307,9 @@ def run_mir_legalization_suite() -> bool:
     expected_control = "\n".join(MIRInterpreter(control).run().output) + "\n"
     assert _compile_and_run_cpp(emit_legalized_cpp(control)) == expected_control
 
+    assert not collect_legalization_issues(scalar, "rust", require_emitter=True)
+    assert _compile_and_run_rust(emit_legalized_rust(scalar)) == "13\n"
+
     ownership = _ownership_module()
     assert not collect_legalization_issues(ownership, "cpp", require_emitter=True)
     expected_ownership = "\n".join(MIRInterpreter(ownership).run().output) + "\n"
@@ -308,7 +333,7 @@ def run_mir_legalization_suite() -> bool:
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "executable Wasm CFG pilot, and legacy C++ oracle"
+        "executable Wasm/Rust CFG pilots, and legacy C++ oracle"
     )
     return True
 

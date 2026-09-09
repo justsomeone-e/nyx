@@ -20,6 +20,7 @@ from .abi import (
 from .interpreter import MIRExecutionResult, MIRInterpreter, MIRTrap
 from .codegen_cpp import MIRCodegenError, emit_legalized_cpp
 from .codegen_llvm import emit_legalized_llvm
+from .codegen_rust import emit_legalized_rust
 from .codegen_wasm import emit_legalized_wasm, emit_legalized_wat, lower_legalized_wasm
 from .legalization import (
     MIR_BACKEND_MIGRATION_ORDER,
