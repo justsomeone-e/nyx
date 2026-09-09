@@ -1696,6 +1696,17 @@ Emitters no longer independently lower these source semantics.
 
 ### M4: aggregates, ownership, memory, and ABI
 
+Implementation status (2026-09-09): complete for the first executable M4
+contract. MIR now carries struct/enum definitions, aggregate construction,
+field/index/dereference/variant projections, and explicit copy, move, borrow,
+retain, release, deinit, and drop operations. The verifier performs
+conservative CFG-wide initialization and move-state analysis. `src/mir/layout.py`
+defines deterministic native-x64, hosted-x64, and wasm32 storage layouts;
+`src/mir/abi.py` classifies direct/indirect/sret calls, preserves Bundle ABI v1,
+and exposes Bundle ABI v2 only as a draft. `tests/mir_memory_abi_suite.py`
+covers value-copy behavior, aggregate loops, payload enums, move/drop failures,
+layout offsets, calling conventions, and checked C adapter boundaries.
+
 Purpose: make value semantics and physical representation explicit.
 
 Work:

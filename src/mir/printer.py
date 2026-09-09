@@ -7,18 +7,25 @@ from .model import (
     AssignStatement,
     AggregateRValue,
     BinaryRValue,
+    BorrowRValue,
     CastRValue,
     CallTerminator,
     ConstOperand,
+    ConstantIndexProjection,
     CopyOperand,
+    DeinitStatement,
     DiscriminantRValue,
     DropTerminator,
     GotoTerminator,
     MIRModule,
+    MIREnumDef,
+    MIRStructDef,
     MoveOperand,
     NopStatement,
     Place,
     PayloadRValue,
+    ReleaseStatement,
+    RetainStatement,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
@@ -28,6 +35,7 @@ from .model import (
     UnaryRValue,
     UnreachableTerminator,
     UseRValue,
+    VariantProjection,
 )
 
 
@@ -39,6 +47,10 @@ def _place(value: Place) -> str:
             rendered += f".{projection.name}"
         elif name == "IndexProjection":
             rendered += f"[_{projection.local}]"
+        elif isinstance(projection, ConstantIndexProjection):
+            rendered += f"[{projection.index}]"
+        elif isinstance(projection, VariantProjection):
+            rendered += f" as {projection.name}.{projection.index}"
         else:
             rendered = f"(*{rendered})"
     return rendered
@@ -65,7 +77,11 @@ def _rvalue(value: object) -> str:
         return f"cast[{value.kind}]({_operand(value.operand)}): {value.type}"
     if isinstance(value, AggregateRValue):
         operands = ", ".join(_operand(item) for item in value.operands)
-        return f"aggregate[{value.kind} {value.name}]({operands}): {value.type}"
+        fields = f" {{{', '.join(value.fields)}}}" if value.fields else ""
+        return f"aggregate[{value.kind} {value.name}{fields}]({operands}): {value.type}"
+    if isinstance(value, BorrowRValue):
+        kind = "&mut" if value.mutable else "&"
+        return f"borrow[{kind}]({_place(value.place)}): {value.type}"
     if isinstance(value, DiscriminantRValue):
         return f"discriminant({_operand(value.operand)}): {value.type}"
     if isinstance(value, PayloadRValue):
@@ -80,6 +96,12 @@ def _statement(value: object) -> str:
         return f"StorageLive(_{value.local})"
     if isinstance(value, StorageDeadStatement):
         return f"StorageDead(_{value.local})"
+    if isinstance(value, RetainStatement):
+        return f"retain({_place(value.place)})"
+    if isinstance(value, ReleaseStatement):
+        return f"release({_place(value.place)})"
+    if isinstance(value, DeinitStatement):
+        return f"deinit({_place(value.place)})"
     if isinstance(value, NopStatement):
         return "nop"
     raise TypeError(f"Unknown MIR statement {type(value).__name__}")
@@ -123,6 +145,19 @@ def _terminator(value: object) -> str:
 
 def print_mir(module: MIRModule) -> str:
     lines = [f"mir v{module.schema_version} {module.source_name!r} target {module.target} {{"]
+    for definition in module.type_definitions:
+        if isinstance(definition, MIRStructDef):
+            fields = ", ".join(f"{field.name}: {field.type}" for field in definition.fields)
+            lines.append(f"  struct {definition.name} [{definition.symbol}] {{ {fields} }}")
+        elif isinstance(definition, MIREnumDef):
+            variants = ", ".join(
+                variant.name + (
+                    "(" + ", ".join(str(item) for item in variant.payload_types) + ")"
+                    if variant.payload_types else ""
+                )
+                for variant in definition.variants
+            )
+            lines.append(f"  enum {definition.name} [{definition.symbol}] {{ {variants} }}")
     for function in module.functions:
         parameters = ", ".join(f"_{local_id}" for local_id in function.parameters)
         lines.append(f"  fn {function.name} [{function.symbol}]({parameters}) {{")

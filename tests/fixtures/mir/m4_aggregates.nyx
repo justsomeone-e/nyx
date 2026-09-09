@@ -1,0 +1,15 @@
+#target cpp
+struct Point { x: int, y: int }
+struct User { name: string }
+
+var original = [1, 2, 3]
+var copied = original
+copied[0] = 9
+
+var point = Point(4, 5)
+point.x = copied[0]
+var user: User? = User("Nyx")
+
+print(original[0], copied[0], point.x)
+print(user?.name ?? "missing")
+for value in copied { print(value) }

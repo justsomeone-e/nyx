@@ -33,11 +33,28 @@ class IndexProjection:
 
 
 @dataclass(frozen=True, slots=True)
+class ConstantIndexProjection:
+    index: int
+
+
+@dataclass(frozen=True, slots=True)
 class DerefProjection:
     pass
 
 
-Projection = FieldProjection | IndexProjection | DerefProjection
+@dataclass(frozen=True, slots=True)
+class VariantProjection:
+    name: str
+    index: int
+
+
+Projection = (
+    FieldProjection
+    | IndexProjection
+    | ConstantIndexProjection
+    | DerefProjection
+    | VariantProjection
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -98,6 +115,14 @@ class AggregateRValue:
     name: str
     operands: Tuple[Operand, ...]
     type: MIRType
+    fields: Tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class BorrowRValue:
+    place: Place
+    mutable: bool
+    type: MIRType
 
 
 @dataclass(frozen=True, slots=True)
@@ -119,6 +144,7 @@ RValue = (
     | UnaryRValue
     | CastRValue
     | AggregateRValue
+    | BorrowRValue
     | DiscriminantRValue
     | PayloadRValue
 )
@@ -144,11 +170,37 @@ class StorageDeadStatement:
 
 
 @dataclass(frozen=True, slots=True)
+class RetainStatement:
+    place: Place
+    span: MIRSpan
+
+
+@dataclass(frozen=True, slots=True)
+class ReleaseStatement:
+    place: Place
+    span: MIRSpan
+
+
+@dataclass(frozen=True, slots=True)
+class DeinitStatement:
+    place: Place
+    span: MIRSpan
+
+
+@dataclass(frozen=True, slots=True)
 class NopStatement:
     span: MIRSpan
 
 
-Statement = AssignStatement | StorageLiveStatement | StorageDeadStatement | NopStatement
+Statement = (
+    AssignStatement
+    | StorageLiveStatement
+    | StorageDeadStatement
+    | RetainStatement
+    | ReleaseStatement
+    | DeinitStatement
+    | NopStatement
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -261,8 +313,38 @@ class MIRFunction:
 
 
 @dataclass(frozen=True, slots=True)
+class MIRField:
+    name: str
+    type: MIRType
+
+
+@dataclass(frozen=True, slots=True)
+class MIRStructDef:
+    name: str
+    symbol: str
+    fields: Tuple[MIRField, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MIREnumVariant:
+    name: str
+    payload_types: Tuple[MIRType, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MIREnumDef:
+    name: str
+    symbol: str
+    variants: Tuple[MIREnumVariant, ...]
+
+
+MIRTypeDefinition = MIRStructDef | MIREnumDef
+
+
+@dataclass(frozen=True, slots=True)
 class MIRModule:
     source_name: str
     target: str
     functions: Tuple[MIRFunction, ...]
+    type_definitions: Tuple[MIRTypeDefinition, ...] = ()
     schema_version: int = MIR_SCHEMA_VERSION

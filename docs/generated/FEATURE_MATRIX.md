@@ -12,7 +12,7 @@
 - 44 stable keywords
 - 52 AST node kinds
 - 47 Typed HIR node kinds
-- 97 diagnostic codes
+- 120 diagnostic codes
 - 18 builtins and 73 intrinsics
 
 ## Backends

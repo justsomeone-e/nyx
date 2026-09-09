@@ -5,7 +5,32 @@ not redirect any existing Typed HIR backend.
 """
 
 from .builder import MIRFunctionBuilder
+from .abi import (
+    ABIProfile,
+    ABIValue,
+    BUNDLE_ABI_V1_VERSION,
+    BUNDLE_ABI_V2_DRAFT_VERSION,
+    BUNDLE_ABI_V2_STATUS,
+    CAdapterContract,
+    FunctionABI,
+    abi_profile,
+    check_c_adapter,
+    classify_function_abi,
+)
 from .interpreter import MIRExecutionResult, MIRInterpreter, MIRTrap
+from .layout import (
+    FieldLayout,
+    HOSTED_X64,
+    LayoutEngine,
+    MIRLayoutError,
+    NATIVE_X64,
+    TARGET_DATA_LAYOUTS,
+    TargetDataLayout,
+    TypeLayout,
+    VariantLayout,
+    WASM32,
+    data_layout_for_target,
+)
 from .lowering import MIRLoweringError, lower_hir_skeleton, lower_hir_to_mir
 from .model import *
 from .passes import MIRPass, MIRPassManager, MIRPassRecord, MIRPassResult

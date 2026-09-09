@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 import math
 
@@ -10,18 +11,28 @@ from .model import (
     AggregateRValue,
     AssignStatement,
     BinaryRValue,
+    BorrowRValue,
     CastRValue,
     CallTerminator,
+    ConstantIndexProjection,
     ConstOperand,
     CopyOperand,
+    DeinitStatement,
+    DerefProjection,
     DiscriminantRValue,
+    DropTerminator,
+    FieldProjection,
     GotoTerminator,
+    IndexProjection,
     MIRFunction,
     MIRModule,
     MoveOperand,
     NopStatement,
     Operand,
     PayloadRValue,
+    Place,
+    ReleaseStatement,
+    RetainStatement,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
@@ -31,6 +42,7 @@ from .model import (
     UnaryRValue,
     UnreachableTerminator,
     UseRValue,
+    VariantProjection,
 )
 from .verifier import verify_mir
 
@@ -50,6 +62,13 @@ class _MIRUserThrow(Exception):
         super().__init__(str(value))
 
 
+@dataclass(slots=True)
+class _BorrowReference:
+    locals: list[object]
+    place: Place
+    mutable: bool
+
+
 @dataclass(frozen=True, slots=True)
 class MIRExecutionResult:
     value: object
@@ -63,6 +82,7 @@ class MIRInterpreter:
         self.max_steps = max_steps
         self.output: list[str] = []
         self.steps = 0
+        self.retain_counts: dict[int, int] = {}
         self.functions = {function.symbol: function for function in module.functions}
         self.functions.update({function.name: function for function in module.functions})
 
@@ -103,13 +123,28 @@ class MIRInterpreter:
             for statement in block.statements:
                 self._tick()
                 if isinstance(statement, AssignStatement):
-                    if statement.place.projections:
-                        raise MIRTrap("Projected assignment is not available before M4")
-                    locals_[statement.place.local] = self._rvalue(statement.value, locals_)
+                    self._write_place(
+                        statement.place,
+                        locals_,
+                        self._rvalue(statement.value, locals_),
+                    )
                 elif isinstance(statement, StorageLiveStatement):
                     locals_[statement.local] = _UNINITIALIZED
                 elif isinstance(statement, StorageDeadStatement):
                     locals_[statement.local] = _UNINITIALIZED
+                elif isinstance(statement, RetainStatement):
+                    value = self._read_place(statement.place, locals_, clone=False)
+                    identity = id(value)
+                    self.retain_counts[identity] = self.retain_counts.get(identity, 1) + 1
+                elif isinstance(statement, ReleaseStatement):
+                    value = self._read_place(statement.place, locals_, clone=False)
+                    identity = id(value)
+                    count = self.retain_counts.get(identity, 1)
+                    if count <= 0:
+                        raise MIRTrap("release of an already released MIR value")
+                    self.retain_counts[identity] = count - 1
+                elif isinstance(statement, DeinitStatement):
+                    self._write_place(statement.place, locals_, _UNINITIALIZED)
                 elif not isinstance(statement, NopStatement):
                     raise MIRTrap(f"Unsupported MIR statement {type(statement).__name__}")
 
@@ -138,15 +173,11 @@ class MIRInterpreter:
                 except _MIRUserThrow as thrown:
                     if terminator.unwind is None or terminator.error_destination is None:
                         raise
-                    if terminator.error_destination.projections:
-                        raise MIRTrap("Projected unwind destinations require M4")
-                    locals_[terminator.error_destination.local] = thrown.value
+                    self._write_place(terminator.error_destination, locals_, thrown.value)
                     block_id = terminator.unwind
                     continue
                 if terminator.destination is not None:
-                    if terminator.destination.projections:
-                        raise MIRTrap("Projected call destinations require M4")
-                    locals_[terminator.destination.local] = value
+                    self._write_place(terminator.destination, locals_, value)
                 if terminator.target is None:
                     raise MIRTrap(f"Call to '{terminator.function}' has no continuation")
                 block_id = terminator.target
@@ -155,13 +186,17 @@ class MIRInterpreter:
                 if actual != terminator.expected:
                     raise MIRTrap(terminator.message)
                 block_id = terminator.target
+            elif isinstance(terminator, DropTerminator):
+                self._read_place(terminator.place, locals_, clone=False)
+                self._write_place(terminator.place, locals_, _UNINITIALIZED)
+                block_id = terminator.target
             elif isinstance(terminator, ThrowTerminator):
                 value = self._operand(terminator.value, locals_)
                 if terminator.target is None:
                     raise _MIRUserThrow(value)
-                if terminator.destination is None or terminator.destination.projections:
-                    raise MIRTrap("Caught throw requires a direct destination")
-                locals_[terminator.destination.local] = value
+                if terminator.destination is None:
+                    raise MIRTrap("Caught throw requires a destination")
+                self._write_place(terminator.destination, locals_, value)
                 block_id = terminator.target
             elif isinstance(terminator, UnreachableTerminator):
                 raise MIRTrap("Reached unreachable MIR terminator")
@@ -225,6 +260,9 @@ class MIRInterpreter:
             if value.type.name == "int" or value.type.name.startswith(("i", "u")):
                 return self._wrap_i64(int(operand))
             return operand
+        if isinstance(value, BorrowRValue):
+            self._read_place(value.place, locals_, clone=False)
+            return _BorrowReference(locals_, value.place, value.mutable)
         if isinstance(value, AggregateRValue):
             operands = tuple(self._operand(item, locals_) for item in value.operands)
             if value.kind == "array":
@@ -232,7 +270,11 @@ class MIRInterpreter:
             if value.kind in ("enum", "result", "option"):
                 return (value.name,) + operands
             if value.kind == "struct":
-                return {"__type__": value.name, "fields": list(operands)}
+                field_names = value.fields or tuple(str(index) for index in range(len(operands)))
+                return {
+                    "__type__": value.name,
+                    "fields": dict(zip(field_names, operands)),
+                }
             raise MIRTrap(f"Unsupported aggregate kind '{value.kind}'")
         if isinstance(value, DiscriminantRValue):
             operand = self._operand(value.operand, locals_)
@@ -247,22 +289,127 @@ class MIRInterpreter:
             operand = self._operand(value.operand, locals_)
             if isinstance(operand, tuple) and len(operand) > value.index + 1:
                 return operand[value.index + 1]
+            if isinstance(operand, dict) and "payload" in operand:
+                return operand["payload"][value.index]
             raise MIRTrap(f"Aggregate has no payload {value.index}")
         raise MIRTrap(f"Unsupported MIR rvalue {type(value).__name__}")
 
     def _operand(self, operand: Operand, locals_: list[object]) -> object:
         if isinstance(operand, ConstOperand):
             return operand.value
-        if isinstance(operand, (CopyOperand, MoveOperand)):
-            if operand.place.projections:
-                raise MIRTrap("Projected operands require M4")
-            value = locals_[operand.place.local]
-            if value is _UNINITIALIZED:
-                raise MIRTrap(f"Read of uninitialized or moved local _{operand.place.local}")
-            if isinstance(operand, MoveOperand):
-                locals_[operand.place.local] = _UNINITIALIZED
+        if isinstance(operand, CopyOperand):
+            return self._read_place(operand.place, locals_, clone=True)
+        if isinstance(operand, MoveOperand):
+            value = self._read_place(operand.place, locals_, clone=False)
+            self._write_place(operand.place, locals_, _UNINITIALIZED)
             return value
         raise MIRTrap(f"Unsupported MIR operand {type(operand).__name__}")
+
+    def _read_place(self, place: Place, locals_: list[object], *, clone: bool) -> object:
+        if place.local < 0 or place.local >= len(locals_):
+            raise MIRTrap(f"Unknown MIR local _{place.local}")
+        value = locals_[place.local]
+        if value is _UNINITIALIZED:
+            raise MIRTrap(f"Read of uninitialized or moved local _{place.local}")
+        for projection in place.projections:
+            value = self._project(value, projection, locals_)
+            if value is _UNINITIALIZED:
+                raise MIRTrap(f"Read of moved value at _{place.local}")
+        return self._clone(value) if clone else value
+
+    def _write_place(self, place: Place, locals_: list[object], value: object) -> None:
+        if not place.projections:
+            locals_[place.local] = value
+            return
+        current = locals_[place.local]
+        if current is _UNINITIALIZED:
+            raise MIRTrap(f"Write through uninitialized local _{place.local}")
+        for projection in place.projections[:-1]:
+            current = self._project(current, projection, locals_)
+            if current is _UNINITIALIZED:
+                raise MIRTrap(f"Write through moved value at _{place.local}")
+        self._assign_projection(current, place.projections[-1], locals_, value)
+
+    def _project(self, value: object, projection: object, locals_: list[object]) -> object:
+        if isinstance(projection, FieldProjection):
+            if not isinstance(value, dict) or "fields" not in value:
+                raise MIRTrap(f"Field projection '.{projection.name}' requires a struct")
+            fields = value["fields"]
+            if projection.name not in fields:
+                raise MIRTrap(f"Struct has no field '{projection.name}'")
+            return fields[projection.name]
+        if isinstance(projection, ConstantIndexProjection):
+            return self._index(value, projection.index)
+        if isinstance(projection, IndexProjection):
+            index = locals_[projection.local]
+            if index is _UNINITIALIZED:
+                raise MIRTrap(f"Index local _{projection.local} is uninitialized")
+            return self._index(value, int(index))
+        if isinstance(projection, DerefProjection):
+            if not isinstance(value, _BorrowReference):
+                raise MIRTrap("Dereference projection requires a MIR borrow")
+            return self._read_place(value.place, value.locals, clone=False)
+        if isinstance(projection, VariantProjection):
+            if not isinstance(value, tuple) or not value or value[0] != projection.name:
+                raise MIRTrap(f"Expected enum variant '{projection.name}'")
+            if projection.index < 0 or projection.index + 1 >= len(value):
+                raise MIRTrap(f"Variant '{projection.name}' has no payload {projection.index}")
+            return value[projection.index + 1]
+        raise MIRTrap(f"Unsupported place projection {type(projection).__name__}")
+
+    def _assign_projection(
+        self,
+        container: object,
+        projection: object,
+        locals_: list[object],
+        value: object,
+    ) -> None:
+        if isinstance(projection, FieldProjection):
+            if not isinstance(container, dict) or "fields" not in container:
+                raise MIRTrap(f"Field projection '.{projection.name}' requires a struct")
+            if projection.name not in container["fields"]:
+                raise MIRTrap(f"Struct has no field '{projection.name}'")
+            container["fields"][projection.name] = value
+            return
+        if isinstance(projection, ConstantIndexProjection):
+            self._set_index(container, projection.index, value)
+            return
+        if isinstance(projection, IndexProjection):
+            index = locals_[projection.local]
+            if index is _UNINITIALIZED:
+                raise MIRTrap(f"Index local _{projection.local} is uninitialized")
+            self._set_index(container, int(index), value)
+            return
+        if isinstance(projection, DerefProjection):
+            if not isinstance(container, _BorrowReference) or not container.mutable:
+                raise MIRTrap("Assignment through dereference requires a mutable MIR borrow")
+            self._write_place(container.place, container.locals, value)
+            return
+        if isinstance(projection, VariantProjection):
+            raise MIRTrap("Variant payload assignment is not part of Nyx value semantics")
+        raise MIRTrap(f"Unsupported place projection {type(projection).__name__}")
+
+    @staticmethod
+    def _index(value: object, index: int) -> object:
+        if not isinstance(value, (list, tuple, str)):
+            raise MIRTrap("Index projection requires an array, tuple, or string")
+        if index < 0 or index >= len(value):
+            raise MIRTrap(f"index {index} out of bounds for length {len(value)}")
+        return value[index]
+
+    @staticmethod
+    def _set_index(value: object, index: int, item: object) -> None:
+        if not isinstance(value, list):
+            raise MIRTrap("Indexed assignment requires a mutable array")
+        if index < 0 or index >= len(value):
+            raise MIRTrap(f"index {index} out of bounds for length {len(value)}")
+        value[index] = item
+
+    @staticmethod
+    def _clone(value: object) -> object:
+        if isinstance(value, _BorrowReference):
+            return value
+        return copy.deepcopy(value)
 
     def _binary(self, op: str, left: object, right: object, result_type: str) -> object:
         if op == "+":

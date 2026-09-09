@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from src.ir.model import (
     IRAssign,
+    IRArray,
     IRAssert,
     IRBinary,
     IRBreak,
@@ -22,10 +23,12 @@ from src.ir.model import (
     IRFor,
     IRGuard,
     IRIf,
+    IRIndexAccess,
     IRLiteral,
     IRMatch,
     IRMatchExpression,
     IRModule,
+    IRMemberAccess,
     IRNullCoalesce,
     IRReference,
     IRReturn,
@@ -36,23 +39,34 @@ from src.ir.model import (
     IRUnary,
     IRVarDecl,
     IRWhile,
+    IREnum,
+    IREnumMember,
+    IRStruct,
     SourceSpan,
 )
-from src.ir.types import BOOL, STRING, VOID, compatible
+from src.ir.types import ANY, BOOL, INT, STRING, VOID, compatible
 
 from .builder import MIRFunctionBuilder
 from .model import (
     AssertTerminator,
+    AggregateRValue,
     AssignStatement,
     BinaryRValue,
     CastRValue,
     CallTerminator,
+    ConstantIndexProjection,
     ConstOperand,
     CopyOperand,
     DiscriminantRValue,
     GotoTerminator,
+    FieldProjection,
+    IndexProjection,
+    MIREnumDef,
+    MIREnumVariant,
+    MIRField,
     MIRModule,
     MIRSpan,
+    MIRStructDef,
     Operand,
     PayloadRValue,
     Place,
@@ -113,8 +127,17 @@ def lower_hir_skeleton(hir: IRModule) -> MIRModule:
 
 
 class _FunctionLowerer:
-    def __init__(self, function: IRFunction):
+    def __init__(
+        self,
+        function: IRFunction,
+        structs: dict[str, IRStruct],
+        enums: dict[str, IREnum],
+        variants: dict[str, tuple[IREnum, IREnumMember]],
+    ):
         self.function = function
+        self.structs = structs
+        self.enums = enums
+        self.variants = variants
         self.span = _span(function.span)
         self.builder = MIRFunctionBuilder(
             function.name,
@@ -293,8 +316,11 @@ class _FunctionLowerer:
         self.current = exit_block
 
     def _lower_for(self, node: IRFor) -> None:
-        if node.start_expr is None or node.end_expr is None or node.collection_expr is not None:
-            raise MIRLoweringError("Collection iteration requires M4 aggregate lowering", _span(node.span))
+        if node.collection_expr is not None:
+            self._lower_collection_for(node)
+            return
+        if node.start_expr is None or node.end_expr is None:
+            raise MIRLoweringError("Malformed MIR for-loop source", _span(node.span))
         span = _span(node.span)
         loop_local = self.builder.new_local(node.var_name, from_hir_type(node.start_expr.type), "variable", span)
         self.locals[node.symbol] = loop_local
@@ -336,6 +362,101 @@ class _FunctionLowerer:
         self._terminate(GotoTerminator(condition_block, span))
         self.current = exit_block
 
+    def _lower_collection_for(self, node: IRFor) -> None:
+        collection_expr = node.collection_expr
+        if collection_expr is None:
+            raise MIRLoweringError("Collection loop has no collection", _span(node.span))
+        span = _span(node.span)
+        collection = self._materialize(
+            self._lower_expr(collection_expr),
+            collection_expr.type,
+            _span(collection_expr.span),
+        )
+        if not isinstance(collection, CopyOperand):
+            raise MIRLoweringError("Collection value could not be materialized", span)
+        element_type = collection_expr.type.arguments[0] if collection_expr.type.arguments else ANY
+        loop_local = self.builder.new_local(
+            node.var_name,
+            from_hir_type(element_type),
+            "variable",
+            span,
+        )
+        self.locals[node.symbol] = loop_local
+        index_local = self.builder.new_local("_iter_index", from_hir_type(INT), "temporary", span)
+        length_local = self.builder.new_local("_iter_length", from_hir_type(INT), "temporary", span)
+        self._push(AssignStatement(
+            Place(index_local),
+            UseRValue(ConstOperand(from_hir_type(INT), 0)),
+            span,
+        ))
+        continuation = self.builder.new_block()
+        self._terminate(CallTerminator(
+            "builtin::len",
+            (collection,),
+            Place(length_local),
+            continuation,
+            None,
+            span,
+        ))
+
+        condition_block = continuation
+        body_block = self.builder.new_block()
+        increment_block = self.builder.new_block()
+        exit_block = self.builder.new_block()
+        self.current = condition_block
+        condition_local = self._new_temporary(BOOL, span)
+        self._push(AssignStatement(
+            Place(condition_local),
+            BinaryRValue(
+                "<",
+                CopyOperand(Place(index_local)),
+                CopyOperand(Place(length_local)),
+                from_hir_type(BOOL),
+            ),
+            span,
+        ))
+        self._terminate(SwitchIntTerminator(
+            CopyOperand(Place(condition_local)),
+            ((1, body_block),),
+            exit_block,
+            span,
+        ))
+
+        keep_depth = len(self.defer_scopes)
+        self.loop_targets.append((exit_block, increment_block, keep_depth))
+        self.current = body_block
+        self._push(AssignStatement(
+            Place(loop_local),
+            UseRValue(CopyOperand(Place(
+                collection.place.local,
+                collection.place.projections + (IndexProjection(index_local),),
+            ))),
+            span,
+        ))
+        self._lower_scoped(node.body)
+        self._goto_if_open(increment_block, span)
+        self.loop_targets.pop()
+
+        self.current = increment_block
+        next_local = self._new_temporary(INT, span)
+        self._push(AssignStatement(
+            Place(next_local),
+            BinaryRValue(
+                "+",
+                CopyOperand(Place(index_local)),
+                ConstOperand(from_hir_type(INT), 1),
+                from_hir_type(INT),
+            ),
+            span,
+        ))
+        self._push(AssignStatement(
+            Place(index_local),
+            UseRValue(CopyOperand(Place(next_local))),
+            span,
+        ))
+        self._terminate(GotoTerminator(condition_block, span))
+        self.current = exit_block
+
     def _lower_guard(self, node: IRGuard) -> None:
         span = _span(node.span)
         condition = self._lower_expr(node.condition)
@@ -368,9 +489,53 @@ class _FunctionLowerer:
         subject = self._materialize(self._lower_expr(node.expr), node.expr.type, _span(node.expr.span))
         join = self.builder.new_block()
         wildcard_body = None
+        tag_operand: Operand | None = None
         for case in node.cases:
             if isinstance(case.pattern, IRReference) and case.pattern.name == "_":
                 wildcard_body = case.body
+                continue
+            if isinstance(case.pattern, IRCall) and case.pattern.callee_symbol in self.variants:
+                _, variant = self.variants[case.pattern.callee_symbol]
+                if tag_operand is None:
+                    tag_local = self._new_temporary(STRING, span)
+                    self._push(AssignStatement(
+                        Place(tag_local),
+                        DiscriminantRValue(subject, from_hir_type(STRING)),
+                        span,
+                    ))
+                    tag_operand = CopyOperand(Place(tag_local))
+                case_block = self.builder.new_block()
+                next_block = self.builder.new_block()
+                self._terminate(SwitchValueTerminator(
+                    tag_operand,
+                    ((variant.name, case_block),),
+                    next_block,
+                    _span(case.pattern.span),
+                ))
+                self.current = case_block
+                for index, binding in enumerate(case.pattern.args):
+                    if not isinstance(binding, IRReference) or binding.name == "_":
+                        continue
+                    payload_type = (
+                        variant.payload_types[index]
+                        if index < len(variant.payload_types)
+                        else binding.type
+                    )
+                    local = self.builder.new_local(
+                        binding.name,
+                        from_hir_type(payload_type),
+                        "variable",
+                        _span(binding.span),
+                    )
+                    self.locals[binding.symbol] = local
+                    self._push(AssignStatement(
+                        Place(local),
+                        PayloadRValue(subject, index, from_hir_type(payload_type)),
+                        _span(binding.span),
+                    ))
+                self._lower_scoped(case.body)
+                self._goto_if_open(join, span)
+                self.current = next_block
                 continue
             pattern = self._lower_expr(case.pattern)
             condition_local = self._new_temporary(BOOL, _span(case.pattern.span))
@@ -400,6 +565,48 @@ class _FunctionLowerer:
             if local is None:
                 raise MIRLoweringError(f"Unresolved MIR local for '{node.name}'", span)
             return CopyOperand(Place(local))
+        if isinstance(node, IRArray):
+            operands = tuple(self._lower_expr(element) for element in node.elements)
+            local = self._new_temporary(node.type, span)
+            self._push(AssignStatement(
+                Place(local),
+                AggregateRValue("array", "Array", operands, from_hir_type(node.type)),
+                span,
+            ))
+            return CopyOperand(Place(local))
+        if isinstance(node, IRMemberAccess):
+            enum_definition = (
+                self.enums.get(node.obj.symbol)
+                if isinstance(node.obj, IRReference)
+                else None
+            )
+            if enum_definition is not None:
+                member = next(
+                    (candidate for candidate in enum_definition.members if candidate.name == node.member),
+                    None,
+                )
+                if member is None:
+                    raise MIRLoweringError(
+                        f"Unknown enum member '{enum_definition.name}.{node.member}'",
+                        span,
+                    )
+                local = self._new_temporary(node.type, span)
+                self._push(AssignStatement(
+                    Place(local),
+                    AggregateRValue(
+                        "enum",
+                        member.name,
+                        (),
+                        from_hir_type(node.type),
+                    ),
+                    span,
+                ))
+                return CopyOperand(Place(local))
+            if node.safe:
+                return self._lower_safe_member(node)
+            return CopyOperand(self._lower_address(node))
+        if isinstance(node, IRIndexAccess):
+            return CopyOperand(self._lower_address(node))
         if isinstance(node, IRBinary):
             if node.op in ("and", "or", "&&", "||"):
                 return self._lower_short_circuit(node)
@@ -426,6 +633,50 @@ class _FunctionLowerer:
             if node.receiver is not None:
                 arguments.append(self._lower_expr(node.receiver))
             arguments.extend(self._lower_expr(argument) for argument in node.args)
+            struct = self.structs.get(node.callee_symbol)
+            if struct is not None:
+                local = self._new_temporary(node.type, span)
+                self._push(AssignStatement(
+                    Place(local),
+                    AggregateRValue(
+                        "struct",
+                        struct.name,
+                        tuple(arguments),
+                        from_hir_type(node.type),
+                        tuple(field.name for field in struct.fields),
+                    ),
+                    span,
+                ))
+                return CopyOperand(Place(local))
+            variant_entry = self.variants.get(node.callee_symbol)
+            if variant_entry is not None:
+                enum, variant = variant_entry
+                local = self._new_temporary(node.type, span)
+                self._push(AssignStatement(
+                    Place(local),
+                    AggregateRValue(
+                        "enum",
+                        variant.name,
+                        tuple(arguments),
+                        from_hir_type(node.type),
+                        tuple(str(index) for index in range(len(arguments))),
+                    ),
+                    span,
+                ))
+                return CopyOperand(Place(local))
+            if node.callee_symbol in ("builtin::Ok", "builtin::Err"):
+                local = self._new_temporary(node.type, span)
+                self._push(AssignStatement(
+                    Place(local),
+                    AggregateRValue(
+                        "result",
+                        node.callee,
+                        tuple(arguments),
+                        from_hir_type(node.type),
+                    ),
+                    span,
+                ))
+                return CopyOperand(Place(local))
             destination = self._new_temporary(node.type, span)
             continuation = self.builder.new_block()
             unwind = self.exception_targets[-1] if self.exception_targets else None
@@ -449,6 +700,41 @@ class _FunctionLowerer:
         if isinstance(node, IRResultPropagate):
             return self._lower_result_propagate(node)
         raise MIRLoweringError(f"M2 does not lower expression {type(node).__name__}", span)
+
+    def _lower_safe_member(self, node: IRMemberAccess) -> Operand:
+        span = _span(node.span)
+        base = self._materialize(
+            self._lower_expr(node.obj),
+            node.obj.type,
+            _span(node.obj.span),
+        )
+        if not isinstance(base, CopyOperand):
+            raise MIRLoweringError("Safe-navigation base could not be materialized", span)
+        result = self._new_temporary(node.type, span)
+        none_block = self.builder.new_block()
+        present_block = self.builder.new_block()
+        join = self.builder.new_block()
+        self._terminate(SwitchValueTerminator(base, ((None, none_block),), present_block, span))
+        self.current = none_block
+        self._push(AssignStatement(
+            Place(result),
+            UseRValue(ConstOperand(from_hir_type(node.type), None)),
+            span,
+        ))
+        self._terminate(GotoTerminator(join, span))
+        self.current = present_block
+        projected = Place(
+            base.place.local,
+            base.place.projections + (FieldProjection(node.member),),
+        )
+        self._push(AssignStatement(
+            Place(result),
+            CastRValue("optional-inject", CopyOperand(projected), from_hir_type(node.type)),
+            span,
+        ))
+        self._goto_if_open(join, span)
+        self.current = join
+        return CopyOperand(Place(result))
 
     def _lower_short_circuit(self, node: IRBinary) -> Operand:
         span = _span(node.span)
@@ -503,7 +789,11 @@ class _FunctionLowerer:
         join = self.builder.new_block()
         self._terminate(SwitchValueTerminator(left, ((None, fallback_block),), present_block, span))
         self.current = present_block
-        self._push(AssignStatement(Place(result), UseRValue(left), span))
+        self._push(AssignStatement(
+            Place(result),
+            CastRValue("optional-unwrap", left, from_hir_type(node.type)),
+            span,
+        ))
         self._terminate(GotoTerminator(join, span))
         self.current = fallback_block
         fallback = self._lower_expr(node.right)
@@ -574,15 +864,55 @@ class _FunctionLowerer:
         return CopyOperand(Place(payload))
 
     def _lower_place(self, node: IRExpr) -> Place:
+        if isinstance(node, IRMemberAccess) and node.safe:
+            raise MIRLoweringError("Safe-navigation is not an assignment target", _span(node.span))
+        return self._lower_address(node)
+
+    def _lower_address(self, node: IRExpr) -> Place:
         if isinstance(node, IRReference):
             local = self.locals.get(node.symbol)
             if local is None:
                 raise MIRLoweringError(f"Unresolved MIR assignment target '{node.name}'", _span(node.span))
             return Place(local)
+        if isinstance(node, IRMemberAccess):
+            base = self._addressable_base(node.obj)
+            return Place(
+                base.local,
+                base.projections + (FieldProjection(node.member),),
+            )
+        if isinstance(node, IRIndexAccess):
+            base = self._addressable_base(node.obj)
+            if isinstance(node.index, IRLiteral) and isinstance(node.index.value, int):
+                projection = ConstantIndexProjection(node.index.value)
+            else:
+                index = self._materialize(
+                    self._lower_expr(node.index),
+                    node.index.type,
+                    _span(node.index.span),
+                )
+                if not isinstance(index, CopyOperand) or index.place.projections:
+                    index_local = self._new_temporary(node.index.type, _span(node.index.span))
+                    self._push(AssignStatement(
+                        Place(index_local),
+                        UseRValue(index),
+                        _span(node.index.span),
+                    ))
+                else:
+                    index_local = index.place.local
+                projection = IndexProjection(index_local)
+            return Place(base.local, base.projections + (projection,))
         raise MIRLoweringError(
-            f"M2 assignment target {type(node).__name__} requires M4 place lowering",
+            f"Expression {type(node).__name__} is not an addressable MIR place",
             _span(node.span),
         )
+
+    def _addressable_base(self, node: IRExpr) -> Place:
+        if isinstance(node, (IRReference, IRMemberAccess, IRIndexAccess)):
+            return self._lower_address(node)
+        value = self._materialize(self._lower_expr(node), node.type, _span(node.span))
+        if not isinstance(value, CopyOperand):
+            raise MIRLoweringError("Projected value could not be materialized", _span(node.span))
+        return value.place
 
     def _new_temporary(self, value_type, span: MIRSpan) -> int:
         self.temporary_counter += 1
@@ -641,8 +971,48 @@ class _FunctionLowerer:
 
 
 def lower_hir_to_mir(hir: IRModule) -> MIRModule:
-    """Lower the executable M2 subset while preserving HIR as the default route."""
-    functions = [_FunctionLowerer(function).lower() for function in hir.functions]
+    """Lower executable Typed HIR into verified target-independent MIR."""
+    structs = {
+        item.symbol: item
+        for item in hir.items
+        if isinstance(item, IRStruct)
+    }
+    enums = {
+        item.symbol: item
+        for item in hir.items
+        if isinstance(item, IREnum)
+    }
+    variants = {
+        f"enum::{enum.name}::variant::{member.name}": (enum, member)
+        for enum in enums.values()
+        for member in enum.members
+        if member.is_variant
+    }
+    type_definitions = tuple(
+        MIRStructDef(
+            item.name,
+            item.symbol,
+            tuple(MIRField(field.name, from_hir_type(field.type)) for field in item.fields),
+        )
+        if isinstance(item, IRStruct)
+        else MIREnumDef(
+            item.name,
+            item.symbol,
+            tuple(
+                MIREnumVariant(
+                    member.name,
+                    tuple(from_hir_type(value) for value in member.payload_types),
+                )
+                for member in item.members
+            ),
+        )
+        for item in hir.items
+        if isinstance(item, (IRStruct, IREnum))
+    )
+    functions = [
+        _FunctionLowerer(function, structs, enums, variants).lower()
+        for function in hir.functions
+    ]
     if hir.top_level_statements:
         synthetic = IRFunction(
             span=hir.top_level_statements[0].span,
@@ -652,7 +1022,12 @@ def lower_hir_to_mir(hir: IRModule) -> MIRModule:
             return_type=VOID,
             body=hir.top_level_statements,
         )
-        functions.append(_FunctionLowerer(synthetic).lower())
-    module = MIRModule(hir.source_name, hir.target, tuple(functions))
+        functions.append(_FunctionLowerer(synthetic, structs, enums, variants).lower())
+    module = MIRModule(
+        hir.source_name,
+        hir.target,
+        tuple(functions),
+        type_definitions,
+    )
     verify_mir(module)
     return module
