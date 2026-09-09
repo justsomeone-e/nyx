@@ -29,6 +29,8 @@ from src.mir import (
 
 SCALAR_FIXTURE = ROOT / "tests" / "fixtures" / "mir" / "m2_scalar.nyx"
 AGGREGATE_FIXTURE = ROOT / "tests" / "fixtures" / "mir" / "m4_aggregates.nyx"
+PAYLOAD_FIXTURE = ROOT / "tour" / "solutions" / "17_results" / "result01.nyx"
+CONTROL_FIXTURE = ROOT / "tests" / "fixtures" / "mir" / "m3_control.nyx"
 
 
 def _lower(path: Path):
@@ -147,20 +149,35 @@ def run_mir_legalization_suite() -> bool:
     assert {issue.code for issue in pending} == {"MIRG1009"}, pending
 
     aggregate = _lower(AGGREGATE_FIXTURE)
-    aggregate_codes = {issue.code for issue in collect_legalization_issues(aggregate, "cpp")}
+    assert not collect_legalization_issues(aggregate, "cpp", require_emitter=True)
+    expected_aggregate = "\n".join(MIRInterpreter(aggregate).run().output) + "\n"
+    assert _compile_and_run_cpp(emit_legalized_cpp(aggregate)) == expected_aggregate
+
+    payload = _lower(PAYLOAD_FIXTURE)
+    assert not collect_legalization_issues(payload, "cpp", require_emitter=True)
+    expected_payload = "\n".join(MIRInterpreter(payload).run().output) + "\n"
+    assert expected_payload == "hello\n"
+    assert _compile_and_run_cpp(emit_legalized_cpp(payload)) == expected_payload
+
+    control = _lower(CONTROL_FIXTURE)
+    assert not collect_legalization_issues(control, "cpp", require_emitter=True)
+    expected_control = "\n".join(MIRInterpreter(control).run().output) + "\n"
+    assert _compile_and_run_cpp(emit_legalized_cpp(control)) == expected_control
+
+    aggregate_codes = {issue.code for issue in collect_legalization_issues(aggregate, "llvm")}
     assert "MIRG1002" in aggregate_codes, aggregate_codes
     assert "MIRG1004" in aggregate_codes, aggregate_codes
     assert "MIRG1005" in aggregate_codes, aggregate_codes
     assert "MIRG1007" in aggregate_codes, aggregate_codes
     try:
-        emit_legalized_cpp(aggregate)
-        raise AssertionError("aggregate MIR bypassed the C++ legalization gate")
+        emit_legalized_llvm(aggregate)
+        raise AssertionError("aggregate MIR bypassed the LLVM legalization gate")
     except MIRLegalizationError as error:
         assert {issue.code for issue in error.issues} == aggregate_codes
 
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
-        "MIR interpreter/C++/LLVM pilots and legacy C++ runtime parity"
+        "scalar/aggregate/payload MIR interpreter parity, C++/LLVM pilots, and legacy C++ oracle"
     )
     return True
 

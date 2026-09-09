@@ -7,7 +7,7 @@ path and publishes profile-only contracts for the remaining migration order.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Iterable
 
 from src.core.backend_capabilities import normalize_backend_name, resolve_backend
@@ -32,6 +32,8 @@ from .model import (
     MIRFunction,
     MIRModule,
     MIRSpan,
+    MIREnumDef,
+    MIRStructDef,
     MoveOperand,
     NopStatement,
     PayloadRValue,
@@ -185,6 +187,26 @@ MIR_BACKEND_PROFILES = {
     ),
 }
 
+# C++ is migrated first and therefore owns the initial aggregate legalization
+# surface. Other targets remain deliberately scalar until their runtime/layout
+# adapters are implemented and tested.
+MIR_BACKEND_PROFILES["cpp"] = replace(
+    MIR_BACKEND_PROFILES["cpp"],
+    legal_rvalues=MIR_BACKEND_PROFILES["cpp"].legal_rvalues | frozenset({
+        AggregateRValue.__name__, DiscriminantRValue.__name__, PayloadRValue.__name__,
+    }),
+    legal_terminators=MIR_BACKEND_PROFILES["cpp"].legal_terminators | frozenset({
+        ThrowTerminator.__name__,
+    }),
+    legal_projections=frozenset({
+        FieldProjection.__name__, IndexProjection.__name__, ConstantIndexProjection.__name__,
+    }),
+    legal_types=MIR_BACKEND_PROFILES["cpp"].legal_types | frozenset({"Array", "Option", "Result"}),
+    legal_runtime_calls=MIR_BACKEND_PROFILES["cpp"].legal_runtime_calls | frozenset({
+        "builtin::len", "builtin::to_string",
+    }),
+)
+
 
 @dataclass(frozen=True, slots=True)
 class MIRLegalizationIssue:
@@ -224,6 +246,7 @@ class _Legalizer:
         self.require_emitter = require_emitter
         self.issues: list[MIRLegalizationIssue] = []
         self.user_functions = {function.symbol for function in module.functions}
+        self.type_definitions = {definition.name: definition for definition in module.type_definitions}
 
     def collect(self) -> tuple[MIRLegalizationIssue, ...]:
         span = self._module_span()
@@ -244,10 +267,20 @@ class _Legalizer:
                 span,
             )
             return tuple(self.issues)
-        if self.module.type_definitions:
+        for definition in self.module.type_definitions:
+            if self.target == "cpp" and isinstance(definition, MIRStructDef):
+                for field in definition.fields:
+                    self._type(field.type, span)
+                continue
+            if self.target == "cpp" and isinstance(definition, MIREnumDef):
+                for variant in definition.variants:
+                    for payload_type in variant.payload_types:
+                        self._type(payload_type, span)
+                continue
+            kind = "enum" if isinstance(definition, MIREnumDef) else "aggregate"
             self._issue(
                 "MIRG1002",
-                f"Target '{self.target}' MIR pilot does not yet legalize aggregate type definitions",
+                f"Target '{self.target}' MIR pilot does not yet legalize {kind} type '{definition.name}'",
                 span,
             )
         for function in self.module.functions:
@@ -256,8 +289,24 @@ class _Legalizer:
 
     def _function(self, function: MIRFunction) -> None:
         assert self.profile is not None
+        discarded_any = {
+            terminator.destination.local
+            for block in function.blocks
+            for terminator in (block.terminator,)
+            if isinstance(terminator, CallTerminator)
+            and terminator.destination is not None
+            and terminator.function in self.user_functions
+            and any(
+                candidate.symbol == terminator.function
+                and candidate.name == "main"
+                and candidate.locals[candidate.return_local].type.name == "any"
+                for candidate in self.module.functions
+            )
+        }
         for local in function.locals:
             if local.type.name == "any" and local.id == function.return_local and function.name == "main":
+                continue
+            if local.type.name == "any" and local.id in discarded_any:
                 continue
             self._type(local.type, local.span)
         for block in function.blocks:
@@ -294,6 +343,22 @@ class _Legalizer:
         elif isinstance(value, CastRValue):
             self._operand(value.operand, span)
             self._type(value.type, span)
+        elif isinstance(value, AggregateRValue):
+            if self.target == "cpp" and value.kind not in ("array", "struct", "enum", "option", "result"):
+                self._issue(
+                    "MIRG1004",
+                    f"Aggregate kind '{value.kind}' is not legal for target '{self.target}'",
+                    span,
+                )
+            for operand in value.operands:
+                self._operand(operand, span)
+            self._type(value.type, span)
+        elif isinstance(value, DiscriminantRValue):
+            self._operand(value.operand, span)
+            self._type(value.type, span)
+        elif isinstance(value, PayloadRValue):
+            self._operand(value.operand, span)
+            self._type(value.type, span)
 
     def _terminator(self, value: object) -> None:
         if isinstance(value, (SwitchIntTerminator, SwitchValueTerminator)):
@@ -317,6 +382,10 @@ class _Legalizer:
                 )
         elif isinstance(value, AssertTerminator):
             self._operand(value.condition, value.span)
+        elif isinstance(value, ThrowTerminator):
+            self._operand(value.value, value.span)
+            if value.destination is not None:
+                self._place(value.destination, value.span)
 
     def _operand(self, value: object, span: MIRSpan) -> None:
         if isinstance(value, ConstOperand):
@@ -337,6 +406,23 @@ class _Legalizer:
 
     def _type(self, value: MIRType, span: MIRSpan) -> None:
         assert self.profile is not None
+        if self.target == "cpp" and value.optional:
+            self._type(replace(value, optional=False), span)
+            return
+        if self.target == "cpp" and value.name == "Array" and len(value.arguments) == 1:
+            self._type(value.arguments[0], span)
+            return
+        if self.target == "cpp" and value.name in ("Option", "Result") and value.arguments:
+            for argument in value.arguments:
+                if argument.name != "any":
+                    self._type(argument, span)
+            return
+        if (
+            self.target == "cpp"
+            and isinstance(self.type_definitions.get(value.name), (MIRStructDef, MIREnumDef))
+            and not value.arguments
+        ):
+            return
         if value.optional or value.pointer or value.is_function or value.arguments:
             self._issue("MIRG1002", f"Type '{value}' is not legal for target '{self.target}'", span)
             return

@@ -119,10 +119,9 @@ def run_mir_memory_abi_suite() -> bool:
     assert observed == ("1 9 9", "Nyx", "9", "2", "3"), observed
 
     payload_module = _lower(ROOT / "tour" / "solutions" / "17_results" / "result01.nyx")
-    assert MIRInterpreter(payload_module).run().output == ("hello", "hello")
+    assert MIRInterpreter(payload_module).run().output == ("hello",)
     static_enum_module = _lower(ROOT / "tour" / "solutions" / "07_enums" / "enums03.nyx")
     assert MIRInterpreter(static_enum_module).run().output == (
-        "Traffic light transitions verified!",
         "Traffic light transitions verified!",
     )
 

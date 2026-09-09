@@ -5,28 +5,38 @@ from __future__ import annotations
 import json
 import math
 import re
+from dataclasses import replace
 
 from .legalization import MIRLegalizationError, legalize_mir
 from .model import (
     AssertTerminator,
     AssignStatement,
+    AggregateRValue,
     BinaryRValue,
     CallTerminator,
     CastRValue,
     ConstOperand,
+    ConstantIndexProjection,
     CopyOperand,
+    DiscriminantRValue,
+    FieldProjection,
     GotoTerminator,
     MIRFunction,
     MIRModule,
+    MIREnumDef,
+    MIRStructDef,
     MoveOperand,
     NopStatement,
     Operand,
     Place,
+    PayloadRValue,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
     SwitchIntTerminator,
     SwitchValueTerminator,
+    ThrowTerminator,
+    IndexProjection,
     UnaryRValue,
     UnreachableTerminator,
     UseRValue,
@@ -56,8 +66,18 @@ class _CppEmitter:
     def __init__(self, module: MIRModule):
         self.module = module
         self.function_names = {
-            function.symbol: ("main" if function.name == "main" else f"nyx_fn_{_identifier(function.name)}")
+            function.symbol: f"nyx_fn_{_identifier(function.name)}"
             for function in module.functions
+        }
+        self.structs = {
+            definition.name: definition
+            for definition in module.type_definitions
+            if isinstance(definition, MIRStructDef)
+        }
+        self.enums = {
+            definition.name: definition
+            for definition in module.type_definitions
+            if isinstance(definition, MIREnumDef)
         }
         self.current: MIRFunction | None = None
         self.local_types: dict[int, MIRType] = {}
@@ -68,19 +88,27 @@ class _CppEmitter:
         parts = [
             "// Experimental Nyx legalized MIR -> C++20 output.",
             "// The production Typed HIR C++ backend remains the parity oracle.",
+            "#include <any>",
             "#include <bit>",
+            "#include <cstddef>",
             "#include <cstdint>",
             "#include <iostream>",
             "#include <limits>",
+            "#include <optional>",
+            "#include <sstream>",
             "#include <stdexcept>",
             "#include <string>",
             "#include <utility>",
+            "#include <vector>",
             "",
             self._runtime(),
+            "",
+            *self._struct_definitions(),
             "",
             *declarations,
             "",
             *definitions,
+            self._entry_point(),
         ]
         return "\n".join(parts).rstrip() + "\n"
 
@@ -122,6 +150,26 @@ inline std::int64_t shr(std::int64_t left, std::int64_t right) {
     return left >> (to_bits(right) & 63U);
 }
 template <typename Value>
+Value& index(std::vector<Value>& values, std::int64_t position) {
+    if (position < 0 || static_cast<std::uint64_t>(position) >= values.size())
+        throw std::out_of_range("array index out of bounds");
+    return values[static_cast<std::size_t>(position)];
+}
+template <typename Value>
+const Value& index(const std::vector<Value>& values, std::int64_t position) {
+    if (position < 0 || static_cast<std::uint64_t>(position) >= values.size())
+        throw std::out_of_range("array index out of bounds");
+    return values[static_cast<std::size_t>(position)];
+}
+inline std::string to_string(const std::string& value) { return value; }
+inline std::string to_string(bool value) { return value ? "true" : "false"; }
+template <typename Value>
+std::string to_string(const Value& value) {
+    std::ostringstream stream;
+    stream << value;
+    return stream.str();
+}
+template <typename Value>
 void print_one(bool& first, const Value& value) {
     if (!first) std::cout << ' ';
     first = false;
@@ -136,15 +184,55 @@ void print(const Values&... values) {
 }
 }  // namespace nyx_mir_runtime"""
 
+    def _struct_definitions(self) -> list[str]:
+        definitions: list[str] = [
+            "struct nyx_tagged_value {\n"
+            "    std::string type_name;\n"
+            "    std::string tag;\n"
+            "    std::vector<std::any> payload;\n"
+            "};",
+            "inline std::ostream& operator<<(std::ostream& output, const nyx_tagged_value& value) {\n"
+            "    output << value.tag << '(';\n"
+            "    for (std::size_t index = 0; index < value.payload.size(); ++index) {\n"
+            "        if (index) output << \", \";\n"
+            "        const auto& item = value.payload[index];\n"
+            "        if (item.type() == typeid(std::int64_t)) output << std::any_cast<std::int64_t>(item);\n"
+            "        else if (item.type() == typeid(double)) output << std::any_cast<double>(item);\n"
+            "        else if (item.type() == typeid(bool)) output << std::boolalpha << std::any_cast<bool>(item);\n"
+            "        else if (item.type() == typeid(std::string)) output << std::any_cast<const std::string&>(item);\n"
+            "        else output << \"<payload>\";\n"
+            "    }\n"
+            "    return output << ')';\n"
+            "}",
+        ]
+        for definition in self.enums.values():
+            definitions.append(
+                f"using nyx_type_{_identifier(definition.name)} = nyx_tagged_value;"
+            )
+        for definition in self.structs.values():
+            lines = [f"struct nyx_type_{_identifier(definition.name)} {{"]
+            for field in definition.fields:
+                lines.append(f"    {self._type(field.type)} {_identifier(field.name)}{{}};")
+            lines.append("};")
+            definitions.append("\n".join(lines))
+        return definitions
+
+    def _entry_point(self) -> str:
+        by_name = {function.name: function for function in self.module.functions}
+        entry = by_name.get("main") or by_name.get("__nyx_top_level")
+        if entry is None:
+            return "int main() { return 0; }"
+        return f"int main() {{ {self.function_names[entry.symbol]}(); return 0; }}"
+
     def _prototype(self, function: MIRFunction) -> str:
         name = self.function_names[function.symbol]
-        if function.name == "main":
-            return "int main()"
         parameters = ", ".join(
             f"{self._type(function.locals[local].type)} _{local}"
             for local in function.parameters
         )
-        return f"static {self._type(function.locals[function.return_local].type)} {name}({parameters})"
+        return_type = function.locals[function.return_local].type
+        rendered_return = "void" if function.name == "main" and return_type.name == "any" else self._type(return_type)
+        return f"static {rendered_return} {name}({parameters})"
 
     def _function(self, function: MIRFunction) -> str:
         self.current = function
@@ -152,7 +240,7 @@ void print(const Values&... values) {
         lines = [self._prototype(function) + " {"]
         parameter_ids = set(function.parameters)
         for local in function.locals:
-            if local.id in parameter_ids or local.type.name == "void":
+            if local.id in parameter_ids or local.type.name in ("void", "any"):
                 continue
             if function.name == "main" and local.id == function.return_local and local.type.name == "any":
                 continue
@@ -171,7 +259,7 @@ void print(const Values&... values) {
 
     def _statement(self, statement: object) -> list[str]:
         if isinstance(statement, AssignStatement):
-            destination_type = self.local_types[statement.place.local]
+            destination_type = self._place_type(statement.place)
             if destination_type.name == "void":
                 return []
             if self.current is not None and self.current.name == "main" and statement.place.local == 0:
@@ -194,10 +282,17 @@ void print(const Values&... values) {
             return lines
         if isinstance(terminator, SwitchValueTerminator):
             discriminator = self._operand(terminator.discriminator)
+            discriminator_type = self._operand_type(terminator.discriminator)
             lines = []
             for index, (value, target) in enumerate(terminator.targets):
                 prefix = "if" if index == 0 else "else if"
-                lines.append(f"    {prefix} ({discriminator} == {self._constant(value)}) goto bb{target};")
+                if value is None and discriminator_type.optional:
+                    condition = f"!({discriminator}).has_value()"
+                elif discriminator_type.optional:
+                    condition = f"({discriminator}).has_value() && ({discriminator}).value() == {self._constant(value)}"
+                else:
+                    condition = f"{discriminator} == {self._constant(value)}"
+                lines.append(f"    {prefix} ({condition}) goto bb{target};")
             lines.append(f"    else goto bb{terminator.otherwise};" if terminator.targets else f"    goto bb{terminator.otherwise};")
             return lines
         if isinstance(terminator, CallTerminator):
@@ -206,9 +301,32 @@ void print(const Values&... values) {
             arguments = ", ".join(self._operand(argument) for argument in terminator.arguments)
             if terminator.function == "builtin::print":
                 lines = [f"    nyx_mir_runtime::print({arguments});"]
+            elif terminator.function == "builtin::len":
+                if len(terminator.arguments) != 1 or terminator.destination is None:
+                    raise MIRCodegenError("builtin::len requires one argument and a destination")
+                lines = [
+                    f"    {self._place(terminator.destination)} = "
+                    f"static_cast<std::int64_t>({self._operand(terminator.arguments[0])}.size());"
+                ]
+            elif terminator.function == "builtin::to_string":
+                if len(terminator.arguments) != 1 or terminator.destination is None:
+                    raise MIRCodegenError("builtin::to_string requires one argument and a destination")
+                lines = [
+                    f"    {self._place(terminator.destination)} = "
+                    f"nyx_mir_runtime::to_string({self._operand(terminator.arguments[0])});"
+                ]
             elif terminator.function in self.function_names:
                 call = f"{self.function_names[terminator.function]}({arguments})"
-                if terminator.destination is None or self.local_types[terminator.destination.local].name == "void":
+                callee = next(
+                    function for function in self.module.functions
+                    if function.symbol == terminator.function
+                )
+                callee_result = callee.locals[callee.return_local].type
+                if (
+                    terminator.destination is None
+                    or self.local_types[terminator.destination.local].name in ("void", "any")
+                    or callee_result.name in ("void", "any")
+                ):
                     lines = [f"    {call};"]
                 else:
                     lines = [f"    {self._place(terminator.destination)} = {call};"]
@@ -224,10 +342,18 @@ void print(const Values&... values) {
                 f"        throw std::runtime_error({message});",
                 f"    goto bb{terminator.target};",
             ]
+        if isinstance(terminator, ThrowTerminator):
+            thrown = self._operand(terminator.value)
+            if terminator.target is not None and terminator.destination is not None:
+                return [
+                    f"    {self._place(terminator.destination)} = {thrown};",
+                    f"    goto bb{terminator.target};",
+                ]
+            return [f"    throw std::runtime_error(nyx_mir_runtime::to_string({thrown}));"]
         if isinstance(terminator, ReturnTerminator):
             assert self.current is not None
-            if self.current.name == "main":
-                return ["    return 0;"]
+            if self.current.name == "main" and self.local_types[self.current.return_local].name == "any":
+                return ["    return;"]
             result_type = self.local_types[self.current.return_local]
             if result_type.name == "void":
                 return ["    return;"]
@@ -253,7 +379,34 @@ void print(const Values&... values) {
                 return f"nyx_mir_runtime::from_bits(~nyx_mir_runtime::to_bits({operand}))"
             raise MIRCodegenError(f"unsupported unary operation '{value.op}'")
         if isinstance(value, CastRValue):
-            return f"static_cast<{self._type(value.type)}>({self._operand(value.operand)})"
+            operand = self._operand(value.operand)
+            if value.kind == "optional-unwrap":
+                return f"({operand}).value()"
+            if value.type.optional:
+                return f"{self._type(value.type)}{{{operand}}}"
+            return f"static_cast<{self._type(value.type)}>({operand})"
+        if isinstance(value, AggregateRValue):
+            operands = ", ".join(self._operand(operand) for operand in value.operands)
+            if value.kind == "array":
+                return f"{self._type(value.type)}{{{operands}}}"
+            if value.kind == "struct":
+                return f"{self._type(value.type)}{{{operands}}}"
+            if value.kind in ("enum", "option", "result"):
+                payload = ", ".join(
+                    f"std::any({self._operand(operand)})" for operand in value.operands
+                )
+                return (
+                    f"{self._type(value.type)}{{{json.dumps(value.type.name)}, "
+                    f"{json.dumps(value.name)}, std::vector<std::any>{{{payload}}}}}"
+                )
+            raise MIRCodegenError(f"unsupported C++ aggregate kind '{value.kind}'")
+        if isinstance(value, DiscriminantRValue):
+            return f"({self._operand(value.operand)}).tag"
+        if isinstance(value, PayloadRValue):
+            return (
+                f"std::any_cast<{self._type(value.type)}>("
+                f"({self._operand(value.operand)}).payload.at({value.index}))"
+            )
         raise MIRCodegenError(f"illegal rvalue reached C++ emitter: {type(value).__name__}")
 
     def _binary(self, value: BinaryRValue) -> str:
@@ -286,24 +439,69 @@ void print(const Values&... values) {
         if isinstance(operand, ConstOperand):
             return self._typed_constant(operand)
         if isinstance(operand, (CopyOperand, MoveOperand)):
-            return self._place(operand.place)
+            rendered = self._place(operand.place)
+            return f"std::move({rendered})" if isinstance(operand, MoveOperand) else rendered
         raise MIRCodegenError(f"illegal operand reached C++ emitter: {type(operand).__name__}")
 
     def _operand_type(self, operand: Operand) -> MIRType:
         if isinstance(operand, ConstOperand):
             return operand.type
         if isinstance(operand, (CopyOperand, MoveOperand)):
-            return self.local_types[operand.place.local]
+            return self._place_type(operand.place)
         raise MIRCodegenError(f"unknown operand type: {type(operand).__name__}")
 
+    def _place(self, place: Place) -> str:
+        rendered = f"_{place.local}"
+        value_type = self.local_types[place.local]
+        for projection in place.projections:
+            if value_type.optional:
+                rendered = f"({rendered}).value()"
+                value_type = replace(value_type, optional=False)
+            if isinstance(projection, FieldProjection):
+                rendered = f"({rendered}).{_identifier(projection.name)}"
+                value_type = self._field_type(value_type, projection.name)
+            elif isinstance(projection, ConstantIndexProjection):
+                rendered = f"nyx_mir_runtime::index({rendered}, {projection.index})"
+                value_type = self._index_type(value_type)
+            elif isinstance(projection, IndexProjection):
+                rendered = f"nyx_mir_runtime::index({rendered}, _{projection.local})"
+                value_type = self._index_type(value_type)
+            else:
+                raise MIRCodegenError(f"illegal projection reached C++ emitter: {type(projection).__name__}")
+        return rendered
+
+    def _place_type(self, place: Place) -> MIRType:
+        value_type = self.local_types[place.local]
+        for projection in place.projections:
+            if value_type.optional:
+                value_type = replace(value_type, optional=False)
+            if isinstance(projection, FieldProjection):
+                value_type = self._field_type(value_type, projection.name)
+            elif isinstance(projection, (ConstantIndexProjection, IndexProjection)):
+                value_type = self._index_type(value_type)
+            else:
+                raise MIRCodegenError(f"unknown projected place type: {type(projection).__name__}")
+        return value_type
+
+    def _field_type(self, value_type: MIRType, name: str) -> MIRType:
+        definition = self.structs.get(value_type.name)
+        if definition is None:
+            raise MIRCodegenError(f"field projection requires a known struct, got '{value_type}'")
+        for field in definition.fields:
+            if field.name == name:
+                return field.type
+        raise MIRCodegenError(f"struct '{value_type.name}' has no field '{name}'")
+
     @staticmethod
-    def _place(place: Place) -> str:
-        if place.projections:
-            raise MIRCodegenError("projected place reached scalar C++ emitter")
-        return f"_{place.local}"
+    def _index_type(value_type: MIRType) -> MIRType:
+        if value_type.name == "Array" and len(value_type.arguments) == 1:
+            return value_type.arguments[0]
+        raise MIRCodegenError(f"index projection requires Array<T>, got '{value_type}'")
 
     def _typed_constant(self, operand: ConstOperand) -> str:
         value = operand.value
+        if operand.type.optional and value is None:
+            return "std::nullopt"
         if operand.type.name in _INTEGER_TYPES:
             bits = int(value) & ((1 << 64) - 1)
             return f"nyx_mir_runtime::from_bits(UINT64_C({bits}))"
@@ -318,13 +516,15 @@ void print(const Values&... values) {
         if operand.type.name == "bool":
             return "true" if bool(value) else "false"
         if operand.type.name == "string":
-            return json.dumps(str(value), ensure_ascii=False)
+            return f"std::string({json.dumps(str(value), ensure_ascii=False)})"
         if operand.type.name == "char":
             return f"U{json.dumps(str(value), ensure_ascii=False)}"
         raise MIRCodegenError(f"unsupported constant type '{operand.type}'")
 
     @staticmethod
     def _constant(value: object) -> str:
+        if value is None:
+            return "std::nullopt"
         if isinstance(value, bool):
             return "true" if value else "false"
         if isinstance(value, int):
@@ -337,6 +537,12 @@ void print(const Values&... values) {
 
     @staticmethod
     def _type(value: MIRType) -> str:
+        if value.optional:
+            return f"std::optional<{_CppEmitter._type(replace(value, optional=False))}>"
+        if value.name == "Array" and len(value.arguments) == 1:
+            return f"std::vector<{_CppEmitter._type(value.arguments[0])}>"
+        if value.name in ("Option", "Result") and value.arguments:
+            return "nyx_tagged_value"
         if value.name == "void":
             return "void"
         if value.name == "bool":
@@ -349,6 +555,8 @@ void print(const Values&... values) {
             return "std::string"
         if value.name == "char":
             return "char32_t"
+        if value.name and not value.arguments and not value.pointer and not value.is_function:
+            return f"nyx_type_{_identifier(value.name)}"
         raise MIRCodegenError(f"unsupported C++ MIR type '{value}'")
 
 

@@ -95,9 +95,10 @@ class MIRInterpreter:
                 top_level = self.functions.get("function::__nyx_top_level")
                 if top_level is not None:
                     value = self._call(top_level, ())
-                main = self.functions.get("main")
-                if main is not None:
-                    value = self._call(main, arguments)
+                else:
+                    main = self.functions.get("main")
+                    if main is not None:
+                        value = self._call(main, arguments)
         except _MIRUserThrow as thrown:
             raise MIRTrap(f"uncaught Nyx throw: {self._format(thrown.value)}") from None
         return MIRExecutionResult(value, tuple(self.output), self.steps)

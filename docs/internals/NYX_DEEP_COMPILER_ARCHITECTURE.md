@@ -1767,13 +1767,15 @@ Implementation status (2026-09-09):
 - `src/mir/codegen_cpp.py` and `src/mir/codegen_llvm.py` are the first real
   consumers of legalized MIR. Their shared pilot scope is scalar values,
   explicit CFG control flow, calls, assertions, wrapping `int64` arithmetic,
-  division traps, strings, floats, and canonical `print` output;
+  division traps, strings, floats, and canonical `print` output. The C++ pilot
+  additionally legalizes arrays, checked index projections, structs, fields,
+  optionals, payload enums, `Result`, lexical cleanup CFG, and caught throws;
 - `nyx emit mir <file> --codegen --target cpp|llvm` exposes the pilots without
   changing the default Typed HIR compilation route;
 - C++ and LLVM pilot output is compiled and executed against both the MIR
   interpreter and the legacy C++ backend oracle in
   `tests/mir_legalization_suite.py`;
-- aggregate/projection/ownership lowering and the Wasm, Rust, JavaScript,
+- explicit borrow/retain/release/drop emission and the Wasm, Rust, JavaScript,
   Python, and C17 emitters remain open M5 work. Their published profiles are
   explicitly `profile-only`, so the CLI cannot pretend that they have migrated.
 
