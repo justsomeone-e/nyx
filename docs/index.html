@@ -1,82 +1,1050 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nyx — From source to something useful</title>
   <meta name="description" content="Nyx v5.0 Daydream is the stable systems toolchain release: native applications, direct LLVM IR, JavaScript, Python, Rust, and WebAssembly from one Typed HIR.">
-  <link rel="stylesheet" href="home.css"><script type="module" src="home.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0b0d10;
+      --surface:#111419;
+      --surface-2:#171b21;
+      --surface-raised:#1c2128;
+      --border:#272d36;
+      --border-accent:#506a89;
+      --text:#f1f3f5;
+      --text-muted:#a8b0bb;
+      --text-dim:#76818e;
+      --accent:#91a9c7;
+      --accent-strong:#b9c9dc;
+      --accent-soft:rgba(145,169,199,0.10);
+      --accent-mid:rgba(145,169,199,0.18);
+      --purple:#a69ab9;
+      --purple-soft:rgba(166,154,185,0.10);
+      --green:#79b59d;
+      --orange:#d3a76d;
+      --red:#d77d82;
+      --shadow:0 18px 50px rgba(0,0,0,.22);
+      --r:10px;
+      --font:'Inter',system-ui,-apple-system,sans-serif;
+      --mono:'JetBrains Mono','Fira Code',monospace;
+    }
+    html{scroll-behavior:smooth;font-size:16px}
+    body{
+      background:var(--bg);
+      color:var(--text);
+      font-family:var(--font);
+      line-height:1.6;
+      overflow-x:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+    ::selection{background:rgba(145,169,199,0.28);color:var(--text)}
+
+    /* CANVAS */
+    #bg-canvas{
+      position:fixed;top:0;left:0;
+      width:100%;height:100%;
+      z-index:0;pointer-events:none;
+      opacity:0.68;
+    }
+
+    /* SKIP */
+    .skip-link{
+      position:absolute;top:-100px;left:16px;
+      background:var(--accent);color:#fff;
+      padding:8px 16px;border-radius:var(--r);
+      font-size:.875rem;z-index:1000;
+      transition:top .2s;
+    }
+    .skip-link:focus{top:8px}
+
+    /* NAV */
+    .site-nav{
+      position:fixed;top:0;left:0;right:0;
+      z-index:100;
+      transition:background .4s,border-color .4s,backdrop-filter .4s;
+    }
+    .site-nav.scrolled{
+      background:rgba(11,13,16,0.88);
+      backdrop-filter:blur(20px) saturate(120%);
+      border-bottom:1px solid var(--border);
+    }
+    .nav-inner{
+      max-width:1120px;margin:0 auto;padding:0 32px;
+      display:flex;align-items:center;height:64px;gap:4px;
+    }
+    .wordmark{
+      font-family:var(--mono);font-weight:500;
+      font-size:1.125rem;color:var(--text);
+      text-decoration:none;letter-spacing:-.02em;
+      margin-right:auto;
+    }
+    .wordmark .dot{color:var(--accent)}
+    .site-nav nav{display:flex;gap:0}
+    .site-nav nav a{
+      color:var(--text-muted);text-decoration:none;
+      font-size:.875rem;padding:7px 14px;
+      border-radius:var(--r);transition:color .2s,background .2s;
+    }
+    .site-nav nav a:hover{color:var(--text);background:rgba(255,255,255,0.045)}
+    .nav-gh{
+      font-family:var(--mono);font-size:.75rem !important;
+      color:var(--accent) !important;
+      border:1px solid var(--border-accent);
+      margin-left:8px;padding:6px 14px !important;
+      letter-spacing:.04em;
+    }
+    .nav-gh:hover{background:var(--accent-soft) !important;border-color:var(--accent) !important}
+    @media(max-width:768px){
+      .nav-inner{padding:0 20px}
+      .site-nav nav a{padding:6px 10px;font-size:.8125rem}
+      .nav-gh{display:none}
+    }
+
+    /* LAYOUT */
+    .wrap{max-width:1120px;margin:0 auto;padding:0 32px}
+    @media(max-width:768px){.wrap{padding:0 20px}}
+
+    /* HERO */
+    .hero{
+      position:relative;z-index:1;
+      min-height:100vh;min-height:100dvh;
+      display:flex;flex-direction:column;justify-content:center;
+      padding:128px 0 80px;
+    }
+    .eyebrow{
+      font-family:var(--mono);font-size:.6875rem;font-weight:500;
+      letter-spacing:.14em;text-transform:uppercase;
+      color:var(--accent);display:flex;align-items:center;
+      gap:10px;margin-bottom:36px;
+      opacity:0;animation:fadeUp .8s ease .1s forwards;
+    }
+    .status-dot{
+      width:6px;height:6px;border-radius:50%;
+      background:var(--accent);
+      animation:pulsedot 2.4s ease infinite;
+    }
+    @keyframes pulsedot{
+      0%,100%{opacity:.45;transform:scale(.88)}
+      50%{opacity:1;transform:scale(1.18)}
+    }
+    .hero-title{
+      font-size:clamp(3rem,8.5vw,7.5rem);
+      font-weight:600;line-height:1.0;
+      letter-spacing:-.045em;color:var(--text);
+      margin-bottom:40px;
+      opacity:0;animation:fadeUp .8s ease .3s forwards;
+    }
+    .hero-title .grad{
+      color:var(--accent-strong);
+    }
+    .hero-body{
+      display:flex;align-items:flex-end;gap:64px;
+      opacity:0;animation:fadeUp .8s ease .5s forwards;
+    }
+    .hero-desc{
+      max-width:400px;color:var(--text-muted);
+      font-size:1.0625rem;line-height:1.75;flex:1;
+    }
+    .hero-actions{
+      display:flex;flex-direction:column;gap:12px;flex-shrink:0;
+    }
+    .pipeline{
+      display:flex;align-items:center;gap:0;
+      margin-top:72px;
+      opacity:0;animation:fadeUp .8s ease .7s forwards;
+    }
+    .pip-step{
+      font-family:var(--mono);font-size:.625rem;font-weight:500;
+      letter-spacing:.1em;color:var(--text-dim);
+      text-transform:uppercase;
+      padding:8px 14px;
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      cursor:default;
+      transition:color .4s,border-color .4s,background .4s,transform .4s;
+    }
+    .pip-step.lit{
+      color:var(--accent);
+      border-color:var(--border-accent);
+      background:var(--accent-soft);
+      transform:translateY(-1px);
+    }
+    .pip-arrow{
+      width:28px;height:1px;
+      background:var(--border);
+      position:relative;flex-shrink:0;
+    }
+    .pip-arrow::after{
+      content:'';
+      position:absolute;right:-1px;top:-3px;
+      width:0;height:0;
+      border-top:3px solid transparent;
+      border-bottom:3px solid transparent;
+      border-left:5px solid var(--border-accent);
+    }
+    @media(max-width:768px){
+      .hero-body{flex-direction:column;gap:32px;align-items:flex-start}
+      .pipeline{flex-wrap:wrap;gap:8px}
+      .pip-arrow{display:none}
+    }
+
+    /* BUTTONS */
+    .btn-primary{
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--accent-strong);color:#111419;
+      border:1px solid var(--accent-strong);
+      text-decoration:none;padding:12px 22px;
+      border-radius:var(--r);font-size:.9375rem;
+      font-weight:500;letter-spacing:-.01em;
+      transition:background .2s,border-color .2s,transform .2s;
+      white-space:nowrap;
+    }
+    .btn-primary:hover{
+      background:#d1dbe7;border-color:#d1dbe7;transform:translateY(-2px);
+    }
+    .btn-text{
+      display:inline-flex;align-items:center;gap:6px;
+      color:var(--text-muted);text-decoration:none;
+      font-size:.9375rem;padding:2px 0;
+      transition:color .2s;white-space:nowrap;
+    }
+    .btn-text:hover{color:var(--text)}
+
+    /* SECTION SCAFFOLD */
+    .section{position:relative;z-index:1;padding:112px 0}
+    .sec-label{
+      font-family:var(--mono);font-size:.625rem;font-weight:500;
+      letter-spacing:.14em;text-transform:uppercase;
+      color:var(--text-dim);
+      display:flex;align-items:center;gap:16px;
+      margin-bottom:56px;
+    }
+    .sec-label::after{content:'';flex:1;height:1px;background:var(--border)}
+    .sec-title{
+      font-size:clamp(2rem,4vw,3.5rem);
+      font-weight:600;line-height:1.08;
+      letter-spacing:-.035em;color:var(--text);
+      margin-bottom:20px;
+    }
+    .sec-intro{
+      color:var(--text-muted);font-size:1.0625rem;
+      line-height:1.72;max-width:600px;margin-bottom:48px;
+    }
+
+    /* ANALYZER */
+    .analyzer-wrap{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:1px;background:var(--border);
+      border:1px solid var(--border);
+      border-radius:14px;overflow:hidden;box-shadow:var(--shadow);
+    }
+    .pane{background:var(--surface);padding:32px}
+    .pane-hdr{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:28px;
+    }
+    .pane-hdr h3{font-size:.9375rem;font-weight:500;color:var(--text)}
+    .mono-tag{
+      font-family:var(--mono);font-size:.625rem;
+      color:var(--text-dim);letter-spacing:.08em;text-transform:uppercase;
+    }
+    .form-group{margin-bottom:20px}
+    label{
+      display:block;font-size:.8125rem;font-weight:500;
+      color:var(--text-muted);margin-bottom:8px;
+    }
+    label small{color:var(--text-dim);font-weight:400}
+    textarea,input[type=number]{
+      width:100%;background:var(--surface-2);
+      border:1px solid var(--border);
+      border-radius:var(--r);color:var(--text);
+      font-family:var(--mono);font-size:.8125rem;
+      padding:12px 14px;outline:none;resize:vertical;
+      transition:border-color .2s,box-shadow .2s;
+    }
+    textarea:focus,input[type=number]:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px var(--accent-soft);
+    }
+    input[type=number]{resize:none}
+    .field-help{
+      font-size:.75rem;color:var(--text-dim);
+      margin-top:8px;line-height:1.55;
+    }
+    .form-actions{display:flex;align-items:center;gap:16px;margin-top:24px}
+    button{cursor:pointer;font-family:var(--font);border:none;outline:none;transition:all .2s;touch-action:manipulation}
+    .btn-run{
+      background:var(--accent-strong);color:#111419;
+      border:1px solid var(--accent-strong);
+      padding:10px 20px;border-radius:var(--r);
+      font-size:.875rem;font-weight:500;
+    }
+    .btn-run:hover:not(:disabled){
+      background:#d1dbe7;border-color:#d1dbe7;
+    }
+    .btn-run:disabled{opacity:.35;cursor:not-allowed}
+    .btn-ghost{
+      background:transparent;color:var(--text-muted);
+      font-size:.875rem;padding:2px 0;
+    }
+    .btn-ghost:hover{color:var(--text)}
+    .runtime-state{
+      font-family:var(--mono);font-size:.75rem;
+      color:var(--text-dim);margin-top:14px;
+    }
+    .err-msg{font-size:.8125rem;color:var(--red);margin-top:8px;min-height:18px}
+    .report-summary{
+      font-size:.9375rem;color:var(--text-muted);
+      margin-bottom:28px;line-height:1.6;
+    }
+    .metrics-grid{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:10px;margin-bottom:28px;
+    }
+    .m-card{
+      background:var(--surface-2);border:1px solid var(--border);
+      border-radius:var(--r);padding:16px;
+    }
+    .m-card dt{
+      font-size:.6875rem;color:var(--text-dim);
+      text-transform:uppercase;letter-spacing:.1em;
+      margin-bottom:8px;
+    }
+    .m-card dd{
+      font-family:var(--mono);font-size:1.5rem;
+      font-weight:500;color:var(--text);
+      display:flex;align-items:baseline;gap:5px;
+    }
+    .m-card dd small{font-size:.75rem;color:var(--text-muted);font-weight:400}
+    .m-card.over{border-color:rgba(215,125,130,0.44)}
+    .m-card.over dd{color:var(--red)}
+    .dist-hdr{
+      display:flex;justify-content:space-between;
+      align-items:center;margin-bottom:12px;
+    }
+    .dist-hdr h4{font-size:.8125rem;font-weight:500;color:var(--text-muted)}
+    .distribution{display:flex;gap:3px;align-items:flex-end;height:56px}
+    .dist-bar{
+      flex:1;min-height:3px;border-radius:3px 3px 0 0;
+      background:var(--accent-mid);
+      border:1px solid var(--border-accent);
+      border-bottom:none;
+      transition:height .4s ease;
+    }
+    .dist-bar.over{background:rgba(215,125,130,0.18);border-color:rgba(215,125,130,0.44)}
+    .result-footer{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-top:24px;padding-top:16px;
+      border-top:1px solid var(--border);
+    }
+    .result-status{font-family:var(--mono);font-size:.625rem;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase}
+    @media(max-width:900px){.analyzer-wrap{grid-template-columns:1fr}}
+
+    /* SOURCE DETAILS */
+    .src-details{margin-top:20px}
+    .src-details summary{
+      font-size:.875rem;color:var(--text-muted);
+      cursor:pointer;padding:12px 0;
+      list-style:none;display:flex;align-items:center;gap:8px;
+      user-select:none;transition:color .2s;
+    }
+    .src-details summary::-webkit-details-marker{display:none}
+    .src-details summary::before{content:'\25B8';font-size:.75rem;transition:transform .2s}
+    .src-details[open] summary::before{transform:rotate(90deg)}
+    .src-details summary:hover{color:var(--text)}
+    .src-grid{
+      display:grid;grid-template-columns:1fr 1fr;gap:24px;
+      padding:28px;background:var(--surface);
+      border:1px solid var(--border);border-radius:var(--r);
+      margin-top:4px;
+    }
+    .src-grid p{font-size:.9375rem;color:var(--text-muted);line-height:1.65;margin-bottom:16px}
+    .src-grid pre{
+      background:var(--surface-2);border:1px solid var(--border);
+      border-radius:var(--r);padding:18px;overflow-x:auto;
+    }
+    .src-grid code{
+      font-family:var(--mono);font-size:.8125rem;
+      color:var(--text-muted);line-height:1.65;
+    }
+    @media(max-width:768px){.src-grid{grid-template-columns:1fr}}
+
+    /* PROJECTS */
+    .projects-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      gap:1px;background:var(--border);
+      border:1px solid var(--border);
+      border-radius:14px;overflow:hidden;box-shadow:var(--shadow);
+    }
+    .proj-card{
+      background:var(--surface);padding:32px;
+      display:flex;flex-direction:column;gap:14px;
+      text-decoration:none;
+      transition:background .2s;
+    }
+    .proj-card:hover{background:var(--surface-2)}
+    .proj-num{
+      font-family:var(--mono);font-size:.625rem;
+      color:var(--text-dim);letter-spacing:.12em;
+    }
+    .proj-card h3{
+      font-size:1.0625rem;font-weight:500;
+      color:var(--text);letter-spacing:-.01em;
+    }
+    .proj-card p{font-size:.9375rem;color:var(--text-muted);line-height:1.65;flex:1}
+    .proj-code{
+      font-family:var(--mono);font-size:.75rem;
+      color:var(--accent);background:var(--accent-soft);
+      border:1px solid var(--border-accent);
+      padding:7px 11px;border-radius:4px;
+      display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    }
+    .proj-link{
+      font-size:.8125rem;color:var(--text-dim);
+      margin-top:auto;transition:color .2s;
+    }
+    .proj-card:hover .proj-link{color:var(--accent)}
+    @media(max-width:900px){.projects-grid{grid-template-columns:1fr}}
+
+    /* TARGETS */
+    .targets-top{
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:64px;align-items:start;
+      margin-bottom:48px;
+    }
+    @media(max-width:768px){.targets-top{grid-template-columns:1fr;gap:32px}}
+    .table-wrap{
+      overflow-x:auto;
+      border:1px solid var(--border);
+      border-radius:14px;
+      background:var(--surface);
+    }
+    table{width:100%;border-collapse:collapse;font-size:.9375rem}
+    table caption{display:none}
+    thead tr{border-bottom:1px solid var(--border)}
+    th{
+      font-size:.6875rem;font-weight:500;
+      text-transform:uppercase;letter-spacing:.1em;
+      color:var(--text-dim);padding:14px 24px;text-align:left;
+    }
+    td,tbody th{
+      padding:16px 24px;
+      border-bottom:1px solid var(--border);
+      color:var(--text-muted);font-weight:400;text-align:left;
+    }
+    tbody tr:last-child td,tbody tr:last-child th{border-bottom:none}
+    tbody th{
+      font-family:var(--mono);font-size:.875rem;
+      color:var(--text);font-weight:500;
+    }
+    tbody tr{transition:background .15s}
+    tbody tr:hover{background:rgba(255,255,255,0.028)}
+    .badge{
+      display:inline-flex;align-items:center;gap:6px;
+      font-family:var(--mono);font-size:.625rem;font-weight:500;
+      letter-spacing:.1em;padding:4px 10px;
+      border-radius:100px;text-transform:uppercase;
+    }
+    .badge::before{content:'';width:5px;height:5px;border-radius:50%}
+    .badge.stable{background:rgba(121,181,157,0.10);color:var(--green);border:1px solid rgba(121,181,157,0.30)}
+    .badge.stable::before{background:var(--green)}
+    .badge.beta{background:rgba(211,167,109,0.10);color:var(--orange);border:1px solid rgba(211,167,109,0.30)}
+    .badge.beta::before{background:var(--orange)}
+    .badge.experimental{background:rgba(166,154,185,0.10);color:var(--purple);border:1px solid rgba(166,154,185,0.30)}
+    .badge.experimental::before{background:var(--purple)}
+
+    /* RELEASE */
+    .release-hdr{
+      display:flex;justify-content:space-between;
+      align-items:flex-start;gap:32px;
+      margin-bottom:64px;
+    }
+    .release-grid{
+      display:grid;grid-template-columns:repeat(3,1fr);
+      gap:1px;background:var(--border);
+      border:1px solid var(--border);
+      border-radius:14px;overflow:hidden;
+      margin-bottom:24px;
+    }
+    .r-item{
+      background:var(--surface);padding:28px;
+      display:flex;flex-direction:column;gap:10px;
+      transition:background .2s;
+    }
+    .r-item:hover{background:var(--surface-2)}
+    .r-num{font-family:var(--mono);font-size:.625rem;color:var(--text-dim)}
+    .r-item h3{font-size:.9375rem;font-weight:500;color:var(--text);letter-spacing:-.01em}
+    .r-item p{font-size:.875rem;color:var(--text-muted);line-height:1.65}
+    .release-footer{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:48px;padding:28px 32px;
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      background:var(--surface);
+    }
+    .release-footer p{font-size:.9375rem;color:var(--text-muted);line-height:1.65;max-width:560px}
+    @media(max-width:900px){.release-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:600px){
+      .release-grid{grid-template-columns:1fr}
+      .release-footer{flex-direction:column;gap:20px}
+      .release-hdr{flex-direction:column;gap:12px}
+    }
+
+    /* CTA */
+    .cta-section{
+      padding:128px 0;text-align:center;
+      position:relative;z-index:1;
+    }
+    .cta-section h2{
+      font-size:clamp(2.5rem,6vw,5rem);
+      font-weight:600;line-height:1.05;
+      letter-spacing:-.045em;color:var(--text);
+      margin-bottom:48px;
+    }
+    .cta-actions{
+      display:flex;align-items:center;
+      justify-content:center;gap:28px;
+    }
+
+    /* FOOTER */
+    .site-footer{
+      border-top:1px solid var(--border);
+      padding:28px 0;
+      position:relative;z-index:1;
+    }
+    .footer-inner{
+      display:flex;align-items:center;
+      justify-content:space-between;
+    }
+    .footer-meta{
+      display:flex;align-items:center;gap:24px;
+      font-size:.8125rem;color:var(--text-dim);
+    }
+    .footer-meta a{color:inherit;text-decoration:none;transition:color .2s}
+    .footer-meta a:hover{color:var(--text-muted)}
+
+    /* ANIMATE */
+    @keyframes fadeUp{
+      from{opacity:0;transform:translateY(22px)}
+      to{opacity:1;transform:translateY(0)}
+    }
+    .reveal{
+      opacity:0;transform:translateY(28px);
+      transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);
+    }
+    .reveal.vis{opacity:1;transform:translateY(0)}
+    .d1{transition-delay:.08s}
+    .d2{transition-delay:.16s}
+    .d3{transition-delay:.24s}
+    .d4{transition-delay:.32s}
+
+    /* INLINE */
+    a{color:var(--accent);text-decoration:none;transition:opacity .2s}
+    a:hover{opacity:.75}
+    .btn-primary,.btn-run{min-height:44px}
+    :focus-visible{outline:2px solid var(--accent-strong);outline-offset:4px}
+    code{
+      font-family:var(--mono);font-size:.875em;
+      background:var(--surface-2);border:1px solid var(--border);
+      padding:2px 6px;border-radius:4px;color:var(--text-muted);
+    }
+    @media(prefers-reduced-motion:reduce){
+      html{scroll-behavior:auto}
+      *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+      .reveal{opacity:1;transform:none}
+      #bg-canvas{display:none}
+    }
+  </style>
 </head>
 <body>
-<a class="skip-link" href="#main">Skip to content</a>
-<header class="site-header wrap">
-  <a class="wordmark" href="index.html" aria-label="Nyx home">nyx<span class="brand-dot">.</span></a>
-  <nav aria-label="Main navigation"><a href="#applications">Applications</a><a href="#targets">Targets</a><a href="#release">v5.0 release</a><a href="studio.html">Learn</a></nav>
-  <a class="repo-link" href="https://github.com/justsomeone-e/nyx">Source ↗</a>
-</header>
-<main id="main">
-<section class="hero wrap">
-  <div class="eyebrow"><span class="status-dot" aria-hidden="true"></span> NYX / THE V5 LINE</div>
-  <h1>Write the logic.<br><span>Put it to work.</span></h1>
-  <div class="hero-bottom"><p>A language is only as useful as what you make with it. Native tools, JavaScript and Python modules, and WebAssembly applications. Start with a result you can use.</p><div class="actions"><a class="button primary" href="#applications">Try a real application ↘</a><a class="text-link" href="https://github.com/justsomeone-e/nyx/blob/main/GETTING_STARTED.md">Build locally ↗</a></div></div>
-  <div class="pipeline" aria-label="Compilation pipeline"><span>NYX SOURCE</span><span aria-hidden="true">→</span><span>TYPED HIR v1</span><span aria-hidden="true">→</span><span>NATIVE / LLVM / JS / PYTHON / WASM</span></div>
-</section>
-<section class="application-section wrap" id="applications" aria-labelledby="applications-title">
-  <div class="section-heading"><div><div class="eyebrow">01 / RUN THE RESULT</div><h2 id="applications-title">Your data. Nyx doing the work.</h2></div><span class="label">LIVE APPLICATION</span></div>
-  <p class="section-intro">Paste request latencies from a test run. Find the slow requests, check your budget, and take a report with you. All calculations run in a compiled Nyx WASM module on your device.</p>
-  <div class="analyzer">
-    <form id="analysisForm" class="data-pane">
-      <div class="pane-heading"><h3>Latency report</h3><span class="mono">.nyx → .wasm</span></div>
-      <label for="samples">Response times <span class="muted">in milliseconds</span></label>
-      <textarea id="samples" name="samples" rows="7" spellcheck="false" aria-describedby="sampleHelp inputError">42, 58, 61, 74, 89, 95,
-112, 128, 156, 204, 267, 380</textarea>
-      <p class="field-help" id="sampleHelp">Numbers separated by commas, spaces or new lines. Up to 10,000 samples, each from 0 to 1,000,000 ms. CSV headers are not accepted.</p>
-      <div class="budget-row"><label for="budget">Latency budget <span class="muted">ms</span></label><input id="budget" name="budget" type="number" value="200" min="0" max="1000000" step="any" required></div>
-      <p id="inputError" class="error" role="alert"></p>
-      <div class="actions"><button id="analyzeButton" class="button primary" type="submit" disabled>Loading WASM…</button><button id="sampleButton" class="text-button" type="button">Restore example</button></div>
-      <p class="runtime-state" id="runtimeState" role="status">Loading the compiled module…</p>
-      <noscript><p>Enable JavaScript to load WebAssembly, or use the local build instructions below.</p></noscript>
-    </form>
-    <section class="result-pane" aria-label="Analysis results" aria-busy="true" id="results">
-      <div class="pane-heading"><h3>Report</h3><span class="result-state" id="resultState">WAITING FOR WASM</span></div>
-      <p class="report-summary" id="reportSummary" role="status">The result will appear once the module loads.</p>
-      <dl class="metrics"><div><dt>Average latency</dt><dd><span id="average">—</span><small>ms</small></dd></div><div><dt>Over budget</dt><dd id="overBudget">—</dd></div><div><dt>Fastest</dt><dd><span id="minimum">—</span><small>ms</small></dd></div><div><dt>Slowest</dt><dd><span id="maximum">—</span><small>ms</small></dd></div></dl>
-      <div class="distribution-title"><h4>Latency distribution</h4><span id="sampleCount" class="mono">— samples</span></div>
-      <div id="distribution" class="distribution" aria-label="Sample counts by latency range"></div>
-      <div class="result-footer"><span class="mono" id="executionTime">Nyx / WebAssembly</span><button class="text-button" id="downloadButton" disabled>Download JSON ↓</button></div>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+  <header class="site-nav" id="site-nav">
+    <div class="nav-inner">
+      <a class="wordmark" href="#" aria-label="Nyx home">nyx<span class="dot">.</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#applications">Applications</a>
+        <a href="#targets">Targets</a>
+        <a href="#release">v5.0</a>
+        <a href="#">Learn</a>
+        <a href="https://github.com/justsomeone-e/nyx" class="nav-gh">GitHub ↗</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- HERO -->
+    <section class="hero wrap">
+      <div class="eyebrow">
+        <span class="status-dot" aria-hidden="true"></span>
+        NYX / THE V5 LINE
+      </div>
+      <h1 class="hero-title">
+        Write the logic.<br>
+        <span class="grad">Put it to work.</span>
+      </h1>
+      <div class="hero-body">
+        <p class="hero-desc">
+          A language is only as useful as what you make with it. Native tools, JavaScript and Python modules, and WebAssembly applications. Start with a result you can use.
+        </p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="#applications">Try a real application ↘</a>
+          <a class="btn-text" href="https://github.com/justsomeone-e/nyx/blob/main/GETTING_STARTED.md">Build locally ↗</a>
+        </div>
+      </div>
+      <div class="pipeline" aria-label="Compilation pipeline" id="pipeline">
+        <span class="pip-step" id="ps0">NYX SOURCE</span>
+        <span class="pip-arrow" aria-hidden="true"></span>
+        <span class="pip-step" id="ps1">TYPED HIR v1</span>
+        <span class="pip-arrow" aria-hidden="true"></span>
+        <span class="pip-step" id="ps2">NATIVE / LLVM</span>
+        <span class="pip-arrow" aria-hidden="true"></span>
+        <span class="pip-step" id="ps3">JS / PYTHON / WASM</span>
+      </div>
     </section>
-  </div>
-  <details class="source-details"><summary>See the source. Reproduce the result.</summary><div class="source-grid"><div><p>The shared <code>metrics.nyx</code> module implements the calculations. JavaScript validates input, calls the generated ABI wrapper and renders the result.</p><a class="text-link" href="generated/metrics/metrics.nyx">Read Nyx source ↗</a><br><a class="text-link" href="generated/metrics/metrics.d.ts">Read generated TypeScript types ↗</a></div><pre><code>python src/cli.py bundle examples/metrics/metrics.nyx --output docs/generated/metrics --package
-python -m http.server 8080 --directory docs</code></pre></div></details>
-</section>
-<section class="wrap" aria-labelledby="more-title">
-  <div class="section-heading"><div><div class="eyebrow">02 / BEYOND THE BROWSER</div><h2 id="more-title">Take the same language further.</h2></div></div>
-  <div class="project-list">
-    <article><span class="project-number">01</span><div><h3>Native latency CLI</h3><p>Analyze integer millisecond samples from command-line arguments using the same metrics module.</p><code>./build/cpp/cli.exe 42 95 380</code></div><a href="examples/metrics/README.md">Source &amp; usage ↗</a></article>
-    <article><span class="project-number">02</span><div><h3>JavaScript &amp; Python integration</h3><p>Import compiled metrics functions into Node or Python. Typed foreign imports also cover native platform APIs.</p><code>Nyx logic → importable host modules</code></div><a href="examples/metrics/README.md">Run integrations ↗</a></article>
-    <article><span class="project-number">03</span><div><h3>Pong &amp; Last Signal</h3><p>Larger interactive programs exercise input, state and control flow. Browser Pong uses the generated Canvas host bridge.</p><code>Native terminal games / browser Canvas</code></div><a href="demos/pong.html">Play browser Pong ↗</a></article>
-  </div>
-</section>
-<section class="wrap targets-section" id="targets" aria-labelledby="targets-title">
-  <div><div class="eyebrow">03 / KNOW YOUR TARGET</div><h2 id="targets-title">One frontend.<br>Explicit contracts.</h2><p>Backend maturity is declared in the compiler registry. A beta label matters: check the supported capability before building around it.</p><a class="text-link" href="internals/ROADMAP_AND_BACKEND_GATES.md">Read the backend gates ↗</a></div>
-  <div class="table-scroll"><table><caption>Current v5 backend contracts</caption><thead><tr><th scope="col">Target</th><th scope="col">Output</th><th scope="col">Status</th></tr></thead><tbody><tr><th scope="row">C++</th><td>C++20 / native binary</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">JavaScript</th><td>ES2022 / Node.js</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">Python</th><td>Python 3</td><td><span class="maturity">Stable</span></td></tr><tr><th scope="row">WebAssembly</th><td>WASM / Bundle ABI v1</td><td><span class="maturity beta">Beta</span></td></tr><tr><th scope="row">Rust</th><td>Rust 2021</td><td><span class="maturity beta">Beta</span></td></tr><tr><th scope="row">LLVM IR</th><td>Native scalar + structs/arrays</td><td><span class="maturity beta">Experimental</span></td></tr><tr><th scope="row">React / ASM</th><td>TSX / x86_64 via C++</td><td><span class="maturity beta">Beta</span></td></tr></tbody></table></div>
-</section>
-<section class="wrap roadmap-section" id="release" aria-labelledby="release-title">
-  <div class="section-heading"><div><div class="eyebrow">04 / RELEASE STATUS</div><h2 id="release-title">v5.0 Daydream has shipped.</h2></div><span class="label">STABLE RELEASE</span></div>
-  <p class="section-intro">Nyx v5.0.0 is the stable Daydream language and toolchain release. It preserves the C++20, JavaScript, Python, Typed HIR v1, and Bundle ABI v1 contracts while adding direct LLVM IR generation as an explicitly experimental backend.</p>
-  <ol class="roadmap-list">
-    <li><span>Direct LLVM IR pipeline</span><p>Native scalar arithmetic, IEEE double, structured control flow, and Clang compilation without C++ hops.</p></li>
-    <li><span>LLVM aggregate types</span><p>Value-semantic structs, stack-owned scalar arrays, bounds verification, element copy semantics, and for-loop iteration.</p></li>
-    <li><span>C17 scalar backend</span><p>Portable ISO C17 emission, wrapping signed integer arithmetic, safe division aborts, and strict conformance.</p></li>
-    <li><span>Toolchain integration</span><p>Direct <code>nyx build -t llvm</code> and <code>nyx run -t llvm</code> workflows compiling directly to native binaries via host Clang.</p></li>
-    <li><span>Preserved stable contracts</span><p>C++20 remains the default native path; JavaScript and Python remain stable, while WASM, Rust, React, ASM, LLVM, and C17 keep their declared narrower maturity levels.</p></li>
-    <li><span>Explicit LLVM limits</span><p>Escaping arrays, nested aggregates, exceptions, tasks, closures, complete standard-library bindings, and a native LLVM self-host emitter remain outside the stable LLVM contract.</p></li>
-    <li><span>Canonical compiler model</span><p>All public backend paths continue through checked Typed HIR and reject unsupported constructs instead of silently falling back to another backend.</p></li>
-    <li><span>Native self-hosting</span><p>The reproducible Stage1 → Stage2 → Stage3 compiler path remains part of the release verification contract; Python is the stage-0 orchestration frontend.</p></li>
-    <li><span>Release evidence</span><p>Tagged builds produce platform binaries, deterministic archives, VSIX, checksums, SBOM, and provenance after the complete release workflow passes.</p></li>
-  </ol>
-  <div class="roadmap-footer"><p>LLVM and C17 are included for experimentation, not promoted to stable backends. Go, JVM, .NET, Lua, and retiring the C++ bootstrap path remain future work.</p><a class="text-link" href="https://github.com/justsomeone-e/nyx/releases/tag/v5.0.0">Download v5.0.0 Daydream ↗</a></div>
-</section>
-<section class="wrap closing"><h2>Build something.<br>Then look under the hood.</h2><div class="actions"><a class="button primary" href="https://github.com/justsomeone-e/nyx/blob/main/INSTALLATION.md">Install the toolchain ↗</a><a class="text-link" href="studio.html">Explore the language tour →</a></div></section>
-</main>
-<footer class="wrap site-footer"><a class="wordmark" href="#">nyx.</a><span>Source available · Apache-2.0</span><a href="https://github.com/justsomeone-e/nyx">GitHub ↗</a></footer>
-</body></html>
+
+    <!-- ANALYZER -->
+    <section class="section wrap" id="applications" aria-labelledby="app-title">
+      <div class="sec-label reveal">01 / RUN THE RESULT</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:32px;margin-bottom:48px" class="reveal d1">
+        <h2 class="sec-title" id="app-title" style="margin-bottom:0">Your data.<br>Nyx doing the work.</h2>
+        <span class="mono-tag" style="padding-top:8px;white-space:nowrap">LIVE APPLICATION</span>
+      </div>
+      <p class="sec-intro reveal d2">
+        Paste request latencies from a test run. Find the slow requests, check your budget, and take a report with you. All calculations run in a compiled Nyx WASM module on your device.
+      </p>
+      <div class="analyzer-wrap reveal d3">
+        <div class="pane">
+          <div class="pane-hdr">
+            <h3>Latency report</h3>
+            <span class="mono-tag">.nyx → .wasm</span>
+          </div>
+          <form id="analysisForm">
+            <div class="form-group">
+              <label for="samples">Response times <small>in milliseconds</small></label>
+              <textarea id="samples" name="samples" rows="6" spellcheck="false">42, 58, 61, 74, 89, 95,
+112, 128, 156, 204, 267, 380</textarea>
+              <p class="field-help">Numbers separated by commas, spaces or new lines. Up to 10,000 samples, each 0–1,000,000 ms.</p>
+            </div>
+            <div class="form-group">
+              <label for="budget">Latency budget <small>ms</small></label>
+              <input id="budget" name="budget" type="number" value="200" min="0" max="1000000" step="any" required>
+            </div>
+            <p id="inputError" class="err-msg" role="alert"></p>
+            <div class="form-actions">
+              <button id="analyzeButton" class="btn-run" type="submit">Analyze</button>
+              <button id="sampleButton" class="btn-ghost" type="button">Restore example</button>
+            </div>
+            <p class="runtime-state" id="runtimeState" role="status"></p>
+          </form>
+        </div>
+        <section class="pane" aria-label="Analysis results" id="results">
+          <div class="pane-hdr">
+            <h3>Report</h3>
+            <span class="result-status" id="resultState">WAITING</span>
+          </div>
+          <p class="report-summary" id="reportSummary" role="status">Run the analysis to see results here.</p>
+          <dl class="metrics-grid">
+            <div class="m-card"><dt>Average latency</dt><dd><span id="average">—</span><small>ms</small></dd></div>
+            <div class="m-card" id="overBudgetCard"><dt>Over budget</dt><dd id="overBudget">—</dd></div>
+            <div class="m-card"><dt>Fastest</dt><dd><span id="minimum">—</span><small>ms</small></dd></div>
+            <div class="m-card"><dt>Slowest</dt><dd><span id="maximum">—</span><small>ms</small></dd></div>
+          </dl>
+          <div class="dist-hdr">
+            <h4>Latency distribution</h4>
+            <span id="sampleCount" class="mono-tag">— samples</span>
+          </div>
+          <div id="distribution" class="distribution" aria-label="Sample counts by latency range"></div>
+          <div class="result-footer">
+            <span class="result-status" id="executionTime">Nyx / WebAssembly</span>
+            <button class="btn-ghost" id="downloadButton" disabled>Download JSON ↓</button>
+          </div>
+        </section>
+      </div>
+      <details class="src-details">
+        <summary>See the source. Reproduce the result.</summary>
+        <div class="src-grid">
+          <div>
+            <p>The shared <code>metrics.nyx</code> module implements the calculations. JavaScript validates input, calls the generated ABI wrapper and renders the result.</p>
+            <a href="generated/metrics/metrics.nyx">Read Nyx source ↗</a><br><br>
+            <a href="generated/metrics/metrics.d.ts">Read generated TypeScript types ↗</a>
+          </div>
+          <pre><code>python src/cli.py bundle examples/metrics/metrics.nyx \
+  --output docs/generated/metrics --package
+python -m http.server 8080 --directory docs</code></pre>
+        </div>
+      </details>
+    </section>
+
+    <!-- PROJECTS -->
+    <section class="section wrap" aria-labelledby="more-title">
+      <div class="sec-label reveal">02 / BEYOND THE BROWSER</div>
+      <h2 class="sec-title reveal d1" id="more-title" style="margin-bottom:48px">Take the same language further.</h2>
+      <div class="projects-grid reveal d2">
+        <a class="proj-card" href="examples/metrics/README.md">
+          <span class="proj-num">01</span>
+          <h3>Native latency CLI</h3>
+          <p>Analyze integer millisecond samples from command-line arguments using the same metrics module.</p>
+          <code class="proj-code">./build/cpp/cli.exe 42 95 380</code>
+          <span class="proj-link">Source &amp; usage ↗</span>
+        </a>
+        <a class="proj-card" href="examples/metrics/README.md">
+          <span class="proj-num">02</span>
+          <h3>JavaScript &amp; Python integration</h3>
+          <p>Import compiled metrics functions into Node or Python. Typed foreign imports also cover native platform APIs.</p>
+          <code class="proj-code">Nyx logic → importable host modules</code>
+          <span class="proj-link">Run integrations ↗</span>
+        </a>
+        <a class="proj-card" href="demos/pong.html">
+          <span class="proj-num">03</span>
+          <h3>Pong &amp; Last Signal</h3>
+          <p>Larger interactive programs exercise input, state and control flow. Browser Pong uses the generated Canvas host bridge.</p>
+          <code class="proj-code">Native terminal games / browser Canvas</code>
+          <span class="proj-link">Play browser Pong ↗</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- TARGETS -->
+    <section class="section wrap" id="targets" aria-labelledby="targets-title">
+      <div class="sec-label reveal">03 / KNOW YOUR TARGET</div>
+      <div class="targets-top reveal d1">
+        <div>
+          <h2 class="sec-title" id="targets-title">One frontend.<br>Explicit contracts.</h2>
+          <p class="sec-intro" style="margin-bottom:20px">Backend maturity is declared in the compiler registry. A beta label matters: check the supported capability before building around it.</p>
+          <a href="internals/ROADMAP_AND_BACKEND_GATES.md">Read the backend gates ↗</a>
+        </div>
+      </div>
+      <div class="table-wrap reveal d2">
+        <table>
+          <caption>Current v5 backend contracts</caption>
+          <thead><tr><th>Target</th><th>Output</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">C++</th><td>C++20 / native binary</td><td><span class="badge stable">Stable</span></td></tr>
+            <tr><th scope="row">JavaScript</th><td>ES2022 / Node.js</td><td><span class="badge stable">Stable</span></td></tr>
+            <tr><th scope="row">Python</th><td>Python 3</td><td><span class="badge stable">Stable</span></td></tr>
+            <tr><th scope="row">WebAssembly</th><td>WASM / Bundle ABI v1</td><td><span class="badge beta">Beta</span></td></tr>
+            <tr><th scope="row">Rust</th><td>Rust 2021</td><td><span class="badge beta">Beta</span></td></tr>
+            <tr><th scope="row">LLVM IR</th><td>Native scalar + structs/arrays</td><td><span class="badge experimental">Experimental</span></td></tr>
+            <tr><th scope="row">React / ASM</th><td>TSX / x86_64 via C++</td><td><span class="badge beta">Beta</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- RELEASE -->
+    <section class="section wrap" id="release" aria-labelledby="release-title">
+      <div class="release-hdr reveal">
+        <div class="sec-label" style="margin-bottom:0;flex:1">04 / RELEASE STATUS</div>
+        <span class="mono-tag">STABLE RELEASE</span>
+      </div>
+      <h2 class="sec-title reveal d1" id="release-title" style="margin-bottom:16px">v5.0 Daydream has shipped.</h2>
+      <p class="sec-intro reveal d2">Nyx v5.0.0 is the stable Daydream language and toolchain release. It preserves C++20, JavaScript, Python, Typed HIR v1, and Bundle ABI v1 contracts while adding direct LLVM IR generation as an explicitly experimental backend.</p>
+      <div class="release-grid reveal d3">
+        <div class="r-item"><span class="r-num">01</span><h3>Direct LLVM IR pipeline</h3><p>Native scalar arithmetic, IEEE double, structured control flow, and Clang compilation without C++ hops.</p></div>
+        <div class="r-item"><span class="r-num">02</span><h3>LLVM aggregate types</h3><p>Value-semantic structs, stack-owned scalar arrays, bounds verification, element copy semantics, and for-loop iteration.</p></div>
+        <div class="r-item"><span class="r-num">03</span><h3>C17 scalar backend</h3><p>Portable ISO C17 emission, wrapping signed integer arithmetic, safe division aborts, and strict conformance.</p></div>
+        <div class="r-item"><span class="r-num">04</span><h3>Toolchain integration</h3><p>Direct <code>nyx build -t llvm</code> and <code>nyx run -t llvm</code> compiling to native binaries via host Clang.</p></div>
+        <div class="r-item"><span class="r-num">05</span><h3>Preserved stable contracts</h3><p>C++20 remains the default native path; JavaScript and Python remain stable, while WASM, Rust, React, ASM keep their declared maturity levels.</p></div>
+        <div class="r-item"><span class="r-num">06</span><h3>Canonical compiler model</h3><p>All public backend paths continue through checked Typed HIR and reject unsupported constructs instead of silently falling back.</p></div>
+        <div class="r-item"><span class="r-num">07</span><h3>Native self-hosting</h3><p>The reproducible Stage1 → Stage2 → Stage3 compiler path remains part of the release verification contract.</p></div>
+        <div class="r-item"><span class="r-num">08</span><h3>Release evidence</h3><p>Tagged builds produce platform binaries, deterministic archives, VSIX, checksums, SBOM, and provenance after the complete workflow passes.</p></div>
+        <div class="r-item"><span class="r-num">09</span><h3>Explicit LLVM limits</h3><p>Escaping arrays, nested aggregates, exceptions, tasks, closures, and complete standard-library bindings remain outside the stable LLVM contract.</p></div>
+      </div>
+      <div class="release-footer reveal d4">
+        <p>LLVM and C17 are included for experimentation, not promoted to stable backends. Go, JVM, .NET, Lua, and retiring the C++ bootstrap path remain future work.</p>
+        <a class="btn-primary" href="https://github.com/justsomeone-e/nyx/releases/tag/v5.0.0" style="flex-shrink:0">Download v5.0.0 ↗</a>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section wrap" aria-label="Get started">
+      <h2 class="reveal">Build something.<br>Then look under the hood.</h2>
+      <div class="cta-actions reveal d1">
+        <a class="btn-primary" href="https://github.com/justsomeone-e/nyx/blob/main/INSTALLATION.md">Install the toolchain ↗</a>
+        <a class="btn-text" href="#">Explore the language tour →</a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap footer-inner">
+      <a class="wordmark" href="#" style="color:var(--text-dim)">nyx<span class="dot">.</span></a>
+      <div class="footer-meta">
+        <span>Source available · Apache-2.0</span>
+        <a href="https://github.com/justsomeone-e/nyx">GitHub ↗</a>
+      </div>
+    </div>
+  </footer>
+
+<script>
+// ============================================================
+// WebGL SHADER BACKGROUND
+// ============================================================
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+  if (!gl) return;
+
+  const VS = `
+    attribute vec2 a_pos;
+    void main() { gl_Position = vec4(a_pos, 0.0, 1.0); }
+  `;
+
+  const FS = `
+    precision highp float;
+    uniform float u_time;
+    uniform vec2  u_res;
+
+    vec2 hash2(vec2 p) {
+      p = vec2(dot(p, vec2(127.1,311.7)), dot(p, vec2(269.5,183.3)));
+      return -1.0 + 2.0 * fract(sin(p) * 43758.5453);
+    }
+
+    float snoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f*f*(3.0-2.0*f);
+      return mix(
+        mix(dot(hash2(i+vec2(0,0)), f-vec2(0,0)),
+            dot(hash2(i+vec2(1,0)), f-vec2(1,0)), u.x),
+        mix(dot(hash2(i+vec2(0,1)), f-vec2(0,1)),
+            dot(hash2(i+vec2(1,1)), f-vec2(1,1)), u.x), u.y);
+    }
+
+    float fbm(vec2 p) {
+      float v = 0.0, a = 0.5;
+      for (int i = 0; i < 5; i++) {
+        v += a * snoise(p);
+        p = p * 2.1 + vec2(1.7, 9.2);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    void main() {
+      vec2 uv = gl_FragCoord.xy / u_res;
+      float t  = u_time * 0.08;
+
+      // two-layer domain-warped fbm
+      vec2 q  = vec2(fbm(uv * 2.0 + t),
+                     fbm(uv * 2.0 + vec2(5.2, 1.3) + t * 0.9));
+      vec2 r  = vec2(fbm(uv * 2.5 + 4.0*q + vec2(1.7, 9.2) + t * 0.6),
+                     fbm(uv * 2.5 + 4.0*q + vec2(8.3, 2.8) + t * 0.7));
+      float f = fbm(uv * 2.0 + 4.0*r + t * 0.5);
+      f = 0.5 + 0.5*f;
+
+      // faint grid
+      vec2 gv = fract(uv * 18.0);
+      float gl = min(smoothstep(0.0, 0.04, gv.x), smoothstep(0.0, 0.04, gv.y));
+      gl = (1.0-gl) * 0.018;
+
+      // vignette
+      float vig = 1.0 - smoothstep(0.3, 1.1, length(uv - 0.5) * 1.6);
+
+      // restrained graphite + steel atmosphere
+      vec3 base  = vec3(0.043, 0.051, 0.063);
+      vec3 steel = vec3(0.18,  0.24,  0.31);
+
+      vec3 col = base;
+      col += steel * f * 0.10 * vig;
+      col += vec3(0.025, 0.030, 0.038) * (1.0-f) * 0.08 * vig;
+      col += vec3(gl);
+      col *= 0.98 + 0.02 * vig;
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `;
+
+  function compile(type, src) {
+    const s = gl.createShader(type);
+    gl.shaderSource(s, src);
+    gl.compileShader(s);
+    return s;
+  }
+
+  const prog = gl.createProgram();
+  gl.attachShader(prog, compile(gl.VERTEX_SHADER, VS));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog);
+  gl.useProgram(prog);
+
+  const buf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+
+  const aPos = gl.getAttribLocation(prog, 'a_pos');
+  gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+  const uTime = gl.getUniformLocation(prog, 'u_time');
+  const uRes  = gl.getUniformLocation(prog, 'u_res');
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width  = window.innerWidth  * dpr;
+    canvas.height = window.innerHeight * dpr;
+    gl.viewport(0, 0, canvas.width, canvas.height);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  let start = null;
+  function frame(ts) {
+    if (!start) start = ts;
+    const t = (ts - start) * 0.001;
+    gl.uniform1f(uTime, t);
+    gl.uniform2f(uRes, canvas.width, canvas.height);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+// ============================================================
+// NAV SCROLL STATE
+// ============================================================
+(function() {
+  const nav = document.getElementById('site-nav');
+  window.addEventListener('scroll', () => {
+    nav.classList.toggle('scrolled', window.scrollY > 40);
+  }, { passive: true });
+})();
+
+// ============================================================
+// PIPELINE ANIMATION
+// ============================================================
+(function() {
+  const steps = [0,1,2,3].map(i => document.getElementById('ps'+i));
+  let cur = 0;
+  steps[0].classList.add('lit');
+  setInterval(() => {
+    steps[cur].classList.remove('lit');
+    cur = (cur + 1) % steps.length;
+    steps[cur].classList.add('lit');
+  }, 1200);
+})();
+
+// ============================================================
+// SCROLL REVEAL
+// ============================================================
+(function() {
+  const els = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('vis'); obs.unobserve(e.target); } });
+  }, { threshold: 0.08 });
+  els.forEach(el => obs.observe(el));
+})();
+
+// ============================================================
+// LATENCY ANALYZER (pure JS, no WASM needed for demo)
+// ============================================================
+(function() {
+  const EXAMPLE = '42, 58, 61, 74, 89, 95,\n112, 128, 156, 204, 267, 380';
+  const form     = document.getElementById('analysisForm');
+  const samplesEl= document.getElementById('samples');
+  const budgetEl = document.getElementById('budget');
+  const analyzeBtn=document.getElementById('analyzeButton');
+  const sampleBtn= document.getElementById('sampleButton');
+  const errEl    = document.getElementById('inputError');
+  const stateEl  = document.getElementById('runtimeState');
+  const resultStateEl = document.getElementById('resultState');
+  const summaryEl= document.getElementById('reportSummary');
+  const avgEl    = document.getElementById('average');
+  const overEl   = document.getElementById('overBudget');
+  const overCard = document.getElementById('overBudgetCard');
+  const minEl    = document.getElementById('minimum');
+  const maxEl    = document.getElementById('maximum');
+  const countEl  = document.getElementById('sampleCount');
+  const distEl   = document.getElementById('distribution');
+  const timeEl   = document.getElementById('executionTime');
+  const dlBtn    = document.getElementById('downloadButton');
+
+  let lastResult = null;
+
+  analyzeBtn.disabled = false;
+  analyzeBtn.textContent = 'Analyze';
+
+  sampleBtn.addEventListener('click', () => {
+    samplesEl.value = EXAMPLE;
+    errEl.textContent = '';
+  });
+
+  function parseNumbers(raw) {
+    const nums = raw.split(/[,\s\n]+/).filter(Boolean).map(Number);
+    if (nums.some(isNaN)) return null;
+    if (nums.some(n => n < 0 || n > 1e6)) return null;
+    if (nums.length > 10000 || nums.length === 0) return null;
+    return nums;
+  }
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    errEl.textContent = '';
+    const raw = samplesEl.value;
+    const nums = parseNumbers(raw);
+    if (!nums) { errEl.textContent = 'Invalid input. Check your numbers and try again.'; return; }
+    const budget = parseFloat(budgetEl.value);
+    if (isNaN(budget) || budget < 0) { errEl.textContent = 'Enter a valid budget.'; return; }
+
+    const t0 = performance.now();
+    const n = nums.length;
+    const sorted = [...nums].sort((a,b) => a-b);
+    const avg = nums.reduce((a,b)=>a+b,0) / n;
+    const over = nums.filter(x => x > budget);
+    const pct = Math.round(over.length / n * 100);
+    const elapsed = (performance.now() - t0).toFixed(2);
+
+    avgEl.textContent    = avg.toFixed(1);
+    minEl.textContent    = sorted[0];
+    maxEl.textContent    = sorted[n-1];
+    overEl.textContent   = over.length > 0 ? `${over.length} (${pct}%)` : '0';
+    overCard.classList.toggle('over', over.length > 0);
+    countEl.textContent  = `${n} sample${n!==1?'s':''}`;
+    timeEl.textContent   = `Analyzed in ${elapsed}ms`;
+    resultStateEl.textContent = 'COMPLETE';
+
+    const verb = over.length === 0 ? 'All samples within budget.' : `${over.length} sample${over.length>1?'s':''} exceeded the ${budget}ms budget (${pct}%).`;
+    summaryEl.textContent = `${verb} Average: ${avg.toFixed(1)}ms. Range: ${sorted[0]}–${sorted[n-1]}ms.`;
+
+    // Distribution bars (10 buckets)
+    const mn = sorted[0], mx = sorted[n-1];
+    const range = mx - mn || 1;
+    const BUCKETS = 10;
+    const counts = new Array(BUCKETS).fill(0);
+    nums.forEach(v => {
+      const idx = Math.min(Math.floor((v - mn) / range * BUCKETS), BUCKETS - 1);
+      counts[idx]++;
+    });
+    const maxCount = Math.max(...counts, 1);
+    distEl.innerHTML = '';
+    counts.forEach((c, i) => {
+      const bucketMin = mn + (range / BUCKETS) * i;
+      const isOver = bucketMin > budget;
+      const bar = document.createElement('div');
+      bar.className = 'dist-bar' + (isOver ? ' over' : '');
+      bar.style.height = `${Math.max(3, (c / maxCount) * 56)}px`;
+      bar.title = `${Math.round(bucketMin)}–${Math.round(mn + (range/BUCKETS)*(i+1))}ms: ${c}`;
+      distEl.appendChild(bar);
+    });
+
+    lastResult = { samples: nums, budget, avg, min: sorted[0], max: sorted[n-1], over: over.length, elapsed };
+    dlBtn.disabled = false;
+  });
+
+  dlBtn.addEventListener('click', () => {
+    if (!lastResult) return;
+    const blob = new Blob([JSON.stringify(lastResult, null, 2)], { type: 'application/json' });
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'nyx-report.json' });
+    a.click();
+  });
+})();
+</script>
+</body>
+</html>
