@@ -336,9 +336,12 @@ impl Lexer {
                     continue
                 }
 
-                if self.match_str("raw") {
-                    self.pos = self.pos + 3
-                    self.col = self.col + 3
+                var native_block_length = 0
+                if self.match_str("raw") { native_block_length = 3 }
+                elif self.match_str("cpp") { native_block_length = 3 }
+                if native_block_length > 0 {
+                    self.pos = self.pos + native_block_length
+                    self.col = self.col + native_block_length
                     while self.pos < length and (self.peek_char() == " " or self.peek_char() == "\t") {
                         self.pos = self.pos + 1
                         self.col = self.col + 1

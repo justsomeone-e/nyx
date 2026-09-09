@@ -11,6 +11,32 @@ import subprocess
 import json
 from typing import Optional, List, Dict, Any, Union
 
+
+def _configure_windows_console() -> None:
+    """Enable UTF-8 and ANSI VT output when attached to a Windows console."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        kernel32 = ctypes.windll.kernel32
+        kernel32.SetConsoleOutputCP(65001)
+        enable_virtual_terminal_processing = 0x0004
+        for standard_handle in (-11, -12):
+            handle = kernel32.GetStdHandle(standard_handle)
+            mode = ctypes.c_uint()
+            if handle and kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+                kernel32.SetConsoleMode(
+                    handle,
+                    mode.value | enable_virtual_terminal_processing,
+                )
+    except (AttributeError, OSError, ValueError):
+        # Redirected streams and older hosts may not expose a console handle.
+        pass
+
+
+_configure_windows_console()
+
 _root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root_dir not in sys.path:
     sys.path.insert(0, _root_dir)

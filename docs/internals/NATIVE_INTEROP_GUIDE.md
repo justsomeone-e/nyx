@@ -68,11 +68,19 @@ The `#native` block embeds platform-specific code directly into the transpiled o
     double native_sin(double x) { return std::sin(x); }
 }
 
+// Raw native text is opaque to the Nyx frontend. Declare the typed call
+// boundary explicitly so checking and HIR lowering do not guess C++ syntax.
+extern "C++" fn native_sin(x: float) -> float
+
 fn calculate_wave(deg: float) -> float {
     // Calls embedded C++ function directly
     return native_sin(deg)
 }
 ```
+
+`#native cpp { ... }` is the C++ spelling of `#native raw { ... }`. Native
+function bodies are intentionally not parsed as Nyx declarations; every symbol
+called from Nyx must therefore have an explicit `extern "C++" fn` signature.
 
 ---
 

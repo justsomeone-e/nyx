@@ -115,8 +115,13 @@ class Lexer:
                     self.tokens.append(Token(TokenType.NATIVE_USE, use_target, self.line, start_col))
                     continue
 
-                # 4. #native raw { ... } or #native target: raw
+                # 4. #native raw { ... } or the documented C++ alias
+                native_block_keyword = None
                 if self.source[self.pos:self.pos+3] == "raw":
+                    native_block_keyword = "raw"
+                elif self.source[self.pos:self.pos+3] == "cpp":
+                    native_block_keyword = "cpp"
+                if native_block_keyword is not None:
                     self.pos += 3; self.col += 3
                     while self.pos < length and self.source[self.pos].isspace():
                         if self.source[self.pos] == '\n':
@@ -155,7 +160,7 @@ class Lexer:
                 while self.pos < length and self.source[self.pos] != '\n':
                     self.pos += 1; self.col += 1
                 raw = self.source[start_raw:self.pos].strip()
-                if raw.startswith("raw "):
+                if raw.startswith(("raw ", "cpp ")):
                     raw = raw[4:].strip()
                 self.tokens.append(Token(TokenType.NATIVE_RAW, raw, self.line, start_col))
                 continue

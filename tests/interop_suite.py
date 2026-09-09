@@ -31,6 +31,24 @@ def run_interop_suite() -> bool:
 
     tests = [
         (
+            "interop_00_documented_cpp_block",
+            '''#target cpp
+#native cpp {
+#include <cmath>
+double native_sin(double x) { return std::sin(x); }
+}
+
+extern "C++" fn native_sin(x: float) -> float
+
+fn main() {
+    print("native sin:", native_sin(0.0))
+}
+
+main()
+''',
+            "native sin: 0"
+        ),
+        (
             "interop_01_native_use",
             """#target cpp
 #native include <vector>

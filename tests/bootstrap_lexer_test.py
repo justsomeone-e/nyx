@@ -165,6 +165,10 @@ def run_bootstrap_lexer_test() -> bool:
             "#native raw {\nint choose(int x) { if (x > 0) { return x; } return 0; }\n}",
         ),
         (
+            "native_cpp_block_alias",
+            "#native cpp {\n#include <cmath>\ndouble native_sin(double x) { return std::sin(x); }\n}",
+        ),
+        (
             "struct_and_impl",
             "struct Point { x: int, y: int }\nimpl Point { fn dist(self) -> int { return self.x + self.y } }",
         ),
