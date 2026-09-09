@@ -1764,8 +1764,9 @@ Implementation status (2026-09-09):
 - stable `MIRG1000`-`MIRG1010` diagnostics reject unknown targets, missing
   profiles, illegal types/operations/projections, unsupported runtime calls,
   unwind edges, unavailable emitters, and emitter-contract violations;
-- `src/mir/codegen_cpp.py` and `src/mir/codegen_llvm.py` are the first real
-  consumers of legalized MIR. Their shared pilot scope is scalar values,
+- `src/mir/codegen_cpp.py`, `src/mir/codegen_llvm.py`, and
+  `src/mir/codegen_wasm.py` are real consumers of legalized MIR. The C++ and
+  LLVM shared pilot scope is scalar values,
   explicit CFG control flow, calls, assertions, wrapping `int64` arithmetic,
   division traps, strings, floats, and canonical `print` output. The C++ pilot
   additionally legalizes arrays, checked index projections, structs, fields,
@@ -1773,18 +1774,25 @@ Implementation status (2026-09-09):
 - the C++ ownership mapping covers borrow/dereference, copy/move, deinit, and
   non-unwinding drop. Explicit MIR retain/release operations map to C++ RAII
   copy/move/destruction instead of emitting a second reference-counting layer;
-- `nyx emit mir <file> --codegen --target cpp|llvm` exposes the pilots without
-  changing the default Typed HIR compilation route;
+- the first Wasm slice accepts pure `int`/`bool` functions, user calls, and
+  dispatcher-based CFG. It emits both WAT and binary Wasm while rejecting
+  strings, host calls, casts, heap values, aggregates, and unresolved shift
+  semantics at legalization. Checked division/remainder helpers preserve Nyx's
+  divide-by-zero trap and signed `MIN / -1` wrapping contract;
+- `nyx emit mir <file> --codegen --target cpp|llvm|wasm` exposes the textual
+  pilot artifacts without changing the default Typed HIR compilation route;
 - C++ and LLVM pilot output is compiled and executed against both the MIR
   interpreter and the legacy C++ backend oracle in
   `tests/mir_legalization_suite.py`;
-- drop unwind edges and the Wasm, Rust, JavaScript, Python, and C17 emitters
-  remain open M5 work. Their published profiles are explicitly `profile-only`,
-  so the CLI cannot pretend that they have migrated.
+- Wasm binary output is instantiated and executed by Node's WebAssembly engine
+  against the MIR interpreter. The established Bundle ABI suite remains green;
+- drop unwind edges, the remaining Wasm runtime/aggregate surface, and the Rust,
+  JavaScript, Python, and C17 emitters remain open M5 work. The latter targets
+  remain explicitly `profile-only`, so the CLI cannot pretend they migrated.
 
-Therefore M5 infrastructure and the first narrow C++ slice are implemented,
-but the M5 exit gate remains open until the full MIR surface and each listed
-backend complete differential parity.
+Therefore M5 infrastructure, the broad C++ slice, LLVM scalar path, and first
+executable Wasm slice are implemented. The M5 exit gate remains open until the
+full MIR surface and each listed backend complete differential parity.
 
 ### M6: vertical language-surface expansion
 

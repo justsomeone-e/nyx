@@ -186,7 +186,9 @@ class ModuleIR:
             "f64.ge", "f64.convert_i32_s", "return", "drop", "memory.size",
             "memory.grow", "memory.copy", "unreachable",
             "i32.load", "f64.load", "i32.store", "f64.store", "i32.load8_u", "i32.wrap_i64", "i64.shr_u",
-            "i64.add", "i64.mul", "i64.gt_u",
+            "i64.eqz", "i64.eq", "i64.ne", "i64.lt_s", "i64.gt_s", "i64.le_s", "i64.ge_s",
+            "i64.add", "i64.sub", "i64.mul", "i64.div_s", "i64.rem_s",
+            "i64.and", "i64.or", "i64.xor", "i64.shl", "i64.shr_s", "i64.gt_u",
         }
         for instruction in instructions:
             op = instruction.op
@@ -364,8 +366,12 @@ class ModuleIR:
             "f64.add": 0xA0, "f64.sub": 0xA1, "f64.mul": 0xA2,
             "f64.div": 0xA3, "i64.extend_i32_u": 0xAD,
             "f64.convert_i32_s": 0xB7, "i32.wrap_i64": 0xA7,
-            "i64.or": 0x84, "i64.shl": 0x86, "i64.shr_u": 0x88,
-            "i64.add": 0x7C, "i64.mul": 0x7E, "i64.gt_u": 0x56,
+            "i64.eqz": 0x50, "i64.eq": 0x51, "i64.ne": 0x52,
+            "i64.lt_s": 0x53, "i64.gt_s": 0x55, "i64.le_s": 0x57, "i64.ge_s": 0x59,
+            "i64.add": 0x7C, "i64.sub": 0x7D, "i64.mul": 0x7E,
+            "i64.div_s": 0x7F, "i64.rem_s": 0x81, "i64.and": 0x83,
+            "i64.or": 0x84, "i64.xor": 0x85, "i64.shl": 0x86,
+            "i64.shr_s": 0x87, "i64.shr_u": 0x88, "i64.gt_u": 0x56,
         }
         for instruction in function.body:
             op = instruction.op

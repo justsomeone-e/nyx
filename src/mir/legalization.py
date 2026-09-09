@@ -1,8 +1,8 @@
 """Target legalization contracts for the experimental MIR pipeline.
 
 Legalization is a hard gate: a backend may only receive operations explicitly
-listed by its profile.  This first M5 slice migrates the scalar/control-flow C++
-path and publishes profile-only contracts for the remaining migration order.
+listed by its profile. M5 currently migrates C++ and LLVM plus a deliberately
+pure integer/control-flow WebAssembly pilot; later targets remain profile-only.
 """
 
 from __future__ import annotations
@@ -167,7 +167,7 @@ MIR_BACKEND_PROFILES = {
         threads=False, ownership="explicit-runtime", abi="native-x64",
     ),
     "wasm": _profile(
-        "wasm", 3, status="profile-only", integer_width=64, exceptions=False,
+        "wasm", 3, status="pilot", integer_width=64, exceptions=False,
         threads=False, ownership="linear-memory-runtime", abi="bundle-v1-wasm32",
     ),
     "rust": _profile(
@@ -211,6 +211,21 @@ MIR_BACKEND_PROFILES["cpp"] = replace(
     legal_runtime_calls=MIR_BACKEND_PROFILES["cpp"].legal_runtime_calls | frozenset({
         "builtin::len", "builtin::to_string",
     }),
+)
+
+# The first MIR-to-Wasm slice is deliberately pure and integer-focused. Heap
+# values, host calls, casts, and aggregate ABI lowering stay behind the gate.
+MIR_BACKEND_PROFILES["wasm"] = replace(
+    MIR_BACKEND_PROFILES["wasm"],
+    legal_rvalues=frozenset({
+        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+    }),
+    legal_terminators=frozenset({
+        AssertTerminator.__name__, CallTerminator.__name__, GotoTerminator.__name__,
+        ReturnTerminator.__name__, SwitchIntTerminator.__name__, UnreachableTerminator.__name__,
+    }),
+    legal_types=frozenset({"void", "bool", "int"}),
+    legal_runtime_calls=frozenset(),
 )
 
 
@@ -345,6 +360,15 @@ class _Legalizer:
             self._operand(value.left, span)
             self._operand(value.right, span)
             self._type(value.type, span)
+            if self.target == "wasm" and value.op not in {
+                "+", "-", "*", "/", "%", "&", "|", "^",
+                "==", "!=", "<", "<=", ">", ">=",
+            }:
+                self._issue(
+                    "MIRG1010",
+                    f"Operation '{value.op}' is outside the integer WebAssembly MIR pilot",
+                    span,
+                )
         elif isinstance(value, UnaryRValue):
             self._operand(value.operand, span)
             self._type(value.type, span)

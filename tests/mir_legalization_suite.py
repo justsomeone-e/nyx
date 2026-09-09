@@ -39,6 +39,8 @@ from src.mir import (
     collect_legalization_issues,
     emit_legalized_cpp,
     emit_legalized_llvm,
+    emit_legalized_wasm,
+    emit_legalized_wat,
     legalize_mir,
     lower_hir_to_mir,
     mir_backend_manifest,
@@ -112,6 +114,39 @@ def _compile_and_run_llvm(source: str) -> str:
         return executed.stdout.replace("\r\n", "\n")
 
 
+def _run_wasm_export(
+    wasm: bytes,
+    function: str,
+    *arguments: int,
+    expect_trap: bool = False,
+) -> str:
+    node = shutil.which("node")
+    assert node is not None, "Node.js is required for the WebAssembly runtime gate"
+    with tempfile.TemporaryDirectory(prefix="nyx_mir_wasm_") as temporary:
+        wasm_path = Path(temporary) / "program.wasm"
+        script_path = Path(temporary) / "run.mjs"
+        wasm_path.write_bytes(wasm)
+        encoded_arguments = ", ".join(f"{argument}n" for argument in arguments)
+        script_path.write_text(
+            "import fs from 'node:fs';\n"
+            "const bytes = fs.readFileSync(new URL('./program.wasm', import.meta.url));\n"
+            "const { instance } = await WebAssembly.instantiate(bytes, {});\n"
+            f"console.log(String(instance.exports[{json.dumps(function)}]({encoded_arguments})));\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        executed = subprocess.run(
+            [node, str(script_path)], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=30,
+        )
+        if expect_trap:
+            assert executed.returncode != 0, "WebAssembly call unexpectedly succeeded"
+            assert "RuntimeError" in executed.stderr, executed.stdout + executed.stderr
+            return ""
+        assert executed.returncode == 0, executed.stdout + executed.stderr
+        return executed.stdout.replace("\r\n", "\n")
+
+
 def _ownership_module() -> MIRModule:
     span = MIRSpan("m5-ownership.nyx", 1, 1)
     int_type = MIRType("int")
@@ -158,11 +193,13 @@ def run_mir_legalization_suite() -> bool:
     assert json.loads(json.dumps(manifest)) == manifest
     assert tuple(manifest["migration_order"]) == MIR_BACKEND_MIGRATION_ORDER
     assert tuple(profile["target"] for profile in manifest["profiles"]) == MIR_BACKEND_MIGRATION_ORDER
-    assert MIR_BACKEND_PROFILES["cpp"].migration_status == "pilot"
-    assert MIR_BACKEND_PROFILES["llvm"].migration_status == "pilot"
+    assert all(
+        MIR_BACKEND_PROFILES[target].migration_status == "pilot"
+        for target in ("cpp", "llvm", "wasm")
+    )
     assert all(
         MIR_BACKEND_PROFILES[target].migration_status == "profile-only"
-        for target in MIR_BACKEND_MIGRATION_ORDER[2:]
+        for target in MIR_BACKEND_MIGRATION_ORDER[3:]
     )
 
     scalar = _lower(SCALAR_FIXTURE)
@@ -200,8 +237,37 @@ def run_mir_legalization_suite() -> bool:
     unprofiled = collect_legalization_issues(scalar, "asm")
     assert {issue.code for issue in unprofiled} == {"MIRG1001"}, unprofiled
 
-    pending = collect_legalization_issues(scalar, "wasm", require_emitter=True)
+    pending = collect_legalization_issues(scalar, "rust", require_emitter=True)
     assert {issue.code for issue in pending} == {"MIRG1009"}, pending
+
+    wasm = _lower_source(
+        "fn sum_without_two(limit: int) -> int {\n"
+        "  var total: int = 0\n"
+        "  var i: int = 0\n"
+        "  while i < limit {\n"
+        "    if i != 2 { set total = total + i }\n"
+        "    set i = i + 1\n"
+        "  }\n"
+        "  return total\n"
+        "}\n"
+        "fn safe_div(left: int, right: int) -> int { return left / right }\n"
+        "fn safe_rem(left: int, right: int) -> int { return left % right }\n",
+        "m5-wasm.nyx",
+    )
+    assert not collect_legalization_issues(wasm, "wasm", require_emitter=True)
+    assert MIRInterpreter(wasm).run("sum_without_two", (6,)).value == 13
+    assert "loop $dispatch" in emit_legalized_wat(wasm)
+    wasm_bytes = emit_legalized_wasm(wasm)
+    assert _run_wasm_export(wasm_bytes, "sum_without_two", 6) == "13\n"
+    minimum = -(1 << 63)
+    assert MIRInterpreter(wasm).run("safe_div", (minimum, -1)).value == minimum
+    assert _run_wasm_export(wasm_bytes, "safe_div", minimum, -1) == f"{minimum}\n"
+    assert _run_wasm_export(wasm_bytes, "safe_rem", minimum, -1) == "0\n"
+    _run_wasm_export(wasm_bytes, "safe_div", 1, 0, expect_trap=True)
+    shifted = _lower_source("fn shifted(x: int) -> int { return x << 64 }\n", "m5-shift.nyx")
+    assert "MIRG1010" in {issue.code for issue in collect_legalization_issues(shifted, "wasm")}
+    rejected_wasm = {issue.code for issue in collect_legalization_issues(scalar, "wasm")}
+    assert "MIRG1007" in rejected_wasm, rejected_wasm
 
     aggregate = _lower(AGGREGATE_FIXTURE)
     assert not collect_legalization_issues(aggregate, "cpp", require_emitter=True)
@@ -242,7 +308,7 @@ def run_mir_legalization_suite() -> bool:
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "and legacy C++ oracle"
+        "executable Wasm CFG pilot, and legacy C++ oracle"
     )
     return True
 
