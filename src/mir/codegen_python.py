@@ -6,20 +6,23 @@ import json
 import keyword
 import math
 import re
+from dataclasses import replace
 
 from .codegen_cpp import MIRCodegenError
 from .legalization import legalize_mir
 from .model import (
-    AssertTerminator, AssignStatement, BinaryRValue, CallTerminator,
-    ConstOperand, CopyOperand, GotoTerminator, MIRFunction, MIRModule,
-    MoveOperand, NopStatement, Operand, ReturnTerminator,
+    AggregateRValue, AssertTerminator, AssignStatement, BinaryRValue, CallTerminator,
+    CastRValue, ConstOperand, ConstantIndexProjection, CopyOperand, DiscriminantRValue, FieldProjection,
+    GotoTerminator, IndexProjection, MIRFunction, MIRModule, MIRStructDef,
+    MoveOperand, NopStatement, Operand, PayloadRValue, Place, ReturnTerminator,
     StorageDeadStatement, StorageLiveStatement, SwitchIntTerminator,
     SwitchValueTerminator, UnaryRValue, UnreachableTerminator, UseRValue,
 )
 from .types import MIRType
 
 
-_RUNTIME = r'''import math
+_RUNTIME = r'''import copy
+import math
 
 NYX_I64_MASK = (1 << 64) - 1
 NYX_I64_SIGN = 1 << 63
@@ -56,6 +59,27 @@ def nyx_f64_rem(left, right):
         return math.fmod(float(left), float(right))
     except ValueError:
         return math.nan
+
+def nyx_clone(value):
+    return copy.deepcopy(value)
+
+def nyx_index(value, index):
+    position = int(index)
+    if position < 0 or position >= len(value):
+        raise IndexError(f"index {position} out of bounds for length {len(value)}")
+    return value[position]
+
+def nyx_set_index(value, index, item):
+    position = int(index)
+    if position < 0 or position >= len(value):
+        raise IndexError(f"index {position} out of bounds for length {len(value)}")
+    value[position] = item
+
+def nyx_field(value, name):
+    return value["fields"][name]
+
+def nyx_set_field(value, name, item):
+    value["fields"][name] = item
 
 def nyx_display(value):
     if value is True:
@@ -94,6 +118,11 @@ class _PythonEmitter:
         })
         self.functions = {function.symbol: function for function in module.functions}
         self.functions.update({function.name: function for function in module.functions})
+        self.structs = {
+            definition.name: definition
+            for definition in module.type_definitions
+            if isinstance(definition, MIRStructDef)
+        }
         self.current: MIRFunction | None = None
         self.local_types: dict[int, MIRType] = {}
 
@@ -132,11 +161,9 @@ class _PythonEmitter:
 
     def _statement(self, value: object) -> list[str]:
         if isinstance(value, AssignStatement):
-            if value.place.projections:
-                raise MIRCodegenError("projected assignment reached the scalar Python emitter")
-            if self.local_types[value.place.local].name in ("void", "any"):
+            if self._place_type(value.place).name in ("void", "any"):
                 return []
-            return [f"l{value.place.local} = {self._rvalue(value.value)}"]
+            return [self._assign_place(value.place, self._rvalue(value.value))]
         if isinstance(value, (StorageLiveStatement, StorageDeadStatement, NopStatement)):
             return []
         raise MIRCodegenError(f"illegal statement reached Python emitter: {type(value).__name__}")
@@ -171,6 +198,14 @@ class _PythonEmitter:
                     f"nyx_display({self._operand(argument)})" for argument in value.arguments
                 )
                 line = f"print({displays})" if displays else "print()"
+            elif value.function == "builtin::len":
+                if len(value.arguments) != 1 or value.destination is None:
+                    raise MIRCodegenError("builtin::len requires one argument and a destination")
+                line = f"{self._place(value.destination)} = nyx_i64(len({self._operand(value.arguments[0])}))"
+            elif value.function == "builtin::to_string":
+                if len(value.arguments) != 1 or value.destination is None:
+                    raise MIRCodegenError("builtin::to_string requires one argument and a destination")
+                line = f"{self._place(value.destination)} = nyx_display({self._operand(value.arguments[0])})"
             elif value.function in self.function_names:
                 call = f"{self.function_names[value.function]}({arguments})"
                 callee = self.functions[value.function]
@@ -205,6 +240,37 @@ class _PythonEmitter:
             return self._operand(value.operand)
         if isinstance(value, BinaryRValue):
             return self._binary(value)
+        if isinstance(value, CastRValue):
+            operand = self._operand(value.operand)
+            if value.kind == "optional-unwrap" or value.type.optional:
+                return operand
+            if value.type.name == "int":
+                return f"nyx_i64({operand})"
+            if value.type.name in ("float", "f64"):
+                return f"float({operand})"
+            if value.type.name == "bool":
+                return f"bool({operand})"
+            if value.type.name == "string":
+                return f"nyx_display({operand})"
+            return operand
+        if isinstance(value, AggregateRValue):
+            operands = [self._operand(operand) for operand in value.operands]
+            if value.kind == "array":
+                return "[" + ", ".join(operands) + "]"
+            if value.kind == "struct":
+                fields = value.fields or tuple(str(index) for index in range(len(operands)))
+                body = ", ".join(f"{name!r}: {operand}" for name, operand in zip(fields, operands))
+                return f"{{'__type__': {value.name!r}, 'fields': {{{body}}}}}"
+            if value.kind in ("enum", "option", "result"):
+                return (
+                    f"{{'__type__': {value.type.name!r}, 'tag': {value.name!r}, "
+                    f"'payload': [{', '.join(operands)}]}}"
+                )
+            raise MIRCodegenError(f"unsupported Python aggregate kind '{value.kind}'")
+        if isinstance(value, DiscriminantRValue):
+            return f"({self._operand(value.operand)})['tag']"
+        if isinstance(value, PayloadRValue):
+            return f"nyx_index(({self._operand(value.operand)})['payload'], {value.index})"
         if isinstance(value, UnaryRValue):
             operand = self._operand(value.operand)
             if value.op in ("!", "not"):
@@ -252,16 +318,15 @@ class _PythonEmitter:
         if isinstance(value, ConstOperand):
             return self._typed_constant(value)
         if isinstance(value, (CopyOperand, MoveOperand)):
-            if value.place.projections:
-                raise MIRCodegenError("projected operand reached the scalar Python emitter")
-            return f"l{value.place.local}"
+            rendered = self._place(value.place)
+            return f"nyx_clone({rendered})" if isinstance(value, CopyOperand) else rendered
         raise MIRCodegenError(f"illegal operand reached Python emitter: {type(value).__name__}")
 
     def _operand_type(self, value: Operand) -> MIRType:
         if isinstance(value, ConstOperand):
             return value.type
         if isinstance(value, (CopyOperand, MoveOperand)):
-            return self.local_types[value.place.local]
+            return self._place_type(value.place)
         raise MIRCodegenError(f"unknown Python operand type: {type(value).__name__}")
 
     @staticmethod
@@ -295,7 +360,59 @@ class _PythonEmitter:
 
     @staticmethod
     def _default(value: MIRType) -> str:
+        if value.optional:
+            return "None"
+        if value.name == "Array":
+            return "[]"
         return {"bool": "False", "int": "0", "float": "0.0", "f64": "0.0", "string": "\"\""}.get(value.name, "None")
+
+    def _place(self, place: Place) -> str:
+        rendered = f"l{place.local}"
+        for projection in place.projections:
+            if isinstance(projection, FieldProjection):
+                rendered = f"nyx_field({rendered}, {projection.name!r})"
+            elif isinstance(projection, ConstantIndexProjection):
+                rendered = f"nyx_index({rendered}, {projection.index})"
+            elif isinstance(projection, IndexProjection):
+                rendered = f"nyx_index({rendered}, l{projection.local})"
+            else:
+                raise MIRCodegenError(f"illegal projection reached Python emitter: {type(projection).__name__}")
+        return rendered
+
+    def _assign_place(self, place: Place, value: str) -> str:
+        if not place.projections:
+            return f"l{place.local} = {value}"
+        parent = Place(place.local, place.projections[:-1])
+        projection = place.projections[-1]
+        rendered_parent = self._place(parent)
+        if isinstance(projection, FieldProjection):
+            return f"nyx_set_field({rendered_parent}, {projection.name!r}, {value})"
+        if isinstance(projection, ConstantIndexProjection):
+            return f"nyx_set_index({rendered_parent}, {projection.index}, {value})"
+        if isinstance(projection, IndexProjection):
+            return f"nyx_set_index({rendered_parent}, l{projection.local}, {value})"
+        raise MIRCodegenError(f"illegal assignment projection reached Python emitter: {type(projection).__name__}")
+
+    def _place_type(self, place: Place) -> MIRType:
+        value_type = self.local_types[place.local]
+        for projection in place.projections:
+            if value_type.optional:
+                value_type = replace(value_type, optional=False)
+            if isinstance(projection, FieldProjection):
+                definition = self.structs.get(value_type.name)
+                if definition is None:
+                    raise MIRCodegenError(f"field projection requires a known struct, got '{value_type}'")
+                field = next((item for item in definition.fields if item.name == projection.name), None)
+                if field is None:
+                    raise MIRCodegenError(f"struct '{definition.name}' has no field '{projection.name}'")
+                value_type = field.type
+            elif isinstance(projection, (ConstantIndexProjection, IndexProjection)):
+                if value_type.name != "Array" or len(value_type.arguments) != 1:
+                    raise MIRCodegenError(f"index projection requires Array<T>, got '{value_type}'")
+                value_type = value_type.arguments[0]
+            else:
+                raise MIRCodegenError(f"unknown Python projection type: {type(projection).__name__}")
+        return value_type
 
 
 def emit_legalized_python(module: MIRModule) -> str:

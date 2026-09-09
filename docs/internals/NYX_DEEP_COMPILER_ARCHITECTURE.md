@@ -1761,6 +1761,9 @@ Implementation status (2026-09-09):
 
 - `src/mir/legalization.py` publishes versioned operation, type, runtime,
   ownership, effect, and ABI profiles in the required migration order;
+- legalization contract schema v2 publishes explicit binary and unary
+  operation allowlists for every target, so unknown operations are rejected
+  before emitter dispatch rather than failing inside generated code;
 - stable `MIRG1000`-`MIRG1010` diagnostics reject unknown targets, missing
   profiles, illegal types/operations/projections, unsupported runtime calls,
   unwind edges, unavailable emitters, and emitter-contract violations;
@@ -1778,8 +1781,9 @@ Implementation status (2026-09-09):
   copy/move/destruction instead of emitting a second reference-counting layer;
 - the first Wasm slice accepts pure `int`/`bool` functions, user calls, and
   dispatcher-based CFG. It emits both WAT and binary Wasm while rejecting
-  strings, host calls, casts, heap values, aggregates, and unresolved shift
-  semantics at legalization. Checked division/remainder helpers preserve Nyx's
+  strings, host calls, casts, heap values, and aggregates at legalization.
+  WebAssembly-native masked shifts now match the canonical signed-i64 rule.
+  Checked division/remainder helpers preserve Nyx's
   divide-by-zero trap and signed `MIN / -1` wrapping contract;
 - `nyx emit mir <file> --codegen --target cpp|llvm|wasm|rust|js|python|c` exposes the
   textual pilot artifacts without changing the default Typed HIR compilation
@@ -1795,15 +1799,22 @@ Implementation status (2026-09-09):
   MIR interpreter and the shared numeric corpus;
 - the Node.js ES2022 pilot preserves Nyx `int` as 64-bit `BigInt` rather than
   lossy JavaScript `number`, including wrapping arithmetic, signed division,
-  remainder, shifts, scalar CFG, user calls, and canonical `print` formatting;
+  remainder, shifts, scalar CFG, user calls, and canonical `print` formatting.
+  Its aggregate slice uses checked array/field projections and explicit deep
+  copies so host object aliasing cannot violate Nyx value semantics; tagged
+  payload objects preserve enum, Option, and Result discriminants;
 - the Python 3 pilot explicitly normalizes arbitrary-precision Python integers
   to Nyx signed i64 after arithmetic, preserves truncating signed division and
-  remainder, and executes scalar CFG, user calls, and canonical output;
+  remainder, and executes scalar CFG, user calls, and canonical output. Arrays,
+  structs, optionals, projected mutation, iteration, and copies execute against
+  the MIR interpreter with `deepcopy` at Nyx copy boundaries. Tagged payload
+  dictionaries preserve enum, Option, and Result discriminants;
 - the C17 pilot uses explicit unsigned-bit conversion for defined signed-i64
   wrapping, masks shifts, handles the signed division edge, tracks temporary
   concatenated strings, and compiles real scalar CFG with Clang in C17 mode;
 - drop unwind edges, the remaining Wasm/Rust aggregate and ownership surfaces,
-  and the JavaScript/Python/C17 aggregate and broader runtime surfaces remain
+  enum/result payloads outside C++/JavaScript/Python, the C17 aggregate surface, and broader
+  target runtime surfaces remain
   open M5 work. Every migration-order target now has a bounded executable pilot;
   none of those pilots imply full backend parity.
 

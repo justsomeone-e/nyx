@@ -56,7 +56,7 @@ from .types import MIRType
 from .verifier import verify_mir
 
 
-MIR_LEGALIZATION_SCHEMA_VERSION = 1
+MIR_LEGALIZATION_SCHEMA_VERSION = 2
 MIR_BACKEND_MIGRATION_ORDER = ("cpp", "llvm", "wasm", "rust", "js", "python", "c")
 
 
@@ -77,6 +77,8 @@ class MIRBackendProfile:
     legal_projections: frozenset[str]
     legal_types: frozenset[str]
     legal_runtime_calls: frozenset[str]
+    legal_binary_ops: frozenset[str]
+    legal_unary_ops: frozenset[str]
 
     @property
     def emitter_available(self) -> bool:
@@ -99,6 +101,8 @@ class MIRBackendProfile:
             "legal_projections": sorted(self.legal_projections),
             "legal_types": sorted(self.legal_types),
             "legal_runtime_calls": sorted(self.legal_runtime_calls),
+            "legal_binary_ops": sorted(self.legal_binary_ops),
+            "legal_unary_ops": sorted(self.legal_unary_ops),
         }
 
 
@@ -125,6 +129,11 @@ _SCALAR_TERMINATORS = frozenset({
 })
 _SCALAR_TYPES = frozenset({"void", "bool", "string", "int", "float", "f64"})
 _SCALAR_RUNTIME = frozenset({"builtin::print"})
+_SCALAR_BINARY_OPS = frozenset({
+    "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>",
+    "==", "!=", "<", "<=", ">", ">=",
+})
+_SCALAR_UNARY_OPS = frozenset({"!", "not", "+", "-", "~"})
 
 
 def _profile(
@@ -154,6 +163,8 @@ def _profile(
         legal_projections=frozenset(),
         legal_types=_SCALAR_TYPES,
         legal_runtime_calls=_SCALAR_RUNTIME,
+        legal_binary_ops=_SCALAR_BINARY_OPS,
+        legal_unary_ops=_SCALAR_UNARY_OPS,
     )
 
 
@@ -242,7 +253,16 @@ MIR_BACKEND_PROFILES["rust"] = replace(
 MIR_BACKEND_PROFILES["js"] = replace(
     MIR_BACKEND_PROFILES["js"],
     legal_rvalues=frozenset({
-        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+        AggregateRValue.__name__, BinaryRValue.__name__, CastRValue.__name__,
+        DiscriminantRValue.__name__, PayloadRValue.__name__, UnaryRValue.__name__,
+        UseRValue.__name__,
+    }),
+    legal_projections=frozenset({
+        FieldProjection.__name__, IndexProjection.__name__, ConstantIndexProjection.__name__,
+    }),
+    legal_types=MIR_BACKEND_PROFILES["js"].legal_types | frozenset({"Array", "Option", "Result"}),
+    legal_runtime_calls=MIR_BACKEND_PROFILES["js"].legal_runtime_calls | frozenset({
+        "builtin::len", "builtin::to_string",
     }),
 )
 
@@ -251,7 +271,16 @@ MIR_BACKEND_PROFILES["js"] = replace(
 MIR_BACKEND_PROFILES["python"] = replace(
     MIR_BACKEND_PROFILES["python"],
     legal_rvalues=frozenset({
-        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+        AggregateRValue.__name__, BinaryRValue.__name__, CastRValue.__name__,
+        DiscriminantRValue.__name__, PayloadRValue.__name__, UnaryRValue.__name__,
+        UseRValue.__name__,
+    }),
+    legal_projections=frozenset({
+        FieldProjection.__name__, IndexProjection.__name__, ConstantIndexProjection.__name__,
+    }),
+    legal_types=MIR_BACKEND_PROFILES["python"].legal_types | frozenset({"Array", "Option", "Result"}),
+    legal_runtime_calls=MIR_BACKEND_PROFILES["python"].legal_runtime_calls | frozenset({
+        "builtin::len", "builtin::to_string",
     }),
 )
 
@@ -325,11 +354,11 @@ class _Legalizer:
             )
             return tuple(self.issues)
         for definition in self.module.type_definitions:
-            if self.target == "cpp" and isinstance(definition, MIRStructDef):
+            if self.target in {"cpp", "js", "python"} and isinstance(definition, MIRStructDef):
                 for field in definition.fields:
                     self._type(field.type, span)
                 continue
-            if self.target == "cpp" and isinstance(definition, MIREnumDef):
+            if self.target in {"cpp", "js", "python"} and isinstance(definition, MIREnumDef):
                 for variant in definition.variants:
                     for payload_type in variant.payload_types:
                         self._type(payload_type, span)
@@ -396,23 +425,31 @@ class _Legalizer:
             self._operand(value.left, span)
             self._operand(value.right, span)
             self._type(value.type, span)
-            if self.target == "wasm" and value.op not in {
-                "+", "-", "*", "/", "%", "&", "|", "^",
-                "==", "!=", "<", "<=", ">", ">=",
-            }:
+            if value.op not in self.profile.legal_binary_ops:
                 self._issue(
                     "MIRG1010",
-                    f"Operation '{value.op}' is outside the integer WebAssembly MIR pilot",
+                    f"Binary operation '{value.op}' is not legal for target '{self.target}'",
                     span,
                 )
         elif isinstance(value, UnaryRValue):
             self._operand(value.operand, span)
             self._type(value.type, span)
+            if value.op not in self.profile.legal_unary_ops:
+                self._issue(
+                    "MIRG1010",
+                    f"Unary operation '{value.op}' is not legal for target '{self.target}'",
+                    span,
+                )
         elif isinstance(value, CastRValue):
             self._operand(value.operand, span)
             self._type(value.type, span)
         elif isinstance(value, AggregateRValue):
-            if self.target == "cpp" and value.kind not in ("array", "struct", "enum", "option", "result"):
+            allowed_kinds = {
+                "cpp": {"array", "struct", "enum", "option", "result"},
+                "js": {"array", "struct", "enum", "option", "result"},
+                "python": {"array", "struct", "enum", "option", "result"},
+            }.get(self.target, set())
+            if value.kind not in allowed_kinds:
                 self._issue(
                     "MIRG1004",
                     f"Aggregate kind '{value.kind}' is not legal for target '{self.target}'",
@@ -494,20 +531,23 @@ class _Legalizer:
         if self.target == "cpp" and value.pointer:
             self._type(replace(value, pointer=False), span)
             return
-        if self.target == "cpp" and value.optional:
+        if self.target in {"cpp", "js", "python"} and value.optional:
             self._type(replace(value, optional=False), span)
             return
-        if self.target == "cpp" and value.name == "Array" and len(value.arguments) == 1:
+        if self.target in {"cpp", "js", "python"} and value.name == "Array" and len(value.arguments) == 1:
             self._type(value.arguments[0], span)
             return
-        if self.target == "cpp" and value.name in ("Option", "Result") and value.arguments:
+        if self.target in {"cpp", "js", "python"} and value.name in ("Option", "Result") and value.arguments:
             for argument in value.arguments:
                 if argument.name != "any":
                     self._type(argument, span)
             return
         if (
-            self.target == "cpp"
-            and isinstance(self.type_definitions.get(value.name), (MIRStructDef, MIREnumDef))
+            self.target in {"cpp", "js", "python"}
+            and isinstance(
+                self.type_definitions.get(value.name),
+                (MIRStructDef, MIREnumDef),
+            )
             and not value.arguments
         ):
             return

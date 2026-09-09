@@ -15,6 +15,7 @@ from src.api import NyxCompiler
 from src.codegen.cpp_toolchain import CppToolchain
 from src.mir import (
     AssignStatement,
+    BinaryRValue,
     BorrowRValue,
     CallTerminator,
     ConstOperand,
@@ -254,6 +255,20 @@ def _ownership_module() -> MIRModule:
     return MIRModule("m5-ownership.nyx", "cpp", (builder.finish(),))
 
 
+def _unsupported_operation_module() -> MIRModule:
+    span = MIRSpan("m5-unsupported-operation.nyx", 1, 1)
+    int_type = MIRType("int")
+    builder = MIRFunctionBuilder("power", "function::power", int_type, span)
+    entry = builder.new_block()
+    builder.push_statement(entry, AssignStatement(
+        Place(0),
+        BinaryRValue("**", ConstOperand(int_type, 2), ConstOperand(int_type, 8), int_type),
+        span,
+    ))
+    builder.set_terminator(entry, ReturnTerminator(span))
+    return MIRModule("m5-unsupported-operation.nyx", "cpp", (builder.finish(),))
+
+
 def run_mir_legalization_suite() -> bool:
     print("=" * 70)
     print("NYX M5 MIR LEGALIZATION / C++ MIGRATION PILOT")
@@ -261,6 +276,7 @@ def run_mir_legalization_suite() -> bool:
 
     manifest = mir_backend_manifest()
     assert json.loads(json.dumps(manifest)) == manifest
+    assert manifest["schema_version"] == 2
     assert tuple(manifest["migration_order"]) == MIR_BACKEND_MIGRATION_ORDER
     assert tuple(profile["target"] for profile in manifest["profiles"]) == MIR_BACKEND_MIGRATION_ORDER
     assert all(
@@ -352,20 +368,35 @@ def run_mir_legalization_suite() -> bool:
     assert _run_wasm_export(wasm_bytes, "safe_rem", minimum, -1) == "0\n"
     _run_wasm_export(wasm_bytes, "safe_div", 1, 0, expect_trap=True)
     shifted = _lower_source("fn shifted(x: int) -> int { return x << 64 }\n", "m5-shift.nyx")
-    assert "MIRG1010" in {issue.code for issue in collect_legalization_issues(shifted, "wasm")}
+    assert not collect_legalization_issues(shifted, "wasm", require_emitter=True)
+    assert _run_wasm_export(emit_legalized_wasm(shifted), "shifted", 7) == "7\n"
     rejected_wasm = {issue.code for issue in collect_legalization_issues(scalar, "wasm")}
     assert "MIRG1007" in rejected_wasm, rejected_wasm
+
+    unsupported_operation = _unsupported_operation_module()
+    for target in MIR_BACKEND_MIGRATION_ORDER:
+        issues = collect_legalization_issues(unsupported_operation, target, require_emitter=True)
+        assert {issue.code for issue in issues} == {"MIRG1010"}, (target, issues)
 
     aggregate = _lower(AGGREGATE_FIXTURE)
     assert not collect_legalization_issues(aggregate, "cpp", require_emitter=True)
     expected_aggregate = "\n".join(MIRInterpreter(aggregate).run().output) + "\n"
+    assert expected_aggregate == "1 9 9\nNyx\n9\n2\n3\n"
     assert _compile_and_run_cpp(emit_legalized_cpp(aggregate)) == expected_aggregate
+    assert not collect_legalization_issues(aggregate, "js", require_emitter=True)
+    assert _run_javascript(emit_legalized_javascript(aggregate)) == expected_aggregate
+    assert not collect_legalization_issues(aggregate, "python", require_emitter=True)
+    assert _run_python(emit_legalized_python(aggregate)) == expected_aggregate
 
     payload = _lower(PAYLOAD_FIXTURE)
     assert not collect_legalization_issues(payload, "cpp", require_emitter=True)
     expected_payload = "\n".join(MIRInterpreter(payload).run().output) + "\n"
     assert expected_payload == "hello\n"
     assert _compile_and_run_cpp(emit_legalized_cpp(payload)) == expected_payload
+    assert not collect_legalization_issues(payload, "js", require_emitter=True)
+    assert _run_javascript(emit_legalized_javascript(payload)) == expected_payload
+    assert not collect_legalization_issues(payload, "python", require_emitter=True)
+    assert _run_python(emit_legalized_python(payload)) == expected_payload
 
     control = _lower(CONTROL_FIXTURE)
     assert not collect_legalization_issues(control, "cpp", require_emitter=True)
@@ -400,11 +431,15 @@ def run_mir_legalization_suite() -> bool:
         raise AssertionError("aggregate MIR bypassed the LLVM legalization gate")
     except MIRLegalizationError as error:
         assert {issue.code for issue in error.issues} == aggregate_codes
+    for target in ("wasm", "rust", "c"):
+        rejected = {issue.code for issue in collect_legalization_issues(aggregate, target)}
+        assert "MIRG1002" in rejected and "MIRG1004" in rejected, (target, rejected)
 
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "executable Wasm/Rust/JavaScript/Python/C17 CFG pilots, and legacy C++ oracle"
+        "executable Wasm/Rust/JavaScript/Python/C17 CFG pilots, JS/Python aggregate "
+        "and payload-enum parity, and legacy C++ oracle"
     )
     return True
 
