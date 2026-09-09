@@ -244,7 +244,15 @@ MIR_BACKEND_PROFILES["wasm"] = replace(
 MIR_BACKEND_PROFILES["rust"] = replace(
     MIR_BACKEND_PROFILES["rust"],
     legal_rvalues=frozenset({
-        BinaryRValue.__name__, UnaryRValue.__name__, UseRValue.__name__,
+        AggregateRValue.__name__, BinaryRValue.__name__, CastRValue.__name__,
+        UnaryRValue.__name__, UseRValue.__name__,
+    }),
+    legal_projections=frozenset({
+        FieldProjection.__name__, IndexProjection.__name__, ConstantIndexProjection.__name__,
+    }),
+    legal_types=MIR_BACKEND_PROFILES["rust"].legal_types | frozenset({"Array"}),
+    legal_runtime_calls=MIR_BACKEND_PROFILES["rust"].legal_runtime_calls | frozenset({
+        "builtin::len", "builtin::to_string",
     }),
 )
 
@@ -354,7 +362,7 @@ class _Legalizer:
             )
             return tuple(self.issues)
         for definition in self.module.type_definitions:
-            if self.target in {"cpp", "js", "python"} and isinstance(definition, MIRStructDef):
+            if self.target in {"cpp", "rust", "js", "python"} and isinstance(definition, MIRStructDef):
                 for field in definition.fields:
                     self._type(field.type, span)
                 continue
@@ -446,6 +454,7 @@ class _Legalizer:
         elif isinstance(value, AggregateRValue):
             allowed_kinds = {
                 "cpp": {"array", "struct", "enum", "option", "result"},
+                "rust": {"array", "struct"},
                 "js": {"array", "struct", "enum", "option", "result"},
                 "python": {"array", "struct", "enum", "option", "result"},
             }.get(self.target, set())
@@ -531,10 +540,10 @@ class _Legalizer:
         if self.target == "cpp" and value.pointer:
             self._type(replace(value, pointer=False), span)
             return
-        if self.target in {"cpp", "js", "python"} and value.optional:
+        if self.target in {"cpp", "rust", "js", "python"} and value.optional:
             self._type(replace(value, optional=False), span)
             return
-        if self.target in {"cpp", "js", "python"} and value.name == "Array" and len(value.arguments) == 1:
+        if self.target in {"cpp", "rust", "js", "python"} and value.name == "Array" and len(value.arguments) == 1:
             self._type(value.arguments[0], span)
             return
         if self.target in {"cpp", "js", "python"} and value.name in ("Option", "Result") and value.arguments:
@@ -543,10 +552,10 @@ class _Legalizer:
                     self._type(argument, span)
             return
         if (
-            self.target in {"cpp", "js", "python"}
+            self.target in {"cpp", "rust", "js", "python"}
             and isinstance(
                 self.type_definitions.get(value.name),
-                (MIRStructDef, MIREnumDef),
+                (MIRStructDef, MIREnumDef) if self.target != "rust" else MIRStructDef,
             )
             and not value.arguments
         ):

@@ -1796,7 +1796,9 @@ Implementation status (2026-09-09):
 - the Rust 2021 pilot maps scalar values, strings, copy/move operands, wrapping
   integer arithmetic, user calls, `print`, and MIR CFG through a Rust `match`
   dispatcher. Generated source is compiled and executed by `rustc` against the
-  MIR interpreter and the shared numeric corpus;
+  MIR interpreter and the shared numeric corpus. Its first aggregate slice maps
+  arrays to `Vec<T>`, structs to generated nominal Rust types, nullable values
+  to `Option<T>`, and Nyx copy boundaries to explicit clones;
 - the Node.js ES2022 pilot preserves Nyx `int` as 64-bit `BigInt` rather than
   lossy JavaScript `number`, including wrapping arithmetic, signed division,
   remainder, shifts, scalar CFG, user calls, and canonical `print` formatting.
@@ -1812,7 +1814,7 @@ Implementation status (2026-09-09):
 - the C17 pilot uses explicit unsigned-bit conversion for defined signed-i64
   wrapping, masks shifts, handles the signed division edge, tracks temporary
   concatenated strings, and compiles real scalar CFG with Clang in C17 mode;
-- drop unwind edges, the remaining Wasm/Rust aggregate and ownership surfaces,
+- drop unwind edges, the remaining Wasm aggregate and Rust enum/ownership surfaces,
   enum/result payloads outside C++/JavaScript/Python, the C17 aggregate surface, and broader
   target runtime surfaces remain
   open M5 work. Every migration-order target now has a bounded executable pilot;

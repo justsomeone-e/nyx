@@ -5,19 +5,26 @@ from __future__ import annotations
 import json
 import math
 import re
+from dataclasses import replace
 
 from .codegen_cpp import MIRCodegenError
 from .legalization import legalize_mir
 from .model import (
+    AggregateRValue,
     AssertTerminator,
     AssignStatement,
     BinaryRValue,
+    CastRValue,
     CallTerminator,
     ConstOperand,
+    ConstantIndexProjection,
     CopyOperand,
+    FieldProjection,
     GotoTerminator,
+    IndexProjection,
     MIRFunction,
     MIRModule,
+    MIRStructDef,
     MoveOperand,
     NopStatement,
     Operand,
@@ -65,6 +72,16 @@ fn nyx_i64_div(left: i64, right: i64) -> i64 {
 fn nyx_i64_rem(left: i64, right: i64) -> i64 {
     if right == 0 { panic!("remainder by zero"); }
     if left == i64::MIN && right == -1 { 0 } else { left % right }
+}
+
+fn nyx_index<T>(values: &[T], index: i64) -> &T {
+    if index < 0 || index as usize >= values.len() { panic!("array index out of bounds"); }
+    &values[index as usize]
+}
+
+fn nyx_index_mut<T>(values: &mut [T], index: i64) -> &mut T {
+    if index < 0 || index as usize >= values.len() { panic!("array index out of bounds"); }
+    &mut values[index as usize]
 }'''
 
 
@@ -88,6 +105,11 @@ class _RustEmitter:
         })
         self.functions = {function.symbol: function for function in module.functions}
         self.functions.update({function.name: function for function in module.functions})
+        self.structs = {
+            definition.name: definition
+            for definition in module.type_definitions
+            if isinstance(definition, MIRStructDef)
+        }
         self.current: MIRFunction | None = None
         self.local_types: dict[int, MIRType] = {}
 
@@ -99,9 +121,17 @@ class _RustEmitter:
             _RUNTIME,
             "",
         ]
+        parts.extend(self._struct_definition(definition) + "\n" for definition in self.structs.values())
         parts.extend(self._function(function) + "\n" for function in self.module.functions)
         parts.append(self._entry_point())
         return "\n".join(parts).rstrip() + "\n"
+
+    def _struct_definition(self, definition: MIRStructDef) -> str:
+        lines = ["#[derive(Clone, Debug, Default, PartialEq)]", f"struct NyxType_{_identifier(definition.name)} {{"]
+        for field in definition.fields:
+            lines.append(f"    {_identifier(field.name)}: {self._type(field.type)},")
+        lines.append("}")
+        return "\n".join(lines)
 
     def _entry_point(self) -> str:
         by_name = {function.name: function for function in self.module.functions}
@@ -140,12 +170,10 @@ class _RustEmitter:
 
     def _statement(self, statement: object) -> list[str]:
         if isinstance(statement, AssignStatement):
-            if statement.place.projections:
-                raise MIRCodegenError("projected assignment reached the scalar Rust emitter")
-            destination = self.local_types[statement.place.local]
+            destination = self._place_type(statement.place)
             if destination.name in ("void", "any"):
                 return []
-            return [f"l{statement.place.local} = {self._rvalue(statement.value)};"]
+            return [self._assign_place(statement.place, self._rvalue(statement.value))]
         if isinstance(statement, (StorageLiveStatement, StorageDeadStatement, NopStatement)):
             return []
         raise MIRCodegenError(f"illegal statement reached Rust emitter: {type(statement).__name__}")
@@ -168,9 +196,16 @@ class _RustEmitter:
             return lines
         if isinstance(value, SwitchValueTerminator):
             discriminator = self._operand(value.discriminator)
+            discriminator_type = self._operand_type(value.discriminator)
             lines = []
             for expected, target in value.targets:
-                lines.append(f"if {discriminator} == {self._constant(expected)} {{")
+                if expected is None and discriminator_type.optional:
+                    condition = f"({discriminator}).is_none()"
+                elif discriminator_type.optional:
+                    condition = f"({discriminator}).as_ref() == Some(&{self._constant(expected)})"
+                else:
+                    condition = f"{discriminator} == {self._constant(expected)}"
+                lines.append(f"if {condition} {{")
                 lines.extend(f"    {line}" for line in self._goto(target))
                 lines.append("}")
             lines.extend(self._goto(value.otherwise))
@@ -184,6 +219,14 @@ class _RustEmitter:
                     f"nyx_display(&{self._operand(argument)})" for argument in value.arguments
                 )
                 line = "println!();" if not displays else f"println!(\"{{}}\", [{displays}].join(\" \"));"
+            elif value.function == "builtin::len":
+                if len(value.arguments) != 1 or value.destination is None:
+                    raise MIRCodegenError("builtin::len requires one argument and a destination")
+                line = f"{self._place(value.destination)} = {self._operand(value.arguments[0])}.len() as i64;"
+            elif value.function == "builtin::to_string":
+                if len(value.arguments) != 1 or value.destination is None:
+                    raise MIRCodegenError("builtin::to_string requires one argument and a destination")
+                line = f"{self._place(value.destination)} = nyx_display(&{self._operand(value.arguments[0])});"
             elif value.function in self.function_names:
                 call = f"{self.function_names[value.function]}({arguments})"
                 callee = self.functions[value.function]
@@ -218,6 +261,22 @@ class _RustEmitter:
             return self._operand(value.operand)
         if isinstance(value, BinaryRValue):
             return self._binary(value)
+        if isinstance(value, CastRValue):
+            operand = self._operand(value.operand)
+            if value.kind == "optional-unwrap":
+                return f"({operand}).expect(\"optional unwrap failed\")"
+            if value.type.optional:
+                return f"Some({operand})"
+            return operand
+        if isinstance(value, AggregateRValue):
+            operands = [self._operand(operand) for operand in value.operands]
+            if value.kind == "array":
+                return "vec![" + ", ".join(operands) + "]"
+            if value.kind == "struct":
+                fields = value.fields or tuple(str(index) for index in range(len(operands)))
+                body = ", ".join(f"{_identifier(name)}: {operand}" for name, operand in zip(fields, operands))
+                return f"NyxType_{_identifier(value.name)} {{ {body} }}"
+            raise MIRCodegenError(f"unsupported Rust aggregate kind '{value.kind}'")
         if isinstance(value, UnaryRValue):
             operand = self._operand(value.operand)
             if value.op in ("!", "not"):
@@ -266,10 +325,8 @@ class _RustEmitter:
         if isinstance(value, ConstOperand):
             return self._typed_constant(value)
         if isinstance(value, (CopyOperand, MoveOperand)):
-            if value.place.projections:
-                raise MIRCodegenError("projected operand reached the scalar Rust emitter")
-            rendered = f"l{value.place.local}"
-            if isinstance(value, CopyOperand) and self.local_types[value.place.local].name == "string":
+            rendered = self._place(value.place)
+            if isinstance(value, CopyOperand):
                 return rendered + ".clone()"
             return rendered
         raise MIRCodegenError(f"illegal operand reached Rust emitter: {type(value).__name__}")
@@ -278,11 +335,13 @@ class _RustEmitter:
         if isinstance(value, ConstOperand):
             return value.type
         if isinstance(value, (CopyOperand, MoveOperand)):
-            return self.local_types[value.place.local]
+            return self._place_type(value.place)
         raise MIRCodegenError(f"unknown Rust operand type: {type(value).__name__}")
 
     @staticmethod
     def _typed_constant(value: ConstOperand) -> str:
+        if value.type.optional and value.value is None:
+            return "None"
         if value.type.name == "string":
             return f"String::from({json.dumps(str(value.value), ensure_ascii=False)})"
         if value.type.name == "bool":
@@ -310,15 +369,81 @@ class _RustEmitter:
     def _type(value: MIRType, function: MIRFunction | None = None) -> str:
         if value.name == "any" and function is not None and function.name == "main":
             return "()"
+        if value.optional:
+            return f"Option<{_RustEmitter._type(replace(value, optional=False), function)}>"
+        if value.name == "Array" and len(value.arguments) == 1:
+            return f"Vec<{_RustEmitter._type(value.arguments[0], function)}>"
         mapping = {"void": "()", "bool": "bool", "int": "i64", "float": "f64", "f64": "f64", "string": "String"}
-        rendered = mapping.get(value.name)
-        if rendered is None or value.optional or value.pointer or value.arguments:
+        rendered = mapping.get(value.name, f"NyxType_{_identifier(value.name)}")
+        if value.pointer or value.arguments:
             raise MIRCodegenError(f"unsupported Rust MIR type '{value}'")
         return rendered
 
     @staticmethod
     def _default(value: MIRType) -> str:
-        return {"bool": "false", "int": "0", "float": "0.0", "f64": "0.0", "string": "String::new()"}.get(value.name, "()")
+        if value.optional:
+            return "None"
+        if value.name == "Array":
+            return "Vec::new()"
+        return {"bool": "false", "int": "0", "float": "0.0", "f64": "0.0", "string": "String::new()"}.get(value.name, "Default::default()")
+
+    def _place(self, place: Place, *, mutable: bool = False) -> str:
+        rendered = f"l{place.local}"
+        value_type = self.local_types[place.local]
+        for projection in place.projections:
+            if value_type.optional:
+                accessor = "as_mut" if mutable else "as_ref"
+                rendered = f"({rendered}).{accessor}().expect(\"optional projection failed\")"
+                value_type = replace(value_type, optional=False)
+            if isinstance(projection, FieldProjection):
+                rendered = f"({rendered}).{_identifier(projection.name)}"
+                value_type = self._field_type(value_type, projection.name)
+            elif isinstance(projection, ConstantIndexProjection):
+                helper = "nyx_index_mut" if mutable else "nyx_index"
+                borrow = "&mut " if mutable else "&"
+                rendered = f"{helper}({borrow}{rendered}, {projection.index})"
+                value_type = self._index_type(value_type)
+            elif isinstance(projection, IndexProjection):
+                helper = "nyx_index_mut" if mutable else "nyx_index"
+                borrow = "&mut " if mutable else "&"
+                rendered = f"{helper}({borrow}{rendered}, l{projection.local})"
+                value_type = self._index_type(value_type)
+            else:
+                raise MIRCodegenError(f"illegal projection reached Rust emitter: {type(projection).__name__}")
+        return rendered
+
+    def _assign_place(self, place: Place, value: str) -> str:
+        rendered = self._place(place, mutable=True)
+        prefix = "*" if place.projections and isinstance(place.projections[-1], (IndexProjection, ConstantIndexProjection)) else ""
+        return f"{prefix}{rendered} = {value};"
+
+    def _place_type(self, place: Place) -> MIRType:
+        value_type = self.local_types[place.local]
+        for projection in place.projections:
+            if value_type.optional:
+                value_type = replace(value_type, optional=False)
+            if isinstance(projection, FieldProjection):
+                value_type = self._field_type(value_type, projection.name)
+            elif isinstance(projection, (ConstantIndexProjection, IndexProjection)):
+                value_type = self._index_type(value_type)
+            else:
+                raise MIRCodegenError(f"unknown Rust projection type: {type(projection).__name__}")
+        return value_type
+
+    def _field_type(self, value_type: MIRType, name: str) -> MIRType:
+        definition = self.structs.get(value_type.name)
+        if definition is None:
+            raise MIRCodegenError(f"field projection requires a known struct, got '{value_type}'")
+        field = next((item for item in definition.fields if item.name == name), None)
+        if field is None:
+            raise MIRCodegenError(f"struct '{definition.name}' has no field '{name}'")
+        return field.type
+
+    @staticmethod
+    def _index_type(value_type: MIRType) -> MIRType:
+        if value_type.name == "Array" and len(value_type.arguments) == 1:
+            return value_type.arguments[0]
+        raise MIRCodegenError(f"index projection requires Array<T>, got '{value_type}'")
 
 
 def emit_legalized_rust(module: MIRModule) -> str:

@@ -387,6 +387,8 @@ def run_mir_legalization_suite() -> bool:
     assert _run_javascript(emit_legalized_javascript(aggregate)) == expected_aggregate
     assert not collect_legalization_issues(aggregate, "python", require_emitter=True)
     assert _run_python(emit_legalized_python(aggregate)) == expected_aggregate
+    assert not collect_legalization_issues(aggregate, "rust", require_emitter=True)
+    assert _compile_and_run_rust(emit_legalized_rust(aggregate)) == expected_aggregate
 
     payload = _lower(PAYLOAD_FIXTURE)
     assert not collect_legalization_issues(payload, "cpp", require_emitter=True)
@@ -431,15 +433,15 @@ def run_mir_legalization_suite() -> bool:
         raise AssertionError("aggregate MIR bypassed the LLVM legalization gate")
     except MIRLegalizationError as error:
         assert {issue.code for issue in error.issues} == aggregate_codes
-    for target in ("wasm", "rust", "c"):
+    for target in ("wasm", "c"):
         rejected = {issue.code for issue in collect_legalization_issues(aggregate, target)}
         assert "MIRG1002" in rejected and "MIRG1004" in rejected, (target, rejected)
 
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
         "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
-        "executable Wasm/Rust/JavaScript/Python/C17 CFG pilots, JS/Python aggregate "
-        "and payload-enum parity, and legacy C++ oracle"
+        "executable Wasm/Rust/JavaScript/Python/C17 CFG pilots, Rust/JS/Python "
+        "aggregate parity, host payload-enum parity, and legacy C++ oracle"
     )
     return True
 
