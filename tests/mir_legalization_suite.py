@@ -14,10 +14,28 @@ if str(ROOT) not in sys.path:
 from src.api import NyxCompiler
 from src.codegen.cpp_toolchain import CppToolchain
 from src.mir import (
+    AssignStatement,
+    BorrowRValue,
+    CallTerminator,
+    ConstOperand,
+    CopyOperand,
+    DeinitStatement,
+    DerefProjection,
+    DropTerminator,
     MIR_BACKEND_MIGRATION_ORDER,
     MIR_BACKEND_PROFILES,
+    MIRFunctionBuilder,
     MIRInterpreter,
     MIRLegalizationError,
+    MIRModule,
+    MIRSpan,
+    MIRType,
+    MoveOperand,
+    Place,
+    ReleaseStatement,
+    RetainStatement,
+    ReturnTerminator,
+    UseRValue,
     collect_legalization_issues,
     emit_legalized_cpp,
     emit_legalized_llvm,
@@ -94,6 +112,43 @@ def _compile_and_run_llvm(source: str) -> str:
         return executed.stdout.replace("\r\n", "\n")
 
 
+def _ownership_module() -> MIRModule:
+    span = MIRSpan("m5-ownership.nyx", 1, 1)
+    int_type = MIRType("int")
+    pointer_type = MIRType("int", pointer=True)
+    builder = MIRFunctionBuilder("main", "function::main", MIRType("any"), span)
+    value = builder.new_local("value", int_type)
+    reference = builder.new_local("reference", pointer_type)
+    observed = builder.new_local("observed", int_type)
+    sink = builder.new_local("sink", int_type)
+    entry = builder.new_block()
+    after_print = builder.new_block()
+    exit_block = builder.new_block()
+    builder.push_statement(entry, AssignStatement(
+        Place(value), UseRValue(ConstOperand(int_type, 42)), span
+    ))
+    builder.push_statement(entry, AssignStatement(
+        Place(reference), BorrowRValue(Place(value), False, pointer_type), span
+    ))
+    builder.push_statement(entry, RetainStatement(Place(reference), span))
+    builder.push_statement(entry, AssignStatement(
+        Place(observed),
+        UseRValue(CopyOperand(Place(reference, (DerefProjection(),)))),
+        span,
+    ))
+    builder.push_statement(entry, ReleaseStatement(Place(reference), span))
+    builder.push_statement(entry, AssignStatement(
+        Place(sink), UseRValue(MoveOperand(Place(observed))), span
+    ))
+    builder.push_statement(entry, DeinitStatement(Place(reference), span))
+    builder.set_terminator(entry, CallTerminator(
+        "builtin::print", (CopyOperand(Place(sink)),), None, after_print, None, span
+    ))
+    builder.set_terminator(after_print, DropTerminator(Place(sink), exit_block, None, span))
+    builder.set_terminator(exit_block, ReturnTerminator(span))
+    return MIRModule("m5-ownership.nyx", "cpp", (builder.finish(),))
+
+
 def run_mir_legalization_suite() -> bool:
     print("=" * 70)
     print("NYX M5 MIR LEGALIZATION / C++ MIGRATION PILOT")
@@ -164,6 +219,15 @@ def run_mir_legalization_suite() -> bool:
     expected_control = "\n".join(MIRInterpreter(control).run().output) + "\n"
     assert _compile_and_run_cpp(emit_legalized_cpp(control)) == expected_control
 
+    ownership = _ownership_module()
+    assert not collect_legalization_issues(ownership, "cpp", require_emitter=True)
+    expected_ownership = "\n".join(MIRInterpreter(ownership).run().output) + "\n"
+    assert expected_ownership == "42\n"
+    generated_ownership = emit_legalized_cpp(ownership)
+    assert "std::move" in generated_ownership
+    assert "int64_t*" in generated_ownership
+    assert _compile_and_run_cpp(generated_ownership) == expected_ownership
+
     aggregate_codes = {issue.code for issue in collect_legalization_issues(aggregate, "llvm")}
     assert "MIRG1002" in aggregate_codes, aggregate_codes
     assert "MIRG1004" in aggregate_codes, aggregate_codes
@@ -177,7 +241,8 @@ def run_mir_legalization_suite() -> bool:
 
     print(
         "[PASS] 7 target profiles, stable negative diagnostics, no-fallback gate, "
-        "scalar/aggregate/payload MIR interpreter parity, C++/LLVM pilots, and legacy C++ oracle"
+        "scalar/aggregate/payload/ownership MIR interpreter parity, C++/LLVM pilots, "
+        "and legacy C++ oracle"
     )
     return True
 

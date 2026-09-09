@@ -1770,14 +1770,17 @@ Implementation status (2026-09-09):
   division traps, strings, floats, and canonical `print` output. The C++ pilot
   additionally legalizes arrays, checked index projections, structs, fields,
   optionals, payload enums, `Result`, lexical cleanup CFG, and caught throws;
+- the C++ ownership mapping covers borrow/dereference, copy/move, deinit, and
+  non-unwinding drop. Explicit MIR retain/release operations map to C++ RAII
+  copy/move/destruction instead of emitting a second reference-counting layer;
 - `nyx emit mir <file> --codegen --target cpp|llvm` exposes the pilots without
   changing the default Typed HIR compilation route;
 - C++ and LLVM pilot output is compiled and executed against both the MIR
   interpreter and the legacy C++ backend oracle in
   `tests/mir_legalization_suite.py`;
-- explicit borrow/retain/release/drop emission and the Wasm, Rust, JavaScript,
-  Python, and C17 emitters remain open M5 work. Their published profiles are
-  explicitly `profile-only`, so the CLI cannot pretend that they have migrated.
+- drop unwind edges and the Wasm, Rust, JavaScript, Python, and C17 emitters
+  remain open M5 work. Their published profiles are explicitly `profile-only`,
+  so the CLI cannot pretend that they have migrated.
 
 Therefore M5 infrastructure and the first narrow C++ slice are implemented,
 but the M5 exit gate remains open until the full MIR surface and each listed

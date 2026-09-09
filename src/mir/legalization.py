@@ -24,6 +24,7 @@ from .model import (
     ConstOperand,
     CopyOperand,
     DeinitStatement,
+    DerefProjection,
     DiscriminantRValue,
     DropTerminator,
     FieldProjection,
@@ -193,13 +194,18 @@ MIR_BACKEND_PROFILES = {
 MIR_BACKEND_PROFILES["cpp"] = replace(
     MIR_BACKEND_PROFILES["cpp"],
     legal_rvalues=MIR_BACKEND_PROFILES["cpp"].legal_rvalues | frozenset({
-        AggregateRValue.__name__, DiscriminantRValue.__name__, PayloadRValue.__name__,
+        AggregateRValue.__name__, BorrowRValue.__name__, DiscriminantRValue.__name__,
+        PayloadRValue.__name__,
+    }),
+    legal_statements=MIR_BACKEND_PROFILES["cpp"].legal_statements | frozenset({
+        DeinitStatement.__name__, ReleaseStatement.__name__, RetainStatement.__name__,
     }),
     legal_terminators=MIR_BACKEND_PROFILES["cpp"].legal_terminators | frozenset({
-        ThrowTerminator.__name__,
+        DropTerminator.__name__, ThrowTerminator.__name__,
     }),
     legal_projections=frozenset({
-        FieldProjection.__name__, IndexProjection.__name__, ConstantIndexProjection.__name__,
+        DerefProjection.__name__, FieldProjection.__name__, IndexProjection.__name__,
+        ConstantIndexProjection.__name__,
     }),
     legal_types=MIR_BACKEND_PROFILES["cpp"].legal_types | frozenset({"Array", "Option", "Result"}),
     legal_runtime_calls=MIR_BACKEND_PROFILES["cpp"].legal_runtime_calls | frozenset({
@@ -318,6 +324,8 @@ class _Legalizer:
                 if isinstance(statement, AssignStatement):
                     self._place(statement.place, statement.span)
                     self._rvalue(statement.value, statement.span)
+                elif isinstance(statement, (RetainStatement, ReleaseStatement, DeinitStatement)):
+                    self._place(statement.place, statement.span)
             terminator = block.terminator
             name = type(terminator).__name__
             if name not in self.profile.legal_terminators:
@@ -359,6 +367,9 @@ class _Legalizer:
         elif isinstance(value, PayloadRValue):
             self._operand(value.operand, span)
             self._type(value.type, span)
+        elif isinstance(value, BorrowRValue):
+            self._place(value.place, span)
+            self._type(value.type, span)
 
     def _terminator(self, value: object) -> None:
         if isinstance(value, (SwitchIntTerminator, SwitchValueTerminator)):
@@ -386,6 +397,14 @@ class _Legalizer:
             self._operand(value.value, value.span)
             if value.destination is not None:
                 self._place(value.destination, value.span)
+        elif isinstance(value, DropTerminator):
+            self._place(value.place, value.span)
+            if value.unwind is not None:
+                self._issue(
+                    "MIRG1008",
+                    f"Unwind edges are not legalized by the '{self.target}' MIR pilot",
+                    value.span,
+                )
 
     def _operand(self, value: object, span: MIRSpan) -> None:
         if isinstance(value, ConstOperand):
@@ -406,6 +425,9 @@ class _Legalizer:
 
     def _type(self, value: MIRType, span: MIRSpan) -> None:
         assert self.profile is not None
+        if self.target == "cpp" and value.pointer:
+            self._type(replace(value, pointer=False), span)
+            return
         if self.target == "cpp" and value.optional:
             self._type(replace(value, optional=False), span)
             return

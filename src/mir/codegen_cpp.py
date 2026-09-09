@@ -13,14 +13,18 @@ from .model import (
     AssignStatement,
     AggregateRValue,
     BinaryRValue,
+    BorrowRValue,
     CallTerminator,
     CastRValue,
     ConstOperand,
     ConstantIndexProjection,
     CopyOperand,
+    DeinitStatement,
+    DerefProjection,
     DiscriminantRValue,
     FieldProjection,
     GotoTerminator,
+    DropTerminator,
     MIRFunction,
     MIRModule,
     MIREnumDef,
@@ -30,6 +34,8 @@ from .model import (
     Operand,
     Place,
     PayloadRValue,
+    ReleaseStatement,
+    RetainStatement,
     ReturnTerminator,
     StorageDeadStatement,
     StorageLiveStatement,
@@ -267,6 +273,11 @@ void print(const Values&... values) {
             return [f"    {self._place(statement.place)} = {self._rvalue(statement.value)};"]
         if isinstance(statement, (StorageLiveStatement, StorageDeadStatement, NopStatement)):
             return []
+        if isinstance(statement, (RetainStatement, ReleaseStatement)):
+            # C++ RAII performs retain/release through value copy/move and destruction.
+            return []
+        if isinstance(statement, DeinitStatement):
+            return [f"    {self._place(statement.place)} = {{}};"]
         raise MIRCodegenError(f"illegal statement reached C++ emitter: {type(statement).__name__}")
 
     def _terminator(self, terminator: object) -> list[str]:
@@ -350,6 +361,13 @@ void print(const Values&... values) {
                     f"    goto bb{terminator.target};",
                 ]
             return [f"    throw std::runtime_error(nyx_mir_runtime::to_string({thrown}));"]
+        if isinstance(terminator, DropTerminator):
+            if terminator.unwind is not None:
+                raise MIRCodegenError("C++ MIR drop unwind edge was not legalized")
+            return [
+                f"    {self._place(terminator.place)} = {{}};",
+                f"    goto bb{terminator.target};",
+            ]
         if isinstance(terminator, ReturnTerminator):
             assert self.current is not None
             if self.current.name == "main" and self.local_types[self.current.return_local].name == "any":
@@ -407,6 +425,8 @@ void print(const Values&... values) {
                 f"std::any_cast<{self._type(value.type)}>("
                 f"({self._operand(value.operand)}).payload.at({value.index}))"
             )
+        if isinstance(value, BorrowRValue):
+            return f"&({self._place(value.place)})"
         raise MIRCodegenError(f"illegal rvalue reached C++ emitter: {type(value).__name__}")
 
     def _binary(self, value: BinaryRValue) -> str:
@@ -466,6 +486,11 @@ void print(const Values&... values) {
             elif isinstance(projection, IndexProjection):
                 rendered = f"nyx_mir_runtime::index({rendered}, _{projection.local})"
                 value_type = self._index_type(value_type)
+            elif isinstance(projection, DerefProjection):
+                if not value_type.pointer:
+                    raise MIRCodegenError(f"dereference requires a pointer, got '{value_type}'")
+                rendered = f"(*{rendered})"
+                value_type = replace(value_type, pointer=False)
             else:
                 raise MIRCodegenError(f"illegal projection reached C++ emitter: {type(projection).__name__}")
         return rendered
@@ -479,6 +504,10 @@ void print(const Values&... values) {
                 value_type = self._field_type(value_type, projection.name)
             elif isinstance(projection, (ConstantIndexProjection, IndexProjection)):
                 value_type = self._index_type(value_type)
+            elif isinstance(projection, DerefProjection):
+                if not value_type.pointer:
+                    raise MIRCodegenError(f"dereference requires a pointer, got '{value_type}'")
+                value_type = replace(value_type, pointer=False)
             else:
                 raise MIRCodegenError(f"unknown projected place type: {type(projection).__name__}")
         return value_type
@@ -537,6 +566,8 @@ void print(const Values&... values) {
 
     @staticmethod
     def _type(value: MIRType) -> str:
+        if value.pointer:
+            return f"{_CppEmitter._type(replace(value, pointer=False))}*"
         if value.optional:
             return f"std::optional<{_CppEmitter._type(replace(value, optional=False))}>"
         if value.name == "Array" and len(value.arguments) == 1:
